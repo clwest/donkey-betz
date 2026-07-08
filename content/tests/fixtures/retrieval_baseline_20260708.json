@@ -1,0 +1,4034 @@
+{
+  "version": 1,
+  "queries": [
+    {
+      "query": "canonical_authority field ADR-0120 Document model",
+      "default": [
+        {
+          "chunk_id": "f6924c67-7700-4e1f-bbcf-4b802a00aa64",
+          "title": "2002 event integration architecture cat b hai event contract design child audit",
+          "file_path": "docs/research/domains/event_integration_architecture/2002_event_integration_architecture_cat_b_hai_event_contract_design_child_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5690701360100773,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "ba09b163-267b-4a02-9d62-e12e287c22d6",
+          "title": "1904 authority enforcement cat f adjacent separation boundaries child audit",
+          "file_path": "docs/research/domains/authority_enforcement/1904_authority_enforcement_cat_f_adjacent_separation_boundaries_child_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5577984498808672,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "4be69b16-96e3-4f2c-98df-5c8d29eeadc4",
+          "title": "1999 authority enforcement canonical summary",
+          "file_path": "docs/research/domains/authority_enforcement/1999_authority_enforcement_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5498586861019659,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "2c69dc9b-c89a-4c8b-9fc7-10cf06c02f8c",
+          "title": "ARCHITECTURE INDEX",
+          "file_path": "docs/research/ARCHITECTURE_INDEX.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.546012174791941,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "d824ba08-b4aa-4906-905d-1c8c73a5cb20",
+          "title": "1999 authority enforcement canonical summary",
+          "file_path": "docs/research/domains/authority_enforcement/1999_authority_enforcement_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.540293466515931,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "d8add183-1d84-4a25-bc53-7fead7458af9",
+          "title": "SESSION 1900 AUTHORITY ENFORCEMENT ARC OPEN",
+          "file_path": "docs/handoffs/SESSION_1900_AUTHORITY_ENFORCEMENT_ARC_OPEN.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5328762328637732,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "124faa35-9c16-4ff4-ab67-dfe1f28b9834",
+          "title": "1902 authority enforcement cat b authority enforcement design decision",
+          "file_path": "docs/research/domains/authority_enforcement/1902_authority_enforcement_cat_b_authority_enforcement_design_decision.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5328561290858055,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "79ef9b7b-775b-49c7-a257-fbb108771052",
+          "title": "2002 event integration architecture cat b hai event contract design child audit",
+          "file_path": "docs/research/domains/event_integration_architecture/2002_event_integration_architecture_cat_b_hai_event_contract_design_child_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.532446674211594,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "342b22da-e557-4295-8b55-5065e41ac54e",
+          "title": "1999 authority enforcement canonical summary",
+          "file_path": "docs/research/domains/authority_enforcement/1999_authority_enforcement_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5275627223107572,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "e5e40fe8-8262-4fd9-9632-eccc455bee47",
+          "title": "2103 rag document loading retrieval authority framework corpus governance design",
+          "file_path": "docs/research/domains/rag_document_loading/2103_rag_document_loading_retrieval_authority_framework_corpus_governance_design.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5266557339607479,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "f6924c67-7700-4e1f-bbcf-4b802a00aa64",
+          "title": "2002 event integration architecture cat b hai event contract design child audit",
+          "file_path": "docs/research/domains/event_integration_architecture/2002_event_integration_architecture_cat_b_hai_event_contract_design_child_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5690701360100773,
+          "weighted_score": 0.8536052040151159
+        },
+        {
+          "chunk_id": "ba09b163-267b-4a02-9d62-e12e287c22d6",
+          "title": "1904 authority enforcement cat f adjacent separation boundaries child audit",
+          "file_path": "docs/research/domains/authority_enforcement/1904_authority_enforcement_cat_f_adjacent_separation_boundaries_child_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5577984498808672,
+          "weighted_score": 0.8366976748213009
+        },
+        {
+          "chunk_id": "4be69b16-96e3-4f2c-98df-5c8d29eeadc4",
+          "title": "1999 authority enforcement canonical summary",
+          "file_path": "docs/research/domains/authority_enforcement/1999_authority_enforcement_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5498586861019659,
+          "weighted_score": 0.8247880291529488
+        },
+        {
+          "chunk_id": "2c69dc9b-c89a-4c8b-9fc7-10cf06c02f8c",
+          "title": "ARCHITECTURE INDEX",
+          "file_path": "docs/research/ARCHITECTURE_INDEX.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.546012174791941,
+          "weighted_score": 0.8190182621879114
+        },
+        {
+          "chunk_id": "d824ba08-b4aa-4906-905d-1c8c73a5cb20",
+          "title": "1999 authority enforcement canonical summary",
+          "file_path": "docs/research/domains/authority_enforcement/1999_authority_enforcement_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.540293466515931,
+          "weighted_score": 0.8104401997738966
+        },
+        {
+          "chunk_id": "d8add183-1d84-4a25-bc53-7fead7458af9",
+          "title": "SESSION 1900 AUTHORITY ENFORCEMENT ARC OPEN",
+          "file_path": "docs/handoffs/SESSION_1900_AUTHORITY_ENFORCEMENT_ARC_OPEN.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5328762328637732,
+          "weighted_score": 0.7993143492956598
+        },
+        {
+          "chunk_id": "124faa35-9c16-4ff4-ab67-dfe1f28b9834",
+          "title": "1902 authority enforcement cat b authority enforcement design decision",
+          "file_path": "docs/research/domains/authority_enforcement/1902_authority_enforcement_cat_b_authority_enforcement_design_decision.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5328561290858055,
+          "weighted_score": 0.7992841936287083
+        },
+        {
+          "chunk_id": "79ef9b7b-775b-49c7-a257-fbb108771052",
+          "title": "2002 event integration architecture cat b hai event contract design child audit",
+          "file_path": "docs/research/domains/event_integration_architecture/2002_event_integration_architecture_cat_b_hai_event_contract_design_child_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.532446674211594,
+          "weighted_score": 0.798670011317391
+        },
+        {
+          "chunk_id": "342b22da-e557-4295-8b55-5065e41ac54e",
+          "title": "1999 authority enforcement canonical summary",
+          "file_path": "docs/research/domains/authority_enforcement/1999_authority_enforcement_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5275627223107572,
+          "weighted_score": 0.7913440834661358
+        },
+        {
+          "chunk_id": "e5e40fe8-8262-4fd9-9632-eccc455bee47",
+          "title": "2103 rag document loading retrieval authority framework corpus governance design",
+          "file_path": "docs/research/domains/rag_document_loading/2103_rag_document_loading_retrieval_authority_framework_corpus_governance_design.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5266557339607479,
+          "weighted_score": 0.7899836009411219
+        }
+      ],
+      "workspace_canonical_filter": [
+        {
+          "chunk_id": "831dad1b-d036-4aea-b7ab-e11482a93d7c",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.683305697500802,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "308a1931-9b19-4b97-9836-87bf82c64e97",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6351779201642771,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "fcaf89c9-b398-45ec-87cd-4d9bf8fdf51d",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6343939937524601,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "81530e9f-0041-4cbb-9e3b-74bff3a2b869",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6137676332733265,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "4f8b1e9f-8ebf-45eb-8f24-84decee198f9",
+          "title": "0130_ADR_AUTHORITY_AWARE_RETRIEVAL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6051542408075338,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "62370fbe-92af-43b6-b032-42308018d744",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5745050782829735,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "d598340e-73e2-4831-96ef-5b9505683e66",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5723225950033379,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "756f95a2-5d2b-42da-8d40-1608672a4bc3",
+          "title": "0130_ADR_AUTHORITY_AWARE_RETRIEVAL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5685172084580358,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "969f609e-9e5c-430f-b8b6-c3c54a136d9f",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5599811505935803,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "3ff7b6f0-49dc-4124-a99f-0aea5959cfa9",
+          "title": "0130_ADR_AUTHORITY_AWARE_RETRIEVAL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5533061013803927,
+          "weighted_score": null
+        }
+      ]
+    },
+    {
+      "query": "KFI-2 canonical_authority backfill signal-safe QuerySet update",
+      "default": [
+        {
+          "chunk_id": "01363db5-30aa-4217-a1c5-49a45774298d",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5759123248024896,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "5ab01c91-4f3f-4b7c-9f85-bbc59da8eb5b",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5461625703941811,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "bcba38c9-b38a-4244-aead-722ec82eebec",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5118890888508748,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "b1aaaff4-7425-4a03-9da5-0b74e12e9c56",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.48280017683381304,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "7513d8a8-79d1-4bd2-9af4-cf61218540f8",
+          "title": "2103 rag document loading retrieval authority framework corpus governance design",
+          "file_path": "docs/research/domains/rag_document_loading/2103_rag_document_loading_retrieval_authority_framework_corpus_governance_design.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4750496659141221,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "055027d2-dd3b-4e9c-a19e-8df8f269c51e",
+          "title": "SESSION 2103 RAG DOCUMENT LOADING RETRIEVAL AUTHORITY FRAMEWORK CORPUS GOVERNANCE DESIGN",
+          "file_path": "docs/handoffs/SESSION_2103_RAG_DOCUMENT_LOADING_RETRIEVAL_AUTHORITY_FRAMEWORK_CORPUS_GOVERNANCE_DESIGN.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4444623465060309,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "0f7761e3-69d5-4803-80cd-38f47b8d9dbc",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.42276022909269395,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "f196885f-6597-479c-ae92-c2fbdf38a2fe",
+          "title": "2101 rag document loading corpus state reality knowledge gap audit",
+          "file_path": "docs/research/domains/rag_document_loading/2101_rag_document_loading_corpus_state_reality_knowledge_gap_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4171772763355843,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "bd5c418e-3b2b-4fdd-858e-950a10335f18",
+          "title": "1304 memory docs rag boundary audit",
+          "file_path": "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4151190095887788,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "15a0a8da-e01a-4eae-b01d-15bf834ef445",
+          "title": "2104 rag document loading behavior substrate structured observation integration",
+          "file_path": "docs/research/domains/rag_document_loading/2104_rag_document_loading_behavior_substrate_structured_observation_integration.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.41061821439678625,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "01363db5-30aa-4217-a1c5-49a45774298d",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5759123248024896,
+          "weighted_score": 0.8638684872037343
+        },
+        {
+          "chunk_id": "5ab01c91-4f3f-4b7c-9f85-bbc59da8eb5b",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5461625703941811,
+          "weighted_score": 0.8192438555912718
+        },
+        {
+          "chunk_id": "bcba38c9-b38a-4244-aead-722ec82eebec",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5118890888508748,
+          "weighted_score": 0.7678336332763123
+        },
+        {
+          "chunk_id": "b1aaaff4-7425-4a03-9da5-0b74e12e9c56",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.48280017683381304,
+          "weighted_score": 0.7242002652507196
+        },
+        {
+          "chunk_id": "7513d8a8-79d1-4bd2-9af4-cf61218540f8",
+          "title": "2103 rag document loading retrieval authority framework corpus governance design",
+          "file_path": "docs/research/domains/rag_document_loading/2103_rag_document_loading_retrieval_authority_framework_corpus_governance_design.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4750496659141221,
+          "weighted_score": 0.7125744988711832
+        },
+        {
+          "chunk_id": "055027d2-dd3b-4e9c-a19e-8df8f269c51e",
+          "title": "SESSION 2103 RAG DOCUMENT LOADING RETRIEVAL AUTHORITY FRAMEWORK CORPUS GOVERNANCE DESIGN",
+          "file_path": "docs/handoffs/SESSION_2103_RAG_DOCUMENT_LOADING_RETRIEVAL_AUTHORITY_FRAMEWORK_CORPUS_GOVERNANCE_DESIGN.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4444623465060309,
+          "weighted_score": 0.6666935197590463
+        },
+        {
+          "chunk_id": "0f7761e3-69d5-4803-80cd-38f47b8d9dbc",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.42276022909269395,
+          "weighted_score": 0.6341403436390409
+        },
+        {
+          "chunk_id": "f196885f-6597-479c-ae92-c2fbdf38a2fe",
+          "title": "2101 rag document loading corpus state reality knowledge gap audit",
+          "file_path": "docs/research/domains/rag_document_loading/2101_rag_document_loading_corpus_state_reality_knowledge_gap_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4171772763355843,
+          "weighted_score": 0.6257659145033765
+        },
+        {
+          "chunk_id": "bd5c418e-3b2b-4fdd-858e-950a10335f18",
+          "title": "1304 memory docs rag boundary audit",
+          "file_path": "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4151190095887788,
+          "weighted_score": 0.6226785143831681
+        },
+        {
+          "chunk_id": "15a0a8da-e01a-4eae-b01d-15bf834ef445",
+          "title": "2104 rag document loading behavior substrate structured observation integration",
+          "file_path": "docs/research/domains/rag_document_loading/2104_rag_document_loading_behavior_substrate_structured_observation_integration.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.41061821439678625,
+          "weighted_score": 0.6159273215951794
+        }
+      ],
+      "workspace_canonical_filter": [
+        {
+          "chunk_id": "969f609e-9e5c-430f-b8b6-c3c54a136d9f",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5323535005953753,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "79f73358-8fc7-4c64-b8b6-13f0064c2ff3",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5118289093024265,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "f03cbedf-1b2b-4fd9-b3bb-d03f94f310b1",
+          "title": "0130_ADR_AUTHORITY_AWARE_RETRIEVAL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5074778295406511,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "39405df0-bce2-49b0-b0c0-af0d38bf9300",
+          "title": "0130_ADR_AUTHORITY_AWARE_RETRIEVAL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4839380147306762,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "6f54b446-0de5-47eb-b7ff-150a55b0c50d",
+          "title": "0130_ADR_AUTHORITY_AWARE_RETRIEVAL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4732844433395431,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "46fd5053-b8e6-4e4c-9887-4a054017f22e",
+          "title": "0130_ADR_AUTHORITY_AWARE_RETRIEVAL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4703605539539839,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c78ae95d-d794-4416-a557-0bdca4f31397",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.46986583778811886,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "4b29b50d-101b-49ea-8e00-f66e6da215a2",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.46369930626176936,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "3ff7b6f0-49dc-4124-a99f-0aea5959cfa9",
+          "title": "0130_ADR_AUTHORITY_AWARE_RETRIEVAL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4600320711844753,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "9febfae6-6aa0-4680-ba5b-c55bbb19b3a6",
+          "title": "0130_ADR_AUTHORITY_AWARE_RETRIEVAL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4555914846289104,
+          "weighted_score": null
+        }
+      ]
+    },
+    {
+      "query": "Deliverable Document mirror ADR-0110 workspace_canonical",
+      "default": [
+        {
+          "chunk_id": "4e873dd7-f9ce-4a74-b809-674abeb29a3e",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6282601017916131,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c0898abe-7d9f-446f-86f7-0eaea634b2b3",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5557430279669658,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "bdd62cc2-31be-40de-b017-64d1a37a409a",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5546357970543524,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "76592b53-07da-486b-9378-f5476c75526f",
+          "title": "Session 1194 \u2014 Initiatives-First Backbone pivot + Plans A + B shipped",
+          "file_path": "docs/handoffs/SESSION_1194_INITIATIVES_FIRST_BACKBONE_PIVOT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5500844650908404,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "31eb3f93-eaa4-4b15-a7f4-50df2d27fe6a",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5481746254090187,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "8c1bed9c-5e11-4f8a-8097-6b1ed3a3f773",
+          "title": "1606 content cross domain integration lens audit",
+          "file_path": "docs/research/domains/content/1606_content_cross_domain_integration_lens_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5462785267607879,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "200a0c2e-0488-46de-a9f8-70bc9c44fb13",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5450668787001185,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "4aac0ace-2e74-4713-8dc6-86654d71cfea",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5333402356583072,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "94278068-0278-43b5-a5c6-c5b7415ff39b",
+          "title": "1600 content domain scoping",
+          "file_path": "docs/research/domains/content/1600_content_domain_scoping.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5275011324886885,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "55531750-8acd-4888-84d7-07fa07dd2a73",
+          "title": "1603 content deliverable base variants audit",
+          "file_path": "docs/research/domains/content/1603_content_deliverable_base_variants_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5219136643600136,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "4e873dd7-f9ce-4a74-b809-674abeb29a3e",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6282601017916131,
+          "weighted_score": 0.9423901526874197
+        },
+        {
+          "chunk_id": "c0898abe-7d9f-446f-86f7-0eaea634b2b3",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5557430279669658,
+          "weighted_score": 0.8336145419504488
+        },
+        {
+          "chunk_id": "bdd62cc2-31be-40de-b017-64d1a37a409a",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5546357970543524,
+          "weighted_score": 0.8319536955815285
+        },
+        {
+          "chunk_id": "76592b53-07da-486b-9378-f5476c75526f",
+          "title": "Session 1194 \u2014 Initiatives-First Backbone pivot + Plans A + B shipped",
+          "file_path": "docs/handoffs/SESSION_1194_INITIATIVES_FIRST_BACKBONE_PIVOT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5500844650908404,
+          "weighted_score": 0.8251266976362606
+        },
+        {
+          "chunk_id": "31eb3f93-eaa4-4b15-a7f4-50df2d27fe6a",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5481746254090187,
+          "weighted_score": 0.8222619381135281
+        },
+        {
+          "chunk_id": "8c1bed9c-5e11-4f8a-8097-6b1ed3a3f773",
+          "title": "1606 content cross domain integration lens audit",
+          "file_path": "docs/research/domains/content/1606_content_cross_domain_integration_lens_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5462785267607879,
+          "weighted_score": 0.8194177901411819
+        },
+        {
+          "chunk_id": "200a0c2e-0488-46de-a9f8-70bc9c44fb13",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5450668787001185,
+          "weighted_score": 0.8176003180501777
+        },
+        {
+          "chunk_id": "4aac0ace-2e74-4713-8dc6-86654d71cfea",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5333402356583072,
+          "weighted_score": 0.8000103534874609
+        },
+        {
+          "chunk_id": "94278068-0278-43b5-a5c6-c5b7415ff39b",
+          "title": "1600 content domain scoping",
+          "file_path": "docs/research/domains/content/1600_content_domain_scoping.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5275011324886885,
+          "weighted_score": 0.7912516987330327
+        },
+        {
+          "chunk_id": "55531750-8acd-4888-84d7-07fa07dd2a73",
+          "title": "1603 content deliverable base variants audit",
+          "file_path": "docs/research/domains/content/1603_content_deliverable_base_variants_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5219136643600136,
+          "weighted_score": 0.7828704965400204
+        }
+      ],
+      "workspace_canonical_filter": [
+        {
+          "chunk_id": "fe03bfab-c843-4f0c-bc57-c336444600db",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.7014142003109771,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "6b7dab4a-69ba-4f2e-9579-85550705b054",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6569857780943402,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "e18388e2-ebd1-4d3f-8924-4f2edfcffcc1",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6451452472410973,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "90549880-0373-4658-87b4-f1880cb6116b",
+          "title": "MANIFEST_v20260707",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6325298797068629,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "d4528cdb-966d-4b29-becb-1e4b3ab8120a",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6176136583422996,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "b572d955-877b-42d8-841e-f2bd03c4063e",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6170624773426893,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "e3bfade1-40cc-4d45-8a7d-6a00f7966a18",
+          "title": "0005_PLATFORM_BOOTSTRAP_CONTRACT",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6076388872136339,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "ce2ad7eb-915e-40cf-89dc-cd9449aa69a8",
+          "title": "MANIFEST_v20260707",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6066890274620055,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "b73c1671-c509-494b-bf5e-725906b9ec6f",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6039303529729089,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "b421e2ef-5390-4f80-895d-e64c136d97f4",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5907745303226556,
+          "weighted_score": null
+        }
+      ]
+    },
+    {
+      "query": "Workspace canonical governance Cycle 1A ADR",
+      "default": [
+        {
+          "chunk_id": "90008143-c34e-4de6-996e-0c46b81fec73",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5847597250234486,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "e6a604c9-de4b-49c9-ba8e-ce59505470a6",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.572883758459813,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "31eb3f93-eaa4-4b15-a7f4-50df2d27fe6a",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5719176296589676,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "3665bf41-5261-4b79-9a2d-a207aaf24f2f",
+          "title": "ADR 0002 pa write shape and correlation contract",
+          "file_path": "docs/adr/ADR-0002-pa-write-shape-and-correlation-contract.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5454669763413567,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "1ce165c6-099a-4191-aea0-e68585c8f0aa",
+          "title": "I 020099 rag corpus substrate maturity implementation close",
+          "file_path": "docs/research/implementation/rag_corpus_substrate_maturity/I-020099_rag_corpus_substrate_maturity_implementation_close.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.545243535636577,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "55bf11e6-5a77-419b-a4cc-d659b288f9fd",
+          "title": "ADR 0001 establish adr corpus",
+          "file_path": "docs/adr/ADR-0001-establish-adr-corpus.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.544782819997734,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "99e736c1-690a-4ccd-bc99-8b4601c2a372",
+          "title": "I 0100 design prep adr a mission runner staged enable",
+          "file_path": "docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_design_prep_adr_a_mission_runner_staged_enable.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5396252706598538,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "9c902360-7947-43c4-8276-c8d0686d5d33",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5263386165739308,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "7e056fcb-fe00-4804-bc3d-7261509bcc91",
+          "title": "ADR 0001 establish adr corpus",
+          "file_path": "docs/adr/ADR-0001-establish-adr-corpus.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5238121075275012,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c758ecf0-d41e-40c7-b824-29bf4235a5c9",
+          "title": "I 0100 scoping",
+          "file_path": "docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_scoping.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.520847111749559,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "90008143-c34e-4de6-996e-0c46b81fec73",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5847597250234486,
+          "weighted_score": 0.877139587535173
+        },
+        {
+          "chunk_id": "e6a604c9-de4b-49c9-ba8e-ce59505470a6",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.572883758459813,
+          "weighted_score": 0.8593256376897195
+        },
+        {
+          "chunk_id": "31eb3f93-eaa4-4b15-a7f4-50df2d27fe6a",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5719176296589676,
+          "weighted_score": 0.8578764444884515
+        },
+        {
+          "chunk_id": "3665bf41-5261-4b79-9a2d-a207aaf24f2f",
+          "title": "ADR 0002 pa write shape and correlation contract",
+          "file_path": "docs/adr/ADR-0002-pa-write-shape-and-correlation-contract.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5454669763413567,
+          "weighted_score": 0.818200464512035
+        },
+        {
+          "chunk_id": "1ce165c6-099a-4191-aea0-e68585c8f0aa",
+          "title": "I 020099 rag corpus substrate maturity implementation close",
+          "file_path": "docs/research/implementation/rag_corpus_substrate_maturity/I-020099_rag_corpus_substrate_maturity_implementation_close.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.545243535636577,
+          "weighted_score": 0.8178653034548655
+        },
+        {
+          "chunk_id": "55bf11e6-5a77-419b-a4cc-d659b288f9fd",
+          "title": "ADR 0001 establish adr corpus",
+          "file_path": "docs/adr/ADR-0001-establish-adr-corpus.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.544782819997734,
+          "weighted_score": 0.817174229996601
+        },
+        {
+          "chunk_id": "99e736c1-690a-4ccd-bc99-8b4601c2a372",
+          "title": "I 0100 design prep adr a mission runner staged enable",
+          "file_path": "docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_design_prep_adr_a_mission_runner_staged_enable.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5396252706598538,
+          "weighted_score": 0.8094379059897807
+        },
+        {
+          "chunk_id": "9c902360-7947-43c4-8276-c8d0686d5d33",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5263386165739308,
+          "weighted_score": 0.7895079248608962
+        },
+        {
+          "chunk_id": "7e056fcb-fe00-4804-bc3d-7261509bcc91",
+          "title": "ADR 0001 establish adr corpus",
+          "file_path": "docs/adr/ADR-0001-establish-adr-corpus.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5238121075275012,
+          "weighted_score": 0.7857181612912518
+        },
+        {
+          "chunk_id": "c758ecf0-d41e-40c7-b824-29bf4235a5c9",
+          "title": "I 0100 scoping",
+          "file_path": "docs/research/implementation/observability_spine_mission_evidence_substrate/I-0100_scoping.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.520847111749559,
+          "weighted_score": 0.7812706676243385
+        }
+      ],
+      "workspace_canonical_filter": [
+        {
+          "chunk_id": "4f8b1e9f-8ebf-45eb-8f24-84decee198f9",
+          "title": "0130_ADR_AUTHORITY_AWARE_RETRIEVAL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6050865432081654,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "831dad1b-d036-4aea-b7ab-e11482a93d7c",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5949862193394049,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "fcaf89c9-b398-45ec-87cd-4d9bf8fdf51d",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5918075637162588,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "fe03bfab-c843-4f0c-bc57-c336444600db",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5890053035716396,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "ff3f5403-3fe1-4686-8c99-70acd1a7937b",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5813398844016604,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "909cd159-6c62-454c-b869-f10e6108b0d1",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5721523412910725,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "ba30b454-89b1-4805-bc33-d27830371f55",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5572749719675959,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "e9605058-8a4b-488c-8c24-71698b314b4e",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5470491019121579,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "79f73358-8fc7-4c64-b8b6-13f0064c2ff3",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5427203911862417,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "62c84ccf-a530-4f38-b055-d7bc68cbb0f6",
+          "title": "MANIFEST_v20260707",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5378281294739379,
+          "weighted_score": null
+        }
+      ]
+    },
+    {
+      "query": "docs cascade sync build_docs_index",
+      "default": [
+        {
+          "chunk_id": "10c9fd18-e9a2-4167-97ee-4ce3709886c4",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6970687189034667,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "027c49b0-f96d-4786-bb4e-b4f28ee11f3b",
+          "title": "1400 revenue domain scoping",
+          "file_path": "docs/research/domains/revenue/1400_revenue_domain_scoping.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6647923714355156,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "e1459f47-e385-4067-9ea5-ef365a72700f",
+          "title": "SESSION 2202 FRONTEND WEBSOCKET CONSUMER UI RENDER HINT ENVELOPE AUDIT",
+          "file_path": "docs/handoffs/SESSION_2202_FRONTEND_WEBSOCKET_CONSUMER_UI_RENDER_HINT_ENVELOPE_AUDIT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6514806172892168,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "495140ce-86ab-4373-b62f-6de315f51f02",
+          "title": "ARCHITECTURE INDEX",
+          "file_path": "docs/research/ARCHITECTURE_INDEX.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6322938612528771,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "bd839fd3-98d4-495e-999e-4bb8822bb9b7",
+          "title": "SESSION 2401 AUTH P1 CAT A",
+          "file_path": "docs/handoffs/SESSION_2401_AUTH_P1_CAT_A.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5927700210928211,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "a7976e59-73f6-4025-8a48-1cdf557758bb",
+          "title": "1399 memory canonical summary",
+          "file_path": "docs/research/domains/memory/1399_memory_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5917479847028562,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "4e4125f5-b417-4682-abb9-13ed7e8c1642",
+          "title": "SESSION 1500 SPORTS ARC OPEN",
+          "file_path": "docs/handoffs/SESSION_1500_SPORTS_ARC_OPEN.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5914751899373722,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "879e789c-3f94-427b-b432-111917a1dd72",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5907038682052176,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "4ff9ed96-d5e6-4edc-82a0-daf3f324ac47",
+          "title": "1304 memory docs rag boundary audit",
+          "file_path": "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5880982163576909,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "81fdd399-263a-43c5-b8b1-58bb7cc4e2e0",
+          "title": "2699 pa canonical summary",
+          "file_path": "docs/research/domains/pa/2699_pa_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5878185997658297,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "10c9fd18-e9a2-4167-97ee-4ce3709886c4",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6970687189034667,
+          "weighted_score": 1.0456030783552
+        },
+        {
+          "chunk_id": "027c49b0-f96d-4786-bb4e-b4f28ee11f3b",
+          "title": "1400 revenue domain scoping",
+          "file_path": "docs/research/domains/revenue/1400_revenue_domain_scoping.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6647923714355156,
+          "weighted_score": 0.9971885571532735
+        },
+        {
+          "chunk_id": "e1459f47-e385-4067-9ea5-ef365a72700f",
+          "title": "SESSION 2202 FRONTEND WEBSOCKET CONSUMER UI RENDER HINT ENVELOPE AUDIT",
+          "file_path": "docs/handoffs/SESSION_2202_FRONTEND_WEBSOCKET_CONSUMER_UI_RENDER_HINT_ENVELOPE_AUDIT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6514806172892168,
+          "weighted_score": 0.9772209259338251
+        },
+        {
+          "chunk_id": "495140ce-86ab-4373-b62f-6de315f51f02",
+          "title": "ARCHITECTURE INDEX",
+          "file_path": "docs/research/ARCHITECTURE_INDEX.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6322938612528771,
+          "weighted_score": 0.9484407918793156
+        },
+        {
+          "chunk_id": "bd839fd3-98d4-495e-999e-4bb8822bb9b7",
+          "title": "SESSION 2401 AUTH P1 CAT A",
+          "file_path": "docs/handoffs/SESSION_2401_AUTH_P1_CAT_A.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5927700210928211,
+          "weighted_score": 0.8891550316392316
+        },
+        {
+          "chunk_id": "a7976e59-73f6-4025-8a48-1cdf557758bb",
+          "title": "1399 memory canonical summary",
+          "file_path": "docs/research/domains/memory/1399_memory_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5917479847028562,
+          "weighted_score": 0.8876219770542843
+        },
+        {
+          "chunk_id": "4e4125f5-b417-4682-abb9-13ed7e8c1642",
+          "title": "SESSION 1500 SPORTS ARC OPEN",
+          "file_path": "docs/handoffs/SESSION_1500_SPORTS_ARC_OPEN.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5914751899373722,
+          "weighted_score": 0.8872127849060584
+        },
+        {
+          "chunk_id": "879e789c-3f94-427b-b432-111917a1dd72",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5907038682052176,
+          "weighted_score": 0.8860558023078264
+        },
+        {
+          "chunk_id": "4ff9ed96-d5e6-4edc-82a0-daf3f324ac47",
+          "title": "1304 memory docs rag boundary audit",
+          "file_path": "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5880982163576909,
+          "weighted_score": 0.8821473245365363
+        },
+        {
+          "chunk_id": "81fdd399-263a-43c5-b8b1-58bb7cc4e2e0",
+          "title": "2699 pa canonical summary",
+          "file_path": "docs/research/domains/pa/2699_pa_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5878185997658297,
+          "weighted_score": 0.8817278996487445
+        }
+      ],
+      "workspace_canonical_filter": [
+        {
+          "chunk_id": "de0d7cc8-028f-40c7-83c0-e48ef464fade",
+          "title": "MANIFEST_v20260707",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5960394612474047,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "2e06349e-113c-4414-a245-4832afe6e99a",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5552130369591415,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "49b3f29f-7f99-4e39-a536-3291d292afc9",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5205930970313971,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "7611e71f-098b-43cf-b778-d8aafb98e8e4",
+          "title": "0010_RESEARCH_OPERATING_PROTOCOL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.513205862673056,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "7f6d365d-2c16-453a-998e-f4c0f43949ab",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4948830451930667,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "06652b10-faa2-4c77-a941-73802d7c0d32",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.46741729827498824,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "616da86c-75fd-40c0-ac12-df07cbc4f7c7",
+          "title": "MANIFEST_v20260707",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.45561510563047336,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "9ccad400-7c6d-4898-900f-169d2f970721",
+          "title": "0010_RESEARCH_OPERATING_PROTOCOL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.453826235838247,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "6a334ca1-7405-4e1d-a08d-63a5d6cab176",
+          "title": "MANIFEST_v20260707",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4511773041610323,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "5e90c889-f611-4a89-a6bf-a94a89195d29",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4431366124860803,
+          "weighted_score": null
+        }
+      ]
+    },
+    {
+      "query": "Rigby PA function calling GPT-5.2",
+      "default": [
+        {
+          "chunk_id": "4e3cc8f4-3128-4661-bba1-48fc6a78c8fa",
+          "title": "Session 1899 \u2014 Group 1800 HumanAttention / Feedback / Learning xx99 canonical summary + arc close",
+          "file_path": "docs/handoffs/SESSION_1899_HUMAN_ATTENTION_XX99_CANONICAL_SUMMARY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5439988899206538,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "e5786f7e-41b5-4480-a944-09187b52df6a",
+          "title": "SESSION 2001 EVENT INTEGRATION ARCHITECTURE P1 CAT A EVENTBUS PRODUCER CONSUMER MAP",
+          "file_path": "docs/handoffs/SESSION_2001_EVENT_INTEGRATION_ARCHITECTURE_P1_CAT_A_EVENTBUS_PRODUCER_CONSUMER_MAP.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.528389333498219,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "dddf5756-a087-4baa-89ef-2824f00ee1e9",
+          "title": "1805 human attention cat e verification loop child audit",
+          "file_path": "docs/research/domains/human_attention/1805_human_attention_cat_e_verification_loop_child_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5221933140049563,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "64d90674-0410-4ac7-91b0-65793944d9a6",
+          "title": "SESSION 2000 EVENT INTEGRATION ARCHITECTURE PARENT SCOPING",
+          "file_path": "docs/handoffs/SESSION_2000_EVENT_INTEGRATION_ARCHITECTURE_PARENT_SCOPING.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5221727448298468,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "7da59f82-b13f-4ea0-b330-c6c9489e95ce",
+          "title": "2602 pa client contract surface design prep audit",
+          "file_path": "docs/research/domains/pa/2602_pa_client_contract_surface_design_prep_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5198541540748104,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "66f767fb-f5d2-48ca-8db8-faab4ea43aad",
+          "title": "1601 content claims pack deliberation pipeline v2 audit",
+          "file_path": "docs/research/domains/content/1601_content_claims_pack_deliberation_pipeline_v2_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5194101031928623,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "95763fc7-4364-4ed7-9be9-908d2ae00f81",
+          "title": "2199 rag document loading canonical summary",
+          "file_path": "docs/research/domains/rag_document_loading/2199_rag_document_loading_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5170648478802388,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c7cbeb86-3bb0-45c2-b89a-d42419689a50",
+          "title": "1506 sports cross domain integration lens and posture decision framing audit",
+          "file_path": "docs/research/domains/sports/1506_sports_cross_domain_integration_lens_and_posture_decision_framing_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5166701736564412,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "281950e8-b7ae-4f71-98ce-aaaf10a5378e",
+          "title": "2502 api frontend client architecture design prep audit",
+          "file_path": "docs/research/domains/api/2502_api_frontend_client_architecture_design_prep_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5157418282504643,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "1f28e418-ee55-41d6-82e2-365a0f38a7e5",
+          "title": "SESSION 1900 AUTHORITY ENFORCEMENT ARC OPEN",
+          "file_path": "docs/handoffs/SESSION_1900_AUTHORITY_ENFORCEMENT_ARC_OPEN.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5129630605454557,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "4e3cc8f4-3128-4661-bba1-48fc6a78c8fa",
+          "title": "Session 1899 \u2014 Group 1800 HumanAttention / Feedback / Learning xx99 canonical summary + arc close",
+          "file_path": "docs/handoffs/SESSION_1899_HUMAN_ATTENTION_XX99_CANONICAL_SUMMARY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5439988899206538,
+          "weighted_score": 0.8159983348809807
+        },
+        {
+          "chunk_id": "e5786f7e-41b5-4480-a944-09187b52df6a",
+          "title": "SESSION 2001 EVENT INTEGRATION ARCHITECTURE P1 CAT A EVENTBUS PRODUCER CONSUMER MAP",
+          "file_path": "docs/handoffs/SESSION_2001_EVENT_INTEGRATION_ARCHITECTURE_P1_CAT_A_EVENTBUS_PRODUCER_CONSUMER_MAP.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.528389333498219,
+          "weighted_score": 0.7925840002473286
+        },
+        {
+          "chunk_id": "dddf5756-a087-4baa-89ef-2824f00ee1e9",
+          "title": "1805 human attention cat e verification loop child audit",
+          "file_path": "docs/research/domains/human_attention/1805_human_attention_cat_e_verification_loop_child_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5221933140049563,
+          "weighted_score": 0.7832899710074344
+        },
+        {
+          "chunk_id": "64d90674-0410-4ac7-91b0-65793944d9a6",
+          "title": "SESSION 2000 EVENT INTEGRATION ARCHITECTURE PARENT SCOPING",
+          "file_path": "docs/handoffs/SESSION_2000_EVENT_INTEGRATION_ARCHITECTURE_PARENT_SCOPING.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5221727448298468,
+          "weighted_score": 0.7832591172447702
+        },
+        {
+          "chunk_id": "7da59f82-b13f-4ea0-b330-c6c9489e95ce",
+          "title": "2602 pa client contract surface design prep audit",
+          "file_path": "docs/research/domains/pa/2602_pa_client_contract_surface_design_prep_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5198541540748104,
+          "weighted_score": 0.7797812311122156
+        },
+        {
+          "chunk_id": "66f767fb-f5d2-48ca-8db8-faab4ea43aad",
+          "title": "1601 content claims pack deliberation pipeline v2 audit",
+          "file_path": "docs/research/domains/content/1601_content_claims_pack_deliberation_pipeline_v2_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5194101031928623,
+          "weighted_score": 0.7791151547892934
+        },
+        {
+          "chunk_id": "95763fc7-4364-4ed7-9be9-908d2ae00f81",
+          "title": "2199 rag document loading canonical summary",
+          "file_path": "docs/research/domains/rag_document_loading/2199_rag_document_loading_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5170648478802388,
+          "weighted_score": 0.7755972718203581
+        },
+        {
+          "chunk_id": "c7cbeb86-3bb0-45c2-b89a-d42419689a50",
+          "title": "1506 sports cross domain integration lens and posture decision framing audit",
+          "file_path": "docs/research/domains/sports/1506_sports_cross_domain_integration_lens_and_posture_decision_framing_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5166701736564412,
+          "weighted_score": 0.7750052604846618
+        },
+        {
+          "chunk_id": "281950e8-b7ae-4f71-98ce-aaaf10a5378e",
+          "title": "2502 api frontend client architecture design prep audit",
+          "file_path": "docs/research/domains/api/2502_api_frontend_client_architecture_design_prep_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5157418282504643,
+          "weighted_score": 0.7736127423756964
+        },
+        {
+          "chunk_id": "1f28e418-ee55-41d6-82e2-365a0f38a7e5",
+          "title": "SESSION 1900 AUTHORITY ENFORCEMENT ARC OPEN",
+          "file_path": "docs/handoffs/SESSION_1900_AUTHORITY_ENFORCEMENT_ARC_OPEN.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5129630605454557,
+          "weighted_score": 0.7694445908181835
+        }
+      ],
+      "workspace_canonical_filter": [
+        {
+          "chunk_id": "f2e0b334-af61-45bf-a60d-2d2275002d2f",
+          "title": "MANIFEST_v20260707",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.40831512536108394,
+          "weighted_score": null
+        }
+      ]
+    },
+    {
+      "query": "Celery worker long_running queue",
+      "default": [
+        {
+          "chunk_id": "d5017c8f-950e-4524-826a-903ae81218d9",
+          "title": "celery workers",
+          "file_path": "docs/topics/celery-workers.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6388508143828772,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "1d62a8ae-d5e7-44e0-bd8c-27ab96a6b5b1",
+          "title": "SESSION 1158 CORPUS NARRATIVE PROGRAM",
+          "file_path": "docs/handoffs/SESSION_1158_CORPUS_NARRATIVE_PROGRAM.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5798381497177129,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "4cf0a008-15a9-4802-a665-b79ea6ba71b7",
+          "title": "WORKERS AND INFRASTRUCTURE",
+          "file_path": "docs/narratives/WORKERS_AND_INFRASTRUCTURE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5763497590030753,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "d861364f-ec30-4287-9f1c-d39d3ae1fb34",
+          "title": "WORKERS AND INFRASTRUCTURE",
+          "file_path": "docs/narratives/WORKERS_AND_INFRASTRUCTURE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5740068599170384,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "6e53fa67-6c3e-44c9-9bdf-d5d21a7e8fa4",
+          "title": "SYSTEM ARCHITECTURE MAP",
+          "file_path": "docs/architecture/SYSTEM_ARCHITECTURE_MAP.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5627841584846913,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "455c67ad-cbbd-4605-9aea-4512cd21d0ba",
+          "title": "Integration Roadmap 2026: From 45% to 95% Autonomous",
+          "file_path": "docs/roadmap/INTEGRATION_ROADMAP_2026.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5608293829447462,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "3d1f7fd6-e888-4d62-94ce-d5d54d43367e",
+          "title": "platform architecture inventory",
+          "file_path": "docs/research/platform_architecture_inventory.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5583564221507102,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c22f9e85-ba90-419b-84cd-c04639a05856",
+          "title": "Session 1211 \u2014 URC v0.1 Phase B extension to 3 more agents + media gate bypass hotfix",
+          "file_path": "docs/handoffs/SESSION_1211_PHASE_B_EXTENSION_THREE_AGENTS.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5578791038145106,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "be005ef9-7669-42f1-8f14-f228ee7f2a3e",
+          "title": "SESSION 1063 PA TOOLS DAVINCI DEPLOY",
+          "file_path": "docs/handoffs/SESSION_1063_PA_TOOLS_DAVINCI_DEPLOY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5569437056522988,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "60cbc5d4-57d9-4a19-9039-a8fe45b1eeb0",
+          "title": "platform architecture inventory",
+          "file_path": "docs/research/platform_architecture_inventory.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5400134124840976,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "d5017c8f-950e-4524-826a-903ae81218d9",
+          "title": "celery workers",
+          "file_path": "docs/topics/celery-workers.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6388508143828772,
+          "weighted_score": 0.9582762215743157
+        },
+        {
+          "chunk_id": "1d62a8ae-d5e7-44e0-bd8c-27ab96a6b5b1",
+          "title": "SESSION 1158 CORPUS NARRATIVE PROGRAM",
+          "file_path": "docs/handoffs/SESSION_1158_CORPUS_NARRATIVE_PROGRAM.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5798381497177129,
+          "weighted_score": 0.8697572245765692
+        },
+        {
+          "chunk_id": "4cf0a008-15a9-4802-a665-b79ea6ba71b7",
+          "title": "WORKERS AND INFRASTRUCTURE",
+          "file_path": "docs/narratives/WORKERS_AND_INFRASTRUCTURE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5763497590030753,
+          "weighted_score": 0.8645246385046129
+        },
+        {
+          "chunk_id": "d861364f-ec30-4287-9f1c-d39d3ae1fb34",
+          "title": "WORKERS AND INFRASTRUCTURE",
+          "file_path": "docs/narratives/WORKERS_AND_INFRASTRUCTURE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5740068599170384,
+          "weighted_score": 0.8610102898755576
+        },
+        {
+          "chunk_id": "6e53fa67-6c3e-44c9-9bdf-d5d21a7e8fa4",
+          "title": "SYSTEM ARCHITECTURE MAP",
+          "file_path": "docs/architecture/SYSTEM_ARCHITECTURE_MAP.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5627841584846913,
+          "weighted_score": 0.844176237727037
+        },
+        {
+          "chunk_id": "455c67ad-cbbd-4605-9aea-4512cd21d0ba",
+          "title": "Integration Roadmap 2026: From 45% to 95% Autonomous",
+          "file_path": "docs/roadmap/INTEGRATION_ROADMAP_2026.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5608293829447462,
+          "weighted_score": 0.8412440744171192
+        },
+        {
+          "chunk_id": "3d1f7fd6-e888-4d62-94ce-d5d54d43367e",
+          "title": "platform architecture inventory",
+          "file_path": "docs/research/platform_architecture_inventory.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5583564221507102,
+          "weighted_score": 0.8375346332260654
+        },
+        {
+          "chunk_id": "c22f9e85-ba90-419b-84cd-c04639a05856",
+          "title": "Session 1211 \u2014 URC v0.1 Phase B extension to 3 more agents + media gate bypass hotfix",
+          "file_path": "docs/handoffs/SESSION_1211_PHASE_B_EXTENSION_THREE_AGENTS.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5578791038145106,
+          "weighted_score": 0.8368186557217658
+        },
+        {
+          "chunk_id": "be005ef9-7669-42f1-8f14-f228ee7f2a3e",
+          "title": "SESSION 1063 PA TOOLS DAVINCI DEPLOY",
+          "file_path": "docs/handoffs/SESSION_1063_PA_TOOLS_DAVINCI_DEPLOY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5569437056522988,
+          "weighted_score": 0.8354155584784482
+        },
+        {
+          "chunk_id": "60cbc5d4-57d9-4a19-9039-a8fe45b1eeb0",
+          "title": "platform architecture inventory",
+          "file_path": "docs/research/platform_architecture_inventory.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5400134124840976,
+          "weighted_score": 0.8100201187261464
+        }
+      ],
+      "workspace_canonical_filter": []
+    },
+    {
+      "query": "AGENT_MAP agent routing",
+      "default": [
+        {
+          "chunk_id": "d7191736-0c61-4e49-957a-7b7d00804d80",
+          "title": "Platform Master Inventory",
+          "file_path": "docs/PLATFORM_INVENTORY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.626230417328704,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "524c1d9d-b6da-40c4-ac41-0e7872fbd752",
+          "title": "RESEARCH OPERATING SYSTEM",
+          "file_path": "docs/research/process/RESEARCH_OPERATING_SYSTEM.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6013054605407917,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "7d4f00b1-ebec-4c71-982c-970e5bdc8f26",
+          "title": "SESSION 1127 FLEET ROUTING PHASE 2A",
+          "file_path": "docs/handoffs/SESSION_1127_FLEET_ROUTING_PHASE_2A.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5792007268492149,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c0781b76-84b4-4648-b9ec-cb4a027a2632",
+          "title": "SESSION 1128 FLEET BRAIN BRIDGE ROUTING",
+          "file_path": "docs/handoffs/SESSION_1128_FLEET_BRAIN_BRIDGE_ROUTING.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5784762871934219,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "23562e59-2834-4352-8219-0847117f592e",
+          "title": "WIREMAP",
+          "file_path": "docs/WIREMAP.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5781864263763913,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "ea018368-2f14-49c7-b914-b92f76dce0fa",
+          "title": "Phase 1 Discovery - Complete Summary",
+          "file_path": "docs/audits/PHASE_1_DISCOVERY_SUMMARY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5566779412276729,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "81daf069-33d7-477e-974d-10ab0a362aec",
+          "title": "Agent 1.2: Agents Discovery",
+          "file_path": "docs/audits/discovery_agents.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5561977320993939,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "0164cdd3-7245-447a-91da-bfa4dfbcee24",
+          "title": "AGENTS AND AUTONOMY",
+          "file_path": "docs/narratives/AGENTS_AND_AUTONOMY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5526464687134178,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "243e02fd-dae7-4521-949e-363071647bec",
+          "title": "Platform Master Inventory",
+          "file_path": "docs/PLATFORM_INVENTORY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5520312398056432,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "5c5c985e-69b8-4810-978f-f794f3f62a5d",
+          "title": "Agent 2.11: Development Agents Audit",
+          "file_path": "docs/audits/audit_development_agents.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5489430090202447,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "d7191736-0c61-4e49-957a-7b7d00804d80",
+          "title": "Platform Master Inventory",
+          "file_path": "docs/PLATFORM_INVENTORY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.626230417328704,
+          "weighted_score": 0.9393456259930559
+        },
+        {
+          "chunk_id": "524c1d9d-b6da-40c4-ac41-0e7872fbd752",
+          "title": "RESEARCH OPERATING SYSTEM",
+          "file_path": "docs/research/process/RESEARCH_OPERATING_SYSTEM.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6013054605407917,
+          "weighted_score": 0.9019581908111876
+        },
+        {
+          "chunk_id": "7d4f00b1-ebec-4c71-982c-970e5bdc8f26",
+          "title": "SESSION 1127 FLEET ROUTING PHASE 2A",
+          "file_path": "docs/handoffs/SESSION_1127_FLEET_ROUTING_PHASE_2A.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5792007268492149,
+          "weighted_score": 0.8688010902738224
+        },
+        {
+          "chunk_id": "c0781b76-84b4-4648-b9ec-cb4a027a2632",
+          "title": "SESSION 1128 FLEET BRAIN BRIDGE ROUTING",
+          "file_path": "docs/handoffs/SESSION_1128_FLEET_BRAIN_BRIDGE_ROUTING.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5784762871934219,
+          "weighted_score": 0.8677144307901329
+        },
+        {
+          "chunk_id": "23562e59-2834-4352-8219-0847117f592e",
+          "title": "WIREMAP",
+          "file_path": "docs/WIREMAP.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5781864263763913,
+          "weighted_score": 0.867279639564587
+        },
+        {
+          "chunk_id": "ea018368-2f14-49c7-b914-b92f76dce0fa",
+          "title": "Phase 1 Discovery - Complete Summary",
+          "file_path": "docs/audits/PHASE_1_DISCOVERY_SUMMARY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5566779412276729,
+          "weighted_score": 0.8350169118415094
+        },
+        {
+          "chunk_id": "81daf069-33d7-477e-974d-10ab0a362aec",
+          "title": "Agent 1.2: Agents Discovery",
+          "file_path": "docs/audits/discovery_agents.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5561977320993939,
+          "weighted_score": 0.8342965981490909
+        },
+        {
+          "chunk_id": "0164cdd3-7245-447a-91da-bfa4dfbcee24",
+          "title": "AGENTS AND AUTONOMY",
+          "file_path": "docs/narratives/AGENTS_AND_AUTONOMY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5526464687134178,
+          "weighted_score": 0.8289697030701267
+        },
+        {
+          "chunk_id": "243e02fd-dae7-4521-949e-363071647bec",
+          "title": "Platform Master Inventory",
+          "file_path": "docs/PLATFORM_INVENTORY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5520312398056432,
+          "weighted_score": 0.8280468597084647
+        },
+        {
+          "chunk_id": "5c5c985e-69b8-4810-978f-f794f3f62a5d",
+          "title": "Agent 2.11: Development Agents Audit",
+          "file_path": "docs/audits/audit_development_agents.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5489430090202447,
+          "weighted_score": 0.8234145135303671
+        }
+      ],
+      "workspace_canonical_filter": []
+    },
+    {
+      "query": "signal handler post_save Deliverable",
+      "default": [
+        {
+          "chunk_id": "b97bbdaa-f119-42db-846c-ba771758ed22",
+          "title": "1603 content deliverable base variants audit",
+          "file_path": "docs/research/domains/content/1603_content_deliverable_base_variants_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5690503145097661,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "10251080-70f8-4441-8e31-59c124fc419f",
+          "title": "1603 content deliverable base variants audit",
+          "file_path": "docs/research/domains/content/1603_content_deliverable_base_variants_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5004676934553131,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "64d4ddf2-50f5-4fd6-aa56-9cbae4bfc935",
+          "title": "1603 content deliverable base variants audit",
+          "file_path": "docs/research/domains/content/1603_content_deliverable_base_variants_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4932599531658488,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "82205272-611d-4064-863c-f3c0c58e1b06",
+          "title": "1604 content publish gate publish rails audit",
+          "file_path": "docs/research/domains/content/1604_content_publish_gate_publish_rails_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.49048827410443363,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "3091fbca-2308-4475-8aaf-c500645c990d",
+          "title": "SESSION 1168 BUGS AND OPS VISIBILITY",
+          "file_path": "docs/handoffs/SESSION_1168_BUGS_AND_OPS_VISIBILITY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4900631471125245,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "f817ced3-5057-4a19-aa8c-1a31a5335cc9",
+          "title": "1901 authority enforcement cat a actor role propagation design",
+          "file_path": "docs/research/domains/authority_enforcement/1901_authority_enforcement_cat_a_actor_role_propagation_design.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.48793132559868213,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "1ab288c7-f681-4032-96fe-819a8e66e1b8",
+          "title": "1603 content deliverable base variants audit",
+          "file_path": "docs/research/domains/content/1603_content_deliverable_base_variants_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.48315174986499176,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "08c86a93-fb89-4687-8b3c-79f8e300cfe1",
+          "title": "1604 content publish gate publish rails audit",
+          "file_path": "docs/research/domains/content/1604_content_publish_gate_publish_rails_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4815760327998688,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "fef951e7-0bf8-4a3f-a3d7-1074a93296d3",
+          "title": "1603 content deliverable base variants audit",
+          "file_path": "docs/research/domains/content/1603_content_deliverable_base_variants_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.480249144945637,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "aec7dc09-4a98-4ef3-b4e0-8f3495b45b43",
+          "title": "1604 content publish gate publish rails audit",
+          "file_path": "docs/research/domains/content/1604_content_publish_gate_publish_rails_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4759274045688606,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "b97bbdaa-f119-42db-846c-ba771758ed22",
+          "title": "1603 content deliverable base variants audit",
+          "file_path": "docs/research/domains/content/1603_content_deliverable_base_variants_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5690503145097661,
+          "weighted_score": 0.8535754717646491
+        },
+        {
+          "chunk_id": "10251080-70f8-4441-8e31-59c124fc419f",
+          "title": "1603 content deliverable base variants audit",
+          "file_path": "docs/research/domains/content/1603_content_deliverable_base_variants_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5004676934553131,
+          "weighted_score": 0.7507015401829695
+        },
+        {
+          "chunk_id": "64d4ddf2-50f5-4fd6-aa56-9cbae4bfc935",
+          "title": "1603 content deliverable base variants audit",
+          "file_path": "docs/research/domains/content/1603_content_deliverable_base_variants_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4932599531658488,
+          "weighted_score": 0.7398899297487732
+        },
+        {
+          "chunk_id": "82205272-611d-4064-863c-f3c0c58e1b06",
+          "title": "1604 content publish gate publish rails audit",
+          "file_path": "docs/research/domains/content/1604_content_publish_gate_publish_rails_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.49048827410443363,
+          "weighted_score": 0.7357324111566504
+        },
+        {
+          "chunk_id": "3091fbca-2308-4475-8aaf-c500645c990d",
+          "title": "SESSION 1168 BUGS AND OPS VISIBILITY",
+          "file_path": "docs/handoffs/SESSION_1168_BUGS_AND_OPS_VISIBILITY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4900631471125245,
+          "weighted_score": 0.7350947206687868
+        },
+        {
+          "chunk_id": "f817ced3-5057-4a19-aa8c-1a31a5335cc9",
+          "title": "1901 authority enforcement cat a actor role propagation design",
+          "file_path": "docs/research/domains/authority_enforcement/1901_authority_enforcement_cat_a_actor_role_propagation_design.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.48793132559868213,
+          "weighted_score": 0.7318969883980232
+        },
+        {
+          "chunk_id": "1ab288c7-f681-4032-96fe-819a8e66e1b8",
+          "title": "1603 content deliverable base variants audit",
+          "file_path": "docs/research/domains/content/1603_content_deliverable_base_variants_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.48315174986499176,
+          "weighted_score": 0.7247276247974876
+        },
+        {
+          "chunk_id": "08c86a93-fb89-4687-8b3c-79f8e300cfe1",
+          "title": "1604 content publish gate publish rails audit",
+          "file_path": "docs/research/domains/content/1604_content_publish_gate_publish_rails_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4815760327998688,
+          "weighted_score": 0.7223640491998032
+        },
+        {
+          "chunk_id": "fef951e7-0bf8-4a3f-a3d7-1074a93296d3",
+          "title": "1603 content deliverable base variants audit",
+          "file_path": "docs/research/domains/content/1603_content_deliverable_base_variants_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.480249144945637,
+          "weighted_score": 0.7203737174184555
+        },
+        {
+          "chunk_id": "aec7dc09-4a98-4ef3-b4e0-8f3495b45b43",
+          "title": "1604 content publish gate publish rails audit",
+          "file_path": "docs/research/domains/content/1604_content_publish_gate_publish_rails_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4759274045688606,
+          "weighted_score": 0.7138911068532909
+        }
+      ],
+      "workspace_canonical_filter": [
+        {
+          "chunk_id": "5315eed0-e951-4035-a797-834d5fe344b5",
+          "title": "0130_ADR_AUTHORITY_AWARE_RETRIEVAL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.48200141267777297,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "79b3f2f3-6255-45b0-8ace-d7b02a5594ee",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4819209544744434,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "9a70c17a-88cd-4a4a-adbb-48ecaac6f473",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4819013060768046,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "9ef72240-9259-41ed-a9ff-d8f05ea15a96",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.47565485759058246,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "ba97f6de-2a32-4885-9e9b-f6186e4769d6",
+          "title": "MANIFEST_v20260707",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4755554872100294,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "52f0e8c8-33f6-48b6-8719-342ed05cff7c",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4485101475755138,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "efb62512-b5cf-44dd-a051-813eb039e132",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.41689367149601475,
+          "weighted_score": null
+        }
+      ]
+    },
+    {
+      "query": "RAG embedding pgvector cosine similarity",
+      "default": [
+        {
+          "chunk_id": "392688b0-d112-44f5-94f3-fb6d19eca57a",
+          "title": "MEMORY SYSTEM ARCHITECTURE",
+          "file_path": "docs/architecture/MEMORY_SYSTEM_ARCHITECTURE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5355018638775297,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "5acaa037-14b0-471c-bd33-4530ac072b5f",
+          "title": "1304 memory docs rag boundary audit",
+          "file_path": "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5267843978491293,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "68e97f31-70de-4dff-8fe5-7026b7cc43ce",
+          "title": "Session 731 - Embedding System Verification & Frontend Gap Analysis",
+          "file_path": "docs/audits/SESSION_731_EMBEDDING_SYSTEM_VERIFICATION.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5147559627223927,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "9bb1f9db-ea66-4d82-9a7c-1438beec47b5",
+          "title": "agent system",
+          "file_path": "docs/topics/agent-system.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5048740730393074,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "bf14790f-ca9a-4771-9372-f1b22da4cef9",
+          "title": "Dossier #4: Content Pipeline",
+          "file_path": "docs/audit-2026/04-content-pipeline.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4946437488496467,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "cab9b854-68ee-485b-bb45-d533890b2e98",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.493655827279045,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "62aa6e5c-963f-44cb-9dcc-596dd4b50143",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.48963145433166,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "be63d34b-299c-475e-adfd-c1360134288b",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.48412328586040787,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "f573aa91-d257-4d50-88d6-3d1b3fb1df01",
+          "title": "Session 731 - Embedding System Verification & Frontend Gap Analysis",
+          "file_path": "docs/audits/SESSION_731_EMBEDDING_SYSTEM_VERIFICATION.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.47905518631936306,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "428338a4-44f7-47ae-a849-be780e42d189",
+          "title": "1304 memory docs rag boundary audit",
+          "file_path": "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.46878095238322226,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "392688b0-d112-44f5-94f3-fb6d19eca57a",
+          "title": "MEMORY SYSTEM ARCHITECTURE",
+          "file_path": "docs/architecture/MEMORY_SYSTEM_ARCHITECTURE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5355018638775297,
+          "weighted_score": 0.8032527958162946
+        },
+        {
+          "chunk_id": "5acaa037-14b0-471c-bd33-4530ac072b5f",
+          "title": "1304 memory docs rag boundary audit",
+          "file_path": "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5267843978491293,
+          "weighted_score": 0.790176596773694
+        },
+        {
+          "chunk_id": "68e97f31-70de-4dff-8fe5-7026b7cc43ce",
+          "title": "Session 731 - Embedding System Verification & Frontend Gap Analysis",
+          "file_path": "docs/audits/SESSION_731_EMBEDDING_SYSTEM_VERIFICATION.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5147559627223927,
+          "weighted_score": 0.772133944083589
+        },
+        {
+          "chunk_id": "9bb1f9db-ea66-4d82-9a7c-1438beec47b5",
+          "title": "agent system",
+          "file_path": "docs/topics/agent-system.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5048740730393074,
+          "weighted_score": 0.7573111095589611
+        },
+        {
+          "chunk_id": "bf14790f-ca9a-4771-9372-f1b22da4cef9",
+          "title": "Dossier #4: Content Pipeline",
+          "file_path": "docs/audit-2026/04-content-pipeline.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4946437488496467,
+          "weighted_score": 0.74196562327447
+        },
+        {
+          "chunk_id": "cab9b854-68ee-485b-bb45-d533890b2e98",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.493655827279045,
+          "weighted_score": 0.7404837409185675
+        },
+        {
+          "chunk_id": "62aa6e5c-963f-44cb-9dcc-596dd4b50143",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.48963145433166,
+          "weighted_score": 0.73444718149749
+        },
+        {
+          "chunk_id": "be63d34b-299c-475e-adfd-c1360134288b",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.48412328586040787,
+          "weighted_score": 0.7261849287906118
+        },
+        {
+          "chunk_id": "f573aa91-d257-4d50-88d6-3d1b3fb1df01",
+          "title": "Session 731 - Embedding System Verification & Frontend Gap Analysis",
+          "file_path": "docs/audits/SESSION_731_EMBEDDING_SYSTEM_VERIFICATION.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.47905518631936306,
+          "weighted_score": 0.7185827794790446
+        },
+        {
+          "chunk_id": "428338a4-44f7-47ae-a849-be780e42d189",
+          "title": "1304 memory docs rag boundary audit",
+          "file_path": "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.46878095238322226,
+          "weighted_score": 0.7031714285748334
+        }
+      ],
+      "workspace_canonical_filter": []
+    },
+    {
+      "query": "session handoff Cycle 1A implementation",
+      "default": [
+        {
+          "chunk_id": "1da721de-a068-408c-b9d7-cf0367193498",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6597528277455189,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "953e2c11-a4f9-4358-aef2-0afa4af4b5c6",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6543830305862719,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "879eeb2a-d85a-40c6-87e6-5e088f747524",
+          "title": "1504 sports betting content pipeline audit",
+          "file_path": "docs/research/domains/sports/1504_sports_betting_content_pipeline_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6489531160107153,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "d9a9d22c-8caf-452a-b2b0-dc180cf15ca6",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6236729024448974,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "042ffc84-ca58-4478-9f1f-cadb35fcd546",
+          "title": "Session 1178 \u2014 Phase 2 auto-wake shipped + live-verified + TTL hotfix",
+          "file_path": "docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6107673103355136,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "9f9a381f-6a4b-4d6e-820f-905b67c02a21",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6025976153495114,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "42c7c23f-473e-40f4-9adc-9cbfc503db9c",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5776201051577359,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c1de4690-784a-40c1-b534-5b8fa498abdb",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5707071849557908,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "5b0a12de-56df-4698-a4b9-9d657c6fa68e",
+          "title": "SESSION 2000 EVENT INTEGRATION ARCHITECTURE PARENT SCOPING",
+          "file_path": "docs/handoffs/SESSION_2000_EVENT_INTEGRATION_ARCHITECTURE_PARENT_SCOPING.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5706793275793486,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "309c961a-6978-4668-af2e-82a7c4b1a61e",
+          "title": "2502 api frontend client architecture design prep audit",
+          "file_path": "docs/research/domains/api/2502_api_frontend_client_architecture_design_prep_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5634790439313196,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "1da721de-a068-408c-b9d7-cf0367193498",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6597528277455189,
+          "weighted_score": 0.9896292416182784
+        },
+        {
+          "chunk_id": "953e2c11-a4f9-4358-aef2-0afa4af4b5c6",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6543830305862719,
+          "weighted_score": 0.9815745458794078
+        },
+        {
+          "chunk_id": "879eeb2a-d85a-40c6-87e6-5e088f747524",
+          "title": "1504 sports betting content pipeline audit",
+          "file_path": "docs/research/domains/sports/1504_sports_betting_content_pipeline_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6489531160107153,
+          "weighted_score": 0.9734296740160728
+        },
+        {
+          "chunk_id": "d9a9d22c-8caf-452a-b2b0-dc180cf15ca6",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6236729024448974,
+          "weighted_score": 0.935509353667346
+        },
+        {
+          "chunk_id": "042ffc84-ca58-4478-9f1f-cadb35fcd546",
+          "title": "Session 1178 \u2014 Phase 2 auto-wake shipped + live-verified + TTL hotfix",
+          "file_path": "docs/handoffs/SESSION_1178_AGENT_AUTO_WAKE_PHASE2.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6107673103355136,
+          "weighted_score": 0.9161509655032704
+        },
+        {
+          "chunk_id": "9f9a381f-6a4b-4d6e-820f-905b67c02a21",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6025976153495114,
+          "weighted_score": 0.9038964230242671
+        },
+        {
+          "chunk_id": "42c7c23f-473e-40f4-9adc-9cbfc503db9c",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5776201051577359,
+          "weighted_score": 0.8664301577366038
+        },
+        {
+          "chunk_id": "c1de4690-784a-40c1-b534-5b8fa498abdb",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5707071849557908,
+          "weighted_score": 0.8560607774336861
+        },
+        {
+          "chunk_id": "5b0a12de-56df-4698-a4b9-9d657c6fa68e",
+          "title": "SESSION 2000 EVENT INTEGRATION ARCHITECTURE PARENT SCOPING",
+          "file_path": "docs/handoffs/SESSION_2000_EVENT_INTEGRATION_ARCHITECTURE_PARENT_SCOPING.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5706793275793486,
+          "weighted_score": 0.8560189913690228
+        },
+        {
+          "chunk_id": "309c961a-6978-4668-af2e-82a7c4b1a61e",
+          "title": "2502 api frontend client architecture design prep audit",
+          "file_path": "docs/research/domains/api/2502_api_frontend_client_architecture_design_prep_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5634790439313196,
+          "weighted_score": 0.8452185658969795
+        }
+      ],
+      "workspace_canonical_filter": [
+        {
+          "chunk_id": "69ac0e7c-2dbf-41ec-b9c1-e99252fbb0d4",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.47895292010732726,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "8dd7bb28-4273-4c6b-b301-30d9b58692ad",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.46510558018694004,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "ba30b454-89b1-4805-bc33-d27830371f55",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.44534352941139277,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "2e06349e-113c-4414-a245-4832afe6e99a",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.43313400189723095,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "ad1cc709-afa9-4f28-850a-22e42a1f588f",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4316292137005415,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "ff3f5403-3fe1-4686-8c99-70acd1a7937b",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.43105181424521,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "bd5e4a6e-971f-48d7-927c-15fcac258733",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.42865596761447167,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "e9605058-8a4b-488c-8c24-71698b314b4e",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.414937762310456,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "b4ea6744-f25f-4591-8320-6f2305cb8dcb",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4064434541277604,
+          "weighted_score": null
+        }
+      ]
+    },
+    {
+      "query": "workspace deliverable ratification record",
+      "default": [
+        {
+          "chunk_id": "b4f69b8e-edae-4cd5-b19f-0724baba2c8d",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6676920685048559,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "76592b53-07da-486b-9378-f5476c75526f",
+          "title": "Session 1194 \u2014 Initiatives-First Backbone pivot + Plans A + B shipped",
+          "file_path": "docs/handoffs/SESSION_1194_INITIATIVES_FIRST_BACKBONE_PIVOT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5913657253699791,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "200a0c2e-0488-46de-a9f8-70bc9c44fb13",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5692717221853931,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "4aac0ace-2e74-4713-8dc6-86654d71cfea",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5415171871311659,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "bdd62cc2-31be-40de-b017-64d1a37a409a",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5405787350459178,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c75e7ae8-803c-4cee-a988-697966530fdb",
+          "title": "RESEARCH OPERATING SYSTEM",
+          "file_path": "docs/research/process/RESEARCH_OPERATING_SYSTEM.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5390425866384253,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "f5a8e0a6-ed4e-4aa4-896c-42c076454973",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5386650389716013,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "17ea7420-be3c-4048-a653-62a4b55c18d7",
+          "title": "2099 event integration architecture canonical summary",
+          "file_path": "docs/research/domains/event_integration_architecture/2099_event_integration_architecture_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5287841544431473,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "4bfda111-a34e-4dd7-9382-0370ed320b0a",
+          "title": "SESSION 2101 RAG DOCUMENT LOADING CORPUS STATE REALITY KNOWLEDGE GAP AUDIT",
+          "file_path": "docs/handoffs/SESSION_2101_RAG_DOCUMENT_LOADING_CORPUS_STATE_REALITY_KNOWLEDGE_GAP_AUDIT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5251674593528849,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c1de4690-784a-40c1-b534-5b8fa498abdb",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5228272247598958,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "b4f69b8e-edae-4cd5-b19f-0724baba2c8d",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6676920685048559,
+          "weighted_score": 1.0015381027572838
+        },
+        {
+          "chunk_id": "76592b53-07da-486b-9378-f5476c75526f",
+          "title": "Session 1194 \u2014 Initiatives-First Backbone pivot + Plans A + B shipped",
+          "file_path": "docs/handoffs/SESSION_1194_INITIATIVES_FIRST_BACKBONE_PIVOT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5913657253699791,
+          "weighted_score": 0.8870485880549687
+        },
+        {
+          "chunk_id": "200a0c2e-0488-46de-a9f8-70bc9c44fb13",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5692717221853931,
+          "weighted_score": 0.8539075832780897
+        },
+        {
+          "chunk_id": "4aac0ace-2e74-4713-8dc6-86654d71cfea",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5415171871311659,
+          "weighted_score": 0.8122757806967489
+        },
+        {
+          "chunk_id": "bdd62cc2-31be-40de-b017-64d1a37a409a",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5405787350459178,
+          "weighted_score": 0.8108681025688766
+        },
+        {
+          "chunk_id": "c75e7ae8-803c-4cee-a988-697966530fdb",
+          "title": "RESEARCH OPERATING SYSTEM",
+          "file_path": "docs/research/process/RESEARCH_OPERATING_SYSTEM.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5390425866384253,
+          "weighted_score": 0.808563879957638
+        },
+        {
+          "chunk_id": "f5a8e0a6-ed4e-4aa4-896c-42c076454973",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5386650389716013,
+          "weighted_score": 0.807997558457402
+        },
+        {
+          "chunk_id": "17ea7420-be3c-4048-a653-62a4b55c18d7",
+          "title": "2099 event integration architecture canonical summary",
+          "file_path": "docs/research/domains/event_integration_architecture/2099_event_integration_architecture_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5287841544431473,
+          "weighted_score": 0.793176231664721
+        },
+        {
+          "chunk_id": "4bfda111-a34e-4dd7-9382-0370ed320b0a",
+          "title": "SESSION 2101 RAG DOCUMENT LOADING CORPUS STATE REALITY KNOWLEDGE GAP AUDIT",
+          "file_path": "docs/handoffs/SESSION_2101_RAG_DOCUMENT_LOADING_CORPUS_STATE_REALITY_KNOWLEDGE_GAP_AUDIT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5251674593528849,
+          "weighted_score": 0.7877511890293274
+        },
+        {
+          "chunk_id": "c1de4690-784a-40c1-b534-5b8fa498abdb",
+          "title": "SESSION 2700 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5228272247598958,
+          "weighted_score": 0.7842408371398437
+        }
+      ],
+      "workspace_canonical_filter": [
+        {
+          "chunk_id": "a032fda8-c1da-4acc-95cc-08103a39238f",
+          "title": "MANIFEST_v20260707",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6115079819893874,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "b572d955-877b-42d8-841e-f2bd03c4063e",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.593919148290601,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "fc4073f0-786e-4433-8015-da7c35eff313",
+          "title": "0010_RESEARCH_OPERATING_PROTOCOL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5919260351658395,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "1f9fe219-ec2b-4d78-bf87-8518df577382",
+          "title": "0010_RESEARCH_OPERATING_PROTOCOL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5807753767122293,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "31e25bbb-62cc-4c38-99cd-57d1f07751d3",
+          "title": "0010_RESEARCH_OPERATING_PROTOCOL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5773910965568737,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "ce2ad7eb-915e-40cf-89dc-cd9449aa69a8",
+          "title": "MANIFEST_v20260707",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5567585307777174,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "e1b243ff-a02e-45c4-9cad-56c6ac40bc62",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.556263876877489,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "e18388e2-ebd1-4d3f-8924-4f2edfcffcc1",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5534517336155234,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "aef54c76-07cf-427d-8254-eb2b8139bd85",
+          "title": "0005_PLATFORM_BOOTSTRAP_CONTRACT",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5519797421580852,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "686e78bd-177e-42f2-b67c-7b4e449e664d",
+          "title": "0100_CYCLE_1_OPEN",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5489632804341477,
+          "weighted_score": null
+        }
+      ]
+    },
+    {
+      "query": "content Document raw_content processed_content",
+      "default": [
+        {
+          "chunk_id": "45f4c1e4-cd9c-4df2-b48e-4531f5016656",
+          "title": "SESSION 2101 RAG DOCUMENT LOADING CORPUS STATE REALITY KNOWLEDGE GAP AUDIT",
+          "file_path": "docs/handoffs/SESSION_2101_RAG_DOCUMENT_LOADING_CORPUS_STATE_REALITY_KNOWLEDGE_GAP_AUDIT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4393284030312222,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "1514f9cf-9dc4-4a1a-8855-826f09eaf5aa",
+          "title": "CAPABILITIES",
+          "file_path": "docs/CAPABILITIES.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4272436021857261,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "8de337f1-4bbd-4514-aae8-6be3ab9b9167",
+          "title": "MEMORY SYSTEM ARCHITECTURE",
+          "file_path": "docs/architecture/MEMORY_SYSTEM_ARCHITECTURE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.42181040207753173,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "b6e15125-d02c-4646-b054-25dd35811fae",
+          "title": "SESSION 2102 RAG DOCUMENT LOADING INGESTION CHUNKING EMBEDDING PIPELINE AUDIT",
+          "file_path": "docs/handoffs/SESSION_2102_RAG_DOCUMENT_LOADING_INGESTION_CHUNKING_EMBEDDING_PIPELINE_AUDIT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4147468283283109,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "8b5d67aa-6d32-47d4-a405-0bd2336828fc",
+          "title": "2199 rag document loading canonical summary",
+          "file_path": "docs/research/domains/rag_document_loading/2199_rag_document_loading_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.413772911111441,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "588194d0-f9e3-485a-b0c0-5eb954ae971b",
+          "title": "SESSION 814 DOCUMENTATION ARCHITECTURE",
+          "file_path": "docs/handoffs/SESSION_814_DOCUMENTATION_ARCHITECTURE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4127815541645401,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "43d5980f-e2fb-494c-9635-62c8a105062d",
+          "title": "SESSION 1603 CONTENT CAT D AUDIT",
+          "file_path": "docs/handoffs/SESSION_1603_CONTENT_CAT_D_AUDIT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.412395596039288,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "d1f7bddf-f294-472c-af12-23a197232480",
+          "title": "1304 memory docs rag boundary audit",
+          "file_path": "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4117674540720353,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "446fab79-0044-4517-b7aa-2db1d838626f",
+          "title": "CAPABILITIES",
+          "file_path": "docs/CAPABILITIES.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4108805737047063,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c5e35b03-5c68-4933-93ea-fda9e57236fa",
+          "title": "SESSION 891 DOMAIN CONTENT CONTEXT",
+          "file_path": "docs/handoffs/SESSION_891_DOMAIN_CONTENT_CONTEXT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4107204826696904,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "45f4c1e4-cd9c-4df2-b48e-4531f5016656",
+          "title": "SESSION 2101 RAG DOCUMENT LOADING CORPUS STATE REALITY KNOWLEDGE GAP AUDIT",
+          "file_path": "docs/handoffs/SESSION_2101_RAG_DOCUMENT_LOADING_CORPUS_STATE_REALITY_KNOWLEDGE_GAP_AUDIT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4393284030312222,
+          "weighted_score": 0.6589926045468333
+        },
+        {
+          "chunk_id": "1514f9cf-9dc4-4a1a-8855-826f09eaf5aa",
+          "title": "CAPABILITIES",
+          "file_path": "docs/CAPABILITIES.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4272436021857261,
+          "weighted_score": 0.6408654032785892
+        },
+        {
+          "chunk_id": "8de337f1-4bbd-4514-aae8-6be3ab9b9167",
+          "title": "MEMORY SYSTEM ARCHITECTURE",
+          "file_path": "docs/architecture/MEMORY_SYSTEM_ARCHITECTURE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.42181040207753173,
+          "weighted_score": 0.6327156031162976
+        },
+        {
+          "chunk_id": "b6e15125-d02c-4646-b054-25dd35811fae",
+          "title": "SESSION 2102 RAG DOCUMENT LOADING INGESTION CHUNKING EMBEDDING PIPELINE AUDIT",
+          "file_path": "docs/handoffs/SESSION_2102_RAG_DOCUMENT_LOADING_INGESTION_CHUNKING_EMBEDDING_PIPELINE_AUDIT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4147468283283109,
+          "weighted_score": 0.6221202424924663
+        },
+        {
+          "chunk_id": "8b5d67aa-6d32-47d4-a405-0bd2336828fc",
+          "title": "2199 rag document loading canonical summary",
+          "file_path": "docs/research/domains/rag_document_loading/2199_rag_document_loading_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.413772911111441,
+          "weighted_score": 0.6206593666671615
+        },
+        {
+          "chunk_id": "588194d0-f9e3-485a-b0c0-5eb954ae971b",
+          "title": "SESSION 814 DOCUMENTATION ARCHITECTURE",
+          "file_path": "docs/handoffs/SESSION_814_DOCUMENTATION_ARCHITECTURE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4127815541645401,
+          "weighted_score": 0.6191723312468101
+        },
+        {
+          "chunk_id": "43d5980f-e2fb-494c-9635-62c8a105062d",
+          "title": "SESSION 1603 CONTENT CAT D AUDIT",
+          "file_path": "docs/handoffs/SESSION_1603_CONTENT_CAT_D_AUDIT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.412395596039288,
+          "weighted_score": 0.618593394058932
+        },
+        {
+          "chunk_id": "d1f7bddf-f294-472c-af12-23a197232480",
+          "title": "1304 memory docs rag boundary audit",
+          "file_path": "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4117674540720353,
+          "weighted_score": 0.617651181108053
+        },
+        {
+          "chunk_id": "446fab79-0044-4517-b7aa-2db1d838626f",
+          "title": "CAPABILITIES",
+          "file_path": "docs/CAPABILITIES.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4108805737047063,
+          "weighted_score": 0.6163208605570595
+        },
+        {
+          "chunk_id": "c5e35b03-5c68-4933-93ea-fda9e57236fa",
+          "title": "SESSION 891 DOMAIN CONTENT CONTEXT",
+          "file_path": "docs/handoffs/SESSION_891_DOMAIN_CONTENT_CONTEXT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4107204826696904,
+          "weighted_score": 0.6160807240045356
+        }
+      ],
+      "workspace_canonical_filter": [
+        {
+          "chunk_id": "2bdf1421-ce53-4d08-b9dd-5dceea109a65",
+          "title": "0130_ADR_AUTHORITY_AWARE_RETRIEVAL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4367412856957785,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "efb62512-b5cf-44dd-a051-813eb039e132",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.43473473235447524,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "491dbb96-721c-4eca-bddc-e06f3d0f0369",
+          "title": "MANIFEST_v20260707",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4096038393059733,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "bccd268b-517c-4db2-ad68-ebf52f8e715c",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.4052819785927164,
+          "weighted_score": null
+        }
+      ]
+    },
+    {
+      "query": "spider network intelligence signal",
+      "default": [
+        {
+          "chunk_id": "8871f042-4c37-4782-b574-6942369cdfa1",
+          "title": "SIGNAL INTELLIGENCE",
+          "file_path": "docs/narratives/SIGNAL_INTELLIGENCE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6254745385137809,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "0d2681d8-d585-4819-9069-775ce14ae92d",
+          "title": "PLATFORM WHAT IT IS",
+          "file_path": "docs/PLATFORM_WHAT_IT_IS.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6071776388576785,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "1a354fba-b1f4-4e49-9d75-71fe6365a627",
+          "title": "System Context Pack for Claude Code",
+          "file_path": "docs/plans/CLAUDE_CONTEXT_SYSTEM_PACK.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6041563600967089,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "a74dca54-1fc3-4e55-90fd-8b1eb9e4fbbe",
+          "title": "Dossier #3: Spider Network",
+          "file_path": "docs/audit-2026/03-spiders.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5958447233749419,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "5b96d7ad-e0d4-4a00-9277-f84b7988f42d",
+          "title": "SYSTEM ARCHITECTURE MAP",
+          "file_path": "docs/architecture/SYSTEM_ARCHITECTURE_MAP.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5907379406426132,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "6bc874c4-60bc-4e5a-9e00-fd91815b01b3",
+          "title": "SPIDERS",
+          "file_path": "docs/SPIDERS.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5877417168548906,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "2cc62a21-f19e-417e-9d96-0a55feaa0163",
+          "title": "PLATFORM ARCHITECTURE MAP",
+          "file_path": "docs/architecture/PLATFORM_ARCHITECTURE_MAP.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5712649022620417,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "6380e867-62ee-47fd-82d3-930b4384fe2b",
+          "title": "Agent 2.4: Spider Network Audit",
+          "file_path": "docs/audits/audit_spider_network.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5670282560615734,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "2f837ea6-d9b9-4e50-a3ba-7196e3dc209e",
+          "title": "signal studio BRIEF",
+          "file_path": "docs/apps/signal_studio_BRIEF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5664588325356621,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "91fba1fc-ec96-4dd7-8632-c30f64beaefc",
+          "title": "Dossier #9: Signal Intelligence + Initiative Pipeline",
+          "file_path": "docs/audit-2026/09-signals-initiatives.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5536357332626448,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "8871f042-4c37-4782-b574-6942369cdfa1",
+          "title": "SIGNAL INTELLIGENCE",
+          "file_path": "docs/narratives/SIGNAL_INTELLIGENCE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6254745385137809,
+          "weighted_score": 0.9382118077706714
+        },
+        {
+          "chunk_id": "0d2681d8-d585-4819-9069-775ce14ae92d",
+          "title": "PLATFORM WHAT IT IS",
+          "file_path": "docs/PLATFORM_WHAT_IT_IS.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6071776388576785,
+          "weighted_score": 0.9107664582865178
+        },
+        {
+          "chunk_id": "1a354fba-b1f4-4e49-9d75-71fe6365a627",
+          "title": "System Context Pack for Claude Code",
+          "file_path": "docs/plans/CLAUDE_CONTEXT_SYSTEM_PACK.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.6041563600967089,
+          "weighted_score": 0.9062345401450633
+        },
+        {
+          "chunk_id": "a74dca54-1fc3-4e55-90fd-8b1eb9e4fbbe",
+          "title": "Dossier #3: Spider Network",
+          "file_path": "docs/audit-2026/03-spiders.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5958447233749419,
+          "weighted_score": 0.8937670850624129
+        },
+        {
+          "chunk_id": "5b96d7ad-e0d4-4a00-9277-f84b7988f42d",
+          "title": "SYSTEM ARCHITECTURE MAP",
+          "file_path": "docs/architecture/SYSTEM_ARCHITECTURE_MAP.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5907379406426132,
+          "weighted_score": 0.8861069109639198
+        },
+        {
+          "chunk_id": "6bc874c4-60bc-4e5a-9e00-fd91815b01b3",
+          "title": "SPIDERS",
+          "file_path": "docs/SPIDERS.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5877417168548906,
+          "weighted_score": 0.8816125752823359
+        },
+        {
+          "chunk_id": "2cc62a21-f19e-417e-9d96-0a55feaa0163",
+          "title": "PLATFORM ARCHITECTURE MAP",
+          "file_path": "docs/architecture/PLATFORM_ARCHITECTURE_MAP.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5712649022620417,
+          "weighted_score": 0.8568973533930626
+        },
+        {
+          "chunk_id": "6380e867-62ee-47fd-82d3-930b4384fe2b",
+          "title": "Agent 2.4: Spider Network Audit",
+          "file_path": "docs/audits/audit_spider_network.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5670282560615734,
+          "weighted_score": 0.85054238409236
+        },
+        {
+          "chunk_id": "2f837ea6-d9b9-4e50-a3ba-7196e3dc209e",
+          "title": "signal studio BRIEF",
+          "file_path": "docs/apps/signal_studio_BRIEF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5664588325356621,
+          "weighted_score": 0.8496882488034931
+        },
+        {
+          "chunk_id": "91fba1fc-ec96-4dd7-8632-c30f64beaefc",
+          "title": "Dossier #9: Signal Intelligence + Initiative Pipeline",
+          "file_path": "docs/audit-2026/09-signals-initiatives.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5536357332626448,
+          "weighted_score": 0.8304535998939673
+        }
+      ],
+      "workspace_canonical_filter": []
+    },
+    {
+      "query": "DocumentEmbedding chunk_index embedding_model",
+      "default": [
+        {
+          "chunk_id": "4cde6fed-255d-4b93-b5b8-a8069561a2dc",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.57399606894913,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "3ac1de60-5825-4522-93bf-ea4412b9c15b",
+          "title": "1304 memory docs rag boundary audit",
+          "file_path": "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.565054782027553,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "dfdef24d-6802-4e88-a6cc-3ef906340ef9",
+          "title": "2102 rag document loading ingestion chunking embedding pipeline audit",
+          "file_path": "docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5584688742780654,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "e91d55e5-25fd-476f-b9d3-20540fb78c2c",
+          "title": "Dossier #6: Embeddings + RAG",
+          "file_path": "docs/audit-2026/06-embeddings-rag.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5431331518619238,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c087a70b-0f6f-4083-a363-b3fbe795fb33",
+          "title": "README",
+          "file_path": "docs/topics/README.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5401385281175585,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "09665ba3-afb5-46e1-a424-73b640c87871",
+          "title": "Dossier #6: Embeddings + RAG",
+          "file_path": "docs/audit-2026/06-embeddings-rag.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5374998230318058,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "9cc603e5-abf0-43c8-83b9-e53b81ccb058",
+          "title": "2102 rag document loading ingestion chunking embedding pipeline audit",
+          "file_path": "docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5331441530610824,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "61cc2c30-ac27-4430-895e-5dcde2f9d57c",
+          "title": "Dossier #6: Embeddings + RAG",
+          "file_path": "docs/audit-2026/06-embeddings-rag.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5314770171128247,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "d459c22b-38a6-4506-b536-eaf38fd59da5",
+          "title": "SESSION 2400 AUTH PARENT SCOPING",
+          "file_path": "docs/handoffs/SESSION_2400_AUTH_PARENT_SCOPING.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5284193952157815,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "afaba95e-6f6b-481e-9dbd-5e4bf0d37655",
+          "title": "Dossier #6: Embeddings + RAG",
+          "file_path": "docs/audit-2026/06-embeddings-rag.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5275452492829309,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "4cde6fed-255d-4b93-b5b8-a8069561a2dc",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.57399606894913,
+          "weighted_score": 0.860994103423695
+        },
+        {
+          "chunk_id": "3ac1de60-5825-4522-93bf-ea4412b9c15b",
+          "title": "1304 memory docs rag boundary audit",
+          "file_path": "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.565054782027553,
+          "weighted_score": 0.8475821730413295
+        },
+        {
+          "chunk_id": "dfdef24d-6802-4e88-a6cc-3ef906340ef9",
+          "title": "2102 rag document loading ingestion chunking embedding pipeline audit",
+          "file_path": "docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5584688742780654,
+          "weighted_score": 0.837703311417098
+        },
+        {
+          "chunk_id": "e91d55e5-25fd-476f-b9d3-20540fb78c2c",
+          "title": "Dossier #6: Embeddings + RAG",
+          "file_path": "docs/audit-2026/06-embeddings-rag.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5431331518619238,
+          "weighted_score": 0.8146997277928857
+        },
+        {
+          "chunk_id": "c087a70b-0f6f-4083-a363-b3fbe795fb33",
+          "title": "README",
+          "file_path": "docs/topics/README.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5401385281175585,
+          "weighted_score": 0.8102077921763378
+        },
+        {
+          "chunk_id": "09665ba3-afb5-46e1-a424-73b640c87871",
+          "title": "Dossier #6: Embeddings + RAG",
+          "file_path": "docs/audit-2026/06-embeddings-rag.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5374998230318058,
+          "weighted_score": 0.8062497345477087
+        },
+        {
+          "chunk_id": "9cc603e5-abf0-43c8-83b9-e53b81ccb058",
+          "title": "2102 rag document loading ingestion chunking embedding pipeline audit",
+          "file_path": "docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5331441530610824,
+          "weighted_score": 0.7997162295916236
+        },
+        {
+          "chunk_id": "61cc2c30-ac27-4430-895e-5dcde2f9d57c",
+          "title": "Dossier #6: Embeddings + RAG",
+          "file_path": "docs/audit-2026/06-embeddings-rag.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5314770171128247,
+          "weighted_score": 0.797215525669237
+        },
+        {
+          "chunk_id": "d459c22b-38a6-4506-b536-eaf38fd59da5",
+          "title": "SESSION 2400 AUTH PARENT SCOPING",
+          "file_path": "docs/handoffs/SESSION_2400_AUTH_PARENT_SCOPING.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5284193952157815,
+          "weighted_score": 0.7926290928236723
+        },
+        {
+          "chunk_id": "afaba95e-6f6b-481e-9dbd-5e4bf0d37655",
+          "title": "Dossier #6: Embeddings + RAG",
+          "file_path": "docs/audit-2026/06-embeddings-rag.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5275452492829309,
+          "weighted_score": 0.7913178739243963
+        }
+      ],
+      "workspace_canonical_filter": []
+    },
+    {
+      "query": "canonical governance ratifier authority",
+      "default": [
+        {
+          "chunk_id": "28b86701-235f-4f3e-8535-1e79ed084a66",
+          "title": "RATIFICATION 2026 07 06 first queue",
+          "file_path": "docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5471701897626405,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "6389ce32-b3d7-4f50-ae30-7fff54d6a367",
+          "title": "2504 api permission floor registry rest ws t7 joint design prep audit",
+          "file_path": "docs/research/domains/api/2504_api_permission_floor_registry_rest_ws_t7_joint_design_prep_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5442567819440817,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "adbde64a-23f2-4c44-ae5c-99d2178b4472",
+          "title": "2103 rag document loading retrieval authority framework corpus governance design",
+          "file_path": "docs/research/domains/rag_document_loading/2103_rag_document_loading_retrieval_authority_framework_corpus_governance_design.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5386946512342579,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "e263d5e0-7684-40c3-8bef-4293db9a325f",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5359987554559555,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "4b680a46-80d1-49ff-aa3d-add747a15986",
+          "title": "ARCHITECTURE INDEX",
+          "file_path": "docs/research/ARCHITECTURE_INDEX.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5330901380887765,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c2028657-789a-4079-bd88-aa78e1b82c36",
+          "title": "governance authority evolution",
+          "file_path": "docs/research/governance_authority_evolution.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5313777253430422,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c9f61c3e-7c03-48de-a492-4121bc8fd986",
+          "title": "1900 authority enforcement domain scoping",
+          "file_path": "docs/research/domains/authority_enforcement/1900_authority_enforcement_domain_scoping.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5263940761609445,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "1a2608e1-d0a6-4229-a826-d7e66a56870f",
+          "title": "2504 api permission floor registry rest ws t7 joint design prep audit",
+          "file_path": "docs/research/domains/api/2504_api_permission_floor_registry_rest_ws_t7_joint_design_prep_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.520483513727074,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "0724a810-0474-4489-b265-1ac389b9325c",
+          "title": "2402 authorization permission floor uniformity audit",
+          "file_path": "docs/research/domains/auth/2402_authorization_permission_floor_uniformity_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5189464794421096,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "27d621f6-24e6-4707-8c62-552899c2a1ae",
+          "title": "2299 frontend canonical summary",
+          "file_path": "docs/research/domains/frontend/2299_frontend_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5189360234914284,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "28b86701-235f-4f3e-8535-1e79ed084a66",
+          "title": "RATIFICATION 2026 07 06 first queue",
+          "file_path": "docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5471701897626405,
+          "weighted_score": 0.8207552846439607
+        },
+        {
+          "chunk_id": "6389ce32-b3d7-4f50-ae30-7fff54d6a367",
+          "title": "2504 api permission floor registry rest ws t7 joint design prep audit",
+          "file_path": "docs/research/domains/api/2504_api_permission_floor_registry_rest_ws_t7_joint_design_prep_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5442567819440817,
+          "weighted_score": 0.8163851729161224
+        },
+        {
+          "chunk_id": "adbde64a-23f2-4c44-ae5c-99d2178b4472",
+          "title": "2103 rag document loading retrieval authority framework corpus governance design",
+          "file_path": "docs/research/domains/rag_document_loading/2103_rag_document_loading_retrieval_authority_framework_corpus_governance_design.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5386946512342579,
+          "weighted_score": 0.8080419768513868
+        },
+        {
+          "chunk_id": "e263d5e0-7684-40c3-8bef-4293db9a325f",
+          "title": "SESSION 2701 \u2014 Cycle 1A Implementation-Session Handoff",
+          "file_path": "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5359987554559555,
+          "weighted_score": 0.8039981331839333
+        },
+        {
+          "chunk_id": "4b680a46-80d1-49ff-aa3d-add747a15986",
+          "title": "ARCHITECTURE INDEX",
+          "file_path": "docs/research/ARCHITECTURE_INDEX.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5330901380887765,
+          "weighted_score": 0.7996352071331647
+        },
+        {
+          "chunk_id": "c2028657-789a-4079-bd88-aa78e1b82c36",
+          "title": "governance authority evolution",
+          "file_path": "docs/research/governance_authority_evolution.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5313777253430422,
+          "weighted_score": 0.7970665880145633
+        },
+        {
+          "chunk_id": "c9f61c3e-7c03-48de-a492-4121bc8fd986",
+          "title": "1900 authority enforcement domain scoping",
+          "file_path": "docs/research/domains/authority_enforcement/1900_authority_enforcement_domain_scoping.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5263940761609445,
+          "weighted_score": 0.7895911142414167
+        },
+        {
+          "chunk_id": "1a2608e1-d0a6-4229-a826-d7e66a56870f",
+          "title": "2504 api permission floor registry rest ws t7 joint design prep audit",
+          "file_path": "docs/research/domains/api/2504_api_permission_floor_registry_rest_ws_t7_joint_design_prep_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.520483513727074,
+          "weighted_score": 0.780725270590611
+        },
+        {
+          "chunk_id": "0724a810-0474-4489-b265-1ac389b9325c",
+          "title": "2402 authorization permission floor uniformity audit",
+          "file_path": "docs/research/domains/auth/2402_authorization_permission_floor_uniformity_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5189464794421096,
+          "weighted_score": 0.7784197191631643
+        },
+        {
+          "chunk_id": "27d621f6-24e6-4707-8c62-552899c2a1ae",
+          "title": "2299 frontend canonical summary",
+          "file_path": "docs/research/domains/frontend/2299_frontend_canonical_summary.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5189360234914284,
+          "weighted_score": 0.7784040352371426
+        }
+      ],
+      "workspace_canonical_filter": [
+        {
+          "chunk_id": "afe2b8e9-f5a2-4903-b471-2490fbddeaa0",
+          "title": "0010_RESEARCH_OPERATING_PROTOCOL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.6575158041724736,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c25c8b23-2d91-4a2b-8e94-72d61008c018",
+          "title": "0010_RESEARCH_OPERATING_PROTOCOL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5728650581839875,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "86bfcf54-1071-4249-91ed-157cc1a92da9",
+          "title": "0010_RESEARCH_OPERATING_PROTOCOL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5714654701781702,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "992a087c-194b-4e47-bf31-b92cfdc5cc17",
+          "title": "MANIFEST_v20260707",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5404874405706944,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "9accce4f-4a86-4bb0-9e30-e49f52aa2266",
+          "title": "0010_RESEARCH_OPERATING_PROTOCOL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5380179230330976,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "cf2032ea-ed70-4fe2-9adb-c912d6f4818f",
+          "title": "0010_RESEARCH_OPERATING_PROTOCOL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5323670469686599,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c1d467a8-53be-4bdf-91bf-9b8d58665163",
+          "title": "0005_PLATFORM_BOOTSTRAP_CONTRACT",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5303519843599636,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "38fa23f3-21de-40f7-82ca-45d5ac22ed52",
+          "title": "0010_RESEARCH_OPERATING_PROTOCOL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5264008795154305,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "fc4073f0-786e-4433-8015-da7c35eff313",
+          "title": "0010_RESEARCH_OPERATING_PROTOCOL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.515998067762781,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "6f7d2f71-7732-41c4-978f-d69ee53b9bff",
+          "title": "0010_RESEARCH_OPERATING_PROTOCOL",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5012561354930253,
+          "weighted_score": null
+        }
+      ]
+    },
+    {
+      "query": "file_path docs prefix imported source",
+      "default": [
+        {
+          "chunk_id": "dd651c0a-e8cd-45ca-b61d-d37d4d5e6784",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4707554112867567,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "7d2c2511-54fc-44c0-97ea-bd4f2c7d24dc",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4517318403181976,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "1118d3c6-2e76-48b2-904c-4cad73e6e47b",
+          "title": "2102 rag document loading ingestion chunking embedding pipeline audit",
+          "file_path": "docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.451664888194799,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "0732236f-5cdc-475b-b7d3-9672cdacc369",
+          "title": "DOC LIFECYCLE",
+          "file_path": "docs/00-START-HERE/DOC_LIFECYCLE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4330367095804104,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "6a24d472-5582-462b-83a1-fbef9052f90f",
+          "title": "1304 memory docs rag boundary audit",
+          "file_path": "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4289413040497083,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "0c253e9d-f506-42b5-955d-cb38ddd16b6a",
+          "title": "SESSION 2103 RAG DOCUMENT LOADING RETRIEVAL AUTHORITY FRAMEWORK CORPUS GOVERNANCE DESIGN",
+          "file_path": "docs/handoffs/SESSION_2103_RAG_DOCUMENT_LOADING_RETRIEVAL_AUTHORITY_FRAMEWORK_CORPUS_GOVERNANCE_DESIGN.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.417163637331764,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "af5adea0-a4c2-488d-97dd-c3749c0a09e2",
+          "title": "SESSION 828 AGENT WORK LOGS",
+          "file_path": "docs/handoffs/SESSION_828_AGENT_WORK_LOGS.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4098958165187392,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "296cca59-708a-4907-8462-575ec1cc8e11",
+          "title": "ARCHITECTURE INDEX",
+          "file_path": "docs/research/ARCHITECTURE_INDEX.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4079369538268476,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "d2d46c17-cbcc-4878-bb93-e177156b00bd",
+          "title": "2102 rag document loading ingestion chunking embedding pipeline audit",
+          "file_path": "docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.40768666129971676,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "753e30a8-766d-402a-ae2b-ebcefeeeca76",
+          "title": "2102 rag document loading ingestion chunking embedding pipeline audit",
+          "file_path": "docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4022457330757584,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "dd651c0a-e8cd-45ca-b61d-d37d4d5e6784",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4707554112867567,
+          "weighted_score": 0.706133116930135
+        },
+        {
+          "chunk_id": "7d2c2511-54fc-44c0-97ea-bd4f2c7d24dc",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4517318403181976,
+          "weighted_score": 0.6775977604772964
+        },
+        {
+          "chunk_id": "1118d3c6-2e76-48b2-904c-4cad73e6e47b",
+          "title": "2102 rag document loading ingestion chunking embedding pipeline audit",
+          "file_path": "docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.451664888194799,
+          "weighted_score": 0.6774973322921984
+        },
+        {
+          "chunk_id": "0732236f-5cdc-475b-b7d3-9672cdacc369",
+          "title": "DOC LIFECYCLE",
+          "file_path": "docs/00-START-HERE/DOC_LIFECYCLE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4330367095804104,
+          "weighted_score": 0.6495550643706156
+        },
+        {
+          "chunk_id": "6a24d472-5582-462b-83a1-fbef9052f90f",
+          "title": "1304 memory docs rag boundary audit",
+          "file_path": "docs/research/domains/memory/1304_memory_docs_rag_boundary_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4289413040497083,
+          "weighted_score": 0.6434119560745625
+        },
+        {
+          "chunk_id": "0c253e9d-f506-42b5-955d-cb38ddd16b6a",
+          "title": "SESSION 2103 RAG DOCUMENT LOADING RETRIEVAL AUTHORITY FRAMEWORK CORPUS GOVERNANCE DESIGN",
+          "file_path": "docs/handoffs/SESSION_2103_RAG_DOCUMENT_LOADING_RETRIEVAL_AUTHORITY_FRAMEWORK_CORPUS_GOVERNANCE_DESIGN.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.417163637331764,
+          "weighted_score": 0.625745455997646
+        },
+        {
+          "chunk_id": "af5adea0-a4c2-488d-97dd-c3749c0a09e2",
+          "title": "SESSION 828 AGENT WORK LOGS",
+          "file_path": "docs/handoffs/SESSION_828_AGENT_WORK_LOGS.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4098958165187392,
+          "weighted_score": 0.6148437247781088
+        },
+        {
+          "chunk_id": "296cca59-708a-4907-8462-575ec1cc8e11",
+          "title": "ARCHITECTURE INDEX",
+          "file_path": "docs/research/ARCHITECTURE_INDEX.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4079369538268476,
+          "weighted_score": 0.6119054307402714
+        },
+        {
+          "chunk_id": "d2d46c17-cbcc-4878-bb93-e177156b00bd",
+          "title": "2102 rag document loading ingestion chunking embedding pipeline audit",
+          "file_path": "docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.40768666129971676,
+          "weighted_score": 0.6115299919495751
+        },
+        {
+          "chunk_id": "753e30a8-766d-402a-ae2b-ebcefeeeca76",
+          "title": "2102 rag document loading ingestion chunking embedding pipeline audit",
+          "file_path": "docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4022457330757584,
+          "weighted_score": 0.6033685996136375
+        }
+      ],
+      "workspace_canonical_filter": [
+        {
+          "chunk_id": "9df677c8-81f5-4565-876a-03dbf2b702c4",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.5158985725956126,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "5b7197fb-eece-49f3-8cb3-badff4483410",
+          "title": "0120_ADR_CANONICAL_AUTHORITY_ATTRIBUTE",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.40155901977567776,
+          "weighted_score": null
+        }
+      ]
+    },
+    {
+      "query": "orphan chunk exclusion filter retrieval",
+      "default": [
+        {
+          "chunk_id": "50746ca0-eb85-46bb-8c32-ebdbdd3deb08",
+          "title": "2102 rag document loading ingestion chunking embedding pipeline audit",
+          "file_path": "docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5449694911142291,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "6768f05d-1964-497b-85d1-295aa5aa75ee",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4980090692417103,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "f98dbc42-d0a2-4605-beab-4cf3722f743c",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.49302785824019146,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "9af618c5-75dd-40e2-918f-46b6bb04e2f1",
+          "title": "2104 rag document loading behavior substrate structured observation integration",
+          "file_path": "docs/research/domains/rag_document_loading/2104_rag_document_loading_behavior_substrate_structured_observation_integration.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.48687736821039695,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "76692ccf-515f-4695-98f3-7d9c6a390cae",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4818808941418422,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "5f4d7d42-2d39-4d18-9cee-67ca90911a18",
+          "title": "1300 memory domain scoping",
+          "file_path": "docs/research/domains/memory/1300_memory_domain_scoping.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.47598306181936856,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "ed095755-b19b-45ab-8123-fb1387d6ba68",
+          "title": "SESSION 1304 MEMORY DOCS RAG BOUNDARY",
+          "file_path": "docs/handoffs/SESSION_1304_MEMORY_DOCS_RAG_BOUNDARY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4749948570730381,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "d3b6717c-6d8a-4d92-81a6-3e95cb8eec2b",
+          "title": "ARCHITECTURE INDEX",
+          "file_path": "docs/research/ARCHITECTURE_INDEX.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4587517802551768,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "26fcb7f7-5b6b-4111-a57a-d9efc3d26f5a",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4576563817212982,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "6c45ba56-b97e-4c30-927b-676b65dd777f",
+          "title": "1305 memory runtime correctness audit",
+          "file_path": "docs/research/domains/memory/1305_memory_runtime_correctness_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4553908607745961,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "50746ca0-eb85-46bb-8c32-ebdbdd3deb08",
+          "title": "2102 rag document loading ingestion chunking embedding pipeline audit",
+          "file_path": "docs/research/domains/rag_document_loading/2102_rag_document_loading_ingestion_chunking_embedding_pipeline_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5449694911142291,
+          "weighted_score": 0.8174542366713436
+        },
+        {
+          "chunk_id": "6768f05d-1964-497b-85d1-295aa5aa75ee",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4980090692417103,
+          "weighted_score": 0.7470136038625654
+        },
+        {
+          "chunk_id": "f98dbc42-d0a2-4605-beab-4cf3722f743c",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.49302785824019146,
+          "weighted_score": 0.7395417873602872
+        },
+        {
+          "chunk_id": "9af618c5-75dd-40e2-918f-46b6bb04e2f1",
+          "title": "2104 rag document loading behavior substrate structured observation integration",
+          "file_path": "docs/research/domains/rag_document_loading/2104_rag_document_loading_behavior_substrate_structured_observation_integration.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.48687736821039695,
+          "weighted_score": 0.7303160523155954
+        },
+        {
+          "chunk_id": "76692ccf-515f-4695-98f3-7d9c6a390cae",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4818808941418422,
+          "weighted_score": 0.7228213412127633
+        },
+        {
+          "chunk_id": "5f4d7d42-2d39-4d18-9cee-67ca90911a18",
+          "title": "1300 memory domain scoping",
+          "file_path": "docs/research/domains/memory/1300_memory_domain_scoping.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.47598306181936856,
+          "weighted_score": 0.7139745927290528
+        },
+        {
+          "chunk_id": "ed095755-b19b-45ab-8123-fb1387d6ba68",
+          "title": "SESSION 1304 MEMORY DOCS RAG BOUNDARY",
+          "file_path": "docs/handoffs/SESSION_1304_MEMORY_DOCS_RAG_BOUNDARY.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4749948570730381,
+          "weighted_score": 0.7124922856095572
+        },
+        {
+          "chunk_id": "d3b6717c-6d8a-4d92-81a6-3e95cb8eec2b",
+          "title": "ARCHITECTURE INDEX",
+          "file_path": "docs/research/ARCHITECTURE_INDEX.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4587517802551768,
+          "weighted_score": 0.6881276703827652
+        },
+        {
+          "chunk_id": "26fcb7f7-5b6b-4111-a57a-d9efc3d26f5a",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4576563817212982,
+          "weighted_score": 0.6864845725819473
+        },
+        {
+          "chunk_id": "6c45ba56-b97e-4c30-927b-676b65dd777f",
+          "title": "1305 memory runtime correctness audit",
+          "file_path": "docs/research/domains/memory/1305_memory_runtime_correctness_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4553908607745961,
+          "weighted_score": 0.6830862911618942
+        }
+      ],
+      "workspace_canonical_filter": []
+    },
+    {
+      "query": "similarity threshold text-embedding-3-small",
+      "default": [
+        {
+          "chunk_id": "4430094e-34e4-4f00-bd3b-801acfc41c6f",
+          "title": "Session 1234 (continuation) \u2014 Docs-corpus arc D9 \u2192 D16: type-aware retrieval for Rigby, 9 PRs",
+          "file_path": "docs/handoffs/SESSION_1234_DOCS_CORPUS_ARC_D9_THROUGH_D16.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5919018453548625,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "2bcf3052-965f-48c1-a2e0-9b19e7c3e600",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5358865438505578,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "e91d55e5-25fd-476f-b9d3-20540fb78c2c",
+          "title": "Dossier #6: Embeddings + RAG",
+          "file_path": "docs/audit-2026/06-embeddings-rag.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4914450906550516,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "59db47e8-9e78-48da-aada-42ec821bfcc7",
+          "title": "SESSION 1024 SEMANTIC SPIDER SEARCH",
+          "file_path": "docs/handoffs/SESSION_1024_SEMANTIC_SPIDER_SEARCH.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.486895048485974,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "04a44f4a-2b59-49c6-80ed-7e7011ba0cb2",
+          "title": "SPIDERS",
+          "file_path": "docs/SPIDERS.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4852595677446191,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "16dbdff8-b01e-46bd-ac71-d7c3eba76210",
+          "title": "Spider Network",
+          "file_path": "docs/topics/spider-network.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4806807489397684,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "2905cef9-6e27-4e5d-9e47-5948de4634be",
+          "title": "Session 730: pgvector Embedding Audit",
+          "file_path": "docs/audits/SESSION_730_PGVECTOR_EMBEDDING_AUDIT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4741039328504216,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "01d07acf-cd16-4f8d-8b22-6d7294fbe696",
+          "title": "Dossier #6: Embeddings + RAG",
+          "file_path": "docs/audit-2026/06-embeddings-rag.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.46953516749754165,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "de8a10b9-136c-4c9d-8d4d-880537a2f118",
+          "title": "SYSTEM OVERVIEW",
+          "file_path": "docs/SYSTEM_OVERVIEW.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.46687578552056863,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "09665ba3-afb5-46e1-a424-73b640c87871",
+          "title": "Dossier #6: Embeddings + RAG",
+          "file_path": "docs/audit-2026/06-embeddings-rag.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.46624065064275055,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "4430094e-34e4-4f00-bd3b-801acfc41c6f",
+          "title": "Session 1234 (continuation) \u2014 Docs-corpus arc D9 \u2192 D16: type-aware retrieval for Rigby, 9 PRs",
+          "file_path": "docs/handoffs/SESSION_1234_DOCS_CORPUS_ARC_D9_THROUGH_D16.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5919018453548625,
+          "weighted_score": 0.8878527680322936
+        },
+        {
+          "chunk_id": "2bcf3052-965f-48c1-a2e0-9b19e7c3e600",
+          "title": "1301 memory rag retrieval lanes audit",
+          "file_path": "docs/research/domains/memory/1301_memory_rag_retrieval_lanes_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.5358865438505578,
+          "weighted_score": 0.8038298157758367
+        },
+        {
+          "chunk_id": "e91d55e5-25fd-476f-b9d3-20540fb78c2c",
+          "title": "Dossier #6: Embeddings + RAG",
+          "file_path": "docs/audit-2026/06-embeddings-rag.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4914450906550516,
+          "weighted_score": 0.7371676359825774
+        },
+        {
+          "chunk_id": "59db47e8-9e78-48da-aada-42ec821bfcc7",
+          "title": "SESSION 1024 SEMANTIC SPIDER SEARCH",
+          "file_path": "docs/handoffs/SESSION_1024_SEMANTIC_SPIDER_SEARCH.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.486895048485974,
+          "weighted_score": 0.730342572728961
+        },
+        {
+          "chunk_id": "04a44f4a-2b59-49c6-80ed-7e7011ba0cb2",
+          "title": "SPIDERS",
+          "file_path": "docs/SPIDERS.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4852595677446191,
+          "weighted_score": 0.7278893516169287
+        },
+        {
+          "chunk_id": "16dbdff8-b01e-46bd-ac71-d7c3eba76210",
+          "title": "Spider Network",
+          "file_path": "docs/topics/spider-network.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4806807489397684,
+          "weighted_score": 0.7210211234096526
+        },
+        {
+          "chunk_id": "2905cef9-6e27-4e5d-9e47-5948de4634be",
+          "title": "Session 730: pgvector Embedding Audit",
+          "file_path": "docs/audits/SESSION_730_PGVECTOR_EMBEDDING_AUDIT.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4741039328504216,
+          "weighted_score": 0.7111558992756324
+        },
+        {
+          "chunk_id": "01d07acf-cd16-4f8d-8b22-6d7294fbe696",
+          "title": "Dossier #6: Embeddings + RAG",
+          "file_path": "docs/audit-2026/06-embeddings-rag.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.46953516749754165,
+          "weighted_score": 0.7043027512463125
+        },
+        {
+          "chunk_id": "de8a10b9-136c-4c9d-8d4d-880537a2f118",
+          "title": "SYSTEM OVERVIEW",
+          "file_path": "docs/SYSTEM_OVERVIEW.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.46687578552056863,
+          "weighted_score": 0.700313678280853
+        },
+        {
+          "chunk_id": "09665ba3-afb5-46e1-a424-73b640c87871",
+          "title": "Dossier #6: Embeddings + RAG",
+          "file_path": "docs/audit-2026/06-embeddings-rag.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.46624065064275055,
+          "weighted_score": 0.6993609759641258
+        }
+      ],
+      "workspace_canonical_filter": []
+    },
+    {
+      "query": "processing_log add_processing_log Document",
+      "default": [
+        {
+          "chunk_id": "d2538c4a-2198-4085-b059-ccdab837366f",
+          "title": "SESSION 856 DIAGNOSTIC PIPELINE",
+          "file_path": "docs/handoffs/SESSION_856_DIAGNOSTIC_PIPELINE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.41020576867071457,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "50ad7a2d-fb8a-4367-8635-a1254466deb8",
+          "title": "INDEX",
+          "file_path": "docs/INDEX.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4056367774196028,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "c8674a19-5bdb-4314-bdcc-222bfb6070c5",
+          "title": "2101 rag document loading corpus state reality knowledge gap audit",
+          "file_path": "docs/research/domains/rag_document_loading/2101_rag_document_loading_corpus_state_reality_knowledge_gap_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4026698822043624,
+          "weighted_score": null
+        },
+        {
+          "chunk_id": "4b2d9b29-1000-44c1-994a-4aa6fb7cc6be",
+          "title": "SESSION 1043 DOCX CSV PROCESSORS",
+          "file_path": "docs/handoffs/SESSION_1043_DOCX_CSV_PROCESSORS.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4021636872030181,
+          "weighted_score": null
+        }
+      ],
+      "authority_weighted": [
+        {
+          "chunk_id": "d2538c4a-2198-4085-b059-ccdab837366f",
+          "title": "SESSION 856 DIAGNOSTIC PIPELINE",
+          "file_path": "docs/handoffs/SESSION_856_DIAGNOSTIC_PIPELINE.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.41020576867071457,
+          "weighted_score": 0.6153086530060718
+        },
+        {
+          "chunk_id": "50ad7a2d-fb8a-4367-8635-a1254466deb8",
+          "title": "INDEX",
+          "file_path": "docs/INDEX.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4056367774196028,
+          "weighted_score": 0.6084551661294042
+        },
+        {
+          "chunk_id": "c8674a19-5bdb-4314-bdcc-222bfb6070c5",
+          "title": "2101 rag document loading corpus state reality knowledge gap audit",
+          "file_path": "docs/research/domains/rag_document_loading/2101_rag_document_loading_corpus_state_reality_knowledge_gap_audit.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4026698822043624,
+          "weighted_score": 0.6040048233065436
+        },
+        {
+          "chunk_id": "4b2d9b29-1000-44c1-994a-4aa6fb7cc6be",
+          "title": "SESSION 1043 DOCX CSV PROCESSORS",
+          "file_path": "docs/handoffs/SESSION_1043_DOCX_CSV_PROCESSORS.md",
+          "canonical_authority": "repo_canonical",
+          "similarity_score": 0.4021636872030181,
+          "weighted_score": 0.6032455308045271
+        }
+      ],
+      "workspace_canonical_filter": [
+        {
+          "chunk_id": "9a70c17a-88cd-4a4a-adbb-48ecaac6f473",
+          "title": "0110_ADR_DELIVERABLE_TO_DOCUMENT_MIRROR",
+          "file_path": "",
+          "canonical_authority": "workspace_canonical",
+          "similarity_score": 0.41462762856555724,
+          "weighted_score": null
+        }
+      ]
+    }
+  ]
+}
