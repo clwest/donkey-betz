@@ -4603,6 +4603,29 @@ PA_TOOL_SCHEMAS = [
                 "min_session": {"type": "integer", "description": "Filter handoffs to session-N tag >= this threshold (e.g. 1200 → only Session 1200+ handoffs). documents action only."},
                 "include_superseded": {"type": "boolean", "description": "When true, include archived/superseded docs in results. Default false. documents action only."},
                 "limit": {"type": "integer", "description": "Max results (default 20, max 50)"},
+                # Cycle 1A KFI-3 (ADR-0130) — authority-aware retrieval.
+                "canonical_authority": {
+                    "type": "string",
+                    "enum": ["workspace_canonical", "repo_canonical", "derived"],
+                    "description": (
+                        "Filter by source-tier classification. "
+                        "'workspace_canonical' surfaces ratified workspace "
+                        "Deliverable mirrors (governance/research canonical). "
+                        "'repo_canonical' surfaces /docs/-ingested content. "
+                        "'derived' surfaces API/spider-imported content. "
+                        "semantic_search action only."
+                    ),
+                },
+                "authority_weighted": {
+                    "type": "boolean",
+                    "description": (
+                        "When true, re-rank results by weighted_score = "
+                        "similarity * authority_weight (workspace_canonical=2.0, "
+                        "repo_canonical=1.5, derived=1.0), tie-broken by "
+                        "updated_at DESC then id ASC. Default false preserves "
+                        "cosine-similarity ranking. semantic_search action only."
+                    ),
+                },
             },
             "required": ["action"],
         },

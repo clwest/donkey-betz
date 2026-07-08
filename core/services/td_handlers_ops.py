@@ -5436,6 +5436,15 @@ class OpsHandlersMixin:
                 f_is_pinned = payload.get('is_pinned')
                 f_min_session = payload.get('min_session')
                 include_superseded = bool(payload.get('include_superseded', False))
+                # Cycle 1A KFI-3 (ADR-0130): authority-aware retrieval params.
+                # Empty string coerced to None for canonical_authority so
+                # LLM-autofilled '' does not narrow the corpus.
+                f_canonical_authority = (
+                    (payload.get('canonical_authority') or '').strip() or None
+                )
+                f_authority_weighted = bool(
+                    payload.get('authority_weighted', False)
+                )
 
                 chunks = search_embeddings(
                     query=query,
@@ -5446,6 +5455,8 @@ class OpsHandlersMixin:
                     is_pinned=(f_is_pinned if f_is_pinned is True else None),
                     min_session=_d14_resolve_min_session(f_min_session),
                     include_superseded=include_superseded,
+                    canonical_authority=f_canonical_authority,
+                    authority_weighted=f_authority_weighted,
                 )
 
                 return {
@@ -5459,6 +5470,8 @@ class OpsHandlersMixin:
                         'min_session': _d14_resolve_min_session(f_min_session),
                         'include_superseded': include_superseded,
                         'similarity_threshold': sim_threshold,
+                        'canonical_authority': f_canonical_authority,
+                        'authority_weighted': f_authority_weighted,
                     },
                     'chunks': [{
                         'id': c['id'],
@@ -5473,6 +5486,10 @@ class OpsHandlersMixin:
                         'tags': c['metadata'].get('tags', []),
                         'chunk_index': c['metadata'].get('chunk_index'),
                         'citation': c['metadata'].get('citation'),
+                        # Cycle 1A KFI-3: authority-aware fields.
+                        'canonical_authority': c.get('canonical_authority'),
+                        'authority_weight': c.get('authority_weight'),
+                        'weighted_score': c.get('weighted_score'),
                     } for c in chunks],
                 }
 

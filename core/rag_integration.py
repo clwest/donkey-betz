@@ -24,6 +24,21 @@ def create_embedding(text: str, model: str = "text-embedding-3-small") -> Option
         logger.error(f"Failed to create embedding: {e}")
         return None
 
+# Cycle 1A KFI-3 (ADR-0130) — authority weights for opt-in ranking.
+# workspace_canonical (2.0) > repo_canonical (1.5) > derived (1.0) per ADR §2.1.
+# retrieval_boost is orthogonal per 0120 and NOT composed into weighted_score.
+_AUTHORITY_WEIGHTS = {
+    'workspace_canonical': 2.0,
+    'repo_canonical': 1.5,
+    'derived': 1.0,
+}
+
+
+def _get_authority_weight(authority):
+    """Return the authority-tier weight in [1.0, 2.0]; unknown → 1.0."""
+    return _AUTHORITY_WEIGHTS.get(authority or '', 1.0)
+
+
 def search_embeddings(
     query: str,
     limit: int = 5,
@@ -44,6 +59,9 @@ def search_embeddings(
     is_pinned: Optional[bool] = None,
     min_session: Optional[int] = None,
     include_superseded: bool = False,
+    # Cycle 1A KFI-3 (ADR-0130) — authority-aware retrieval.
+    canonical_authority: Optional[str] = None,
+    authority_weighted: bool = False,
 ) -> List[Dict[str, Any]]:
     """
     Session 1234 D12 — semantic search over Document corpus via pgvector.
@@ -117,11 +135,31 @@ def search_embeddings(
         # Mirror the classmethod's orphan-chunk exclusion + cosine
         # threshold so retrieval still excludes parentless chunks
         # ("Agent Activity Knowledge Base" entries that pollute results).
+        #
+        # Cycle 1A KFI-3 (ADR-0130, Chris F1 Option B 2026-07-08):
+        # workspace-mirror Documents (KFI-1) legitimately have empty
+        # file_path — they originate from workspace Deliverables, not
+        # from filesystem paths. The default orphan filter would exclude
+        # them collaterally. Under Option B, default retrieval MUST
+        # remain unchanged; workspace mirrors are reachable ONLY when
+        # the caller explicitly requests them via
+        # ``canonical_authority='workspace_canonical'``. The narrow
+        # branch below substitutes ``source='workspace'`` as the
+        # anti-pollution invariant for the explicit-opt-in path,
+        # preserving the intent of the orphan exclusion while making
+        # the workspace-canonical filter functional.
         from pgvector.django import CosineDistance
+        qs = DocumentEmbedding.objects
+        if canonical_authority == 'workspace_canonical':
+            qs = qs.filter(document__source='workspace')
+        else:
+            qs = (
+                qs
+                .filter(document__file_path__isnull=False)
+                .exclude(document__file_path='')
+            )
         qs = (
-            DocumentEmbedding.objects
-            .filter(document__file_path__isnull=False)
-            .exclude(document__file_path='')
+            qs
             .annotate(distance=CosineDistance('embedding_vector', query_embedding))
             .filter(distance__lt=(1 - similarity_threshold))
         )
@@ -137,6 +175,13 @@ def search_embeddings(
             qs = qs.filter(document__is_pinned=True)
         if not include_superseded:
             qs = qs.exclude(document__status=ContentStatus.ARCHIVED)
+        # Cycle 1A KFI-3 (ADR-0130 §2.1): canonical_authority filter.
+        # Belt-and-suspenders alongside the source='workspace' branch
+        # above — narrows repo_canonical / derived requests and adds
+        # defense for the hypothetical case of a source='workspace'
+        # row that failed to receive canonical_authority='workspace_canonical'.
+        if canonical_authority:
+            qs = qs.filter(document__canonical_authority=canonical_authority)
         # Session 1234 D14 — positive-only min_session guard.
         # LLM autofills integer params with 0 the same way it autofills
         # booleans with False; treat anything <= 0 as "no filter" so
@@ -164,15 +209,35 @@ def search_embeddings(
             except (ValueError, TypeError):
                 pass
 
-        # Take final K after filtering — sort by distance (ascending =
-        # closest match first), then slice. The classmethod did the
-        # same order; we just defer the slice until after our filters.
-        qs = qs.order_by('distance')[:limit]
+        # Take final K after filtering.
+        #
+        # Default (authority_weighted=False): sort by cosine distance
+        # ascending = closest match first. Unchanged from HEAD.
+        #
+        # Cycle 1A KFI-3 (ADR-0130 §2.1): when authority_weighted=True,
+        # rank by weighted_score DESC, tie-break by
+        # Coalesce(document.updated_at, document.created_at) DESC,
+        # final by document.id ASC. The weighted score is computed
+        # after retrieval (per-row) rather than pushed into the SQL
+        # ORDER BY because CosineDistance annotations complicate ORM
+        # arithmetic; the ranking is applied to the retrieved candidate
+        # pool. To keep the candidate pool honest, we still ORDER BY
+        # distance ASC in SQL and take a candidate window of `limit *
+        # 3` (bounded oversample), then apply weighted ordering in
+        # Python and truncate to `limit`. The oversample is a
+        # bounded implementation detail; downstream consumers see
+        # exactly `limit` rows.
+        if authority_weighted:
+            candidate_qs = qs.order_by('distance')[:max(limit * 3, limit)]
+            chunks = list(candidate_qs.select_related('document'))
+        else:
+            qs = qs.order_by('distance')[:limit]
+            chunks = list(qs.select_related('document'))
 
         documents = []
         encryption_service = get_encryption_service()
 
-        for chunk in qs:
+        for chunk in chunks:
             doc = chunk.document
             # Decrypt content if encrypted; chunk_text usually plaintext.
             try:
@@ -191,6 +256,15 @@ def search_embeddings(
                 if math.isnan(similarity) or math.isinf(similarity):
                     similarity = 0.0
 
+            # Cycle 1A KFI-3 (ADR-0130 §2.1): compute weighted_score when
+            # authority_weighted=True. retrieval_boost remains
+            # orthogonal per 0120 — NOT composed into weighted_score.
+            if authority_weighted:
+                authority_weight = _get_authority_weight(doc.canonical_authority)
+                weighted_score = similarity * authority_weight
+            else:
+                authority_weight = None
+                weighted_score = None
             documents.append({
                 'id': str(chunk.id),
                 'content': content[:1000],
@@ -205,17 +279,56 @@ def search_embeddings(
                     'chunk_index': chunk.chunk_index,
                     # citation in the same shape as search_docs PA tool
                     'citation': f"[{doc.file_path}#{chunk.chunk_index}]",
+                    # Cycle 1A KFI-3 (ADR-0130): canonical_authority
+                    # metadata for downstream authority-aware consumers.
+                    'canonical_authority': doc.canonical_authority,
+                    # Retained for deterministic tie-break sort below.
+                    'updated_at': doc.updated_at,
+                    'created_at': doc.created_at,
+                    'document_id': doc.id,
                 },
                 # D9/D10 retrieval_boost maps to legacy importance_score.
                 'importance_score': float(doc.retrieval_boost or 1.0),
                 'similarity_score': similarity,
+                # Cycle 1A KFI-3: authority-aware retrieval fields.
+                # Top-level canonical_authority is always populated;
+                # authority_weight + weighted_score are populated only
+                # when authority_weighted=True.
+                'canonical_authority': doc.canonical_authority,
+                'authority_weight': authority_weight,
+                'weighted_score': weighted_score,
             })
+
+        # Cycle 1A KFI-3 (ADR-0130 §2.1): apply weighted ranking +
+        # deterministic tie-break in Python. Sort key composition:
+        #   1. weighted_score DESC
+        #   2. Coalesce(updated_at, created_at) DESC
+        #   3. id ASC (deterministic final tie-break)
+        if authority_weighted:
+            def _sort_key(row):
+                meta = row['metadata']
+                effective_ts = meta.get('updated_at') or meta.get('created_at')
+                doc_id_str = str(meta.get('document_id') or '')
+                # Return tuple: (-weighted, -epoch, +id) so builtin
+                # ascending sort yields weighted DESC, ts DESC, id ASC.
+                epoch = effective_ts.timestamp() if effective_ts else 0.0
+                return (-row['weighted_score'], -epoch, doc_id_str)
+            documents.sort(key=_sort_key)
+            documents = documents[:limit]
+
+        # Strip internal tie-break fields before returning to callers.
+        for row in documents:
+            row['metadata'].pop('updated_at', None)
+            row['metadata'].pop('created_at', None)
+            row['metadata'].pop('document_id', None)
 
         logger.info(
             f"Found {len(documents)} relevant chunks for query "
             f"(filters: category={category} class={effective_class} "
             f"is_pinned={is_pinned} min_session={min_session} "
-            f"include_superseded={include_superseded})"
+            f"include_superseded={include_superseded} "
+            f"canonical_authority={canonical_authority} "
+            f"authority_weighted={authority_weighted})"
         )
         return documents
 
