@@ -319,7 +319,9 @@ At the time of this Playbook version's ratification, the platform hosts a substa
 
 **[RS] PLAYBOOK-1.6.4** The document at `docs/00-START-HERE/DOC_LIFECYCLE.md` is the pre-existing constitutional governance for the `/docs/` corpus. It MUST NOT be duplicated by any subsequent Playbook chapter. [E5: `docs/00-START-HERE/DOC_LIFECYCLE.md`]
 
-**[EP] PLAYBOOK-1.6.5** Chapter Documentation Cascade MUST cite `DOC_LIFECYCLE.md` as prior authority. Extensions to documentation discipline MUST be additive relative to `DOC_LIFECYCLE.md`. [E3: 2714 §17.1 Amendment C — part of the convergent 2708-2714 research chain] **[PENDING — resolves once Chapter 4 stub-body-file references DOC_LIFECYCLE.md]**
+**[EP] PLAYBOOK-1.6.5** Chapter Documentation Cascade MUST cite `DOC_LIFECYCLE.md` as prior authority. Extensions to documentation discipline MUST be additive relative to `DOC_LIFECYCLE.md`. [E3: 2714 §17.1 Amendment C — part of the convergent 2708-2714 research chain]
+
+> **Commentary:** PENDING — resolves once Chapter 4 stub-body-file references DOC_LIFECYCLE.md.
 
 > **Commentary:** The Doc Lifecycle constitution already governs the `/docs/` corpus at repository level. The Engineering Playbook Chapter Documentation Cascade extends this governance with the four-step docs cascade and the workspace-mirror discipline established by Cycle 1A KFI-1 and KFI-4. The two documents cooperate; neither replaces the other.
 
@@ -335,17 +337,19 @@ At the time of this Playbook version's ratification, the platform hosts a substa
 
 ### 1.6.4 The peer operating systems
 
-**[RS] PLAYBOOK-1.6.9** The Research Operating System at `docs/research/process/RESEARCH_OPERATING_SYSTEM.md` and the Implementation Operating System at `docs/research/process/IMPLEMENTATION_OPERATING_SYSTEM.md` are peer constitutional documents relative to the Engineering Playbook. [E5: files exist at commit 309f85ee]
+**[RS] PLAYBOOK-1.6.9** The Research Operating System at `docs/research/process/RESEARCH_OPERATING_SYSTEM.md` and the Implementation Operating System at `docs/research/process/IMPLEMENTATION_OPERATING_SYSTEM.md` MUST be treated as peer constitutional documents relative to the Engineering Playbook. [E5: files exist at commit 309f85ee]
 
-**[EP] PLAYBOOK-1.6.10** Chapter Research Methodology MUST cite the Research Operating System as prior art. Chapter Implementation Discipline MUST cite the Implementation Operating System as prior art. [E3: 2714 §17.1 Amendment A — part of the convergent 2708-2714 research chain] **[PENDING — resolves once Chapters 2 and 3 stub-body-files reference the peer OSes]**
+**[EP] PLAYBOOK-1.6.10** Chapter Research Methodology MUST cite the Research Operating System as prior art. Chapter Implementation Discipline MUST cite the Implementation Operating System as prior art. [E3: 2714 §17.1 Amendment A — part of the convergent 2708-2714 research chain]
+
+> **Commentary:** PENDING — resolves once Chapters 2 and 3 stub-body-files reference the peer OSes.
 
 > **Commentary:** The peer OS documents were the platform's methodology substrate before the Engineering Playbook. Their absorption into Playbook chapters is a design question, not a default. At v0.1 the Playbook cites and extends; it does not absorb.
 
 ### 1.6.5 The session-open contracts
 
-**[RS] PLAYBOOK-1.6.11** The repository MUST host three session-open contract documents that are runtime-injected into agent context at every session start: `CLAUDE.md` at the repository root (injected via `core/services/docs_context_builder.py:177` with maximum 300 lines at line 363); `docs/governance/SYSTEM_OWNER.md`; and `docs/canon/INDEX.md` (injected at line 186). [E5: `core/services/docs_context_builder.py:177, 184, 186, 363, 365`]
+**[RS] PLAYBOOK-1.6.11** The repository MUST enumerate its session-open contract documents in `core/services/docs_context_builder.py`. Two mechanisms cooperate: `CRITICAL_DOCS` (guaranteed injection with per-doc line caps) covers `CLAUDE.md` (300 lines), `00-START-NEXT-SESSION.md` (200 lines), `docs/governance/SYSTEM_OWNER.md` (100 lines), `docs/missions/CURRENT_MISSION.md` (100 lines), and `docs/USER_FEEDBACK_QUEUE.md` (100 lines); `PRIORITY_DOCS` (retrieval scoring boost of +100) additionally elevates `CLAUDE.md`, `00-START-NEXT-SESSION.md`, `docs/ARCHITECTURE.md`, `docs/AGENTS.md`, `docs/CAPABILITIES.md`, `docs/DATABASE_MODEL_REFERENCE.md`, `docs/governance/SYSTEM_OWNER.md`, `docs/missions/CURRENT_MISSION.md`, `docs/canon/INDEX.md`, and `docs/USER_FEEDBACK_QUEUE.md`. [E5: `core/services/docs_context_builder.py:176-192` (PRIORITY_DOCS); E5: `core/services/docs_context_builder.py:362-369` (CRITICAL_DOCS); E5: `core/services/docs_context_builder.py:282-283` (PRIORITY_DOCS scoring boost)]
 
-**[RS] PLAYBOOK-1.6.12** The `MEMORY.md` file and the `00-START-NEXT-SESSION.md` file are session-open contracts loaded through separate mechanisms. Their content MUST be treated as authoritative for the session behavior they govern. [E5: `MEMORY.md`; E5: `00-START-NEXT-SESSION.md`; E3: 2714 §14.5 — part of the convergent 2708-2714 research chain]
+**[RS] PLAYBOOK-1.6.12** The `00-START-NEXT-SESSION.md` file at the repository root is a session-open contract loaded through a mechanism separate from `docs_context_builder.py`. Its content MUST be treated as authoritative for the session behavior it governs. [E5: `00-START-NEXT-SESSION.md` at repository root (verified present at commit 309f85ee); E5: `docs/research/process/RESEARCH_OPERATING_SYSTEM.md:853` (A3 lists `00-START-NEXT-SESSION.md` among REQUIRED session-open absorptions); E3: 2714 §14.5 — part of the convergent 2708-2714 research chain]
 
 **[RS] PLAYBOOK-1.6.13** Modifications to any runtime-injected session-open contract MUST preserve the file's load path. Such modifications MUST NOT exceed the maximum-lines constraint imposed by the runtime injector. [E5: `core/services/docs_context_builder.py:363-365`]
 
@@ -1165,7 +1169,7 @@ The Playbook makes explicit compatibility declarations in each version's frontma
 
 **[GR] PLAYBOOK-10.10.2** Backward compatibility means that behavior expected against a prior Playbook version remains observable against the current version at the rule level. A PATCH or MINOR amendment MUST preserve backward compatibility. A MAJOR amendment MAY break backward compatibility subject to the rationale rule in §10.6.2. [E3: 2712 §7]
 
-**[GR] PLAYBOOK-10.10.3** Forward compatibility is not guaranteed. A reader targeting Playbook version `v1.0.0` MUST NOT assume that behavior in a future version will be identical, even under a PATCH bump. Forward-looking rules (Extension Points sections) inform authors about probable future evolution but do not constitute forward-compatibility guarantees. [E3: `docs/research/platform/engineering_playbook_architecture_specification.md` §16 (extension points as informative)]
+**[EP] PLAYBOOK-10.10.3** Forward compatibility is not guaranteed. A reader targeting Playbook version `v1.0.0` MUST NOT assume that behavior in a future version will be identical, even under a PATCH bump. Forward-looking rules (Extension Points sections) inform authors about probable future evolution but do not constitute forward-compatibility guarantees. [E3: `docs/research/platform/engineering_playbook_architecture_specification.md` §16 — part of the convergent 2708-2714 research chain per manifest §2.3]
 
 ## 10.11 Ratification sequencing
 
@@ -1179,7 +1183,7 @@ Ratification produces multiple coordinated artifacts: a merged commit, an annota
 
 **[GR] PLAYBOOK-10.11.4** Frontmatter fields that cannot be populated until after the merge commit exists — specifically `commit_sha`, `git_tag`, `ratification_record.deliverable_id`, `ratified_date`, and `ratifier` — MAY be populated in a follow-up commit tagged `playbook-vX.Y.Z-frontmatter`. The follow-up commit MUST reference the primary ratification tag. [E3: `docs/research/platform/engineering_playbook_architecture_specification.md` §8.6 (post-ratification frontmatter fill mechanism)]
 
-**[GR] PLAYBOOK-10.11.5** Ratification is complete when the workspace ratification record's `status` field is `completed` (via PublishGate transition) and the git tag has been applied to the merge commit. Partial completion of the ratification sequence MUST NOT be treated as ratification. [E5: `content_tool.content_complete` (PublishGate transition mechanism); E2: RATIFICATION_20260708_0199_CYCLE_1_CLOSEOUT `status` field]
+**[EP] PLAYBOOK-10.11.5** Ratification MUST be treated as complete only when the workspace ratification record's `status` field is `completed` (via PublishGate transition) AND the git tag has been applied to the merge commit. Partial completion of the ratification sequence MUST NOT be treated as ratification. [E3: 2712 §15.1 (two-commit ratification pattern) — part of the convergent 2708-2714 research chain per manifest §2.3; E5: `content_tool.content_complete` (PublishGate transition mechanism); E2: RATIFICATION_20260708_0199_CYCLE_1_CLOSEOUT `status` field]
 
 ## 10.12 Canon Registry interaction
 
@@ -1189,7 +1193,7 @@ The Playbook is included in the Canon Registry maintained at `docs/canon/INDEX.m
 
 **[GR] PLAYBOOK-10.12.2** The Canon Registry entry for the Playbook MUST be added, updated, or renewed as part of every ratification's Stage 6 mirror. The update MUST occur before the ratification is considered fully mirrored. [E3: `docs/research/platform/engineering_playbook_architecture_specification.md` §8; E6: `docs/handoffs/SESSION_2707_0199_RATIFICATION_HANDOFF.md` §7]
 
-**[GR] PLAYBOOK-10.12.3** The Canon Registry MUST NOT hold the Playbook body itself. The Registry contains a pointer to the body at its repository path. The body remains at `docs/ENGINEERING_PLAYBOOK.md`. [E5: `docs/canon/INDEX.md` §Canon Registry (documents live at original paths); E3: `docs/research/platform/engineering_playbook_architecture_specification.md` §6.1]
+**[EP] PLAYBOOK-10.12.3** The Canon Registry MUST NOT hold the Playbook body itself. The Registry contains a pointer to the body at its repository path. The body remains at `docs/ENGINEERING_PLAYBOOK.md`. [E5: `docs/canon/INDEX.md` §Canon Registry (documents live at original paths); E3: 2712 §6.1 — part of the convergent 2708-2714 research chain per manifest §2.3]
 
 ## 10.13 Constitutional Debt handling
 
@@ -1201,7 +1205,7 @@ The Constitutional Debt Register records items intentionally deferred by prior a
 
 **[GR] PLAYBOOK-10.13.3** A debt entry marked as blocking for a specific version MUST be resolved before that version is ratified. A debt entry marked as non-blocking MAY be resolved in the specified earliest-eligible version or later, at the author's discretion. [E3: `docs/research/platform/playbook_authoring_session_2719.md` §8 (CD-15 example: blocking for v0.1 ratification)]
 
-**[GR] PLAYBOOK-10.13.4** Resolution of a debt entry MUST occur through the amendment lifecycle. Debt entries are candidates for future amendments; they do not carry independent authority. [E3: `docs/research/platform/engineering_playbook_authoring_protocol.md` §11; E3: `docs/research/platform/playbook_authoring_session_2719.md` §8]
+**[EP] PLAYBOOK-10.13.4** Resolution of a debt entry MUST occur through the amendment lifecycle. Debt entries are candidates for future amendments; they do not carry independent authority. [E3: 2713 §11 — part of the convergent 2708-2714 research chain per manifest §2.3; E3: `docs/research/platform/playbook_authoring_session_2719.md` §8]
 
 > **Commentary:** The Constitutional Debt Register is a bridge between the authoring sessions and future amendments. It records deferrals that are architecturally intentional (not implementation defects) and gives future authors and reviewers a shared reference for what has been consciously left for later.
 
