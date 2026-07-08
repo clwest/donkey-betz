@@ -27,7 +27,7 @@ Prior anchor context: Cycle 1A ratified at SESSION 2707 close (0199_CYCLE_1_CLOS
 
 **Engineering Playbook v0.1.0: READY FOR RATIFICATION.**
 
-- 165 rules across 11 chapters (Chapters 0-10). 4 FULL chapters (0, 1, 6, 10); 7 STUB chapters (2, 3, 4, 5, 7, 8, 9) per 2712 §16.9 stub-authorization.
+- **190 rules** across 11 chapters (Chapters 0-10) — canonical count per Session 2727 forensic reconciliation (was previously stated as 165 in Session 2726 ratification package §1.2 based on cascading arithmetic errors in Session 2716 and Session 2720 self-summaries; reconciliation trail in `docs/research/platform/platform_constitutional_transition_review.md`). Per-chapter: 9 + 49 + 3 + 3 + 3 + 3 + 57 + 3 + 3 + 2 + 55. 4 FULL chapters (0, 1, 6, 10); 7 STUB chapters (2, 3, 4, 5, 7, 8, 9) per 2712 §16.9 stub-authorization.
 - Frozen evidence manifest at Session 2715 (`docs/research/platform/engineering_playbook_evidence_manifest.md`, SHA-256 `198a4d87…`).
 - Rigby SIGN audit history: Session 2722 (first CORRECTION-PASS), 2723 (correction), 2724 (final verification, CD-47 recorded), 2725 (compliance correction, CD-47 RESOLVED, CD-48 non-blocking recorded).
 - Cumulative 70/70 sampled rules verified PASS across Sessions 2724 + 2725.

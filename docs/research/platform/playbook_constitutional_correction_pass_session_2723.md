@@ -1,5 +1,7 @@
 # Playbook Constitutional Correction Pass — Session 2723
 
+> **Session 2727 correction note (2026-07-08 UTC):** This document references a Playbook rule count of **165** ("102 of 165 rules were not corrected" and "165 rule total" in §correction-scope discussion). Session 2727 forensic reconciliation established the canonical rule count as **190** — per `docs/research/platform/platform_constitutional_transition_review.md` §"Rule Inventory Reconciliation — Complete" and commit `d24f738e` (docs/ENGINEERING_PLAYBOOK.md). The 165 figure was inherited from Session 2721's rollup. Under the corrected 190 count, the "102 of 165 not corrected" reframes as "127 of 190 not corrected" (Session 2723 touched 63 rules; 190 - 63 = 127); this is a summary-arithmetic correction only and does NOT change which rules Session 2723 corrected. **This correction is treated as a correction to a derived summary; no rule correction, TC-1..TC-5 taxonomy application, or new rule addition (PLAYBOOK-1.4.5a split) recorded in this document is changed.** All 63 Session 2723 corrections stand as authored. Historical claims of 165 preserved in place.
+
 **Session:** 2723 (Constitutional Correction Pass + independent Rigby re-audit)
 **Date:** 2026-07-08
 **Role:** Constitutional Custodian / Editor-in-Chief
