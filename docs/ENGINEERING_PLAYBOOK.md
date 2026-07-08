@@ -1,27 +1,29 @@
 ---
 title: "Donkey Betz Engineering Playbook"
 version: "0.1.0"
-version_status: draft
+version_status: ratified
 scope: platform
 parent_version: null
 supersedes: []
 compatible_with: []
 ratifier: chris
-ratified_date: null
+ratified_date: 2026-07-08
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
-  deliverable_id: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
+  deliverable_id: b083c034-5aba-4dc3-9758-57eba29b4bf2
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
 branch_authored: playbook/v0.1.0-inaugural
-commit_sha: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
-content_hash: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
-git_tag: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
+commit_sha: b372edfe127f1af59c4322871092aa7151669463
+content_hash: sha256:0205af5b74d34d686d064552b28989c472e2b4048c780a873e4e03193de988ab
+git_tag: playbook-v0.1.0
 schema_version: 1
 authoring_sessions: [2716, 2718, 2719, 2720, 2721]
-correction_sessions: [2723, 2725]
-audit_sessions: [2722, 2724, 2725]
+correction_sessions: [2723, 2725, 2727]
+audit_sessions: [2722, 2724, 2725, 2727]
 ratification_package_session: 2726
+ratification_session: 2727
+rule_count: 190
 evidence_manifest: docs/research/platform/engineering_playbook_evidence_manifest.md
 ---
 
