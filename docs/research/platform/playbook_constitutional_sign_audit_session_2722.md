@@ -1,5 +1,7 @@
 # Playbook Constitutional SIGN Audit — Session 2722
 
+> **Session 2727 correction note (2026-07-08 UTC):** This document references a Playbook rule count of **165** (line 8 audit-subject description; line 476 close status). Session 2727 forensic reconciliation established the canonical rule count as **190** — per `docs/research/platform/platform_constitutional_transition_review.md` §"Rule Inventory Reconciliation — Complete" and commit `d24f738e` (docs/ENGINEERING_PLAYBOOK.md). The 165 figure was inherited from Session 2721's rollup, which propagated Session 2716 and Session 2720 self-summary arithmetic errors. **This correction is treated as a correction to a derived summary; no Rigby finding recorded in this document is changed.** The Session 2722 F-BLOCKING findings, correction-pass verdicts, and audit-methodology results all stand as authored. The +25 rule delta (the 25 rules in Chapters 0/1/10 that exceeded the 165 summary) was not sampled by this audit and was not sampled by subsequent Sessions 2724 or 2725 either; an expanded SIGN pass on those 25 rules is a candidate follow-on before v0.1 ratification. Historical claims of 165 preserved in place.
+
 **Session:** 2722 (Rigby's first Constitutional Audit of Engineering Playbook v0.1)
 **Date:** 2026-07-08
 **Auditor:** Rigby (Personal Assistant, live audit dispatched via `tools/pa_local.sh`)
