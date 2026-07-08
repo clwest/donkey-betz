@@ -13490,3 +13490,255 @@ def expire_stale_followup_subscriptions():
             expired_count,
         )
     return {"expired": expired_count}
+
+
+# ---------------------------------------------------------------------------
+# Cycle 1A KFI-1 (ADR-0110) — Deliverable → Document mirror
+# ---------------------------------------------------------------------------
+
+@shared_task(name='mirror_deliverable_to_document', queue='long_running')
+def mirror_deliverable_to_document(ratification_record_id=None,
+                                    target_deliverable_id=None):
+    """Mirror a ratified workspace Deliverable into a content.Document.
+
+    Args:
+        ratification_record_id: UUID (as str) of the ratification_record
+            Deliverable that triggered the mirror. Required.
+        target_deliverable_id: UUID (as str) of the target Deliverable
+            to mirror. If None, extracted from the ratification_record
+            body via the 3-path cascade in
+            ``core.services.deliverable_mirror_target_extraction``.
+
+    Behavior (ADR-0110 §2.1 + Chris directives 2026-07-08):
+      - Owner cascade: ``rr.user`` → ``target.user`` → fail-closed
+        (MIRROR_OWNER_UNRESOLVED).
+      - Idempotence (A13 Option C, mirror-task-local):
+        * new Document → embed.
+        * existing + content_hash unchanged → preserve embeddings.
+        * existing + content_hash changed → delete prior
+          DocumentEmbeddings, update raw_content + content_hash,
+          re-embed.
+      - Uniqueness (A14 Option A): DB-level partial UNIQUE (source,
+        source_reference) WHERE source='workspace'. Concurrent race
+        recovered via IntegrityError → re-fetch.
+      - Instrumentation: four ISO-8601 UTC timestamps in
+        ``extracted_metadata['mirror']`` +
+        ``add_processing_log('deliverable_mirror', …)``.
+    """
+    import hashlib as _hashlib_mirror
+    from django.db import IntegrityError
+
+    from core.models import Deliverable
+    from content.models import Document, DocumentEmbedding
+    from core.services.deliverable_mirror_target_extraction import (
+        extract_target_deliverable_id,
+    )
+
+    if not ratification_record_id:
+        logger.error('[deliverable_mirror] missing ratification_record_id')
+        return {'status': 'error', 'reason': 'missing_ratification_record_id'}
+
+    mirror_start_ts = timezone.now()
+
+    try:
+        rr = Deliverable.objects.get(id=ratification_record_id)
+    except Deliverable.DoesNotExist:
+        logger.error(
+            '[deliverable_mirror] ratification_record not found rr=%s',
+            ratification_record_id,
+        )
+        return {'status': 'error', 'reason': 'ratification_record_not_found'}
+
+    # Target resolution.
+    if target_deliverable_id:
+        try:
+            target = Deliverable.objects.get(id=target_deliverable_id)
+        except Deliverable.DoesNotExist:
+            logger.error(
+                '[deliverable_mirror] explicit target not found target=%s rr=%s',
+                target_deliverable_id, ratification_record_id,
+            )
+            return {'status': 'error', 'reason': 'target_not_found'}
+    else:
+        resolved_target_id = extract_target_deliverable_id(rr, Deliverable)
+        if resolved_target_id is None:
+            # Extraction helper already logged the specific terminal.
+            return {'status': 'error', 'reason': 'target_extraction_failed'}
+        try:
+            target = Deliverable.objects.get(id=resolved_target_id)
+        except Deliverable.DoesNotExist:
+            logger.error(
+                '[deliverable_mirror] extracted target not found target=%s rr=%s',
+                resolved_target_id, ratification_record_id,
+            )
+            return {'status': 'error', 'reason': 'target_not_found'}
+
+    # Owner cascade: rr.user → target.user → fail closed.
+    owner = None
+    if rr.user_id:
+        owner = rr.user
+    elif target.user_id:
+        owner = target.user
+    if owner is None:
+        logger.error(
+            'MIRROR_OWNER_UNRESOLVED rr=%s target=%s',
+            rr.id, target.id,
+        )
+        return {'status': 'error', 'reason': 'mirror_owner_unresolved'}
+
+    # Content + hash — explicit computation because Document.save() only
+    # auto-hashes when processed_content is set (SIGN-3 non-blocking note).
+    raw_content = target.content or ''
+    new_hash = _hashlib_mirror.sha256(raw_content.encode('utf-8')).hexdigest()
+
+    ratification_ts = rr.created_at.isoformat()
+    mirror_start_ts_iso = mirror_start_ts.isoformat()
+
+    defaults = {
+        'owner': owner,
+        'title': target.title,
+        'description': f'Workspace mirror of {target.title}',
+        'document_type': 'markdown',
+        'raw_content': raw_content,
+        'content_hash': new_hash,
+        'canonical_authority': 'workspace_canonical',
+        'is_active': True,
+        'status': 'pending',
+        'extracted_metadata': {
+            'mirror': {
+                'ratification_ts': ratification_ts,
+                'mirror_start_ts': mirror_start_ts_iso,
+                'target_deliverable_id': str(target.id),
+                'target_deliverable_type': target.deliverable_type,
+                'ratification_record_id': str(rr.id),
+            },
+        },
+    }
+
+    try:
+        doc, created = Document.objects.get_or_create(
+            source='workspace',
+            source_reference=str(target.id),
+            defaults=defaults,
+        )
+    except IntegrityError:
+        # Concurrent worker won the race under the partial unique
+        # constraint. Re-fetch the existing row and proceed on the
+        # idempotence path.
+        doc = Document.objects.get(
+            source='workspace',
+            source_reference=str(target.id),
+        )
+        created = False
+
+    should_embed = False
+
+    if created:
+        # New Document → embed.
+        should_embed = True
+    elif doc.content_hash == new_hash:
+        # Existing + unchanged content → preserve embeddings.
+        doc.add_processing_log(
+            step='deliverable_mirror',
+            status='skipped_unchanged',
+            details={
+                'ratification_record_id': str(rr.id),
+                'target_deliverable_id': str(target.id),
+                'reason': 'content_hash_match',
+            },
+        )
+        return {
+            'status': 'skipped_unchanged',
+            'document_id': str(doc.id),
+            'target_deliverable_id': str(target.id),
+            'ratification_record_id': str(rr.id),
+        }
+    else:
+        # Existing + changed content → clear prior embeddings + re-embed.
+        DocumentEmbedding.objects.filter(document=doc).delete()
+        doc.raw_content = raw_content
+        doc.content_hash = new_hash
+        doc.title = target.title
+        doc.save(update_fields=[
+            'raw_content', 'content_hash', 'title', 'updated_at',
+        ])
+        should_embed = True
+
+    mirror_complete_ts = timezone.now()
+    embedding_complete_ts = None
+
+    if should_embed:
+        try:
+            from content.embeddings import RAGSystem
+            RAGSystem().process_document_for_rag_sync(doc)
+            embedding_complete_ts = timezone.now()
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                '[deliverable_mirror] embedding failed rr=%s target=%s doc=%s err=%s',
+                rr.id, target.id, doc.id, exc,
+            )
+            doc.add_processing_log(
+                step='deliverable_mirror',
+                status='embedding_failed',
+                details={
+                    'ratification_record_id': str(rr.id),
+                    'target_deliverable_id': str(target.id),
+                    'error': str(exc),
+                },
+            )
+            # Persist partial timestamps so SC-1 measurement is inspectable.
+            mirror_meta = dict(doc.extracted_metadata or {})
+            mirror_block = dict(mirror_meta.get('mirror') or {})
+            mirror_block.update({
+                'ratification_ts': ratification_ts,
+                'mirror_start_ts': mirror_start_ts_iso,
+                'mirror_complete_ts': mirror_complete_ts.isoformat(),
+            })
+            mirror_meta['mirror'] = mirror_block
+            doc.extracted_metadata = mirror_meta
+            doc.save(update_fields=['extracted_metadata', 'updated_at'])
+            return {
+                'status': 'embedding_failed',
+                'document_id': str(doc.id),
+                'error': str(exc),
+            }
+
+    # Persist all four timestamps + mirror-run details.
+    mirror_meta = dict(doc.extracted_metadata or {})
+    mirror_block = dict(mirror_meta.get('mirror') or {})
+    mirror_block.update({
+        'ratification_ts': ratification_ts,
+        'mirror_start_ts': mirror_start_ts_iso,
+        'mirror_complete_ts': mirror_complete_ts.isoformat(),
+        'embedding_complete_ts': (
+            embedding_complete_ts.isoformat()
+            if embedding_complete_ts else None
+        ),
+        'target_deliverable_id': str(target.id),
+        'target_deliverable_type': target.deliverable_type,
+        'ratification_record_id': str(rr.id),
+    })
+    mirror_meta['mirror'] = mirror_block
+    doc.extracted_metadata = mirror_meta
+    doc.save(update_fields=['extracted_metadata', 'updated_at'])
+
+    mirror_run_ms = int(
+        (mirror_complete_ts - mirror_start_ts).total_seconds() * 1000
+    )
+    doc.add_processing_log(
+        step='deliverable_mirror',
+        status='success' if embedding_complete_ts else 'success_no_embed',
+        details={
+            'ratification_record_id': str(rr.id),
+            'target_deliverable_id': str(target.id),
+            'mirror_run_ms': mirror_run_ms,
+            'created': created,
+        },
+    )
+
+    return {
+        'status': 'created' if created else 'updated',
+        'document_id': str(doc.id),
+        'target_deliverable_id': str(target.id),
+        'ratification_record_id': str(rr.id),
+    }
