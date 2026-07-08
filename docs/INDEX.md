@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-07-08 07:09
+**Generated:** 2026-07-08 07:13
 **Current Session:** 2706
 **Total Documentation:** 2987 files | 894,597 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 7,430 |
+| Total cross-references | 7,414 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -38,7 +38,7 @@
 | `docs/INDEX.md` | 155 | INDEX |
 | `docs/research/ARCHITECTURE_INDEX.md` | 137 | ARCHITECTURE INDEX |
 | `docs/research/OPEN_ARCS.md` | 132 | OPEN ARCS |
-| `docs/archive/old-structure/capabilities/08_Sports_Analytics/README.md` | 121 | 🏆 SPORTS ANALYTICS PLATFORM - AI-Powered Betting I |
+| `docs/archive/old-structure/capabilities/07_Neural_Visualization/README.md` | 121 | 🎭 NEURAL ORCHESTRA VISUALIZATION - Living AI Symph |
 | `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` | 113 | DOMAIN RESEARCH PLAYBOOK |
 | `docs/AGENTS.md` | 80 | AGENTS |
 | `docs/00-START-HERE/DOC_LIFECYCLE.md` | 68 | DOC LIFECYCLE |
@@ -255,8 +255,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_2706_CYCLE_1A_CLOSEOUT_HANDOFF.md | handoffs | 177 | 2026-07-08 07:08 |
-| INDEX.md | docs | 399 | 2026-07-08 06:36 |
+| SESSION_2706_CYCLE_1A_CLOSEOUT_HANDOFF.md | handoffs | 177 | 2026-07-08 07:13 |
+| INDEX.md | docs | 399 | 2026-07-08 07:13 |
 | SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md | handoffs | 310 | 2026-07-07 21:42 |
 | SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md | handoffs | 283 | 2026-07-07 20:05 |
 | cross_domain_integration_audit.md | research | 2,911 | 2026-07-07 11:01 |
