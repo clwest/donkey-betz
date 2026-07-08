@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-08T02:07:38+00:00",
+    "generated": "2026-07-08T03:44:50+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "2881f979852d",
-    "doc_count": 2435,
-    "commit_count": 7742,
+    "git_head": "f4cb905dae5c",
+    "doc_count": 2436,
+    "commit_count": 7746,
     "confidence_breakdown": {
-      "HIGH": 1588,
+      "HIGH": 1589,
       "MEDIUM": 352,
       "LOW": 5,
       "UNKNOWN": 490
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1258,
+      "commit_count": 1260,
       "prs": [
         10,
         11,
@@ -3035,7 +3035,8 @@
         2982,
         2983,
         2984,
-        2985
+        2985,
+        2987
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7360,7 +7361,7 @@
         2502,
         2504
       ],
-      "commit_count": 214,
+      "commit_count": 216,
       "prs": [
         2213,
         2219,
@@ -7483,7 +7484,8 @@
         2982,
         2983,
         2984,
-        2985
+        2985,
+        2987
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -18958,6 +18960,21 @@
       "commit_count": 2,
       "prs": [
         2986
+      ]
+    },
+    "docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md": {
+      "originating_session": 2701,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "f4cb905d",
+      "first_commit_date": "2026-07-07",
+      "first_commit_subject": "docs(cycle-1a): SESSION 2701 implementation-session handoff \u2014 all five KFI ADRs (0110-0150) RATIFIED; code streams pending (#2988)",
+      "sessions_touched": [
+        2701
+      ],
+      "commit_count": 2,
+      "prs": [
+        2988
       ]
     },
     "docs/handoffs/SESSION_273_DOCUMENTATION_OVERHAUL.md": {
