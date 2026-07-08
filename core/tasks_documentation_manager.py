@@ -109,11 +109,21 @@ def _force_deliverable_ready(
     acks_late=False,         # match process_pa_chat_task
     ignore_result=False,
 )
-def rigby_documentation_manager_daily(self) -> dict:
+def rigby_documentation_manager_daily(self, force: bool = False) -> dict:
     """Run Rigby's Documentation Manager daily routine end-to-end.
 
     Thin Celery wrapper around the MissionRunner-driven docs cascade.
     Idempotent within the same calendar day (handled by MissionRunner).
+
+    Args:
+        force: Cycle 1A KFI-4 (ADR-0140 §2.1 (5)) — when True, bypass
+            the MissionRunner hash-delta preflight and always run the
+            full cascade pipeline. This ``force`` is orthogonal to
+            ``core.tasks.refresh_docs_corpus(force=...)`` — the two
+            tasks live on distinct entry points, distinct cache keys,
+            and distinct semantics. This ``force`` means ONLY
+            "bypass MissionRunner preflight step in the docs-manager
+            factory."
 
     Returns the result envelope as a JSON-safe dict:
         {
@@ -126,7 +136,7 @@ def rigby_documentation_manager_daily(self) -> dict:
             already_ran: bool,
         }
     """
-    runner = build_docs_manager_runner()
+    runner = build_docs_manager_runner(force=force)
     result = runner.run()
     return result.as_dict()
 
