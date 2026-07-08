@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-07-07 21:42
+**Generated:** 2026-07-07 22:30
 **Current Session:** 0
 **Total Documentation:** 2986 files | 894,411 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 7,406 |
+| Total cross-references | 7,423 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -38,7 +38,7 @@
 | `docs/INDEX.md` | 156 | INDEX |
 | `docs/research/ARCHITECTURE_INDEX.md` | 137 | ARCHITECTURE INDEX |
 | `docs/research/OPEN_ARCS.md` | 133 | OPEN ARCS |
-| `docs/topics/README.md` | 121 | README |
+| `docs/archive/founder-toolkit-exports-2026-04/README.md` | 121 | Founder Toolkit Exports (April 2026) |
 | `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` | 113 | DOMAIN RESEARCH PLAYBOOK |
 | `docs/AGENTS.md` | 80 | AGENTS |
 | `docs/00-START-HERE/DOC_LIFECYCLE.md` | 68 | DOC LIFECYCLE |
@@ -255,8 +255,8 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| INDEX.md | docs | 399 | 2026-07-07 21:45 |
 | SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md | handoffs | 310 | 2026-07-07 21:42 |
-| INDEX.md | docs | 399 | 2026-07-07 20:08 |
 | SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md | handoffs | 283 | 2026-07-07 20:05 |
 | cross_domain_integration_audit.md | research | 2,911 | 2026-07-07 11:01 |
 | I-0200_scoping.md | research | 488 | 2026-07-07 11:01 |
