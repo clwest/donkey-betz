@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-08T13:14:44+00:00",
+    "generated": "2026-07-08T14:56:34+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "f92a88ede2e3",
-    "doc_count": 2437,
-    "commit_count": 7771,
+    "git_head": "20df44602873",
+    "doc_count": 2438,
+    "commit_count": 7775,
     "confidence_breakdown": {
-      "HIGH": 1590,
+      "HIGH": 1591,
       "MEDIUM": 352,
       "LOW": 5,
       "UNKNOWN": 490
@@ -2520,7 +2520,7 @@
         2502,
         2504
       ],
-      "commit_count": 1273,
+      "commit_count": 1274,
       "prs": [
         10,
         11,
@@ -7372,7 +7372,7 @@
         2502,
         2504
       ],
-      "commit_count": 229,
+      "commit_count": 230,
       "prs": [
         2213,
         2219,
@@ -19008,6 +19008,19 @@
       "first_commit_subject": "docs(cycle-1a-close): SESSION 2706 closeout handoff + 00-START rewrite",
       "sessions_touched": [
         2706
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_2707_0199_RATIFICATION_HANDOFF.md": {
+      "originating_session": 2707,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "9792edf6",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(cycle-1a-ratified): SESSION 2707 0199 SIGN+correction+ratification handoff + 00-START rewrite",
+      "sessions_touched": [
+        2707
       ],
       "commit_count": 1,
       "prs": []
