@@ -747,7 +747,7 @@ The "ratification moment" — the specific transition from unratified to ratifie
 
 ### 8.3 After ratification (target state)
 
-- `docs/ENGINEERING_PLAYBOOK.md` exists at v0.1.0 with 165 rules, 11 chapters, ratified frontmatter.
+- `docs/ENGINEERING_PLAYBOOK.md` exists at v0.1.0 with **190 rules** (per §"Rule Inventory Reconciliation" — reconciled from the Session 2726 ratification package's inherited 165 claim), 11 chapters, ratified frontmatter.
 - `playbook-v0.1.0` git tag created.
 - `RATIFICATION_20260708_PLAYBOOK_v0_1_0` (or `_20260709_`) workspace deliverable ratified in `a9a16593-e0a4-44dc-8256-efc65d524b3c`.
 - Canon Registry has a "Constitutional Canon" subsection with Playbook + evidence manifest entries. Registry count: 7 promoted (was 5), still under ≤10 cap.
@@ -814,7 +814,7 @@ The following are the **irreversible / semantically-significant** transitions on
 
 | Transition | Before | After |
 |---|---|---|
-| **Constitutional codification** | Informal (CLAUDE.md, MEMORY.md, IOS, Research OS, handoffs, ADRs — scattered) | Formal (Playbook v0.1.0 unified codification with 165 rules, evidence-cited, semver-tracked) |
+| **Constitutional codification** | Informal (CLAUDE.md, MEMORY.md, IOS, Research OS, handoffs, ADRs — scattered) | Formal (Playbook v0.1.0 unified codification with **190 rules** — reconciled from the ratification package's 165 claim per §"Rule Inventory Reconciliation" — evidence-cited, semver-tracked) |
 | **Ratification substrate** | Per-artifact (each ADR has its own ratification record) | Per-artifact + version-tracked (Playbook amendments cascade version bumps; ratification records reference versions) |
 | **Rule identity** | Anonymous (rules are "the rule from feedback_verifier_loop_pattern.md" or "the rule from IOS §4.3") | Named (rules are PLAYBOOK-N.M.K with stable identifiers across versions) |
 | **Constitutional debt tracking** | Ad hoc | First-class category tied to versions (CD-47 resolved-in-v0.1, CD-48 targeted-for-v0.1.1) |
@@ -1167,7 +1167,7 @@ Emergency amendments bypass steps 3-4 with explicit Chris directive per 2712 §9
 
 **Conditional YES** — subject to Chris's Option A directive (NOT Option D) AND surfacing of the five explicit posture declarations enumerated in §9.21.
 
-- **165 rules, 11 chapters, 4 FULL + 7 STUB per 2712 §16.9.**
+- **190 rules** (per §"Rule Inventory Reconciliation" — reconciled from the ratification package's 165 claim; 25-rule delta identified as Session 2716/2720 self-summary arithmetic errors + Session 2723's 1.4.5a split), 11 chapters, 4 FULL + 7 STUB per 2712 §16.9.
 - **0 unresolved F-BLOCKING findings on the Playbook body itself.**
 - **CD-47 RESOLVED** (15/15 Rigby PASS on fresh SIGN pin `pa-275e12fb72de4b3e`).
 - **CD-48 recorded, non-blocking conditional on v0.1.1 PATCH commitment per §5.6 corrected**.
