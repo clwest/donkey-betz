@@ -60,22 +60,67 @@ message -> _detect_intent_and_route() [506 lines of if/elif keyword matching]
 
 ## Enrichment Pipeline
 
-Eight intelligence services inject context before the LLM generates analysis. Each intent maps to specific services:
+Eight intelligence services inject context before the LLM generates analysis. Each canonical intent maps to a list of services via `INTENT_ENRICHMENT_MAP` (see `core/services/unified_pa_entrypoint.py:244`). See `docs/research/tools/validation/context_injection_pipeline_validation.md` (S2730 Batch C tool 1) for the full trace.
 
-| Service | Source | Fires For |
-|---------|--------|-----------|
-| intelligence_enricher | PAIntelligenceEnricher | work_tool, governance_tool, ops_tool, reasoning, pilots, gates, system_overview |
-| blog_performance | BlogPerformanceContextBuilder | content_tool |
-| domain_context | DomainContentContextBuilder (9 domains) | content_tool, opportunities, predictions, intelligence_tool |
-| spider_trends | SpiderContextBuilder | content_tool, opportunities, predictions, learning_patterns, intelligence_tool |
-| advisor | AdvisorContextBuilder (25 advisors) | opportunities, reasoning |
-| strategic_memory | StrategicMemoryService | work_tool, governance_tool, execution_history, reasoning |
-| proactive_intelligence | ProactiveIntelligenceService | content_tool, opportunities, intelligence_tool, system_overview |
-| platform_briefing | PlatformIntelligenceBriefingService | system_overview, execution_history |
+### Canonical intents → enrichment services
 
-**Relevance gating:** Content-related intents skip the gate. All others require 15% keyword overlap to avoid irrelevant injection.
+| Canonical intent | Enrichment services fired |
+|---|---|
+| `content_review` | blog_performance, domain_context, spider_trends, strategic_memory, proactive_intelligence |
+| `opportunities` | spider_trends, domain_context, advisor, proactive_intelligence |
+| `predictions` | spider_trends, domain_context |
+| `initiatives` | intelligence_enricher, strategic_memory |
+| `boardroom` | intelligence_enricher, strategic_memory |
+| `system_health` | intelligence_enricher |
+| `stock_intelligence` | domain_context, spider_trends, proactive_intelligence |
+| `legislation` | domain_context, spider_trends |
+| `crypto_price` | domain_context |
+| `spider_data` | domain_context |
+| `execution_history` | intelligence_enricher, strategic_memory, platform_briefing |
+| `learning_patterns` | spider_trends |
+| `pilots` | intelligence_enricher |
+| `gates` | intelligence_enricher |
+| `reasoning` | intelligence_enricher, advisor, strategic_memory |
+| `system_overview` | intelligence_enricher, proactive_intelligence, platform_briefing |
+| `recent_activity` / `system_health_check` / `error_summary` / `surgical_moves_status` / `agent_introspection` / `scheduled_tasks` / `dreams` | (pure data, no enrichment) |
 
-**Enrichment caps (Session 1006):** 1500-2000 chars per section. Raised from 300-600 which was discarding 85-95% of data.
+**Any intent not listed above (including `general`)** silently receives empty enrichment. Rigby's `_metadata.services_requested` field (see below) surfaces this.
+
+### Intent aliases (variant → canonical)
+
+`INTENT_ALIASES` (`unified_pa_entrypoint.py:276`) normalizes variant names before the map lookup. Examples: `blogs` → `content_review`, `attention_items` → `boardroom`, `errors` → `error_summary`.
+
+### Metadata envelope (Session 2730 F-CI-9)
+
+`_enrich_tool_result` returns a `_metadata` sub-dict on the sections payload so callers can distinguish "enrichment ran and produced nothing" from "enrichment silently failed" from "enrichment was gated out" from "enrichment service unavailable":
+
+```
+{
+    '_metadata': {
+        'canonical_intent': str,                    # post-INTENT_ALIASES resolution
+        'services_requested': List[str],            # from INTENT_ENRICHMENT_MAP
+        'services_run': List[str],                  # entered branch
+        'services_failed': List[Tuple[str, str]],   # (name, error_class)
+        'services_gated_out': List[str],            # relevance gate returned False
+        'services_unavailable': List[str],          # branch guard failed (lazy-load None)
+        'sections_truncated': List[Tuple[str, int, int]],  # (key, orig_len, cap)
+    },
+    ...content sections
+}
+```
+
+Downstream `_build_analytical_prompt` filters `_metadata` via its `section_labels` iteration (9 known content section keys). The metadata is telemetry-only — it never reaches the LLM system prompt.
+
+### Relevance gating (Session 2730 F-CI-4/5)
+
+`_passes_relevance_gate` requires 15% keyword overlap. Two silent-filter branches now emit observability logs:
+
+- **Empty enrichment_text** → returns False.
+- **Short enrichment (<30 tokens)** → returns False + DEBUG log naming token count. Short-authoritative snippets (e.g., 25-word canonical findings) fail here.
+- **Empty msg_words** (stop-word-only queries like `"why?"`) → returns True + INFO log naming the permissive-include fallback.
+- **DIRECT_RELEVANCE_INTENTS** (`content_review`, `opportunities`, `predictions`, `spider_data`, `stock_intelligence`, `crypto_price`) bypass the gate entirely.
+
+**Enrichment caps (Session 1006):** 1500-2000 chars per section. Raised from 300-600 which was discarding 85-95% of data. Silent truncation is now recorded in `_metadata.sections_truncated`.
 
 ## Context Building (_build_context)
 
@@ -85,9 +130,13 @@ Session 1035: All DB-touching steps have `asyncio.wait_for` timeouts to prevent 
 |------|---------|---------------------|
 | Profile load (ExtendedUserProfile) | 5s | PA works without profile context |
 | Knowledge injection | 3s | PA works without system knowledge |
-| System stats | 5s | PA uses hardcoded defaults |
+| System stats | 5s | PA uses hardcoded defaults (see `stats_source` below) |
 | Docs context (RAG) | 5s | PA works without document context |
 | Conversation history (sync, __init__) | 5s | `SET LOCAL statement_timeout` |
+
+**Session 2730 F-CI-1 narrow-except discipline** (mirrors S1234 D17-D21, F-RG-1, F-WS-4): Only env errors (`DatabaseError`, `ConnectionError`, `OSError` per `_CONTEXT_INJECTION_ENV_ERRORS`) are caught and logged per phase. Logic errors (`AttributeError`, `TypeError`, `KeyError`) propagate — the S1103c `profile.experience` (wrong attribute name) bug was hidden in a broad-except for multi-session period before this discipline landed.
+
+**Session 2730 F-CI-7 `stats_source` signal**: `_get_system_stats` now returns `stats_source: 'live' | 'fallback'` so downstream can tell hardcoded 74/77/25 defaults from live ORM counts. Env errors preserve the fallback path; logic errors propagate.
 
 ## Async Processing (Celery)
 
