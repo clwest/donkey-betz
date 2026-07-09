@@ -851,6 +851,20 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/15'),
         'options': {'queue': 'default', 'expires': 900},
     },
+
+    # ── Beat Schedule Health (Session 2735 Beat Health Campaign P1) ────────
+    # Compare app.conf.beat_schedule allowlisted entries against observed
+    # CeleryTaskEvent fires over lookback_days. If any allowlisted beat
+    # entry failed the min_expected_fires threshold, dispatch a single
+    # consolidated HAI(source_type='beat_health', urgency='critical').
+    # Allowlist starter set: heart-service-heartbeat, check-celery-health,
+    # monitor-celery-health. Runtime-tunable via SystemConfiguration
+    # (beat_health_allowlist as JSON list).
+    'check-beat-health': {
+        'task': 'check_beat_health',
+        'schedule': crontab(hour=1, minute=17),
+        'options': {'queue': 'default', 'expires': 3600},
+    },
 }
 
 # Task routing configuration
@@ -942,6 +956,12 @@ app.conf.imports = (
     # monitor-only at ship; will never call governance.set_mode('freeze')
     # regardless of cost_protection_enforce_mode config value.
     'core.tasks_cost_protection',
+    # Session 2735 Beat Schedule Health Campaign P1: check_beat_health
+    # beat task in tasks_beat_health.py. Same lesson — non-standard
+    # module needs explicit listing so worker dispatch resolves the
+    # task name on beat fires + manual run_now dispatches. Task is
+    # monitor-only (no auto-remediation, no restart, no reschedule).
+    'core.tasks_beat_health',
 )
 
 
