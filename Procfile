@@ -22,12 +22,18 @@
 # Postgres in practice; tagging uniformly avoids special-case verifier debt.
 release: PG_APPLICATION_NAME=dbz:release sh -c "chown -R appuser:appuser /app/workspaces 2>/dev/null || true; python manage.py collectstatic --noinput && python manage.py migrate --noinput && python manage.py sync_celery_beat --apply --create-only --disable-missing && python manage.py sync_task_queues --apply && python manage.py setup_codebase_workspace && python manage.py setup_pa_service_account"
 web: PG_APPLICATION_NAME=dbz:web daphne -b 0.0.0.0 -p ${PORT:-8000} --http-timeout 120 --application-close-timeout 120 core.asgi:application
-celery-worker: PG_APPLICATION_NAME=dbz:celery-worker celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=5 --max-memory-per-child=150000 -Q default,agents,sports
-celery-pa: PG_APPLICATION_NAME=dbz:celery-pa celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=10 --max-memory-per-child=200000 -Q pa
-celery-content: PG_APPLICATION_NAME=dbz:celery-content celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=2 --max-memory-per-child=250000 -Q content
-celery-long-running: PG_APPLICATION_NAME=dbz:celery-long-running celery -A core worker -l info --pool=prefork -c 2 --max-tasks-per-child=2 --max-memory-per-child=150000 -Q long_running,ml
-celery-long-running-2: PG_APPLICATION_NAME=dbz:celery-long-running-2 celery -A core worker -l info --pool=prefork -c 2 --max-tasks-per-child=2 --max-memory-per-child=150000 -Q long_running,ml
-celery-broadcast: PG_APPLICATION_NAME=dbz:celery-broadcast celery -A core worker -l info --pool=threads -c 3 --max-tasks-per-child=50 --max-memory-per-child=200000 -Q broadcast
-celery-beat: PG_APPLICATION_NAME=dbz:celery-beat celery -A core beat -l info
-code-worker: PG_APPLICATION_NAME=dbz:code-worker celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=1 --max-memory-per-child=400000 -Q code_jobs
+# Session 2731 F-WF-2: PA_USE_FUNCTION_CALLING=true declared explicitly on
+# every celery-* line as belt-and-suspenders against Railway env-var drift.
+# Code default is 'true' as of S2731 F-WF-1, but the Procfile declaration
+# keeps the intent visible in infra config so future operators reading the
+# Procfile don't have to trace to settings.py to know which routing path
+# the workers use. See docs/research/tools/validation/pa_use_function_calling_env_validation.md.
+celery-worker: PG_APPLICATION_NAME=dbz:celery-worker PA_USE_FUNCTION_CALLING=true celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=5 --max-memory-per-child=150000 -Q default,agents,sports
+celery-pa: PG_APPLICATION_NAME=dbz:celery-pa PA_USE_FUNCTION_CALLING=true celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=10 --max-memory-per-child=200000 -Q pa
+celery-content: PG_APPLICATION_NAME=dbz:celery-content PA_USE_FUNCTION_CALLING=true celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=2 --max-memory-per-child=250000 -Q content
+celery-long-running: PG_APPLICATION_NAME=dbz:celery-long-running PA_USE_FUNCTION_CALLING=true celery -A core worker -l info --pool=prefork -c 2 --max-tasks-per-child=2 --max-memory-per-child=150000 -Q long_running,ml
+celery-long-running-2: PG_APPLICATION_NAME=dbz:celery-long-running-2 PA_USE_FUNCTION_CALLING=true celery -A core worker -l info --pool=prefork -c 2 --max-tasks-per-child=2 --max-memory-per-child=150000 -Q long_running,ml
+celery-broadcast: PG_APPLICATION_NAME=dbz:celery-broadcast PA_USE_FUNCTION_CALLING=true celery -A core worker -l info --pool=threads -c 3 --max-tasks-per-child=50 --max-memory-per-child=200000 -Q broadcast
+celery-beat: PG_APPLICATION_NAME=dbz:celery-beat PA_USE_FUNCTION_CALLING=true celery -A core beat -l info
+code-worker: PG_APPLICATION_NAME=dbz:code-worker PA_USE_FUNCTION_CALLING=true celery -A core worker -l info --pool=prefork -c 1 --max-tasks-per-child=1 --max-memory-per-child=400000 -Q code_jobs
 resolve-node: PG_APPLICATION_NAME=dbz:resolve-node sh -c "cd resolve_node && MOCK_MODE=true uvicorn app:app --host 0.0.0.0 --port ${PORT:-5001}"
