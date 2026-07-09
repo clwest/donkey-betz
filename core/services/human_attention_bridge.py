@@ -307,6 +307,93 @@ class HumanAttentionBridge:
             logger.error(f"Failed to create signal pattern attention: {e}")
 
     # =========================================================================
+    # BODY-SYSTEM DEGRADATION  (Session 2734 — Capability Chain §14)
+    # =========================================================================
+
+    def create_body_system_degradation_attention(self, heartbeat, user=None):
+        """
+        Create attention item when a ``HeartBeat`` records
+        ``overall_status`` of ``critical`` or ``offline``.
+
+        Called by
+        ``core/signals/body_system_degradation_signals.py`` after the
+        signal-side dedup gate (no existing open HAI in the last hour).
+        Seventh producer category on this bridge per Platform
+        Capability Graph §14 wire-up.
+
+        Args:
+            heartbeat: ``HeartBeat`` instance with ``overall_status``,
+                ``health_score``, ``components``, etc.
+            user: Optional target user; defaults to all admins.
+
+        Chain:
+            BodyCoordinator every-10-min scan
+            → HeartBeat.save(overall_status='critical'|'offline')
+            → post_save receiver (dedup + kill switch guard)
+            → transaction.on_commit
+            → this method
+            → HumanInterfaceService.create_attention_item()
+            → HumanAttentionItem row
+        """
+        try:
+            users = [user] if user else self.get_admin_users()
+
+            overall_status = getattr(heartbeat, 'overall_status', 'unknown') or 'unknown'
+            health_score = float(getattr(heartbeat, 'health_score', 0.0) or 0.0)
+            components_checked = int(getattr(heartbeat, 'components_checked', 0) or 0)
+            components_healthy = int(getattr(heartbeat, 'components_healthy', 0) or 0)
+            is_alive = bool(getattr(heartbeat, 'is_alive', False))
+            components = getattr(heartbeat, 'components', {}) or {}
+
+            # 'critical' is the wake-someone-up state; 'offline' means the
+            # coordinator itself flagged the system as unreachable — same
+            # urgency for the human inbox.
+            urgency = 'critical'
+            components_degraded = max(components_checked - components_healthy, 0)
+
+            summary = (
+                f"Platform health {overall_status} — "
+                f"score {health_score:.1f}/100, "
+                f"{components_degraded} of {components_checked} components unhealthy"
+                + ('' if is_alive else ' (is_alive=False)')
+                + '.'
+            )
+
+            payload = _serialize_for_json({
+                'heartbeat_id': str(getattr(heartbeat, 'id', '')),
+                'overall_status': overall_status,
+                'health_score': health_score,
+                'is_alive': is_alive,
+                'components_checked': components_checked,
+                'components_healthy': components_healthy,
+                'components_degraded': components_degraded,
+                'components': components,
+                'recorded_at': getattr(heartbeat, 'recorded_at', None),
+            })
+
+            for target_user in users:
+                service = self.get_service(target_user)
+                service.create_attention_item(
+                    source_type='body_system_degradation',
+                    source_id=str(getattr(heartbeat, 'id', '')),
+                    source_agent='BodyCoordinator',
+                    item_type='alert',
+                    title=f"Platform health {overall_status}: score {health_score:.0f}/100",
+                    summary=summary[:400],
+                    urgency=urgency,
+                    payload=payload,
+                )
+                logger.info(
+                    "[HAI_BRIDGE] body_system_degradation attention created "
+                    "user=%s heartbeat_id=%s status=%s score=%.1f",
+                    target_user.username, heartbeat.id, overall_status,
+                    health_score,
+                )
+
+        except Exception as e:
+            logger.error(f"Failed to create body system degradation attention: {e}")
+
+    # =========================================================================
     # SYSTEM ALERTS
     # =========================================================================
 
