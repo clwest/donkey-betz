@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-07-09 11:21
+**Generated:** 2026-07-09 11:52
 **Current Session:** 2733
 **Total Documentation:** 3041 files | 924,625 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 7,788 |
+| Total cross-references | 7,797 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -38,7 +38,7 @@
 | `docs/INDEX.md` | 174 | INDEX |
 | `docs/research/ARCHITECTURE_INDEX.md` | 139 | ARCHITECTURE INDEX |
 | `docs/research/OPEN_ARCS.md` | 135 | OPEN ARCS |
-| `docs/topics/README.md` | 122 | README |
+| `docs/archive/old-structure/capabilities/04_Agent_Orchestra/README.md` | 122 | 🤖 AI AGENT ORCHESTRA - 149 Specialized Intelligenc |
 | `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` | 113 | DOMAIN RESEARCH PLAYBOOK |
 | `docs/AGENTS.md` | 83 | AGENTS |
 | `docs/00-START-HERE/DOC_LIFECYCLE.md` | 81 | DOC LIFECYCLE |
@@ -256,7 +256,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 400 | 2026-07-09 10:48 |
+| INDEX.md | docs | 400 | 2026-07-09 11:27 |
 | platform_capability_graph.md | research | 713 | 2026-07-09 09:29 |
 | integration_readiness_matrix.md | research | 295 | 2026-07-09 09:29 |
 | SESSION_2733_CAMPAIGN_RETROSPECTIVE.md | handoffs | 418 | 2026-07-09 08:22 |
