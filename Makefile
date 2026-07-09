@@ -23,7 +23,7 @@ MOBILE_DIR ?= mobile
 # Export common env for child processes if you want (safe; read-only for checks)
 export HOST PORT
 
-.PHONY: start stop restart status logs dev-up dev-stop dev-health ws-start ws-stop ws-status runworker selfpatch-apply selfpatch-propose mobile mobile-stop mobile-status mobile-logs start-all stop-all celery celery-stop celery-status davinci-bridge davinci-bridge-stop davinci-bridge-status davinci-bridge-logs
+.PHONY: start stop restart status logs dev-up dev-stop dev-health ws-start ws-stop ws-status runworker selfpatch-apply selfpatch-propose mobile mobile-stop mobile-status mobile-logs start-all stop-all celery celery-stop celery-recycle celery-status davinci-bridge davinci-bridge-stop davinci-bridge-status davinci-bridge-logs
 
 # ---------- Core service lifecycle ----------
 start: ## Start Redis (if needed) and Daphne (background). Wait for health endpoint.
@@ -227,6 +227,23 @@ davinci-bridge-logs: ## Tail DaVinci Bridge logs
 # - default worker: Quick tasks (4 threads)
 # - long_running worker: Spider network, agent conversations, dreams (2 threads)
 # - broadcast worker: High-frequency status updates (2 threads)
+#
+# Session 2731 F-CW-1 recycle discipline:
+# All local celery workers use `--pool=solo` (macOS SIGSEGV avoidance —
+# see CLAUDE.md macOS Celery SIGSEGV note). Solo pool does NOT fork child
+# processes, so the `CELERY_WORKER_MAX_TASKS_PER_CHILD=50` and
+# `CELERY_WORKER_MAX_MEMORY_PER_CHILD=300_000` settings in `core/settings.py`
+# are SILENTLY IGNORED locally — there are no children to recycle.
+#
+# Local workers therefore run indefinitely; module-level Python caches
+# (`_CLIENT_CACHE`, `_aggregator_cache`, `_service_cache`, ...) accumulate
+# state across every task the worker handles. Chronic drift is silent
+# until a stall reproduces (see MEMORY rule feedback_local_celery_stall_playbook
+# for the S1184-adjacent April 2026 incident).
+#
+# Recycle discipline for long-running local dev sessions: run
+# `make celery-recycle` (below) periodically. It's `make celery-stop &&
+# make celery` in one command — bounces every worker cleanly.
 CELERY_LONG_RUNNING_LOG ?= celery-long-running.log
 CELERY_BROADCAST_LOG ?= celery-broadcast.log
 CELERY_CODE_JOBS_LOG ?= celery-code-jobs.log
@@ -413,12 +430,36 @@ celery-stop: ## Stop all Celery workers and beat
 	fi
 	@echo "✓ Celery services stopped."
 
+celery-recycle: ## Bounce every Celery worker (recycle in-worker Python caches). See F-CW-1.
+	@# Session 2731 F-CW-1: local `--pool=solo` workers never recycle themselves —
+	@# CELERY_WORKER_MAX_TASKS_PER_CHILD from settings is silently ignored under
+	@# solo pool. Long-running local dev accumulates module-level cache state
+	@# indefinitely (`_CLIENT_CACHE`, `_aggregator_cache`, `_service_cache`,
+	@# ...) which contributes to the stall class MEMORY rule
+	@# feedback_local_celery_stall_playbook diagnoses. Run this target on the
+	@# cadence your feature work requires (typical: once per session, or
+	@# after a code change to a service module that owns a module-level
+	@# cache). Effect is equivalent to `make celery-stop && make celery` in
+	@# one command.
+	@echo "==> Recycling Celery workers (F-CW-1 solo-pool cache reset)..."
+	@$(MAKE) celery-stop
+	@$(MAKE) celery
+
 celery-status: ## Check Celery worker and beat status
+	@# Session 2731 F-CW-3: extended to check every worker started by `make
+	@# celery`. Pre-S2731 only default / long_running / broadcast were
+	@# verified — if `pa` or `code_jobs` crashed silently the status target
+	@# still showed all-green because the other three were fine. Operators
+	@# then trusted the status output and only discovered the missing
+	@# workers when a Rigby request timed out or a claude_code_tool
+	@# dispatch never fired.
 	@echo "==> Celery status (multi-queue architecture)"
 	@echo "Workers:"
 	@if pgrep -f "hostname=default" >/dev/null 2>&1; then echo "  ✓ Default worker (quick tasks)"; else echo "  ✗ Default worker not running"; fi
-	@if pgrep -f "hostname=long_running" >/dev/null 2>&1; then echo "  ✓ Long-running worker (slow tasks)"; else echo "  ✗ Long-running worker not running"; fi
+	@if pgrep -f "hostname=pa@" >/dev/null 2>&1; then echo "  ✓ PA worker (Rigby chat + agentic loop)"; else echo "  ✗ PA worker not running (Rigby will fall through — tail celery-pa.log)"; fi
+	@if pgrep -f "hostname=long_running" >/dev/null 2>&1; then echo "  ✓ Long-running worker (slow tasks + ml queue)"; else echo "  ✗ Long-running worker not running"; fi
 	@if pgrep -f "hostname=broadcast" >/dev/null 2>&1; then echo "  ✓ Broadcast worker (status updates)"; else echo "  ✗ Broadcast worker not running"; fi
+	@if pgrep -f "hostname=code_jobs" >/dev/null 2>&1; then echo "  ✓ code_jobs worker (claude_code_engineer_task)"; else echo "  ✗ code_jobs worker not running (claude_code_tool dispatches will queue-forever — tail $(CELERY_CODE_JOBS_LOG))"; fi
 	@echo "Scheduler:"
 	@if pgrep -f "celery -A core beat" >/dev/null 2>&1; then echo "  ✓ Celery beat running"; else echo "  ✗ Celery beat not running"; fi
 	@echo ""
