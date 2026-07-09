@@ -137,6 +137,18 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Initiative diagnostic signals not available
 
+        # Session 2734 — Capability Chain §1 Mission Completion.
+        # Post-save handler on OpsRunEvent broadcasts a
+        # ``mission_verdict`` system event when
+        # ``label.startswith('verdict_issued:')`` on a mission-domain
+        # run. Wired via ``transaction.on_commit`` so a rolled-back
+        # transaction produces no phantom broadcast.
+        try:
+            from core.signals import connect_mission_verdict_signals
+            connect_mission_verdict_signals()
+        except ImportError:
+            pass  # Mission verdict signals not available
+
     def _should_run_startup_check(self):
         """Determine if we should run the startup health check"""
         # Check if DATABASE_AUDIT_ON_STARTUP is enabled
