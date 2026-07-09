@@ -4404,14 +4404,36 @@ class UnifiedPAEntrypoint:
         return set(re.findall(r'[a-z0-9_]+', text.lower()))
 
     def _passes_relevance_gate(self, message: str, enrichment_text: str, threshold: float = 0.15) -> bool:
-        """Keyword overlap relevance check with regex tokenization."""
+        """Keyword overlap relevance check with regex tokenization.
+
+        Session 2730 F-CI-4 + F-CI-5: added observability logs for the
+        two silent-filter branches — short-enrichment discard and the
+        empty-msg-words permissive-include fallback. Behavior unchanged;
+        operator can now see when either branch fires.
+        """
         if not enrichment_text:
             return False
         enrich_words = self._tokenize(enrichment_text)
         if len(enrich_words) < 30:
-            return False  # Too short to be useful
+            # Session 2730 F-CI-5: log silent discard of short enrichment
+            # (previous behavior was completely silent). Short-authoritative
+            # snippets — e.g., 25-word canonical findings — get discarded
+            # here; DEBUG log surfaces the pattern without volume risk.
+            logger.debug(
+                "relevance gate: enrichment discarded (short: %d tokens < 30)",
+                len(enrich_words),
+            )
+            return False
         msg_words = self._tokenize(message) - self.STOP_WORDS
         if not msg_words:
+            # Session 2730 F-CI-4: log permissive-include fallback for
+            # stop-word-only queries ("why?", "how?"). Behavior preserved
+            # (return True so enrichment is not silently dropped); INFO
+            # log surfaces the pattern so operator can spot cases where
+            # enrichment fires unconditionally due to query composition.
+            logger.info(
+                "relevance gate: bypass — msg has no non-stopword tokens (permissive include)",
+            )
             return True  # Can't filter, include it
         overlap = len(msg_words & enrich_words)
         return (overlap / len(msg_words)) >= threshold
