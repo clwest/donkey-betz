@@ -2,11 +2,11 @@
 
 ---
 
-## READ THIS FIRST — TOOL VALIDATION CAMPAIGN CLOSED (SESSION 2732)
+## READ THIS FIRST — TOOL VALIDATION CAMPAIGN CLOSED + RETROSPECTIVE WRITTEN (SESSION 2733)
 
-**Refreshed 2026-07-09 (SESSION 2732 close: Batch D of the Rigby Tool Validation Engineering Campaign shipped 3 tools, 11 defects patched, 45 regression tests, 3 observability additions, 2 bounded LRU refactors, and 1 mgmt command target — CLOSING the campaign's original 4-batch / 18-tool scope).**
+**Refreshed 2026-07-09 (SESSION 2733: post-campaign retrospective written; no code changes. Prior session S2732 closed the campaign's original 4-batch / 18-tool scope. Retrospective at [`docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md`](docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md) is input into the Playbook v0.1.1 PATCH work.).**
 
-Prior anchor context: Engineering Playbook v0.1.0 ratified at Session 2727 close. Sessions 2728 → 2732 executed the Rigby Tool Validation Engineering Campaign end-to-end. **All 18 tools verified at DEFECT-PATCHED-VERIFIED.**
+Prior anchor context: Engineering Playbook v0.1.0 ratified at Session 2727 close. Sessions 2728 → 2732 executed the Rigby Tool Validation Engineering Campaign end-to-end. **All 18 tools verified at DEFECT-PATCHED-VERIFIED.** Session 2733 wrote the retrospective identifying 6 methodology moves that worked + 6 reusable patterns + 2 anti-patterns caught in flight + 6 sections proposed for Playbook v0.1.1 codification.
 
 ---
 
@@ -87,12 +87,12 @@ Prior anchor context: Engineering Playbook v0.1.0 ratified at Session 2727 close
 
 ## Current recommended first task
 
-**Chris-choice among five options** (per S2732 handoff §9):
+**Chris-choice among four options** (per S2732 handoff §9, with option 4 completed at S2733):
 
 1. **Combined batch-close doc pass** — sweep the ~35 cross-tool consistency observations logged across A + B + C + D into a single cleanup PR. High leverage for uniformity.
-2. **PA worker restart + Rigby cross-check of Batches B + C + D patches** — ~40+ defects patched but not yet loaded into the running worker. Rigby dispatches would still hit Batch A code.
-3. **Playbook v0.1.1 PATCH** — CD-48 + CD-49 codification (from S2727 handoff §5). Constitutional work; independent of the campaign.
-4. **Post-campaign retrospective** — write a `SESSION_2733_CAMPAIGN_RETROSPECTIVE.md` capturing what worked / what to codify into the Playbook v0.1.1 methodology chapters / what patterns to reuse (F-D-5 envelope shape, D17-D21 narrow-except discipline, td_autofill_safety pattern, `_metadata` envelope shape from Batch C tool 1, `is_retryable` classification from Batch C tool 5, startup-log substrate observability from Batch D).
+2. **PA worker restart + Rigby cross-check of Batches B + C + D patches** — ~40+ defects patched but not yet loaded into the running worker. Rigby dispatches would still hit Batch A code. Use `make celery-recycle` (F-CW-1 helper shipped in Batch D).
+3. **Playbook v0.1.1 PATCH** — CD-48 + CD-49 codification (from S2727 handoff §5). **Session 2733 retrospective is direct input** — §6 of the retrospective proposes 6 specific sections for v0.1.1 codification. Constitutional work; independent of the campaign.
+4. ~~Post-campaign retrospective~~ — **completed at S2733.** See [`docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md`](docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md).
 5. **Something else** — the campaign is closed; the queue is open.
 
 Recommended session-open protocol:
@@ -106,11 +106,12 @@ Recommended session-open protocol:
 
 ## Reference documents (read order for post-campaign sessions)
 
-Campaign-closure anchors (S2732):
+Campaign-closure + retrospective anchors (S2732 / S2733):
 
-1. [`docs/handoffs/SESSION_2732_TOOL_VALIDATION_CAMPAIGN_CLOSED.md`](docs/handoffs/SESSION_2732_TOOL_VALIDATION_CAMPAIGN_CLOSED.md) — **Session 2732 handoff + campaign-close artifacts.**
-2. [`docs/research/tools/tools_validation_engineering_campaign_plan.md`](docs/research/tools/tools_validation_engineering_campaign_plan.md) — **the campaign plan Chris ratified.** Now historical; scope complete.
-3. [`docs/research/tools/validation/`](docs/research/tools/validation/) — **18 validation reports** across the 4 batches.
+1. [`docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md`](docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md) — **Session 2733 retrospective.** Input into Playbook v0.1.1 methodology chapters.
+2. [`docs/handoffs/SESSION_2732_TOOL_VALIDATION_CAMPAIGN_CLOSED.md`](docs/handoffs/SESSION_2732_TOOL_VALIDATION_CAMPAIGN_CLOSED.md) — Session 2732 handoff + campaign-close artifacts.
+3. [`docs/research/tools/tools_validation_engineering_campaign_plan.md`](docs/research/tools/tools_validation_engineering_campaign_plan.md) — the campaign plan Chris ratified. Now historical; scope complete.
+4. [`docs/research/tools/validation/`](docs/research/tools/validation/) — **18 validation reports** across the 4 batches.
 
 Prior batch-close handoffs:
 
