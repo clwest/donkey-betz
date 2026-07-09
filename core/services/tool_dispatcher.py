@@ -956,6 +956,14 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
             if result.result is not None else ''
         )
         result_size = len(result_str.encode('utf-8', errors='replace'))
+        # Session 2730 F-PS-2a/F-PS-2b: silent-truncation signals so
+        # analytics can distinguish truncated / dropped rows from full
+        # rows without inferring from other fields. `>` not `>=`
+        # mirrors the slice semantics (`result_str[:4096]` returns
+        # everything when len==4096); `>=` on the 64KB threshold
+        # matches the existing "drop at cap" boundary.
+        summary_truncated = len(result_str) > 4096
+        full_result_dropped = result_size > 65536
 
         # Arc I-0100 P2 (IB-1799-T1-01): resolve trace_id to UUID via
         # feature-flagged helper. When TOOL_CALL_TRACE_ID_ENFORCED is
@@ -974,8 +982,10 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                 f"sha256:{hashlib.sha256(result_str.encode()).hexdigest()}"
                 if result_str else ''
             ),
-            full_result=result_str if result_size <= 65536 else '',
+            full_result='' if full_result_dropped else result_str,
             result_size_bytes=result_size,
+            summary_truncated=summary_truncated,
+            full_result_dropped=full_result_dropped,
             success=result.ok,
             error_message=result.error_message or '',
             error_type=result.error_code or '',
