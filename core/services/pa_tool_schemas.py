@@ -3404,7 +3404,7 @@ PA_TOOL_SCHEMAS = [
                         "list: browse deliverables (supports status/type/category/date/workspace filters). "
                         "detail: get full content of a deliverable (pass full=true for uncapped content). "
                         "create: create a new deliverable (title + content required). "
-                        "update: update an existing deliverable by id. "
+                        "update: update an existing deliverable by id. NOTE: cannot set status='completed' via update — completed is a lifecycle terminal state (returns a typed error pointing at content_tool.content_complete or deliverable_tool.set_status status='completed'; see F-D-7 Session 2728). "
                         "append: append text to a deliverable (never overwrites). "
                         "search: search deliverables by title keyword. "
                         "save/unsave: bookmark or unbookmark a deliverable. "

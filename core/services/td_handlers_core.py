@@ -3940,7 +3940,29 @@ RESEARCH DATA:
             from core.models import ChatConversation
             from django.db.models import Count, Max
 
-            limit = min(payload.get('limit', 10), 25)
+            # Session 2728 F-S-3 — surface hard cap explicitly so Rigby knows
+            # when the returned set is a bounded slice, not the full history.
+            # Mirrors the F-D-5 pattern (deliverable_tool.list/search) approved
+            # at Batch A tool 1.
+            _LIST_RECENT_HARD_MAX = 25
+            _requested_limit = payload.get('limit', 10)
+            try:
+                _requested_limit_int = int(_requested_limit)
+            except (TypeError, ValueError):
+                _requested_limit_int = 10
+            limit = min(_requested_limit_int, _LIST_RECENT_HARD_MAX)
+            _limit_capped = _requested_limit_int > _LIST_RECENT_HARD_MAX
+
+            # Session 2728 F-S-3 — surface `total` (unbounded distinct
+            # conversation count) so callers can detect there are more
+            # conversations beyond the returned slice.
+            total = (
+                ChatConversation.objects
+                .filter(user_id=user_id)
+                .values('conversation_id')
+                .distinct()
+                .count()
+            )
 
             recent = (
                 ChatConversation.objects.filter(user_id=user_id)
@@ -3961,11 +3983,19 @@ RESEARCH DATA:
                     'last_message': conv['last_message'].isoformat() if conv['last_message'] else None,
                 })
 
-            return {
+            _resp = {
                 'action': 'list_recent',
                 'conversations': conversations,
                 'count': len(conversations),
+                'total': total,
+                'limit': limit,
             }
+            if _limit_capped:
+                _resp['limit_capped'] = True
+                _resp['requested_limit'] = _requested_limit_int
+                _resp['effective_limit'] = limit
+                _resp['hard_max'] = _LIST_RECENT_HARD_MAX
+            return _resp
 
         elif action == 'whoami':
             # Session 1226 — return the authenticated user's identity AND whether the
@@ -4059,26 +4089,69 @@ RESEARCH DATA:
                 }
 
             qs = ChatConversation.objects.filter(conversation_id=target, user_id=user_id)
+            # Session 2728 F-S-6 — distinguish "actually retired" from
+            # "no-op because target didn't exist / already retired".
+            # Prior behavior returned `retired: True + updated_count: 0` for
+            # both no-op cases, so Rigby's cleanup workflow couldn't tell
+            # whether her pin ownership check should follow up on a
+            # not-found or accept an already-retired state. Chris ratified
+            # option (b) at Batch A tool 2 close: use the extra existence
+            # query and return one of three shapes.
+            target_exists = qs.exists()
             previously_active = qs.filter(session_active=True).exists()
             updated = qs.filter(session_active=True).update(session_active=False)
 
-            response = {
+            if updated > 0:
+                # Actual retire happened.
+                response = {
+                    'action': 'retire',
+                    'conversation_id': target,
+                    'is_current_bound': is_current_bound,
+                    'previously_active': previously_active,
+                    'retired': True,
+                    'updated_count': updated,
+                }
+                if is_current_bound:
+                    response['pin_rotation_notice'] = (
+                        f"You just retired the currently-bound thread `{target}`. "
+                        f"Edit `tools/pa_local.sh` line 70 to a new conversation_id "
+                        f"(create one via session_tool.create_fresh) before any "
+                        f"further work — otherwise this PA wrapper will keep "
+                        f"dispatching into a retired thread."
+                    )
+                return response
+
+            # updated == 0 — no-op. Two distinguishable causes.
+            if not target_exists:
+                return {
+                    'action': 'retire',
+                    'conversation_id': target,
+                    'is_current_bound': is_current_bound,
+                    'previously_active': False,
+                    'retired': False,
+                    'updated_count': 0,
+                    'reason': 'not_found',
+                    'message': (
+                        f"No conversation found with id `{target}` for this "
+                        "user. Check the conversation_id — it may be a typo, "
+                        "belong to a different user, or have been deleted."
+                    ),
+                }
+
+            # Rows exist but none are session_active=True → already retired.
+            return {
                 'action': 'retire',
                 'conversation_id': target,
                 'is_current_bound': is_current_bound,
-                'previously_active': previously_active,
-                'retired': True,
-                'updated_count': updated,
+                'previously_active': False,
+                'retired': False,
+                'updated_count': 0,
+                'reason': 'already_retired',
+                'message': (
+                    f"Conversation `{target}` is already retired "
+                    "(session_active=False on all rows). No-op."
+                ),
             }
-            if is_current_bound:
-                response['pin_rotation_notice'] = (
-                    f"You just retired the currently-bound thread `{target}`. "
-                    f"Edit `tools/pa_local.sh` line 70 to a new conversation_id "
-                    f"(create one via session_tool.create_fresh) before any "
-                    f"further work — otherwise this PA wrapper will keep "
-                    f"dispatching into a retired thread."
-                )
-            return response
 
         elif action == 'set_active':
             # Session 1248 — inverse of retire. Bulk-flip session_active=True
