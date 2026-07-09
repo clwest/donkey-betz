@@ -366,14 +366,39 @@ class CodeJobHandlersMixin:
             request_mode=request_mode,
         )
 
+        # Session 2728 F-CC-3 — surface whether the completion banner will fire.
+        # The S1174 PR-2 auto-wake `create_implicit_followup_subscription` at
+        # `core/tasks.py:11900` is gated on `conversation_id` being truthy. If
+        # the caller's dispatch omits conversation_id AND the PA entrypoint did
+        # not auto-inject it (which normally happens via
+        # `unified_pa_entrypoint.py:2096` `setdefault`), then no follow-up
+        # subscription will arm and Rigby will not receive a completion banner
+        # for this dispatch. Prior response said `status: 'dispatched'`
+        # regardless — Rigby had no way to detect the silent-no-banner
+        # consequence from the response shape. Chris ratified option (a) at
+        # Batch A tool 4 close: echo `conversation_id` and add a
+        # `follow_up_will_fire` boolean so Rigby can decide whether to poll
+        # `execution_history_tool` / `schedule_followup` explicitly.
+        follow_up_will_fire = bool(conversation_id)
+        message_suffix = (
+            'Results will be posted to the conversation when complete.'
+            if follow_up_will_fire
+            else (
+                'NOTE: no conversation_id was resolved for this dispatch — no '
+                'completion banner will fire. Poll `execution_history_tool` or '
+                'call `schedule_followup(task_id=...)` to observe completion.'
+            )
+        )
         return {
             'status': 'dispatched',
             'task_id': str(task.id),
             'request_mode': request_mode,
+            'conversation_id': conversation_id or None,
+            'follow_up_will_fire': follow_up_will_fire,
             'message': (
                 f'Claude Code engineering session started '
-                f'(request_mode={request_mode}). Task ID: {task.id}. Results '
-                f'will be posted to the conversation when complete.'
+                f'(request_mode={request_mode}). Task ID: {task.id}. '
+                f'{message_suffix}'
             ),
         }
 
