@@ -837,6 +837,20 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute=15),  # every hour at :15 — offset from sports odds
         'options': {'queue': 'long_running', 'expires': 3600},
     },
+
+    # ── Cost Protection (Session 2735 P1) ──────────────────────────────────
+    # Rolling hour/day/month spend check against CostTracking. Monitor-only
+    # at ship: if any window breaches its configured SystemConfiguration
+    # threshold, dispatches an HAI(source_type='cost_breach', urgency=
+    # 'critical'). Enforcement (auto governance.set_mode('freeze')) is
+    # DELIBERATELY not implemented in this release per Chris's enforcement-
+    # gate discipline (requires monitor observation period + explicit
+    # approval before freeze becomes active).
+    'check-cost-thresholds': {
+        'task': 'check_cost_thresholds',
+        'schedule': crontab(minute='*/15'),
+        'options': {'queue': 'default', 'expires': 900},
+    },
 }
 
 # Task routing configuration
@@ -921,6 +935,13 @@ app.conf.imports = (
     # worker dispatch resolves the task name on the first beat fire
     # (PR 4.3) + on manual `run_now` dispatches via the PA tool.
     'core.tasks_bug_triage',
+    # Session 2735 Cost Protection Campaign P1: check_cost_thresholds
+    # beat task in tasks_cost_protection.py. Same lesson — non-standard
+    # module needs explicit listing so worker dispatch resolves the
+    # task name on beat fires + manual run_now dispatches. Task is
+    # monitor-only at ship; will never call governance.set_mode('freeze')
+    # regardless of cost_protection_enforce_mode config value.
+    'core.tasks_cost_protection',
 )
 
 
