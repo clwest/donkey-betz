@@ -336,14 +336,33 @@ class ContentHandlersMixin:
         if action == 'list':
             # Session 1101: Honor status filter from payload (default: ready)
             _STATUS_ALIASES = {'approved': 'ready', 'pending_review': 'ready', 'rejected': 'archived'}
-            status_filter = payload.get('status', 'ready')
-            status_filter = _STATUS_ALIASES.get(status_filter, status_filter)
-            qs = base_qs.filter(status=status_filter)
+            # Session 2730 F-OH-1 — track applied filters + escape hatches
+            # so Rigby can tell which filters fired and distinguish the
+            # `status='ready'` default from an explicit caller request.
+            # Mirrors the deliverable_tool `_apply_common_filters` +
+            # `applied_filters` gold standard.
+            _applied: Dict[str, Any] = {}
+
+            # Session 2730 F-OH-1 — `status='all'` escape hatch matching the
+            # `_handle_initiative.list` precedent (td_handlers_content.py:1589).
+            # Without this, callers who wanted the broadest set had to know
+            # to iterate every status value.
+            _status_raw = payload.get('status')
+            _status_defaulted = _status_raw is None
+            status_filter = _status_raw if _status_raw is not None else 'ready'
+            if str(status_filter).lower() != 'all':
+                status_filter = _STATUS_ALIASES.get(status_filter, status_filter)
+                qs = base_qs.filter(status=status_filter)
+                _applied['status'] = status_filter
+            else:
+                qs = base_qs
 
             if content_type:
                 qs = qs.filter(deliverable_type=content_type)
+                _applied['type'] = content_type
             if category:
                 qs = qs.filter(category__icontains=category)
+                _applied['category'] = category
 
             # Session 1101: Date range filters
             created_before = payload.get('created_before')
@@ -353,11 +372,13 @@ class ContentHandlersMixin:
                 dt = parse_datetime(created_before)
                 if dt:
                     qs = qs.filter(created_at__lt=dt)
+                    _applied['created_before'] = created_before
             if created_after:
                 from django.utils.dateparse import parse_datetime
                 dt = parse_datetime(created_after)
                 if dt:
                     qs = qs.filter(created_at__gte=dt)
+                    _applied['created_after'] = created_after
 
             total = qs.count()
             offset = max(payload.get('offset', 0), 0)
@@ -373,13 +394,22 @@ class ContentHandlersMixin:
                 'total': total,
                 'count': len(items),
                 'items': items,
+                # Session 2730 F-OH-1 — align with deliverable_tool gold
+                # standard: `applied_filters` records only filters that
+                # actually fired (not the value of every declared filter).
+                # `status_defaulted` distinguishes explicit `status='ready'`
+                # from the implicit default.
+                'applied_filters': dict(_applied),
+                'status_defaulted': _status_defaulted,
+                # Preserved for backward compat with any callers that
+                # were reading `filters_applied` before S2730.
                 'filters_applied': {
                     'type': content_type,
                     'category': category,
-                    'status': status_filter,
+                    'status': _applied.get('status'),
                     'created_before': created_before,
                     'created_after': created_after,
-                }
+                },
             }
 
         elif action == 'recent':
