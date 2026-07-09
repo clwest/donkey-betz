@@ -477,6 +477,140 @@ class HumanAttentionBridge:
             logger.error(f"Failed to create body system degradation attention: {e}")
 
     # =========================================================================
+    # WORKER FAILURE CLUSTER  (Session 2734 — Capability Chain §15 closure)
+    # =========================================================================
+
+    def create_failure_cluster_attention(self, snapshot, user=None):
+        """
+        Create an attention item when a ``FailureClusterSnapshot`` breaches
+        the configured threshold — Category B closure of §15 Item 14.
+
+        Called by ``core/signals/failure_cluster_signals.py`` after the
+        ``CeleryTaskEvent.status='FAILURE'`` post_save receiver computes
+        the sliding-window cluster and confirms the dedup gate (no open
+        ``failure_cluster`` HAI for the same ``(task_name, urgency_band)``
+        in the last 30 minutes).
+
+        Urgency policy (per Rigby SIGN ``pa-74ecac300bba4ab3`` Q3
+        refinement — dedup on ``(task_name, urgency_band)`` allows a
+        previously-``high`` cluster to re-escalate to ``critical`` when
+        the count crosses the critical threshold within the dedup
+        window):
+
+          * ``urgency_band='high'`` — 5+ distinct task_ids failed in the
+            5-minute window. Inbox visibility only. Does NOT trigger
+            Expo push.
+          * ``urgency_band='critical'`` — 15+ distinct task_ids failed.
+            Worker-storm territory. Triggers Expo push via
+            ``signals_push_notifications.on_critical_attention_item``.
+
+        Args:
+            snapshot: ``FailureClusterSnapshot`` from
+                ``core.services.failure_cluster_aggregator.compute_cluster``.
+                Must have ``exceeds_threshold=True``.
+            user: Optional target user; defaults to admins.
+        """
+        try:
+            users = [user] if user else self.get_admin_users()
+
+            task_name = getattr(snapshot, 'task_name', '') or 'unknown'
+            distinct_count = int(getattr(snapshot, 'distinct_task_id_count', 0) or 0)
+            total_count = int(getattr(snapshot, 'total_event_count', 0) or 0)
+            urgency_band = getattr(snapshot, 'urgency_band', 'high') or 'high'
+            urgency = 'critical' if urgency_band == 'critical' else 'high'
+            window_minutes = int(getattr(snapshot, 'window_minutes', 5) or 5)
+            # Per Rigby SIGN pa-74ecac300bba4ab3 post-implementation Q3
+            # refinement: truncate long-tail lists to top-5 samples +
+            # keep total counts so the inbox payload does not bloat when
+            # a storm hits many workers/queues/error types at once.
+            _PAYLOAD_SAMPLE_MAX = 5
+            all_queues = list(getattr(snapshot, 'distinct_queues', ()) or ())
+            all_workers = list(getattr(snapshot, 'distinct_workers', ()) or ())
+            all_error_types = list(
+                getattr(snapshot, 'distinct_error_types', ()) or ()
+            )
+            distinct_queues = all_queues[:_PAYLOAD_SAMPLE_MAX]
+            distinct_workers = all_workers[:_PAYLOAD_SAMPLE_MAX]
+            distinct_error_types = all_error_types[:_PAYLOAD_SAMPLE_MAX]
+            top_error_signature = getattr(snapshot, 'top_error_signature', '') or ''
+            sample_task_ids = list(
+                getattr(snapshot, 'sample_task_ids', ()) or ()
+            )[:_PAYLOAD_SAMPLE_MAX]
+            idempotency_key = getattr(snapshot, 'idempotency_key', '') or ''
+
+            title = (
+                f"Worker failure cluster: {task_name[:60]} — "
+                f"{distinct_count} failures in {window_minutes}m"
+            )
+
+            summary_parts = [
+                f"{distinct_count} distinct Celery tasks failed in the last "
+                f"{window_minutes} minute(s) for task '{task_name}'."
+            ]
+            if top_error_signature:
+                summary_parts.append(f"Top error: {top_error_signature}.")
+            if distinct_queues:
+                summary_parts.append(
+                    f"Queues: {', '.join(distinct_queues[:3])}."
+                )
+            if distinct_workers:
+                summary_parts.append(
+                    f"Workers: {', '.join(distinct_workers[:3])}."
+                )
+            summary = ' '.join(summary_parts)
+
+            payload = _serialize_for_json({
+                'task_name': task_name,
+                'window_minutes': window_minutes,
+                'window_start': getattr(snapshot, 'window_start', None),
+                'window_end': getattr(snapshot, 'window_end', None),
+                'distinct_task_id_count': distinct_count,
+                'total_event_count': total_count,
+                'distinct_queues': distinct_queues,
+                'distinct_queues_total': len(all_queues),
+                'distinct_workers': distinct_workers,
+                'distinct_workers_total': len(all_workers),
+                'distinct_error_types': distinct_error_types,
+                'distinct_error_types_total': len(all_error_types),
+                'top_error_signature': top_error_signature,
+                'sample_task_ids': sample_task_ids,
+                'earliest_finished_at': getattr(
+                    snapshot, 'earliest_finished_at', None,
+                ),
+                'latest_finished_at': getattr(
+                    snapshot, 'latest_finished_at', None,
+                ),
+                'threshold': int(getattr(snapshot, 'threshold', 5) or 5),
+                'critical_threshold': int(
+                    getattr(snapshot, 'critical_threshold', 15) or 15
+                ),
+                'urgency_band': urgency_band,
+                'idempotency_key': idempotency_key,
+            })
+
+            for target_user in users:
+                service = self.get_service(target_user)
+                service.create_attention_item(
+                    source_type='failure_cluster',
+                    source_id=idempotency_key or f'failure_cluster:{task_name}',
+                    source_agent='CeleryTelemetry',
+                    item_type='alert',
+                    title=title[:200],
+                    summary=summary[:400],
+                    urgency=urgency,
+                    payload=payload,
+                )
+                logger.info(
+                    "[HAI_BRIDGE] failure_cluster attention created "
+                    "user=%s task_name=%s distinct=%d band=%s idempotency=%s",
+                    target_user.username, task_name, distinct_count,
+                    urgency_band, idempotency_key,
+                )
+
+        except Exception as e:
+            logger.error(f"Failed to create failure cluster attention: {e}")
+
+    # =========================================================================
     # SYSTEM ALERTS
     # =========================================================================
 

@@ -78,6 +78,11 @@ from .mission_verdict_attention_signals import (
     connect_mission_verdict_attention_signals,
 )
 
+from .failure_cluster_signals import (
+    escalate_failure_cluster,
+    connect_failure_cluster_signals,
+)
+
 __all__ = [
     # Trigger signals
     'evaluate_triggers_for_spider_data',
@@ -127,4 +132,7 @@ __all__ = [
     # Session 2734 — Platform Closure §1 Item 9 HAI on mission verdict
     'escalate_mission_verdict_to_hai',
     'connect_mission_verdict_attention_signals',
+    # Session 2734 — Platform Closure §15 Item 14 HAI on failure cluster
+    'escalate_failure_cluster',
+    'connect_failure_cluster_signals',
 ]

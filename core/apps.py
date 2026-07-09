@@ -187,6 +187,24 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Mission verdict attention signals not available
 
+        # Session 2734 — Platform Closure Category B: Capability Chain
+        # §15 Worker Failure Item 14 HAI on failure cluster. Post-save
+        # receiver on CeleryTaskEvent filters status='FAILURE' rows,
+        # runs the FailureClusterAggregator (distinct-task-id count over
+        # a 5-minute sliding window per task_name), and dispatches
+        # HumanAttentionBridge.create_failure_cluster_attention when the
+        # count meets the configurable threshold (default 5 for 'high',
+        # 15 for 'critical'). Dedup key: (task_name, urgency_band) —
+        # allows a previously-high cluster to re-escalate to critical
+        # within the 30-min dedup window (Rigby SIGN
+        # pa-74ecac300bba4ab3 Q3 refinement). Kill switch:
+        # settings.FAILURE_CLUSTER_HAI_ENABLED (default True).
+        try:
+            from core.signals import connect_failure_cluster_signals
+            connect_failure_cluster_signals()
+        except ImportError:
+            pass  # Failure cluster signals not available
+
     def _should_run_startup_check(self):
         """Determine if we should run the startup health check"""
         # Check if DATABASE_AUDIT_ON_STARTUP is enabled
