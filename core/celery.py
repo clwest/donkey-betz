@@ -21,6 +21,53 @@ app = Celery('unified_donkey_betz_core')
 # the configuration object to child processes.
 app.config_from_object('django.conf:settings', namespace='CELERY')
 
+
+# Session 2731 F-CW-2 — worker lifecycle observability. Pre-S2731 the
+# only way to see a prefork child recycle (Railway/production, triggered
+# by CELERY_WORKER_MAX_TASKS_PER_CHILD or CELERY_WORKER_MAX_MEMORY_PER_CHILD)
+# was to parse celery's internal MainProcess logger — easy to miss in
+# tail. These two handlers emit `[CELERY_WORKER_INIT]` at child startup
+# and `[CELERY_WORKER_SHUTDOWN]` at child exit so recycle events become
+# grep-visible in ≤1 second.
+#
+# The `worker_process_init` signal fires once per prefork child at
+# fork-time (Railway) OR once per worker process at startup (macOS
+# solo pool, which doesn't fork). Either way the log line lets an
+# operator answer "when did this worker child last restart?" without
+# parsing multiple log sources.
+from celery.signals import worker_process_init, worker_process_shutdown
+
+
+@worker_process_init.connect
+def _log_worker_process_init(**_kwargs):
+    """Session 2731 F-CW-2 — emit grep-visible worker child startup event."""
+    import os as _os
+    logger.info(
+        "[CELERY_WORKER_INIT] pid=%d ppid=%d hostname=%s app=%s",
+        _os.getpid(),
+        _os.getppid(),
+        _os.uname().nodename,
+        app.main,
+    )
+
+
+@worker_process_shutdown.connect
+def _log_worker_process_shutdown(pid=None, exitcode=None, **_kwargs):
+    """Session 2731 F-CW-2 — emit grep-visible worker child shutdown event.
+
+    On prefork, this fires per-child when the child is recycled
+    (max_tasks_per_child or max_memory_per_child reached) or when the
+    parent shuts down. `exitcode` names the reason: 0 = clean recycle,
+    non-zero = kill signal (e.g. SIGKILL from OOM).
+    """
+    import os as _os
+    logger.info(
+        "[CELERY_WORKER_SHUTDOWN] pid=%s exitcode=%s hostname=%s",
+        pid if pid is not None else _os.getpid(),
+        exitcode,
+        _os.uname().nodename,
+    )
+
 # Celery Beat Schedule — MINIMAL (token-conservation mode)
 # Session 1077+: Stripped to essentials only. Full schedule preserved in git history.
 # Only cleanups + health checks run. All agent exercises, spider crawls,
