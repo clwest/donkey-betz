@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-09T02:16:59+00:00",
+    "generated": "2026-07-09T03:24:17+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "9f1f1e3461a3",
-    "doc_count": 2471,
-    "commit_count": 7799,
+    "git_head": "dca420c54235",
+    "doc_count": 2477,
+    "commit_count": 7810,
     "confidence_breakdown": {
-      "HIGH": 1592,
+      "HIGH": 1593,
       "MEDIUM": 384,
       "LOW": 5,
-      "UNKNOWN": 490
+      "UNKNOWN": 495
     },
     "excludes": [
       "docs/archive/",
@@ -2542,7 +2542,7 @@
         2726,
         2727
       ],
-      "commit_count": 1277,
+      "commit_count": 1278,
       "prs": [
         10,
         11,
@@ -7397,7 +7397,7 @@
         2726,
         2727
       ],
-      "commit_count": 233,
+      "commit_count": 234,
       "prs": [
         2213,
         2219,
@@ -19061,6 +19061,19 @@
       "sessions_touched": [
         2726,
         2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_2728_TOOL_VALIDATION_BATCH_A_CLOSED.md": {
+      "originating_session": 2728,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "bb73a1db",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(session-2728-close): handoff + 00-START rewrite for Batch A close + Batch B opening",
+      "sessions_touched": [
+        2728
       ],
       "commit_count": 1,
       "prs": []
@@ -36468,6 +36481,17 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/research/tools/validation/canonical_authority_helpers_validation.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "62cc6bc7",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(tools-validation): canonical_authority_helpers \u2014 VERIFIED-VALID-AT-HEAD (Batch B tool 4)",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
+    },
     "docs/research/tools/validation/claude_code_tool_validation.md": {
       "originating_session": 2728,
       "confidence": "MEDIUM",
@@ -36494,6 +36518,39 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/research/tools/validation/kb_ingest_validation.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "8de6a047",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(tools-validation-batch-b): 4 validation reports for Batch B tools 1/2/3/5",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/validation/rag_retrieval_path_validation.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "8de6a047",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(tools-validation-batch-b): 4 validation reports for Batch B tools 1/2/3/5",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/validation/repo_tool_validation.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "8de6a047",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(tools-validation-batch-b): 4 validation reports for Batch B tools 1/2/3/5",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
+    },
     "docs/research/tools/validation/search_docs_kb_tool_validation.md": {
       "originating_session": 2728,
       "confidence": "MEDIUM",
@@ -36517,6 +36574,17 @@
       "sessions_touched": [
         2728
       ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/validation/workspace_retrieval_validation.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "8de6a047",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(tools-validation-batch-b): 4 validation reports for Batch B tools 1/2/3/5",
+      "sessions_touched": [],
       "commit_count": 1,
       "prs": []
     },
