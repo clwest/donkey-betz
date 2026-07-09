@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-09T03:24:17+00:00",
+    "generated": "2026-07-09T13:26:25+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "dca420c54235",
-    "doc_count": 2477,
-    "commit_count": 7810,
+    "git_head": "ad9a5665a831",
+    "doc_count": 2483,
+    "commit_count": 7839,
     "confidence_breakdown": {
-      "HIGH": 1593,
-      "MEDIUM": 384,
+      "HIGH": 1594,
+      "MEDIUM": 389,
       "LOW": 5,
       "UNKNOWN": 495
     },
@@ -2542,7 +2542,7 @@
         2726,
         2727
       ],
-      "commit_count": 1278,
+      "commit_count": 1279,
       "prs": [
         10,
         11,
@@ -7397,7 +7397,7 @@
         2726,
         2727
       ],
-      "commit_count": 234,
+      "commit_count": 235,
       "prs": [
         2213,
         2219,
@@ -19074,6 +19074,19 @@
       "first_commit_subject": "docs(session-2728-close): handoff + 00-START rewrite for Batch A close + Batch B opening",
       "sessions_touched": [
         2728
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_2729_TOOL_VALIDATION_BATCH_B_CLOSED.md": {
+      "originating_session": 2729,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "08af9207",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(session-2729-close): handoff + 00-START rewrite for Batch B close + next-step options",
+      "sessions_touched": [
+        2729
       ],
       "commit_count": 1,
       "prs": []
@@ -36505,6 +36518,19 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/research/tools/validation/context_injection_pipeline_validation.md": {
+      "originating_session": 2730,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "1c09d7dc",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(validation): close Batch C tool 1 verdict \u2014 6 patches + 28 tests",
+      "sessions_touched": [
+        2730
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
     "docs/research/tools/validation/deliverable_tool_validation.md": {
       "originating_session": 2728,
       "confidence": "MEDIUM",
@@ -36529,6 +36555,32 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/research/tools/validation/orm_helper_defaults_validation.md": {
+      "originating_session": 2730,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "c7b06c9a",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "docs(validation): close Batch C tool 4 verdict \u2014 2 patches + 18 tests",
+      "sessions_touched": [
+        2730
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/validation/payload_size_limits_validation.md": {
+      "originating_session": 2730,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "5fa2c9d9",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(validation): close Batch C tool 2 verdict \u2014 4 patches + 21 tests + 1 migration",
+      "sessions_touched": [
+        2730
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
     "docs/research/tools/validation/rag_retrieval_path_validation.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -36548,6 +36600,32 @@
       "first_commit_date": "2026-07-08",
       "first_commit_subject": "docs(tools-validation-batch-b): 4 validation reports for Batch B tools 1/2/3/5",
       "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/validation/retrieval_limits_hidden_filters_validation.md": {
+      "originating_session": 2730,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "72ea94a8",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "docs(validation): close Batch C tool 3 verdict \u2014 refactor-only close",
+      "sessions_touched": [
+        2730
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/validation/retry_behavior_validation.md": {
+      "originating_session": 2730,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "f845ed72",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "docs(validation): close Batch C tool 5 verdict \u2014 closes Batch C",
+      "sessions_touched": [
+        2730
+      ],
       "commit_count": 1,
       "prs": []
     },
@@ -41340,9 +41418,10 @@
         1157,
         1158,
         1218,
-        1222
+        1222,
+        2730
       ],
-      "commit_count": 34,
+      "commit_count": 35,
       "prs": [
         1080,
         1081,
