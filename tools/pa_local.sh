@@ -502,4 +502,31 @@ export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
 # arc-scoped pin via `session_tool.create_fresh label='ios-arc-open-
 # I-NNNN'` and rotate --conversation to that pin; the T4 pin is
 # preserved as-is for research-phase re-entry.
-python tools/pa_chat.py "$@" --tools --conversation pa-44a6eb70d8814e34
+# Session 2735 conversation-lifecycle checkpoint (2026-07-09):
+# Retired the long-lived T4 Group 1700 Observability pin
+# `pa-44a6eb70d8814e34` after it accumulated 100+ messages and 70+
+# tool calls across multiple campaigns (Platform Closure, HAI
+# Delivery Fanout, Cost Protection, Beat Schedule Health). Chris
+# formalized the new conversation-lifecycle rule: "conversations are
+# compute, not memory. Permanent memory lives in repository /
+# Workspace / Deliverables / docs / RAG / Playbook / retrospectives."
+#
+# Retirement triggers going forward:
+# - campaign completed
+# - PR merged + cascade complete
+# - SIGN complete
+# - deliverable finalized
+# - conversation exceeds ~50 messages
+# - conversation exceeds ~40 tool calls
+# - Claude or Rigby detects context drift risk
+#
+# 20 stale campaign/SIGN/verify pins retired in the same operation
+# via session_tool.retire (see the process-checkpoint report in the
+# corresponding closeout deliverable for the full list).
+#
+# New default: pa-fe6e8eca232c4903 (label
+# 'engineering-session-post-process-checkpoint'). This becomes the
+# next-campaign starting pin until it too hits a retirement trigger,
+# at which point mint a fresh one via session_tool.create_fresh and
+# update this line.
+python tools/pa_chat.py "$@" --tools --conversation pa-88e3f4c934694408
