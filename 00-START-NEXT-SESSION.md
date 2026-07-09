@@ -2,11 +2,11 @@
 
 ---
 
-## READ THIS FIRST — BATCH B OF THE TOOL VALIDATION CAMPAIGN CLOSED (SESSION 2729)
+## READ THIS FIRST — BATCH C OF THE TOOL VALIDATION CAMPAIGN CLOSED (SESSION 2731)
 
-**Refreshed 2026-07-08 (SESSION 2729 close: Batch B of the Rigby Tool Validation Engineering Campaign shipped 5 tools, 10 defects, 51 regression tests, and 2 SECURITY-class fixes to main).**
+**Refreshed 2026-07-09 (SESSION 2731 close: Batch C of the Rigby Tool Validation Engineering Campaign shipped 5 tools, 19 defects patched, 110 regression tests, 1 migration, and 4 shared primitives to main).**
 
-Prior anchor context: Engineering Playbook v0.1.0 ratified at Session 2727 close. Session 2728 opened with a constitutional-research directive that self-disproved and pivoted to engineering QA. Batch A closed at S2728. Session 2729 = Batch B execution (continuous with S2728 workday).
+Prior anchor context: Engineering Playbook v0.1.0 ratified at Session 2727 close. Session 2728 pivoted to engineering QA. Batch A closed at S2728. Batch B closed at S2729. Sessions 2730 + 2731 = Batch C execution + close (continuous workday).
 
 ---
 
@@ -15,121 +15,144 @@ Prior anchor context: Engineering Playbook v0.1.0 ratified at Session 2727 close
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD (post PR #3013 + PR #3014) | `432366d6` — will advance again with the S2729 handoff commit |
+| HEAD (post PR #3016 + PR #3017) | `e4bc1065` — will advance again with the S2731 handoff commit |
 | Playbook body commit_sha | `b372edfe127f1af59c4322871092aa7151669463` (unchanged from S2727) |
 | Git tag | `playbook-v0.1.0` (unchanged) |
-| Batch B close PR | #3013 merged as `dca420c5` (patches + tests + reports) |
-| Docs cascade PR | #3014 merged as `432366d6` (INDEX + provenance refresh) |
-| Pending migrations | 0 |
-| PA worker | Post-S2728-restart with Batch A patches active. **NEEDS RESTART** to load Batch B patches when Rigby cross-check dispatches begin. |
-| Docs cascade state | 3,038/3,038 Documents embedded; INDEX.md regenerated (3,027 docs); `_provenance.json` fresh |
+| Batch C close PR | #3016 merged as `ad9a5665` (patches + tests + reports + migration 0379) |
+| Docs cascade PR | #3017 merged as `e4bc1065` (INDEX + provenance refresh) |
+| Pending migrations | 0 (0379 applied cleanly during Batch C tool 2) |
+| PA worker | Post-S2728-restart with Batch A patches active. **NEEDS RESTART** to load Batches B + C patches when Rigby cross-check dispatches begin. |
+| Docs cascade state | 3,033/3,033 Documents embedded; INDEX.md regenerated (3,033 docs); `_provenance.json` fresh |
 
 ---
 
 ## Current constitutional state (unchanged from S2727)
 
-**Engineering Playbook v0.1.0: RATIFIED.** No amendments in S2728/S2729. CD-47 RESOLVED; CD-48 + CD-49 targeted for v0.1.1 PATCH.
+**Engineering Playbook v0.1.0: RATIFIED.** No amendments in S2728/S2729/S2730/S2731. CD-47 RESOLVED; CD-48 + CD-49 targeted for v0.1.1 PATCH.
 
 ---
 
-## Current tool-validation-campaign state (post-Session 2729)
+## Current tool-validation-campaign state (post-Session 2731)
 
 **Batch A: CLOSED (S2728).** 5 tools verified; 17 defects patched; 64 regression tests; 3 MEMORY rule annotations.
 
 **Batch B: CLOSED (S2729).** 5 tools verified; 10 defects patched; 51 regression tests; **2 SECURITY-class fixes** (F-KI-2/F-KI-3 kb_ingest cross-user provenance leak + F-KI-4 kb_ingest SSRF surface).
 
-| Batch B tool | Report | Defects patched | Commit |
+**Batch C: CLOSED (S2731).** 5 tools verified; 19 defects patched; 110 regression tests; **4 shared primitives extracted**; 1 migration (0379).
+
+| Batch C tool | Report | Defects patched | Commit |
 |---|---|---|---|
-| B1 RAG retrieval path | `docs/research/tools/validation/rag_retrieval_path_validation.md` | 1 (F-RG-1) | `1597b798` |
-| B2 `repo_tool` | `docs/research/tools/validation/repo_tool_validation.md` | 3 (F-RT-2, F-RT-5, F-RT-11) | `258ecb98` |
-| B3 `kb_ingest` | `docs/research/tools/validation/kb_ingest_validation.md` | 4 (F-KI-1, F-KI-2/F-KI-3, F-KI-4, F-KI-5(a)) | `9d010aa1` |
-| B4 canonical_authority_helpers | `docs/research/tools/validation/canonical_authority_helpers_validation.md` | **0 (VERIFY-ONLY; Chris Option A)** | `62cc6bc7` |
-| B5 workspace retrieval | `docs/research/tools/validation/workspace_retrieval_validation.md` | 2 (F-WS-4, F-WS-1) | `01322aec` |
+| C1 context injection pipeline | `docs/research/tools/validation/context_injection_pipeline_validation.md` | 9 (F-CI-1/2/3/4/5/6/7/9/10 + F-CI-8 doc) | `bcc6b392` .. `13e06ed5` |
+| C2 payload-size limits | `docs/research/tools/validation/payload_size_limits_validation.md` | 4 (F-PS-1, F-PS-2a/2b + migration 0379, F-PS-3) | `0a85a492` .. `904f3857` |
+| C3 retrieval limits + hidden filters | `docs/research/tools/validation/retrieval_limits_hidden_filters_validation.md` | 2 refactor-only (F-RL-1 shared helper + F-RL-2 3-site migration) | `dcb0697a` .. `c8d190eb` |
+| C4 ORM helper defaults | `docs/research/tools/validation/orm_helper_defaults_validation.md` | 2 (F-OH-1 content_review.list + F-OH-2 initiative.list) | `497b6f28` .. `540f71d6` |
+| C5 retry behavior | `docs/research/tools/validation/retry_behavior_validation.md` | 1 (F-RB-1 ToolResult.is_retryable + classification map) | `5f502c30` |
 
-**Batch B highlights:**
-- **2 SECURITY-class fixes:** F-KI-2/F-KI-3 (cross-user provenance leak) + F-KI-4 (SSRF surface).
-- **1 constitutional-artifact verify-only close** — canonical_authority_helpers (Cycle 1A KFI-2 / ADR-0120). First tool in campaign to close as VERIFIED-VALID-AT-HEAD without patches.
-- **2 first-coverage-at-HEAD tools** — repo_tool (15 tests) + kb_ingest (16 tests) had zero regression tests before this batch.
-- **D17-D21 narrow-except discipline extended** from 4-way to 6-way (F-RG-1 tool 1 + F-WS-4 tool 5).
-- **122/122 substantive tests pass** across all 10 validation-2728 files + adjacent canonical_authority tests. Zero cross-tool interference.
+**Batch C highlights:**
 
-**MEMORY rules status (unchanged from Batch A + reinforcements):**
-- 3 annotated at Batch A: `feedback_deliverable_tool_use_append_for_large_payloads` (RESOLVED), `feedback_ratification_workflow_gotchas` gotcha #3 (RESOLVED), `feedback_procfile_makefile_queue_parity` (VERIFIED-VALID).
-- Batch B reinforcements: `feedback_procfile_makefile_queue_parity` (implicit via tool 3 default queue verification), `feedback_pa_local_verify_ownership` (workspace ownership discipline reinforced at tool 5), `feedback_ratification_workflow_gotchas` gotcha #2 (KFI-2 backfill discipline exercised in cascade).
+- **4 shared primitives extracted** — `_CONTEXT_INJECTION_ENV_ERRORS` (F-CI-1), `_build_fresh_summary` (F-PS-1), `td_limit_envelope.compute_limit` (F-RL-1), `_ERROR_CODE_RETRYABLE` + `_classify_retryable` (F-RB-1).
+- **8-way narrow-except discipline** — Batch B tool 5 established 6-way; Batch C tool 1 extends to 8-way via `_build_context` + `_get_system_stats`.
+- **Migration 0379** — `ToolCallRecord.summary_truncated` + `full_result_dropped` boolean columns; both indexed for analytics. First Batch C migration.
+- **Rigby-visible envelope additions** — `_metadata` on enrichment sections (F-CI-9), `stats_source` on system stats (F-CI-7), `content_truncated`+`content_original_length` on doc detail (F-PS-3), `applied_filters`+`status_defaulted` on 2 list handlers (F-OH-1/F-OH-2), `is_retryable` on every dispatch envelope (F-RB-1).
+- **248/248 substantive tests pass** across all 15 validation-2728 files + `test_td_autofill_safety.py` + `test_pa_tool_args_malformed.py`. Zero cross-tool interference.
+
+**MEMORY rules status (reinforced this batch):**
+
+- `feedback_llm_autofills_boolean_params_with_false` — **3rd verification pass** (F-RL-5, F-OH-4, F-RB-6 tests). Semantic extended to int-autofill class in the new `compute_limit` helper.
+- `feedback_openai_client_factory` — **3rd verification pass** (F-RB-3 factory invariants + F-RB-6 module-path stability).
+- `feedback_anthropic_client_factory` — 2nd verification pass (F-RB-6 module-path stability).
+- `feedback_deliverable_tool_use_append_for_large_payloads` — re-verified RESOLVED at F-PS-6 (S1177 F1 skip-handler-dispatch invariant + retry_hint envelope shape intact).
+- `feedback_procfile_makefile_queue_parity` — implicitly reinforced via F-RB-4 (PA `pa` queue + `acks_late=False` design intact).
+- `feedback_triage_decision_card_pattern` — reinforced via consistent `applied_filters` audit across 3 list handlers post-F-OH-1/F-OH-2.
 
 **Batches remaining:**
 
-- **Batch C — Runtime substrate tools** (5 tools): context injection pipeline, payload-size limits, retrieval limits + hidden filters, ORM helper defaults, retry behavior. Queued per campaign plan §3.3.
-- **Batch D — Worker & environment discipline** (`PA_USE_FUNCTION_CALLING`, Celery worker lifecycle, worker cache behavior). Queued. Blocking on operator-drift observations from F-CC-DEPLOY-1 (Batch A tool 4) and F-WS-9 (Batch B tool 5 F-B-HIGH-3 territory from S2600 PA arc).
+- **Batch D — Worker & environment discipline** (3 items): `PA_USE_FUNCTION_CALLING` env, Celery worker lifecycle (`max_tasks_per_child`, PID cache, restart triggers), worker cache behavior (in-worker Python caches vs Redis vs DB). Queued per campaign plan §3.4.
 
-**Combined batch-close deferred work (30+ cross-tool consistency observations logged across Batches A + B):** schema-`required` violated by handler defaults; error envelope `ok: false` consistency; multi-alias parameter extraction undocumented; undocumented action aliases; index/corpus freshness signal missing; test-file mock refresh for `test_rag_integration_search_embeddings.py`; D17-D21 invariant test extension to 6-way at `test_d20_views_rag_embeddings_narrow_except.py::test_all_four_allowlists_have_same_shape`. To be swept at a future combined batch-close doc pass.
+**Combined batch-close deferred work (~35 cross-tool consistency observations logged across Batches A + B + C):**
+
+Batch C additions to the deferred list:
+- F-CI-11 — workspace-blind enrichment (PARKED-CONSTITUTIONAL).
+- F-PS-4 — other `td_handlers_core` content silent-truncation surfaces (~5 sites).
+- F-RL-3 — apply envelope to 2-3 additional Rigby-callable handlers.
+- F-RL-4 — ~25 remaining un-enveloped silent-cap sites.
+- F-OH-5 — implicit `is_active=True` filter sweep (~15 sites).
+- F-RB-2 — S1077 hardcoded `content_tool`/`work_tool` auto-retry generalization.
+
+Plus prior Batches A + B deferred items (schema-`required` violated by handler defaults, error envelope `ok: false` consistency, multi-alias parameter extraction undocumented, undocumented action aliases, index/corpus freshness signal missing, test-file mock refresh for `test_rag_integration_search_embeddings.py`, D17-D21 invariant test extension to 8-way).
 
 ---
 
 ## Current Rigby SIGN pin state
 
-**Active pin at session-2729 close:** `pa-44a6eb70d8814e34` (T4 Group 1700 Observability paused-research pin; preserved through Batches A + B for cross-check dispatches).
+**Active pin at session-2731 close:** `pa-44a6eb70d8814e34` (T4 Group 1700 Observability paused-research pin; preserved through Batches A + B + C for cross-check dispatches).
 
 **Fresh-session decision:** on next session open, decide based on task:
-- **Continue campaign (Batch C or A/B close doc pass)** — no new pin needed; paused-research pin remains usable.
-- **Rigby cross-check of Batch B patches** — no new pin; but requires PA worker restart to load Batch B code (see below).
+- **Continue campaign (Batch D or combined batch-close doc pass)** — no new pin needed; paused-research pin remains usable.
+- **Rigby cross-check of Batches B + C patches** — no new pin; but requires PA worker restart to load Batches B + C code (see below).
 - **Anything other than campaign execution** — mint a new pin per playbook §16 fresh-thread discipline.
 
 **Default PA wrapper (`tools/pa_local.sh`) currently points at:** `pa-44a6eb70d8814e34` (unchanged from S2727 close).
 
-**PA worker restart REQUIRED before Rigby-side Batch B verification:** current worker (PID 12820 from S2728 restart) has Batch A patches loaded but NOT Batch B. To verify F-RG-1, F-RT-2/5/11, F-KI-1/2/3/4/5, F-WS-4/1 via Rigby dispatch, run `make celery-stop && make celery` per S2728 handoff §10 discipline.
+**PA worker restart REQUIRED before Rigby-side Batches B + C verification:** current worker (PID 12820 from S2728 restart) has Batch A patches loaded but NOT Batches B or C. To verify F-RG-1, F-RT-2/5/11, F-KI-1..5, F-WS-4/1, F-CI-1..10, F-PS-1/2/3, F-RL-1/2, F-OH-1/2, F-RB-1 via Rigby dispatch, run `make celery-stop && make celery` per S2728 handoff §10 discipline.
 
 ---
 
 ## Current recommended first task
 
-**Chris-choice among four options** (per S2729 handoff §9):
+**Chris-choice among four options** (per S2731 handoff §10):
 
-1. **Batch C — Runtime substrate tools** per campaign plan §3.3. Natural next; 5 tools queued.
-2. **Batch A/B close doc pass** — sweep the 30+ cross-tool consistency observations logged across A + B into a single cleanup PR. High leverage for uniformity.
-3. **Test-file mock refresh** — dedicated PR to fix `test_rag_integration_search_embeddings.py` stale-mock breakage + extend D17-D21 invariant test to 6-way.
+1. **Batch D — Worker & environment discipline** per campaign plan §3.4. Natural next; 3 items queued.
+2. **Combined batch-close doc pass** — sweep the ~35 cross-tool consistency observations logged across A + B + C into a single cleanup PR. High leverage for uniformity.
+3. **PA worker restart + Rigby cross-check of Batches B + C patches** — 20+ patches merged but not yet loaded into the running worker. Rigby dispatches would still hit Batch A code.
 4. **Playbook v0.1.1 PATCH** — CD-48 + CD-49 codification (from S2727 handoff §5). Constitutional work; independent of the campaign.
 
 Recommended session-open protocol:
 1. `context-kit orient` (mandatory session-open).
-2. Read `docs/handoffs/SESSION_2729_TOOL_VALIDATION_BATCH_B_CLOSED.md` in full.
-3. Confirm PA worker state — `ps aux | grep hostname=pa` — restart if Batch B verification via Rigby is planned.
-4. If Chris chooses Batch C: read `docs/research/tools/tools_validation_engineering_campaign_plan.md` §3.3 (Batch C scope). Begin Batch C tool 1 (context injection pipeline).
-5. If Chris chooses doc-pass or mock refresh: read the batch-close observation lists in the 10 Batch A + B validation reports.
+2. Read `docs/handoffs/SESSION_2731_TOOL_VALIDATION_BATCH_C_CLOSED.md` in full.
+3. Confirm PA worker state — `ps aux | grep hostname=pa` — restart if Batches B + C verification via Rigby is planned.
+4. If Chris chooses Batch D: read `docs/research/tools/tools_validation_engineering_campaign_plan.md` §3.4 (Batch D scope). Begin Batch D item 1 (`PA_USE_FUNCTION_CALLING` env verification).
+5. If Chris chooses doc-pass: read the batch-close observation lists in the 15 Batch A + B + C validation reports.
 
 ---
 
-## Reference documents (read order for post-Batch-B sessions)
+## Reference documents (read order for post-Batch-C sessions)
 
-Session 2729 outputs (post-Batch-B anchors):
+Session 2731 outputs (post-Batch-C anchors):
 
-1. [`docs/handoffs/SESSION_2729_TOOL_VALIDATION_BATCH_B_CLOSED.md`](docs/handoffs/SESSION_2729_TOOL_VALIDATION_BATCH_B_CLOSED.md) — **Session 2729 handoff + Batch B close artifacts.**
-2. [`docs/research/tools/tools_validation_engineering_campaign_plan.md`](docs/research/tools/tools_validation_engineering_campaign_plan.md) — **the campaign plan Chris ratified.** Batch C scope in §3.3.
-3. [`docs/research/tools/validation/`](docs/research/tools/validation/) — **10 validation reports** (5 Batch A + 5 Batch B).
+1. [`docs/handoffs/SESSION_2731_TOOL_VALIDATION_BATCH_C_CLOSED.md`](docs/handoffs/SESSION_2731_TOOL_VALIDATION_BATCH_C_CLOSED.md) — **Session 2731 handoff + Batch C close artifacts.**
+2. [`docs/research/tools/tools_validation_engineering_campaign_plan.md`](docs/research/tools/tools_validation_engineering_campaign_plan.md) — **the campaign plan Chris ratified.** Batch D scope in §3.4.
+3. [`docs/research/tools/validation/`](docs/research/tools/validation/) — **15 validation reports** (5 Batch A + 5 Batch B + 5 Batch C).
+
+Session 2729 anchors:
+
+4. [`docs/handoffs/SESSION_2729_TOOL_VALIDATION_BATCH_B_CLOSED.md`](docs/handoffs/SESSION_2729_TOOL_VALIDATION_BATCH_B_CLOSED.md) — Session 2729 handoff + Batch B close.
 
 Session 2728 anchors:
 
-4. [`docs/handoffs/SESSION_2728_TOOL_VALIDATION_BATCH_A_CLOSED.md`](docs/handoffs/SESSION_2728_TOOL_VALIDATION_BATCH_A_CLOSED.md) — Session 2728 handoff + Batch A close.
+5. [`docs/handoffs/SESSION_2728_TOOL_VALIDATION_BATCH_A_CLOSED.md`](docs/handoffs/SESSION_2728_TOOL_VALIDATION_BATCH_A_CLOSED.md) — Session 2728 handoff + Batch A close.
 
 Session 2727 anchors (unchanged):
 
-5. [`docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md`](docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md) — Playbook v0.1.0 ratification ledger.
-6. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified Playbook v0.1.0 body.
+6. [`docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md`](docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md) — Playbook v0.1.0 ratification ledger.
+7. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified Playbook v0.1.0 body.
 
 Pre-Playbook-arc anchors (unchanged):
 
-7. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap.
+8. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap.
 
 ---
 
-## Session close summary (Session 2729)
+## Session close summary (Session 2731)
 
-- **Merged PRs:** #3013 (Batch B close — 5 tools, 10 defects, 51 regression tests, 2 SECURITY fixes), #3014 (docs cascade — INDEX + provenance refresh).
-- **Engineering campaign:** Batch B of 4 batches closed. 2 of 4 batches complete (A + B).
-- **Docs cascade:** 3,038/3,038 Documents embedded; Rigby's RAG surface current at HEAD.
-- **Cross-tool regression:** 122/122 substantive tests pass across all validation-2728 files + adjacent canonical_authority. Zero regressions.
+- **Merged PRs:** #3016 (Batch C close — 5 tools, 19 defects patched, 110 regression tests, 1 migration, 4 shared primitives), #3017 (docs cascade — INDEX + provenance refresh).
+- **Engineering campaign:** Batch C of 4 batches closed. **3 of 4 batches complete** (A + B + C).
+- **Docs cascade:** 3,033/3,033 Documents embedded; Rigby's RAG surface current at HEAD.
+- **Cross-tool regression:** 248/248 substantive tests pass across all 15 validation-2728 files + `test_td_autofill_safety.py` + `test_pa_tool_args_malformed.py`. Zero regressions.
+- **Shared primitives extracted:** 4 across the batch — see handoff §3.
+- **8-way narrow-except discipline** — Batch B tool 5's 6-way extended.
 - **Constitutional debt state:** unchanged from S2727 (CD-47 RESOLVED; CD-48/CD-49 v0.1.1 PATCH targets).
-- **Handoff + anchor updates:** this file + `docs/handoffs/SESSION_2729_TOOL_VALIDATION_BATCH_B_CLOSED.md`.
-- **PA worker restart** deferred to next session (Batch B patches are loaded from repo but not yet in the running worker).
+- **Handoff + anchor updates:** this file + `docs/handoffs/SESSION_2731_TOOL_VALIDATION_BATCH_C_CLOSED.md`.
+- **PA worker restart** deferred to next session (Batches B + C patches loaded from repo but not yet in the running worker).
 
 ---
