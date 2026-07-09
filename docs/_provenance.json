@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-09T00:02:06+00:00",
+    "generated": "2026-07-09T02:16:59+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "eefeca22e6a1",
-    "doc_count": 2460,
-    "commit_count": 7790,
+    "git_head": "9f1f1e3461a3",
+    "doc_count": 2471,
+    "commit_count": 7799,
     "confidence_breakdown": {
-      "HIGH": 1591,
-      "MEDIUM": 374,
+      "HIGH": 1592,
+      "MEDIUM": 384,
       "LOW": 5,
       "UNKNOWN": 490
     },
@@ -2542,7 +2542,7 @@
         2726,
         2727
       ],
-      "commit_count": 1276,
+      "commit_count": 1277,
       "prs": [
         10,
         11,
@@ -7397,7 +7397,7 @@
         2726,
         2727
       ],
-      "commit_count": 232,
+      "commit_count": 233,
       "prs": [
         2213,
         2219,
@@ -19047,6 +19047,20 @@
       "first_commit_subject": "docs(cycle-1a-ratified): SESSION 2707 0199 SIGN+correction+ratification handoff + 00-START rewrite",
       "sessions_touched": [
         2707
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md": {
+      "originating_session": 2727,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "90c277f6",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(session-2727-close): Step 12 \u2014 handoff + 00-START rewrite + CLAUDE.md anchor + record body draft",
+      "sessions_touched": [
+        2726,
+        2727
       ],
       "commit_count": 1,
       "prs": []
@@ -36250,6 +36264,20 @@
       "commit_count": 2,
       "prs": []
     },
+    "docs/research/platform/playbook_v0_1_ratification_record_body.md": {
+      "originating_session": 2726,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "90c277f6",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(session-2727-close): Step 12 \u2014 handoff + 00-START rewrite + CLAUDE.md anchor + record body draft",
+      "sessions_touched": [
+        2726,
+        2727
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
     "docs/research/platform/workspace_architecture_and_constitution_proposal.md": {
       "originating_session": 2726,
       "confidence": "MEDIUM",
@@ -36371,6 +36399,123 @@
       "first_commit_subject": "docs(session-1274): select evidence-only symbol mapping v0",
       "sessions_touched": [
         1274
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/tools_operational_contract_architecture_pressure_test.md": {
+      "originating_session": 2728,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "b03e57ba",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(tools-validation-batch-a): campaign plan + Batch A validation reports + research provenance",
+      "sessions_touched": [
+        2728
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/tools_operational_contract_domain_definition.md": {
+      "originating_session": 2728,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "b03e57ba",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(tools-validation-batch-a): campaign plan + Batch A validation reports + research provenance",
+      "sessions_touched": [
+        2728
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/tools_the_unanswered_constitutional_question.md": {
+      "originating_session": 2728,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "b03e57ba",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(tools-validation-batch-a): campaign plan + Batch A validation reports + research provenance",
+      "sessions_touched": [
+        2728
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/tools_validation_engineering_campaign_plan.md": {
+      "originating_session": 2728,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "b03e57ba",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(tools-validation-batch-a): campaign plan + Batch A validation reports + research provenance",
+      "sessions_touched": [
+        2728
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/validation/agent_introspection_run_agent_validation.md": {
+      "originating_session": 2728,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "b03e57ba",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(tools-validation-batch-a): campaign plan + Batch A validation reports + research provenance",
+      "sessions_touched": [
+        2728
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/validation/claude_code_tool_validation.md": {
+      "originating_session": 2728,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "b03e57ba",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(tools-validation-batch-a): campaign plan + Batch A validation reports + research provenance",
+      "sessions_touched": [
+        2728
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/validation/deliverable_tool_validation.md": {
+      "originating_session": 2728,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "b03e57ba",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(tools-validation-batch-a): campaign plan + Batch A validation reports + research provenance",
+      "sessions_touched": [
+        2728
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/validation/search_docs_kb_tool_validation.md": {
+      "originating_session": 2728,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "b03e57ba",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(tools-validation-batch-a): campaign plan + Batch A validation reports + research provenance",
+      "sessions_touched": [
+        2728
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/validation/session_tool_validation.md": {
+      "originating_session": 2728,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "b03e57ba",
+      "first_commit_date": "2026-07-08",
+      "first_commit_subject": "docs(tools-validation-batch-a): campaign plan + Batch A validation reports + research provenance",
+      "sessions_touched": [
+        2728
       ],
       "commit_count": 1,
       "prs": []
