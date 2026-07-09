@@ -1818,12 +1818,9 @@ class UnifiedPAEntrypoint:
                         f"{len(successful_runs)} successful tool runs — attempting fresh summary"
                     )
                     fresh_messages = self._build_messages_array(message, context)
-                    tool_summary = json.dumps(
-                        [{'tool': r.get('tool', ''), 'ok': r.get('ok'),
-                          'result': str(r.get('result', ''))[:4000]}
-                         for r in tool_runs],
-                        default=str
-                    )[:4000]
+                    # Session 2730 F-PS-1: use JSON-aware truncator so mid-object
+                    # breakage cannot escape into the LLM's next turn.
+                    tool_summary = self._build_fresh_summary(tool_runs)
                     fresh_messages.append({
                         "role": "user",
                         "content": (
@@ -1876,11 +1873,10 @@ class UnifiedPAEntrypoint:
                     if successful_runs:
                         logger.info(f"[{trace_id}] Attempting clean summary of {len(successful_runs)} successful tool runs")
                         fresh_messages = self._build_messages_array(message, context)
-                        tool_summary = json.dumps(
-                            [{'tool': r.get('tool', ''), 'ok': r.get('ok'), 'result': str(r.get('result', ''))[:4000]}
-                             for r in tool_runs],
-                            default=str
-                        )[:4000]
+                        # Session 2730 F-PS-1: JSON-aware truncator preserves
+                        # `_truncated: {shown, total}` markers per-result and
+                        # in the outer envelope.
+                        tool_summary = self._build_fresh_summary(tool_runs)
                         fresh_messages.append({
                             "role": "user",
                             "content": f"Here are the tool results I gathered. Please summarize them for the user:\n{tool_summary}",
@@ -2023,11 +2019,8 @@ class UnifiedPAEntrypoint:
                 # Session 1060: Drop previous_response_id — see degenerate break above.
                 # Also inject tool results as user context so the LLM can summarize.
                 fresh_messages = self._build_messages_array(message, context)
-                tool_summary = json.dumps(
-                    [{'tool': r.get('tool', ''), 'ok': r.get('ok'), 'result': str(r.get('result', ''))[:4000]}
-                     for r in tool_runs],
-                    default=str
-                )[:4000]
+                # Session 2730 F-PS-1: JSON-aware truncator (see helper).
+                tool_summary = self._build_fresh_summary(tool_runs)
                 fresh_messages.append({
                     "role": "user",
                     "content": f"Here are the tool results I gathered. Please summarize them for the user:\n{tool_summary}",
@@ -2377,6 +2370,46 @@ class UnifiedPAEntrypoint:
             data.pop('_truncated', None)
 
         return json.dumps(data, default=str)
+
+    @classmethod
+    def _build_fresh_summary(
+        cls,
+        tool_runs: List[Dict[str, Any]],
+        per_result_limit: int = 4000,
+        total_limit: int = 8000,
+    ) -> str:
+        """
+        Session 2730 F-PS-1: JSON-aware fresh-summary builder for
+        degraded-turn recovery paths (LLM failed / degenerate response /
+        duplicate-sig loop break).
+
+        Previously three sites (`_process_message` degraded branches at
+        lines 1821, 1879, 2026) did naive `str(r.get('result', ''))[:4000]`
+        per-result plus `[:4000]` on the outer JSON. The S1065 docstring
+        on `_truncate_tool_output` explicitly names this as the anti-pattern
+        that broke JSON mid-object and made GPT-5.2 see partial results.
+
+        This helper: (a) per-result, JSON-encodes each result and runs the
+        smart truncator so `_truncated: {shown, total}` markers survive;
+        (b) JSON-encodes the summary list; (c) runs the smart truncator
+        again against total_limit so mid-object breakage cannot escape
+        into the LLM's next turn.
+        """
+        summarized = []
+        for r in tool_runs:
+            raw_result = r.get('result', '')
+            try:
+                encoded = json.dumps(raw_result, default=str)
+            except (TypeError, ValueError):
+                encoded = str(raw_result)
+            trimmed = cls._truncate_tool_output(encoded, per_result_limit)
+            summarized.append({
+                'tool': r.get('tool', ''),
+                'ok': r.get('ok'),
+                'result': trimmed,
+            })
+        outer = json.dumps(summarized, default=str)
+        return cls._truncate_tool_output(outer, total_limit)
 
     @staticmethod
     def _is_degenerate_content(text: str) -> bool:
