@@ -2,11 +2,13 @@
 
 ---
 
-## READ THIS FIRST — §12 KNOWLEDGE RETRIEVAL CAMPAIGN CLOSED (SESSION 2736)
+## READ THIS FIRST — PLAYBOOK v0.2.0 RATIFIED (SESSION 2737) + §12 KNOWLEDGE RETRIEVAL CAMPAIGN CLOSED (SESSION 2736)
 
-**Refreshed 2026-07-09 (SESSION 2736: §12 Knowledge Retrieval Campaign shipped end-to-end across 6 phases (P0 → P1 → P1.1 → P2 → P2.1 → P3 → P3.1 → P4). Three new EOS rules ratified (R1 Tool Autonomy, R2 CDR discipline, R3 Acceptance-tests-first). Two Capability Discovery Records authored — CDR-001 (§16 Notification Fanout downgraded to wrap-up bundle) + CDR-002 (§12 Knowledge Retrieval closed via 3-service extension). 51 tests pass (23 acceptance + 28 S2728 regression); zero regression across the campaign arc.).**
+**Refreshed 2026-07-09 (SESSION 2737: Engineering Playbook v0.2.0 MINOR ratified. R1/R2/R3 EOS rules codified into ratified Playbook body as PLAYBOOK-5.2.2/2.2.2/3.2.2. Rule count 190 → 193. Git tag `playbook-v0.2.0`. Full SIGN discipline discharged 15/15 CONFIRMED across 2 batches. Prior arc close SESSION 2736 §12 Knowledge Retrieval Campaign remains valid — all 3 gaps closed via 3-service extension across 6 phases + Rigby SIGN at each gate).**
 
-Campaign anchor: [`docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md`](docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md). Read it first.
+Session anchors (read in order):
+1. [`docs/handoffs/SESSION_2737_PLAYBOOK_V0_2_0_RATIFIED.md`](docs/handoffs/SESSION_2737_PLAYBOOK_V0_2_0_RATIFIED.md) — Playbook v0.2.0 ratification record
+2. [`docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md`](docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md) — §12 Knowledge Retrieval close
 
 ---
 
@@ -15,10 +17,11 @@ Campaign anchor: [`docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSE
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | `2c2c6cc2` — session-2736 campaign work in working tree, awaiting a single close PR |
+| HEAD | `3dc2c588` — Playbook v0.2.0 MINOR merged (PR #3048); §12 campaign at `fe25cbd1` (PR #3047) |
 | Working tree | 4 modified + 6 new files (see §1 below) |
-| Playbook body commit_sha | `b372edfe127f1af59c4322871092aa7151669463` (unchanged from S2727) |
-| Playbook git tag | `playbook-v0.1.0` (unchanged) |
+| Playbook body commit_sha | `ab3c88fa1ddc689a3fbe4cb59d13a5f5fb71cb9b` (v0.2.0 ratifiable body) — prior v0.1.0 at `b372edfe` preserved in prior_ratification block |
+| Playbook git tag | `playbook-v0.2.0` (annotated, applied to merge commit `3dc2c588`) — `playbook-v0.1.0` remains on `d82b450a` |
+| Playbook rule count | 193 (was 190) — rules added: PLAYBOOK-5.2.2, PLAYBOOK-2.2.2, PLAYBOOK-3.2.2 |
 | Pending migrations | 0 |
 | PA worker | Post-S2728 restart with Batches A-D. **NEEDS RESTART** to load S2736 P1-P3.1 code when Rigby dispatches begin. Run `make celery-recycle` (F-CW-1 helper from S2732 Batch D). |
 | Campaign SIGN pin | `pa-5c76b58f70654409` (title `campaign-s2736-knowledge-retrieval`) — RETIRED at P4 close. |

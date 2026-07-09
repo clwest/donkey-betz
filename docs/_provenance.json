@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-09T22:54:54+00:00",
+    "generated": "2026-07-09T23:32:42+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "2c2c6cc28aa3",
-    "doc_count": 2491,
-    "commit_count": 7912,
+    "git_head": "3dc2c588d96e",
+    "doc_count": 2495,
+    "commit_count": 7917,
     "confidence_breakdown": {
-      "HIGH": 1597,
+      "HIGH": 1601,
       "MEDIUM": 394,
       "LOW": 5,
       "UNKNOWN": 495
@@ -1997,10 +1997,28 @@
         2723,
         2725,
         2726,
-        2727
+        2727,
+        2736
       ],
-      "commit_count": 3,
-      "prs": []
+      "commit_count": 6,
+      "prs": [
+        3048
+      ]
+    },
+    "docs/EOS_RULES.md": {
+      "originating_session": 2736,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "fe25cbd1",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "feat(session-2736): \u00a712 Knowledge Retrieval Campaign \u2014 CLOSED (#3047)",
+      "sessions_touched": [
+        2736
+      ],
+      "commit_count": 2,
+      "prs": [
+        3047
+      ]
     },
     "docs/ERROR_TRACKING.md": {
       "originating_session": 752,
@@ -2544,9 +2562,10 @@
         2731,
         2732,
         2734,
-        2735
+        2735,
+        2736
       ],
-      "commit_count": 1303,
+      "commit_count": 1305,
       "prs": [
         10,
         11,
@@ -3084,7 +3103,8 @@
         3039,
         3041,
         3043,
-        3045
+        3045,
+        3047
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7414,9 +7434,10 @@
         2731,
         2732,
         2734,
-        2735
+        2735,
+        2736
       ],
-      "commit_count": 259,
+      "commit_count": 261,
       "prs": [
         2213,
         2219,
@@ -7562,7 +7583,8 @@
         3039,
         3041,
         3043,
-        3045
+        3045,
+        3047
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19159,6 +19181,21 @@
       ],
       "commit_count": 1,
       "prs": []
+    },
+    "docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md": {
+      "originating_session": 2736,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "fe25cbd1",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "feat(session-2736): \u00a712 Knowledge Retrieval Campaign \u2014 CLOSED (#3047)",
+      "sessions_touched": [
+        2736
+      ],
+      "commit_count": 2,
+      "prs": [
+        3047
+      ]
     },
     "docs/handoffs/SESSION_273_DOCUMENTATION_OVERHAUL.md": {
       "originating_session": 273,
@@ -36028,6 +36065,36 @@
         2982
       ]
     },
+    "docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md": {
+      "originating_session": 2736,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "fe25cbd1",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "feat(session-2736): \u00a712 Knowledge Retrieval Campaign \u2014 CLOSED (#3047)",
+      "sessions_touched": [
+        2736
+      ],
+      "commit_count": 2,
+      "prs": [
+        3047
+      ]
+    },
+    "docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md": {
+      "originating_session": 2736,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "fe25cbd1",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "feat(session-2736): \u00a712 Knowledge Retrieval Campaign \u2014 CLOSED (#3047)",
+      "sessions_touched": [
+        2736
+      ],
+      "commit_count": 2,
+      "prs": [
+        3047
+      ]
+    },
     "docs/research/platform/constitutional_ecosystem_inventory.md": {
       "originating_session": 2726,
       "confidence": "MEDIUM",
@@ -36149,15 +36216,17 @@
       "originating_session": 2734,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "7ded646c",
+      "first_commit_sha": "fe25cbd1",
       "first_commit_date": "2026-07-09",
-      "first_commit_subject": "Capability Chain \u00a71 Mission Completion \u2014 WS push on verdict_issued (S2734) (#3023)",
+      "first_commit_subject": "feat(session-2736): \u00a712 Knowledge Retrieval Campaign \u2014 CLOSED (#3047)",
       "sessions_touched": [
-        2734
+        2734,
+        2736
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        3023
+        3023,
+        3047
       ]
     },
     "docs/research/platform/platform_constitutional_architecture.md": {
