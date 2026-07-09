@@ -830,10 +830,27 @@ class BodyCoordinator:
         return actions
 
     def _handle_digestive_blocked(self, event: CoordinationEvent) -> List[str]:
-        """Handle DIGESTIVE blocked - pause spider execution."""
+        """Handle DIGESTIVE blocked - pause spider execution + inbox HAI.
+
+        Session 2735 addition: alongside the pre-existing Discord alert,
+        also create a ``HumanAttentionItem(source_type='data_pipeline_stall',
+        urgency='critical')`` via ``HumanAttentionBridge`` so the silent-
+        outage 24h invisibility window (per Capability Graph §5 Item 9)
+        closes at the same 10-min cadence as this autonomic tick.
+
+        Dedup: skip if any open (undecided) ``data_pipeline_stall`` HAI
+        was created within the last hour. Matches the §14 body-system
+        cadence policy — the tick fires every 10 min, so an unguarded
+        dispatch would create 6 duplicate HAI per persistent-critical
+        hour.
+
+        Kill switch: ``settings.DATA_PIPELINE_STALL_HAI_ENABLED``
+        (default True). Discord alert path is unaffected by the
+        switch.
+        """
         actions = []
 
-        # Send alert
+        # Send alert (pre-existing)
         try:
             from core.services.discord_notifications import send_status_notification
             send_status_notification(
@@ -845,10 +862,74 @@ class BodyCoordinator:
         except Exception as e:
             logger.error(f"Failed to send alert: {e}")
 
+        # Session 2735 — inbox HAI production (Capability Chain §5 Item 14).
+        from django.conf import settings as _dj_settings
+        if getattr(_dj_settings, 'DATA_PIPELINE_STALL_HAI_ENABLED', True):
+            try:
+                if self._data_pipeline_stall_dedup_open():
+                    actions.append(
+                        "Skipped HAI dispatch — open data_pipeline_stall "
+                        "attention already present within 1h dedup window"
+                    )
+                else:
+                    self._dispatch_data_pipeline_stall_hai(event)
+                    actions.append("Created data_pipeline_stall HumanAttentionItem")
+            except Exception as e:  # pragma: no cover — defensive
+                logger.warning(
+                    "[BodyCoordinator] data_pipeline_stall HAI dispatch "
+                    "failed (%s: %s); Discord alert path unaffected",
+                    type(e).__name__, e,
+                )
+
         # Signal spider coordinator to pause
         actions.append("Signaled spider coordinator to pause execution")
 
         return actions
+
+    def _data_pipeline_stall_dedup_open(self) -> bool:
+        """True if an undecided ``data_pipeline_stall`` HAI was created
+        in the last hour. Fails safe to ``False`` on any error so a
+        broken lookup does NOT swallow a genuine escalation.
+        """
+        try:
+            from datetime import timedelta as _td
+            from core.models_human_interface import HumanAttentionItem
+            cutoff = timezone.now() - _td(hours=1)
+            return HumanAttentionItem.objects.filter(
+                source_type='data_pipeline_stall',
+                decided_at__isnull=True,
+                created_at__gte=cutoff,
+            ).exists()
+        except Exception as e:  # pragma: no cover — defensive
+            logger.warning(
+                "[BodyCoordinator] data_pipeline_stall dedup lookup "
+                "failed (%s: %s); allowing escalation",
+                type(e).__name__, e,
+            )
+            return False
+
+    def _dispatch_data_pipeline_stall_hai(self, event: CoordinationEvent):
+        """Dispatch to the HumanAttentionBridge with the current
+        digestive snapshot embedded in the event payload.
+        """
+        from core.services.human_attention_bridge import attention_bridge
+        data = event.data or {}
+        digestive_status = str(data.get('status') or 'starving')
+        items_pending = int(data.get('items_pending', 0) or 0)
+        items_24h = int(data.get('items_24h', 0) or 0)
+        recent_intake = int(data.get('recent_intake', 0) or 0)
+        # Bucket rounds the coordination event's minute-precision
+        # timestamp down to the hour so retries within the same tick
+        # window produce the same idempotency_key.
+        ts = event.timestamp or timezone.now()
+        window_bucket = ts.strftime('%Y-%m-%d:%H')
+        attention_bridge.create_data_pipeline_stall_attention(
+            digestive_status=digestive_status,
+            items_pending=items_pending,
+            items_24h=items_24h,
+            recent_intake=recent_intake,
+            window_bucket=window_bucket,
+        )
 
     def _handle_digestive_bloated(self, event: CoordinationEvent) -> List[str]:
         """Handle DIGESTIVE bloated - reduce intake rate."""

@@ -611,6 +611,127 @@ class HumanAttentionBridge:
             logger.error(f"Failed to create failure cluster attention: {e}")
 
     # =========================================================================
+    # DATA PIPELINE STALL  (Session 2735 — Capability Chain §5 closure)
+    # =========================================================================
+
+    def create_data_pipeline_stall_attention(
+        self,
+        digestive_status: str,
+        items_pending: int,
+        items_24h: int = 0,
+        recent_intake: int = 0,
+        window_bucket: str = '',
+        user=None,
+    ):
+        """
+        Create an attention item when the DIGESTIVE body system reports
+        ``starving`` or ``blocked`` — Category B closure of §5 Item 14.
+
+        Called from ``BodyCoordinator._handle_digestive_blocked`` after
+        the ``DIGESTIVE_BLOCKED`` coordination event fires (severity
+        ``critical`` by definition). Tenth producer method on this
+        bridge per Platform Capability Graph §5 wire-up. Existing chain:
+
+            digestive.check_intake() returns 'starving' (spider drought
+              — recent_intake=0 while items_24h>0)
+            → BodyCoordinator._detect_digestive_events emits
+              CoordinationEvent(DIGESTIVE_BLOCKED, severity='critical')
+            → _handle_digestive_blocked → Discord alert (pre-existing)
+              + this bridge method (Session 2735 addition)
+            → HumanInterfaceService.create_attention_item(
+                source_type='data_pipeline_stall')
+            → HumanAttentionItem row → inbox
+
+        Urgency policy (per Rigby SIGN ``pa-51ce887a2f0d48ef`` Q2):
+        always ``critical``. The DIGESTIVE_BLOCKED coordination event
+        already carries ``severity='critical'`` because a 1h+ intake
+        stall silently degrades every downstream signal / content /
+        opportunity chain. ``critical`` triggers Expo push via
+        ``signals_push_notifications.on_critical_attention_item`` —
+        same policy as §14 body_system_degradation.
+
+        Idempotency: ``window_bucket`` is a caller-supplied string
+        (typically ``digestive.status:{YYYY-MM-DD:HH}``) that composes
+        with the ``digestive_status`` to form a stable dedup key even
+        if the caller loses the coordination event id across restarts.
+
+        Args:
+            digestive_status: 'starving' or 'blocked' — the digestive
+                system's assessment. Never 'healthy'/'sluggish'/'bloated'
+                (upstream guard in the handler.)
+            items_pending: pending items in the pipeline (from
+                ``digestive.get_status()``).
+            items_24h: items processed in the last 24h; informative for
+                the human reading the item.
+            recent_intake: items ingested in the last hour; distinguishes
+                'starving' (0) from 'blocked' (nonzero but stuck).
+            window_bucket: caller-composed idempotency key body.
+            user: Optional target user; defaults to admins.
+        """
+        try:
+            users = [user] if user else self.get_admin_users()
+
+            status = (digestive_status or 'unknown').lower()
+            urgency = 'critical'
+            idempotency_key = (
+                f"data_pipeline_stall:{window_bucket or 'no-bucket'}:{status}"
+            )
+
+            title = (
+                f"Data pipeline {status}: intake_1h={recent_intake} "
+                f"items_24h={items_24h} pending={items_pending}"
+            )
+            summary_parts = [
+                f"DIGESTIVE body system reports status='{status}'."
+            ]
+            if status == 'starving':
+                summary_parts.append(
+                    f"No spider intake in the last hour "
+                    f"(recent_intake={recent_intake})"
+                    + (f" despite {items_24h} items in the 24h window." if items_24h else '.')
+                )
+            elif status == 'blocked':
+                summary_parts.append(
+                    f"Pipeline appears blocked with {items_pending} pending items "
+                    f"— intake in last hour: {recent_intake}."
+                )
+            summary_parts.append(
+                "Downstream signal / content / opportunity chains "
+                "silently degrade while this persists."
+            )
+            summary = ' '.join(summary_parts)
+
+            payload = _serialize_for_json({
+                'digestive_status': status,
+                'items_pending': int(items_pending or 0),
+                'items_24h': int(items_24h or 0),
+                'recent_intake': int(recent_intake or 0),
+                'window_bucket': window_bucket,
+                'idempotency_key': idempotency_key,
+            })
+
+            for target_user in users:
+                service = self.get_service(target_user)
+                service.create_attention_item(
+                    source_type='data_pipeline_stall',
+                    source_id=idempotency_key,
+                    source_agent='BodyCoordinator',
+                    item_type='alert',
+                    title=title[:200],
+                    summary=summary[:400],
+                    urgency=urgency,
+                    payload=payload,
+                )
+                logger.info(
+                    "[HAI_BRIDGE] data_pipeline_stall attention created "
+                    "user=%s status=%s intake_1h=%d bucket=%s",
+                    target_user.username, status, recent_intake, window_bucket,
+                )
+
+        except Exception as e:
+            logger.error(f"Failed to create data pipeline stall attention: {e}")
+
+    # =========================================================================
     # SYSTEM ALERTS
     # =========================================================================
 
