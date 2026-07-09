@@ -2608,20 +2608,85 @@ RESEARCH DATA:
 
         elif action == 'ingest':
             url = payload.get('url', '').strip()
-            if not url:
-                raise ValueError("'url' is required for ingest action")
 
+            # Session 2728 F-KI-1 — return typed error dict on empty URL
+            # instead of raising ValueError. Mirrors sibling actions in this
+            # handler (search line 2525, promote line 2630) which already
+            # return `{'error': ...}` dicts for missing required params. The
+            # prior raise propagated as a TOOL_EXCEPTION at the dispatcher
+            # layer, hiding the specific cause behind the generic exception
+            # envelope. Chris ratified at Batch B tool 3 close.
+            if not url:
+                return {
+                    'action': 'ingest',
+                    'ok': False,
+                    'error_code': 'url_required',
+                    'error': "'url' is required for ingest action",
+                }
+
+            # Session 2728 F-KI-4 — URL scheme validation at tool boundary.
+            # Reject non-http/https schemes (file://, data:, javascript:, etc.)
+            # so LLM-autofilled or user-mistaken URLs cannot reach the
+            # downstream URL fetcher and become an SSRF / local-file
+            # exfiltration surface. DocumentProcessingPipeline presumably
+            # validates too but defense-in-depth at the tool layer is worth
+            # doing. Chris ratified at Batch B tool 3 close.
+            from urllib.parse import urlparse
+            try:
+                _parsed = urlparse(url)
+            except Exception:
+                _parsed = None
+            if not _parsed or _parsed.scheme not in ('http', 'https'):
+                _scheme = _parsed.scheme if _parsed else None
+                return {
+                    'action': 'ingest',
+                    'ok': False,
+                    'error_code': 'invalid_url_scheme',
+                    'error': (
+                        f"URL scheme must be http or https; got scheme="
+                        f"{_scheme!r}. Non-http(s) schemes (file://, "
+                        "data:, javascript:, etc.) are rejected at the "
+                        "tool boundary to defend against SSRF and local-"
+                        "file exfiltration."
+                    ),
+                    'url': url,
+                }
+
+            # Session 2728 F-KI-2 / F-KI-3 — plumb user_id through to the
+            # Celery task. Prior handler dropped user_id on the delay call,
+            # which combined with `_impl_process_url_async` defaulting to
+            # `User.objects.first()` (tasks_media.py:374-375) meant every
+            # PA-dispatched kb_ingest silently attributed the created
+            # Document to the lowest-ID user in the DB — not the actual
+            # dispatching user. Passing user_id explicitly restores the
+            # dispatching-user-owns-ingested-document invariant. Chris
+            # ratified at Batch B tool 3 close.
             # Dispatch URL ingestion as async task
             from core.tasks import process_url_async
-            task = process_url_async.delay(url=url, generate_embeddings=True)
+            task = process_url_async.delay(
+                url=url,
+                user_id=user_id,
+                generate_embeddings=True,
+            )
 
+            # Session 2728 F-KI-5 option (a) — additive `dispatched: True`
+            # field alongside the existing `success: True`. The prior
+            # `success: True` was misleading because it signaled dispatch
+            # success, not ingestion success (the actual work is async).
+            # `dispatched: True` is semantically accurate; `success: True`
+            # is retained for back-compat with any downstream consumers.
+            # Also echo `user_id` for provenance so Rigby can verify her
+            # user_id survived the delegation (F-KI-2 verification).
+            # Chris ratified at Batch B tool 3 close.
             return {
                 'action': 'ingest',
                 'url': url,
                 'task_id': str(task.id),
                 'mode': 'async',
                 'message': f'URL "{url}" queued for RAG ingestion. Use job_status to check progress.',
-                'success': True,
+                'success': True,       # back-compat
+                'dispatched': True,    # semantically accurate — dispatch success, not ingestion success
+                'user_id': str(user_id) if user_id else None,
             }
 
         elif action == 'promote':
