@@ -14,9 +14,9 @@ ratification_record:
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
 branch_authored: playbook/v0.2.0-eos-rules-codification
-commit_sha: null  # populated post-merge frontmatter fill
-content_hash: null  # populated post-merge frontmatter fill
-git_tag: playbook-v0.2.0  # target — applied post-merge
+commit_sha: ab3c88fa1ddc689a3fbe4cb59d13a5f5fb71cb9b
+content_hash: sha256:ae3228d9b9673dec672300b56b2076790b1548d946852fe08f594c3a37b46938
+git_tag: playbook-v0.2.0
 schema_version: 1
 prior_ratification:
   version: "0.1.0"
