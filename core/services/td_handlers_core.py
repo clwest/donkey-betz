@@ -4005,18 +4005,12 @@ RESEARCH DATA:
             from core.models import ChatConversation
             from django.db.models import Count, Max
 
-            # Session 2728 F-S-3 — surface hard cap explicitly so Rigby knows
-            # when the returned set is a bounded slice, not the full history.
-            # Mirrors the F-D-5 pattern (deliverable_tool.list/search) approved
-            # at Batch A tool 1.
-            _LIST_RECENT_HARD_MAX = 25
-            _requested_limit = payload.get('limit', 10)
-            try:
-                _requested_limit_int = int(_requested_limit)
-            except (TypeError, ValueError):
-                _requested_limit_int = 10
-            limit = min(_requested_limit_int, _LIST_RECENT_HARD_MAX)
-            _limit_capped = _requested_limit_int > _LIST_RECENT_HARD_MAX
+            # Session 2728 F-S-3 / S2730 F-RL-2 — surface hard cap via the
+            # shared `td_limit_envelope.compute_limit` helper. Rigby sees
+            # `limit_capped/requested_limit/effective_limit/hard_max` when
+            # she requests more than the handler will return.
+            from core.services.td_limit_envelope import compute_limit
+            limit, _envelope = compute_limit(payload, default=10, hard_max=25)
 
             # Session 2728 F-S-3 — surface `total` (unbounded distinct
             # conversation count) so callers can detect there are more
@@ -4048,19 +4042,14 @@ RESEARCH DATA:
                     'last_message': conv['last_message'].isoformat() if conv['last_message'] else None,
                 })
 
-            _resp = {
+            return {
                 'action': 'list_recent',
                 'conversations': conversations,
                 'count': len(conversations),
                 'total': total,
                 'limit': limit,
+                **_envelope,  # S2730 F-RL-2: shared limit envelope
             }
-            if _limit_capped:
-                _resp['limit_capped'] = True
-                _resp['requested_limit'] = _requested_limit_int
-                _resp['effective_limit'] = limit
-                _resp['hard_max'] = _LIST_RECENT_HARD_MAX
-            return _resp
 
         elif action == 'whoami':
             # Session 1226 — return the authenticated user's identity AND whether the

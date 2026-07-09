@@ -5267,27 +5267,20 @@ class OpsHandlersMixin:
     def _handle_kb_browse(self, tool_name, payload, user_id, trace_id):
         """R2-6: Browse KB documents, embedding collections, and chunk counts."""
         action = payload.get('action', 'stats')
-        # Session 2728 F-KB-1 — surface the hard cap on `limit` explicitly so
-        # Rigby knows when a returned set is a bounded slice, not the full
-        # result. Mirrors the F-D-5 (deliverable_tool) and F-S-3 (session_tool)
-        # patterns approved earlier in Batch A. Applied to all list-shaped
-        # actions: documents, chunks, search_embeddings, semantic_search.
-        _KB_HARD_MAX = 50
-        _requested_limit = payload.get('limit', 20)
-        try:
-            _requested_limit_int = int(_requested_limit)
-        except (TypeError, ValueError):
-            _requested_limit_int = 20
-        limit = min(_requested_limit_int, _KB_HARD_MAX)
-        _limit_capped = _requested_limit_int > _KB_HARD_MAX
+        # Session 2728 F-KB-1 / S2730 F-RL-2 — surface the hard cap on
+        # `limit` explicitly via the shared `td_limit_envelope.compute_limit`
+        # helper. Rigby sees the `limit_capped/requested_limit/
+        # effective_limit/hard_max` F-D-5 shape when she requests more
+        # than the handler will return.
+        from core.services.td_limit_envelope import compute_limit
+        limit, _envelope = compute_limit(payload, default=20, hard_max=50)
 
         def _apply_limit_envelope(resp: Dict[str, Any]) -> Dict[str, Any]:
-            """Attach limit-cap fields when caller exceeded the hard maximum."""
-            if _limit_capped:
-                resp['limit_capped'] = True
-                resp['requested_limit'] = _requested_limit_int
-                resp['effective_limit'] = limit
-                resp['hard_max'] = _KB_HARD_MAX
+            """Attach limit-cap fields when caller exceeded the hard maximum.
+            Preserved as a closure wrapper so the four call sites below
+            keep their existing shape; the helper's envelope dict is
+            spread into the response only when non-empty."""
+            resp.update(_envelope)
             return resp
 
         try:

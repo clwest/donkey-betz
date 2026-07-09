@@ -336,14 +336,33 @@ class ContentHandlersMixin:
         if action == 'list':
             # Session 1101: Honor status filter from payload (default: ready)
             _STATUS_ALIASES = {'approved': 'ready', 'pending_review': 'ready', 'rejected': 'archived'}
-            status_filter = payload.get('status', 'ready')
-            status_filter = _STATUS_ALIASES.get(status_filter, status_filter)
-            qs = base_qs.filter(status=status_filter)
+            # Session 2730 F-OH-1 — track applied filters + escape hatches
+            # so Rigby can tell which filters fired and distinguish the
+            # `status='ready'` default from an explicit caller request.
+            # Mirrors the deliverable_tool `_apply_common_filters` +
+            # `applied_filters` gold standard.
+            _applied: Dict[str, Any] = {}
+
+            # Session 2730 F-OH-1 — `status='all'` escape hatch matching the
+            # `_handle_initiative.list` precedent (td_handlers_content.py:1589).
+            # Without this, callers who wanted the broadest set had to know
+            # to iterate every status value.
+            _status_raw = payload.get('status')
+            _status_defaulted = _status_raw is None
+            status_filter = _status_raw if _status_raw is not None else 'ready'
+            if str(status_filter).lower() != 'all':
+                status_filter = _STATUS_ALIASES.get(status_filter, status_filter)
+                qs = base_qs.filter(status=status_filter)
+                _applied['status'] = status_filter
+            else:
+                qs = base_qs
 
             if content_type:
                 qs = qs.filter(deliverable_type=content_type)
+                _applied['type'] = content_type
             if category:
                 qs = qs.filter(category__icontains=category)
+                _applied['category'] = category
 
             # Session 1101: Date range filters
             created_before = payload.get('created_before')
@@ -353,11 +372,13 @@ class ContentHandlersMixin:
                 dt = parse_datetime(created_before)
                 if dt:
                     qs = qs.filter(created_at__lt=dt)
+                    _applied['created_before'] = created_before
             if created_after:
                 from django.utils.dateparse import parse_datetime
                 dt = parse_datetime(created_after)
                 if dt:
                     qs = qs.filter(created_at__gte=dt)
+                    _applied['created_after'] = created_after
 
             total = qs.count()
             offset = max(payload.get('offset', 0), 0)
@@ -373,13 +394,22 @@ class ContentHandlersMixin:
                 'total': total,
                 'count': len(items),
                 'items': items,
+                # Session 2730 F-OH-1 — align with deliverable_tool gold
+                # standard: `applied_filters` records only filters that
+                # actually fired (not the value of every declared filter).
+                # `status_defaulted` distinguishes explicit `status='ready'`
+                # from the implicit default.
+                'applied_filters': dict(_applied),
+                'status_defaulted': _status_defaulted,
+                # Preserved for backward compat with any callers that
+                # were reading `filters_applied` before S2730.
                 'filters_applied': {
                     'type': content_type,
                     'category': category,
-                    'status': status_filter,
+                    'status': _applied.get('status'),
                     'created_before': created_before,
                     'created_after': created_after,
-                }
+                },
             }
 
         elif action == 'recent':
@@ -1584,15 +1614,27 @@ class ContentHandlersMixin:
             # Build queryset with filters
             qs = Initiative.objects.all()
 
-            # Filter by status (default to ACTIVE)
-            status_filter = payload.get('status', 'ACTIVE')
+            # Session 2730 F-OH-2 — track applied filters + surface a
+            # `status_defaulted` flag so Rigby can tell the implicit
+            # `status='ACTIVE'` default from an explicit request.
+            # Mirrors the deliverable_tool `applied_filters` gold standard
+            # (td_handlers_agents.py:1893). Behavior unchanged; observability
+            # added.
+            _applied: Dict[str, Any] = {}
+
+            # Filter by status (default to ACTIVE; 'all' bypass preserved)
+            _status_raw = payload.get('status')
+            _status_defaulted = _status_raw is None
+            status_filter = _status_raw if _status_raw is not None else 'ACTIVE'
             if status_filter and status_filter != 'all':
                 qs = qs.filter(status=status_filter.upper())
+                _applied['status'] = status_filter.upper()
 
             # Filter by stage
             stage_filter = payload.get('stage')
             if stage_filter:
                 qs = qs.filter(current_stage=int(stage_filter))
+                _applied['stage'] = int(stage_filter)
 
             # Filter by purpose/program — enums removed from schema to stop GPT
             # auto-filling defaults. Apply only when value looks intentional.
@@ -1602,11 +1644,13 @@ class ContentHandlersMixin:
             purpose_applied = purpose_filter not in _IGNORED_PURPOSE
             if purpose_applied:
                 qs = qs.filter(purpose=purpose_filter)
+                _applied['purpose'] = purpose_filter
 
             program_filter = payload.get('program', '').strip().lower()
             program_applied = program_filter not in _IGNORED_PROGRAM
             if program_applied:
                 qs = qs.filter(program=program_filter)
+                _applied['program'] = program_filter
 
             # Session 996: Filter by owner
             # Session 1077: 'all' means no owner filter (was searching for literal 'all' in owner_agent)
@@ -1624,6 +1668,7 @@ class ContentHandlersMixin:
                         user_obj = _User.objects.filter(id=user_id).first()
                         if user_obj:
                             qs = qs.filter(owner=user_obj)
+                            _applied['owner'] = 'me'
                     except Exception as e:
                         logger.warning(
                             "td_handlers_content: owner='me' filter lookup "
@@ -1634,13 +1679,16 @@ class ContentHandlersMixin:
                         )
                 elif owner_filter == 'unowned':
                     qs = qs.filter(owner__isnull=True, owner_agent='')
+                    _applied['owner'] = 'unowned'
                 else:
                     qs = qs.filter(owner_agent__icontains=owner_filter)
+                    _applied['owner'] = owner_filter
 
             # Session 1077: Filter by workspace
             ws_filter = payload.get('workspace') or payload.get('workspace_id')
             if ws_filter:
                 qs = qs.filter(workspace_id=ws_filter)
+                _applied['workspace_id'] = ws_filter
 
             # Session 1077: Annotate action item counts to avoid N+1 queries
             # (was 2 COUNT queries per initiative in the loop)
@@ -1712,13 +1760,22 @@ class ContentHandlersMixin:
                 'offset': start,
                 'limit': int(limit),
                 'items': items,
+                # Session 2730 F-OH-2 — align with deliverable_tool gold
+                # standard: `applied_filters` records only filters that
+                # actually fired. `status_defaulted` distinguishes
+                # explicit `status='ACTIVE'` from the implicit default
+                # that fires when caller omits the field.
+                'applied_filters': dict(_applied),
+                'status_defaulted': _status_defaulted,
+                # Preserved for backward compat with any callers that
+                # were reading `filters_applied` before S2730.
                 'filters_applied': {
                     'status': status_filter,
                     'stage': stage_filter or '',
                     'purpose': purpose_filter if purpose_applied else '',
                     'program': program_filter if program_applied else '',
                     'owner': owner_filter or '',
-                }
+                },
             }
 
         elif action == 'audit':
@@ -4640,6 +4697,23 @@ class ContentHandlersMixin:
                 from core.models_document_registry import InitiativeStage
                 from core.models_unified_system import SelfBlog
 
+                # Session 2730 F-PS-3: surface silent-truncation of the
+                # 5000-char content cap so Rigby / analytics can tell
+                # "full doc fit" from "doc was clipped at 5000." Rigby's
+                # mental model of `content` is that it's the doc body;
+                # she was previously wrong for docs > 5000 chars.
+                _CONTENT_CAP = 5000
+
+                def _doc_content_with_signal(full_text: str) -> dict:
+                    total = len(full_text or '')
+                    truncated = total > _CONTENT_CAP
+                    return {
+                        'content': (full_text or '')[:_CONTENT_CAP],
+                        'content_truncated': truncated,
+                        'content_original_length': total,
+                        'content_cap': _CONTENT_CAP,
+                    }
+
                 stage = None
                 if stage_id:
                     stage = InitiativeStage.objects.select_related('document', 'initiative').filter(id=stage_id).first()
@@ -4653,7 +4727,7 @@ class ContentHandlersMixin:
                         'gateway': 'content_tool', 'action': action,
                         'document_id': str(doc.id),
                         'title': doc.title,
-                        'content': doc.full_text[:5000],
+                        **_doc_content_with_signal(doc.full_text),
                         'content_type': doc.content_type,
                         'created_at': doc.created_at.isoformat(),
                         'initiative': stage.initiative.name if stage else None,
@@ -4691,7 +4765,16 @@ class ContentHandlersMixin:
                     'initiative': stage.initiative.name,
                     'document_id': str(doc.id) if doc else None,
                     'title': doc.title if doc else None,
-                    'content': (doc.full_text[:5000] if doc else ''),
+                    # Session 2730 F-PS-3: same content-cap signal shape
+                    # as the doc_id branch. When there's no doc, all
+                    # fields are the zero form (empty content, not
+                    # truncated, length 0).
+                    **(_doc_content_with_signal(doc.full_text) if doc else {
+                        'content': '',
+                        'content_truncated': False,
+                        'content_original_length': 0,
+                        'content_cap': _CONTENT_CAP,
+                    }),
                     'content_type': doc.content_type if doc else None,
                 }
             except Exception as e:

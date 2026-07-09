@@ -43,6 +43,18 @@ from datetime import datetime
 
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.db.utils import DatabaseError
+
+# Session 2730 F-CI-1 — narrow-except allowlist for the context injection
+# pipeline. Mirrors S1234 D17-D21 discipline extended in Batch B tool 1
+# (F-RG-1 in core/rag_integration.py) and Batch B tool 5 (F-WS-4 in
+# core/services/workspace_resolver.py). Environmental failures (DB down,
+# network unreachable, filesystem OSError) log WARNING and skip the
+# affected phase. Logic errors (AttributeError, TypeError, KeyError,
+# NameError, ValueError) propagate — the S1103c `profile.experience`
+# bug hid inside a broad-except for multiple sessions before it was
+# caught. Narrow-except discipline prevents recurrence.
+_CONTEXT_INJECTION_ENV_ERRORS = (DatabaseError, ConnectionError, OSError)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -1043,7 +1055,7 @@ class UnifiedPAEntrypoint:
                     try:
                         enrichment_sections = await asyncio.wait_for(
                             self._enrich_tool_result(
-                                message, intent or 'general', {}, trace_id
+                                message, intent or 'general', trace_id
                             ),
                             timeout=15.0
                         )
@@ -1053,7 +1065,21 @@ class UnifiedPAEntrypoint:
                     if enrichment_sections:
                         from core.services.pa_security import scrub_enrichment_context
                         enrichment_sections = scrub_enrichment_context(enrichment_sections)
-                    logger.info(f"[{trace_id}] FC enrichment: {int((time.time()-t2)*1000)}ms sections={list(enrichment_sections.keys())}")
+                    # Session 2730 F-CI-9: emit envelope summary — content
+                    # section keys plus a compact metadata snapshot so
+                    # operators can see gated-out / failed / truncated
+                    # counts without grepping DEBUG logs.
+                    _md = enrichment_sections.get('_metadata', {}) if isinstance(enrichment_sections, dict) else {}
+                    _content_keys = [k for k in enrichment_sections.keys() if not k.startswith('_')] if isinstance(enrichment_sections, dict) else []
+                    logger.info(
+                        f"[{trace_id}] FC enrichment: {int((time.time()-t2)*1000)}ms "
+                        f"sections={_content_keys} "
+                        f"run={_md.get('services_run', [])} "
+                        f"failed={_md.get('services_failed', [])} "
+                        f"gated={_md.get('services_gated_out', [])} "
+                        f"unavail={_md.get('services_unavailable', [])} "
+                        f"truncated={_md.get('sections_truncated', [])}"
+                    )
             else:
                 # ── Existing path: keyword routing ──────────────
                 # 2. Detect intent and route
@@ -1140,7 +1166,7 @@ class UnifiedPAEntrypoint:
                         try:
                             enrichment_sections = await asyncio.wait_for(
                                 self._enrich_tool_result(
-                                    message, intent, tool_result.result, trace_id
+                                    message, intent, trace_id
                                 ),
                                 timeout=15.0
                             )
@@ -1151,7 +1177,20 @@ class UnifiedPAEntrypoint:
                         if enrichment_sections:
                             from core.services.pa_security import scrub_enrichment_context
                             enrichment_sections = scrub_enrichment_context(enrichment_sections)
-                        logger.info(f"[{trace_id}] Step 3b enrichment: {int((time.time()-t2)*1000)}ms sections={list(enrichment_sections.keys())}")
+                        # Session 2730 F-CI-9: same envelope-summary log format
+                        # as the FC path so the two branches produce
+                        # comparable telemetry.
+                        _md = enrichment_sections.get('_metadata', {}) if isinstance(enrichment_sections, dict) else {}
+                        _content_keys = [k for k in enrichment_sections.keys() if not k.startswith('_')] if isinstance(enrichment_sections, dict) else []
+                        logger.info(
+                            f"[{trace_id}] Step 3b enrichment: {int((time.time()-t2)*1000)}ms "
+                            f"sections={_content_keys} "
+                            f"run={_md.get('services_run', [])} "
+                            f"failed={_md.get('services_failed', [])} "
+                            f"gated={_md.get('services_gated_out', [])} "
+                            f"unavail={_md.get('services_unavailable', [])} "
+                            f"truncated={_md.get('sections_truncated', [])}"
+                        )
 
                         # Generate response from tool result + enrichment
                         t3 = time.time()
@@ -1779,12 +1818,9 @@ class UnifiedPAEntrypoint:
                         f"{len(successful_runs)} successful tool runs — attempting fresh summary"
                     )
                     fresh_messages = self._build_messages_array(message, context)
-                    tool_summary = json.dumps(
-                        [{'tool': r.get('tool', ''), 'ok': r.get('ok'),
-                          'result': str(r.get('result', ''))[:4000]}
-                         for r in tool_runs],
-                        default=str
-                    )[:4000]
+                    # Session 2730 F-PS-1: use JSON-aware truncator so mid-object
+                    # breakage cannot escape into the LLM's next turn.
+                    tool_summary = self._build_fresh_summary(tool_runs)
                     fresh_messages.append({
                         "role": "user",
                         "content": (
@@ -1837,11 +1873,10 @@ class UnifiedPAEntrypoint:
                     if successful_runs:
                         logger.info(f"[{trace_id}] Attempting clean summary of {len(successful_runs)} successful tool runs")
                         fresh_messages = self._build_messages_array(message, context)
-                        tool_summary = json.dumps(
-                            [{'tool': r.get('tool', ''), 'ok': r.get('ok'), 'result': str(r.get('result', ''))[:4000]}
-                             for r in tool_runs],
-                            default=str
-                        )[:4000]
+                        # Session 2730 F-PS-1: JSON-aware truncator preserves
+                        # `_truncated: {shown, total}` markers per-result and
+                        # in the outer envelope.
+                        tool_summary = self._build_fresh_summary(tool_runs)
                         fresh_messages.append({
                             "role": "user",
                             "content": f"Here are the tool results I gathered. Please summarize them for the user:\n{tool_summary}",
@@ -1984,11 +2019,8 @@ class UnifiedPAEntrypoint:
                 # Session 1060: Drop previous_response_id — see degenerate break above.
                 # Also inject tool results as user context so the LLM can summarize.
                 fresh_messages = self._build_messages_array(message, context)
-                tool_summary = json.dumps(
-                    [{'tool': r.get('tool', ''), 'ok': r.get('ok'), 'result': str(r.get('result', ''))[:4000]}
-                     for r in tool_runs],
-                    default=str
-                )[:4000]
+                # Session 2730 F-PS-1: JSON-aware truncator (see helper).
+                tool_summary = self._build_fresh_summary(tool_runs)
                 fresh_messages.append({
                     "role": "user",
                     "content": f"Here are the tool results I gathered. Please summarize them for the user:\n{tool_summary}",
@@ -2338,6 +2370,53 @@ class UnifiedPAEntrypoint:
             data.pop('_truncated', None)
 
         return json.dumps(data, default=str)
+
+    @classmethod
+    def _build_fresh_summary(
+        cls,
+        tool_runs: List[Dict[str, Any]],
+        per_result_limit: int = 4000,
+        total_limit: int = 8000,
+    ) -> str:
+        """
+        Session 2730 F-PS-1: JSON-aware fresh-summary builder for
+        degraded-turn recovery paths (LLM failed / degenerate response /
+        duplicate-sig loop break).
+
+        Previously three sites (`_run_agentic_loop` degraded branches at
+        lines 1821, 1879, 2026) did naive `str(r.get('result', ''))[:4000]`
+        per-result plus `[:4000]` on the outer JSON. The S1065 docstring
+        on `_truncate_tool_output` explicitly names this as the anti-pattern
+        that broke JSON mid-object and made GPT-5.2 see partial results.
+
+        This helper:
+        1. Per-result, JSON-encodes each result and runs the smart
+           truncator so `_truncated: {shown, total}` markers survive.
+        2. Wraps the summary list in `{'runs': [...]}` so the smart
+           truncator (which requires a dict input with a list field)
+           can prune runs from the tail if the outer envelope
+           overshoots `total_limit`.
+        3. Returns the JSON-encoded envelope. The LLM sees a valid
+           JSON dict either way — no mid-object breakage.
+        """
+        summarized = []
+        for r in tool_runs:
+            raw_result = r.get('result', '')
+            try:
+                encoded = json.dumps(raw_result, default=str)
+            except (TypeError, ValueError):
+                encoded = str(raw_result)
+            trimmed = cls._truncate_tool_output(encoded, per_result_limit)
+            summarized.append({
+                'tool': r.get('tool', ''),
+                'ok': r.get('ok'),
+                'result': trimmed,
+            })
+        # Wrap in a dict envelope so `_truncate_tool_output` can find
+        # the `runs` list field and prune from the tail. Without this
+        # wrap, a raw list input falls back to naive slicing.
+        outer = json.dumps({'runs': summarized}, default=str)
+        return cls._truncate_tool_output(outer, total_limit)
 
     @staticmethod
     def _is_degenerate_content(text: str) -> bool:
@@ -2868,8 +2947,9 @@ class UnifiedPAEntrypoint:
                 }
         except asyncio.TimeoutError:
             logger.warning("Profile load timed out after 5s — skipping")
-        except Exception as e:
-            logger.warning(f"Failed to load profile: {e}")
+        except _CONTEXT_INJECTION_ENV_ERRORS as e:
+            # Session 2730 F-CI-1: env errors log + skip; logic errors propagate
+            logger.warning(f"Profile load env error ({type(e).__name__}): {e}")
 
         # Add dynamic system knowledge if relevant (3s timeout)
         if self.knowledge_injector:
@@ -2884,8 +2964,9 @@ class UnifiedPAEntrypoint:
                     context['system_knowledge'] = knowledge_context
             except asyncio.TimeoutError:
                 logger.warning("Knowledge injection timed out after 3s — skipping")
-            except Exception as e:
-                logger.warning(f"Failed to inject knowledge: {e}")
+            except _CONTEXT_INJECTION_ENV_ERRORS as e:
+                # Session 2730 F-CI-1: env errors log + skip; logic errors propagate
+                logger.warning(f"Knowledge injection env error ({type(e).__name__}): {e}")
 
         # Add system stats (5s timeout)
         try:
@@ -2895,8 +2976,9 @@ class UnifiedPAEntrypoint:
             )
         except asyncio.TimeoutError:
             logger.warning("System stats timed out after 5s — skipping")
-        except Exception as e:
-            logger.warning(f"Failed to get system stats: {e}")
+        except _CONTEXT_INJECTION_ENV_ERRORS as e:
+            # Session 2730 F-CI-1: env errors log + skip; logic errors propagate
+            logger.warning(f"System stats env error ({type(e).__name__}): {e}")
 
         # Session 943: Inject docs context so PA knows about system architecture,
         # recent sessions, and what we've been working on (5s timeout)
@@ -2919,8 +3001,9 @@ class UnifiedPAEntrypoint:
                     logger.debug(f"[Session 943] PA docs context: {len(docs_context.get('relevant_docs', []))} docs")
             except asyncio.TimeoutError:
                 logger.warning("Docs context injection timed out after 5s — skipping")
-            except Exception as e:
-                logger.debug(f"Failed to inject docs context: {e}")
+            except _CONTEXT_INJECTION_ENV_ERRORS as e:
+                # Session 2730 F-CI-1: env errors log + skip; logic errors propagate
+                logger.warning(f"Docs context env error ({type(e).__name__}): {e}")
 
         # Workspace context (codebase structure from SKIN layer)
         try:
@@ -2963,8 +3046,9 @@ class UnifiedPAEntrypoint:
                     logger.debug(f"PA workspace context: {ws_ctx.get('workspace_name')} ({ws_ctx.get('total_files', 0)} files)")
         except asyncio.TimeoutError:
             logger.warning("Workspace context injection timed out after 3s — skipping")
-        except Exception as e:
-            logger.debug(f"Failed to inject workspace context: {e}")
+        except _CONTEXT_INJECTION_ENV_ERRORS as e:
+            # Session 2730 F-CI-1: env errors log + skip; logic errors propagate
+            logger.warning(f"Workspace context env error ({type(e).__name__}): {e}")
 
         # Merge user-provided context
         context.update(user_context)
@@ -2977,16 +3061,23 @@ class UnifiedPAEntrypoint:
         return context
 
     async def _get_system_stats(self) -> Dict[str, Any]:
-        """Get basic system stats for context."""
-        stats = {
+        """Get basic system stats for context.
+
+        Session 2730 F-CI-7: adds `stats_source: 'live' | 'fallback'` so
+        downstream callers can tell hardcoded defaults from live ORM
+        counts. Narrow-except discipline mirrors F-CI-1: env errors
+        (DB down, connection refused) return the fallback with
+        `stats_source='fallback'`; logic errors propagate.
+        """
+        stats: Dict[str, Any] = {
             'agent_count': 74,
             'spider_count': 77,
             'advisor_count': 25,
+            'stats_source': 'fallback',
         }
 
         try:
             from core.models_unified_system import Agent, LegacySpiderData, Opportunity
-            from django.db.models import Count
 
             # Real counts
             stats['agent_count'] = await asyncio.to_thread(Agent.objects.count)
@@ -2994,8 +3085,13 @@ class UnifiedPAEntrypoint:
             stats['opportunity_count'] = await asyncio.to_thread(
                 lambda: Opportunity.objects.filter(status='active').count()
             )
-        except Exception as e:
-            logger.debug(f"Failed to get real stats: {e}")
+            stats['stats_source'] = 'live'
+        except _CONTEXT_INJECTION_ENV_ERRORS as e:
+            # Session 2730 F-CI-7: env errors return fallback with signal;
+            # logic errors propagate so the S1103c-class bug (silent
+            # AttributeError swallowed for multiple sessions) cannot
+            # recur here.
+            logger.warning(f"System stats env error ({type(e).__name__}): {e} — using fallback counts")
 
         return stats
 
@@ -4375,14 +4471,36 @@ class UnifiedPAEntrypoint:
         return set(re.findall(r'[a-z0-9_]+', text.lower()))
 
     def _passes_relevance_gate(self, message: str, enrichment_text: str, threshold: float = 0.15) -> bool:
-        """Keyword overlap relevance check with regex tokenization."""
+        """Keyword overlap relevance check with regex tokenization.
+
+        Session 2730 F-CI-4 + F-CI-5: added observability logs for the
+        two silent-filter branches — short-enrichment discard and the
+        empty-msg-words permissive-include fallback. Behavior unchanged;
+        operator can now see when either branch fires.
+        """
         if not enrichment_text:
             return False
         enrich_words = self._tokenize(enrichment_text)
         if len(enrich_words) < 30:
-            return False  # Too short to be useful
+            # Session 2730 F-CI-5: log silent discard of short enrichment
+            # (previous behavior was completely silent). Short-authoritative
+            # snippets — e.g., 25-word canonical findings — get discarded
+            # here; DEBUG log surfaces the pattern without volume risk.
+            logger.debug(
+                "relevance gate: enrichment discarded (short: %d tokens < 30)",
+                len(enrich_words),
+            )
+            return False
         msg_words = self._tokenize(message) - self.STOP_WORDS
         if not msg_words:
+            # Session 2730 F-CI-4: log permissive-include fallback for
+            # stop-word-only queries ("why?", "how?"). Behavior preserved
+            # (return True so enrichment is not silently dropped); INFO
+            # log surfaces the pattern so operator can spot cases where
+            # enrichment fires unconditionally due to query composition.
+            logger.info(
+                "relevance gate: bypass — msg has no non-stopword tokens (permissive include)",
+            )
             return True  # Can't filter, include it
         overlap = len(msg_words & enrich_words)
         return (overlap / len(msg_words)) >= threshold
@@ -4391,21 +4509,52 @@ class UnifiedPAEntrypoint:
         self,
         message: str,
         intent: str,
-        tool_result: Any,
-        trace_id: str
-    ) -> Dict[str, str]:
+        trace_id: str,
+    ) -> Dict[str, Any]:
         """
         Session 959: Gather intelligence enrichment sections for the current query.
 
-        Returns a dict of named sections (each truncated to its cap).
-        One service failure never blocks others.
-        """
-        sections: Dict[str, str] = {}
+        Session 2730 F-CI-6: removed dead `tool_result` parameter — it
+        was declared but never referenced in the function body. Only
+        `message` and `intent` shape enrichment service selection.
 
+        Session 2730 F-CI-2 + F-CI-3 + F-CI-9: surfaces `_metadata`
+        sub-dict on the return payload with `services_requested`,
+        `services_run`, `services_failed`, `services_gated_out`,
+        `services_unavailable`, and `sections_truncated`. Downstream
+        `_build_analytical_prompt` filters `_metadata` out via the
+        existing `section_labels` iteration (already scoped to 9 known
+        section keys). Per-service failures now log with `exc_info=True`
+        so future logic-bug-hiding-in-except (S1103c pattern) is easier
+        to catch.
+
+        Returns a dict of named sections (each truncated to its cap)
+        plus a `_metadata` sub-dict. One service failure never blocks
+        others.
+        """
+        sections: Dict[str, Any] = {}
         canonical_intent = self.INTENT_ALIASES.get(intent, intent)
         enrichment_services = self.INTENT_ENRICHMENT_MAP.get(canonical_intent, [])
 
+        # Session 2730 F-CI-9: metadata envelope tracks each service's
+        # outcome so callers can distinguish "enrichment ran and produced
+        # nothing" from "enrichment silently failed" from "enrichment
+        # was gated out for relevance."
+        services_run: List[str] = []
+        services_failed: List[tuple] = []
+        services_gated_out: List[str] = []
+        sections_truncated: List[tuple] = []
+
         if not enrichment_services:
+            sections['_metadata'] = {
+                'canonical_intent': canonical_intent,
+                'services_requested': [],
+                'services_run': [],
+                'services_failed': [],
+                'services_gated_out': [],
+                'services_unavailable': [],
+                'sections_truncated': [],
+            }
             return sections
 
         is_direct = canonical_intent in self.DIRECT_RELEVANCE_INTENTS
@@ -4413,6 +4562,7 @@ class UnifiedPAEntrypoint:
         for service_key in enrichment_services:
             try:
                 if service_key == 'intelligence_enricher' and self.intelligence_enricher:
+                    services_run.append(service_key)
                     result = await asyncio.to_thread(
                         self.intelligence_enricher.enrich_context, message
                     )
@@ -4433,6 +4583,7 @@ class UnifiedPAEntrypoint:
                         sections['learning_insights'] = text
 
                 elif service_key == 'blog_performance' and self.blog_performance_fn:
+                    services_run.append(service_key)
                     text = await asyncio.to_thread(
                         self.blog_performance_fn,
                         limit=10, include_learning_rules=True
@@ -4441,14 +4592,18 @@ class UnifiedPAEntrypoint:
                         sections['blog_performance'] = str(text)
 
                 elif service_key == 'domain_context' and self.domain_context_builder:
+                    services_run.append(service_key)
                     text = await asyncio.to_thread(
                         self.domain_context_builder.build_context, topic=message
                     )
                     if text:
                         if is_direct or self._passes_relevance_gate(message, str(text)):
                             sections['domain_context'] = str(text)
+                        else:
+                            services_gated_out.append(service_key)
 
                 elif service_key == 'spider_trends' and self.spider_context_builder:
+                    services_run.append(service_key)
                     result = await asyncio.to_thread(
                         self.spider_context_builder.build_context_for_agent,
                         'personal_assistant', message, hours=48, max_trends=5
@@ -4466,8 +4621,11 @@ class UnifiedPAEntrypoint:
                                 hours = freshness.get('hours_covered', 0)
                                 text += f"\nData quality: {quality}, {hours}h window"
                             sections['spider_trends'] = text
+                        else:
+                            services_gated_out.append(service_key)
 
                 elif service_key == 'advisor' and self.advisor_context_builder:
+                    services_run.append(service_key)
                     result = await asyncio.to_thread(
                         self.advisor_context_builder.build_context_for_agent,
                         'personal_assistant', message
@@ -4492,6 +4650,7 @@ class UnifiedPAEntrypoint:
                         sections['advisor'] = '\n'.join(parts)
 
                 elif service_key == 'strategic_memory':
+                    services_run.append(service_key)
                     # Session 962 Phase 2: Strategic Memory Service
                     try:
                         from core.services.strategic_memory_service import get_strategic_memory_service
@@ -4510,6 +4669,7 @@ class UnifiedPAEntrypoint:
                         )
 
                 elif service_key == 'proactive_intelligence' and self.proactive_intelligence_service:
+                    services_run.append(service_key)
                     pi_result = await asyncio.to_thread(
                         self.proactive_intelligence_service.get_relevant_intelligence,
                         message, None, 3, 24
@@ -4518,11 +4678,14 @@ class UnifiedPAEntrypoint:
                     if text:
                         if is_direct or self._passes_relevance_gate(message, text):
                             sections['proactive_intelligence'] = text
+                        else:
+                            services_gated_out.append(service_key)
 
                 # Session 992: Platform Intelligence Briefing
                 # Skip relevance gate — only fires for system_overview/execution_history
                 # where platform activity is inherently relevant
                 elif service_key == 'platform_briefing' and self.platform_briefing_service:
+                    services_run.append(service_key)
                     text = await asyncio.to_thread(
                         self.platform_briefing_service.get_formatted_briefing
                     )
@@ -4530,14 +4693,40 @@ class UnifiedPAEntrypoint:
                         sections['platform_briefing'] = text
 
             except Exception as e:
-                logger.warning(f"[{trace_id}] Enrichment '{service_key}' failed: {e}")
+                # Session 2730 F-CI-2: use exc_info=True to include
+                # traceback so future logic-bug-hiding-in-except
+                # (S1103c-class pattern) is easier to catch. Per-service
+                # isolation preserved — one failure does not block others.
+                logger.warning(
+                    f"[{trace_id}] Enrichment '{service_key}' failed: {e}",
+                    exc_info=True,
+                )
+                services_failed.append((service_key, type(e).__name__))
 
-        # Truncate each section to its cap
-        for key, text in sections.items():
+        # Session 2730 F-CI-3: truncation loop now records
+        # `sections_truncated` so callers can tell truncated from full.
+        truncatable_keys = [k for k in sections.keys() if not k.startswith('_')]
+        for key in truncatable_keys:
+            text = sections[key]
             cap = self.ENRICHMENT_CAPS.get(key, 600)
             if len(text) > cap:
+                sections_truncated.append((key, len(text), cap))
                 sections[key] = text[:cap] + '...'
 
+        # Compute unavailable: services in the requested list that never
+        # entered any branch (guard failed at `and self.X:`).
+        run_or_failed = set(services_run) | {name for name, _ in services_failed}
+        services_unavailable = [s for s in enrichment_services if s not in run_or_failed]
+
+        sections['_metadata'] = {
+            'canonical_intent': canonical_intent,
+            'services_requested': list(enrichment_services),
+            'services_run': services_run,
+            'services_failed': services_failed,
+            'services_gated_out': services_gated_out,
+            'services_unavailable': services_unavailable,
+            'sections_truncated': sections_truncated,
+        }
         return sections
 
     @staticmethod
@@ -4651,8 +4840,19 @@ Only describe features and capabilities that actually exist. Never fabricate con
 
         # Add the data to analyze
         # Session 1006: Raised from 3000 → 8000; tool results were losing most of their data
+        # Session 2730 F-CI-10: log WARNING on 8000-char truncation so
+        # operators can spot tool_results that are getting cut off before
+        # the analytical LLM sees them. Silent truncation with no signal
+        # was the anti-pattern surfaced across the whole context injection
+        # pipeline (see F-CI-3 for the enrichment-section analog).
         tool_str = str(tool_result)
-        if len(tool_str) > 8000:
+        _tool_str_original_len = len(tool_str)
+        if _tool_str_original_len > 8000:
+            logger.warning(
+                "analytical prompt: tool_result truncated %d → 8000 chars "
+                "(intent=%s) — LLM sees only the first 8000 chars",
+                _tool_str_original_len, intent,
+            )
             tool_str = tool_str[:8000] + '...'
 
         parts.append(f'\n=== DATA TO ANALYZE ===\nUser asked: "{message}"\nTool returned: {tool_str}')
@@ -4676,7 +4876,13 @@ Only describe features and capabilities that actually exist. Never fabricate con
         """
         user_name = context.get('user_name', 'there')
         enrichment_sections = enrichment_sections or {}
-        has_enrichment = any(v for v in enrichment_sections.values())
+        # Session 2730 F-CI-9: skip `_metadata` (and any future underscore-
+        # prefixed envelope keys) — those are provenance carriers, not
+        # content. The analytical LLM branch should only fire when at
+        # least one content section is non-empty.
+        has_enrichment = any(
+            v for k, v in enrichment_sections.items() if not k.startswith('_')
+        )
 
         # Always generate the compact structured list (users need IDs to act)
         structured_output = self._format_tool_result(tool_result, intent, user_name)

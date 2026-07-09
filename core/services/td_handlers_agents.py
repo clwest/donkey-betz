@@ -1614,19 +1614,13 @@ class AgentHandlersMixin:
                 _action_inferred_at_l2 = True
                 logger.info(f"[deliverables] Inferred action=append from id+content (was 'list')")
 
-        # Session 2728 F-D-5 — list/search limit is capped at 50 in the
-        # handler; prior response omitted any signal of the cap firing so
-        # callers requesting `limit=200` believed they got the full set. Now
-        # captures both the requested and effective limits so response builders
-        # can surface `limit_capped`.
-        _LIST_HARD_MAX = 50
-        _requested_limit = payload.get('limit', 10)
-        try:
-            _requested_limit_int = int(_requested_limit)
-        except (TypeError, ValueError):
-            _requested_limit_int = 10
-        limit = min(_requested_limit_int, _LIST_HARD_MAX)
-        _limit_capped = _requested_limit_int > _LIST_HARD_MAX
+        # Session 2728 F-D-5 / S2730 F-RL-2 — list/search limit is capped
+        # at 50; when a caller requests more, the response spreads
+        # `**_envelope` from the shared `compute_limit` helper so Rigby
+        # sees the `limit_capped/requested_limit/effective_limit/hard_max`
+        # F-D-5 shape.
+        from core.services.td_limit_envelope import compute_limit
+        limit, _envelope = compute_limit(payload, default=10, hard_max=50)
         offset = max(payload.get('offset', 0), 0)
 
         # Build base queryset scoped to user
@@ -1901,14 +1895,10 @@ class AgentHandlersMixin:
                 'applied_filters': dict(_applied),
                 'show_all': _show_all,
             }
-            # Session 2728 F-D-5 — surface limit-cap when caller exceeded the
-            # handler's hard maximum so Rigby knows the returned set is a
-            # bounded slice, not the full result.
-            if _limit_capped:
-                _resp['limit_capped'] = True
-                _resp['requested_limit'] = _requested_limit_int
-                _resp['effective_limit'] = limit
-                _resp['hard_max'] = _LIST_HARD_MAX
+            # Session 2728 F-D-5 / S2730 F-RL-2 — surface limit-cap via
+            # the shared envelope dict from `compute_limit`. Empty dict
+            # spread is a no-op on the happy path.
+            _resp.update(_envelope)
             return _resp
 
         elif action == 'search':
@@ -1930,12 +1920,9 @@ class AgentHandlersMixin:
                 'applied_filters': dict(_applied),
                 'show_all': _show_all,
             }
-            # Session 2728 F-D-5 — surface limit-cap on search as well.
-            if _limit_capped:
-                _resp['limit_capped'] = True
-                _resp['requested_limit'] = _requested_limit_int
-                _resp['effective_limit'] = limit
-                _resp['hard_max'] = _LIST_HARD_MAX
+            # Session 2728 F-D-5 / S2730 F-RL-2 — same shared envelope
+            # as the list branch above.
+            _resp.update(_envelope)
             return _resp
 
         elif action == 'detail':
