@@ -109,11 +109,30 @@ class GatewayHandlersMixin:
         try:
             if action == 'tree':
                 rel_path = payload.get('path', '')
-                depth = min(payload.get('depth', 2), 4)
+                # Session 2728 F-RT-2 — surface depth cap if caller exceeded.
+                # Mirrors the F-D-5 pattern (`limit_capped/requested_limit/
+                # effective_limit/hard_max`) approved at Batch A tool 1 and
+                # applied to the depth axis here.
+                _DEPTH_HARD_MAX = 4
+                _requested_depth = payload.get('depth', 2)
+                try:
+                    _requested_depth_int = int(_requested_depth)
+                except (TypeError, ValueError):
+                    _requested_depth_int = 2
+                depth = min(_requested_depth_int, _DEPTH_HARD_MAX)
+                _depth_capped = _requested_depth_int > _DEPTH_HARD_MAX
                 full_path = _safe_path(rel_path)
                 if not os.path.isdir(full_path):
                     return {'error': f'Not a directory: {rel_path}'}
 
+                # Session 2728 F-RT-2 — track when the per-directory file cap
+                # and the total-entries cap fire so the response carries a
+                # machine-parseable signal (not just the literal "...
+                # (truncated at 500 entries)" string appended below).
+                _FILES_PER_DIR_HARD_MAX = 50
+                _ENTRIES_HARD_MAX = 500
+                _files_capped_per_dir = False
+                _entries_truncated = False
                 entries = []
                 for root, dirs, files in os.walk(full_path):
                     # Calculate depth relative to full_path
@@ -127,14 +146,38 @@ class GatewayHandlersMixin:
                     display_root = os.path.relpath(root, project_root)
                     for d in dirs:
                         entries.append(f'{display_root}/{d}/')
-                    for f in sorted(files)[:50]:  # cap files per dir
+                    _sorted_files = sorted(files)
+                    if len(_sorted_files) > _FILES_PER_DIR_HARD_MAX:
+                        _files_capped_per_dir = True
+                    for f in _sorted_files[:_FILES_PER_DIR_HARD_MAX]:
                         if f not in BLOCKED_FILES:
                             entries.append(f'{display_root}/{f}')
-                    if len(entries) > 500:
+                    if len(entries) > _ENTRIES_HARD_MAX:
                         entries.append('... (truncated at 500 entries)')
+                        _entries_truncated = True
                         break
 
-                return {'action': 'tree', 'path': rel_path or '.', 'depth': depth, 'entries': entries, 'count': len(entries)}
+                _tree_response = {
+                    'action': 'tree',
+                    'path': rel_path or '.',
+                    'depth': depth,
+                    'entries': entries,
+                    'count': len(entries),
+                }
+                # Only attach the envelope when a cap actually fired. Keeps the
+                # response quiet on the happy path.
+                if _depth_capped:
+                    _tree_response['depth_capped'] = True
+                    _tree_response['requested_depth'] = _requested_depth_int
+                    _tree_response['effective_depth'] = depth
+                    _tree_response['depth_hard_max'] = _DEPTH_HARD_MAX
+                if _entries_truncated:
+                    _tree_response['entries_truncated'] = True
+                    _tree_response['entries_hard_max'] = _ENTRIES_HARD_MAX
+                if _files_capped_per_dir:
+                    _tree_response['files_capped_per_dir'] = True
+                    _tree_response['files_per_dir_hard_max'] = _FILES_PER_DIR_HARD_MAX
+                return _tree_response
 
             elif action == 'read_file':
                 rel_path = payload.get('path', '')
@@ -189,22 +232,56 @@ class GatewayHandlersMixin:
                     files = [os.path.relpath(f, project_root) for f in result.stdout.strip().split('\n') if f]
                     files = [f for f in files if not any(bd in f for bd in BLOCKED_DIRS) and os.path.basename(f) not in BLOCKED_FILES]
 
+                    # Session 2728 F-RT-5 — track truncation across the three
+                    # silent caps on the search response so Rigby knows the
+                    # returned set is bounded, not the full result. Mirrors
+                    # the F-D-5 pattern approved at Batch A tool 1.
+                    _FILES_LIST_HARD_MAX = 30
+                    _SAMPLE_MATCHES_HARD_MAX = 30
+                    _MATCH_SOURCE_FILES_HARD_MAX = 10
+                    _LINES_PER_FILE_HARD_MAX = 5
+                    _files_matched_total = len(files)
+                    _files_list_truncated = _files_matched_total > _FILES_LIST_HARD_MAX
+                    # Track when the match-sampling stage bounds the sample
+                    # (either by file-source cap OR by per-file line cap OR by
+                    # the final matches[:30] slice).
+                    _match_source_capped = _files_matched_total > _MATCH_SOURCE_FILES_HARD_MAX
+                    _per_file_line_capped = False
+
                     # Get matching lines from first few files
                     matches = []
-                    for fpath in files[:10]:
+                    for fpath in files[:_MATCH_SOURCE_FILES_HARD_MAX]:
                         cmd2 = ['grep', '-n', query, os.path.join(project_root, fpath)]
                         r2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=5)
-                        for line in r2.stdout.strip().split('\n')[:5]:
+                        _file_lines = r2.stdout.strip().split('\n')
+                        if len(_file_lines) > _LINES_PER_FILE_HARD_MAX:
+                            _per_file_line_capped = True
+                        for line in _file_lines[:_LINES_PER_FILE_HARD_MAX]:
                             if line:
                                 matches.append(f'{fpath}:{line}')
 
-                    return {
+                    _sample_matches_truncated = (
+                        len(matches) > _SAMPLE_MATCHES_HARD_MAX
+                        or _match_source_capped
+                        or _per_file_line_capped
+                    )
+                    _search_response = {
                         'action': 'search',
                         'query': query,
-                        'files_matched': len(files),
-                        'files': files[:30],
-                        'sample_matches': matches[:30],
+                        'files_matched': _files_matched_total,
+                        'files': files[:_FILES_LIST_HARD_MAX],
+                        'sample_matches': matches[:_SAMPLE_MATCHES_HARD_MAX],
                     }
+                    # Attach envelope only when a cap fired.
+                    if _files_list_truncated:
+                        _search_response['files_truncated'] = True
+                        _search_response['files_hard_max'] = _FILES_LIST_HARD_MAX
+                    if _sample_matches_truncated:
+                        _search_response['sample_matches_truncated'] = True
+                        _search_response['sample_matches_hard_max'] = _SAMPLE_MATCHES_HARD_MAX
+                        _search_response['match_source_files_hard_max'] = _MATCH_SOURCE_FILES_HARD_MAX
+                        _search_response['lines_per_file_hard_max'] = _LINES_PER_FILE_HARD_MAX
+                    return _search_response
                 except subprocess.TimeoutExpired:
                     return {'error': 'Search timed out (10s limit)'}
 
@@ -257,6 +334,22 @@ class GatewayHandlersMixin:
         except ValueError as e:
             return {'error': str(e)}
         except Exception as e:
+            # Session 2728 F-RT-11 — preserve the response contract (still
+            # returns a typed error dict with the error message) but log the
+            # traceback at ERROR level so operators can diagnose what
+            # actually raised (grep binary missing, filesystem I/O error,
+            # unexpected ORM import failure, etc.). Prior behavior swallowed
+            # the traceback silently; the response-side error string alone
+            # is insufficient for post-hoc diagnosis when Rigby reports
+            # "repo_tool.search returned an error I don't understand."
+            # Narrower than the F-RG-1 discipline extension because this
+            # tool's response already surfaces the message; only the log
+            # side was missing.
+            logger.error(
+                "repo_tool: unhandled %s during action=%r: %s",
+                type(e).__name__, payload.get('action', 'tree'), e,
+                exc_info=True,
+            )
             return {'error': f'repo_tool error: {str(e)}'}
 
     # ── Analytics / Event Queries ────────────────────────────────────────────
