@@ -1614,15 +1614,27 @@ class ContentHandlersMixin:
             # Build queryset with filters
             qs = Initiative.objects.all()
 
-            # Filter by status (default to ACTIVE)
-            status_filter = payload.get('status', 'ACTIVE')
+            # Session 2730 F-OH-2 — track applied filters + surface a
+            # `status_defaulted` flag so Rigby can tell the implicit
+            # `status='ACTIVE'` default from an explicit request.
+            # Mirrors the deliverable_tool `applied_filters` gold standard
+            # (td_handlers_agents.py:1893). Behavior unchanged; observability
+            # added.
+            _applied: Dict[str, Any] = {}
+
+            # Filter by status (default to ACTIVE; 'all' bypass preserved)
+            _status_raw = payload.get('status')
+            _status_defaulted = _status_raw is None
+            status_filter = _status_raw if _status_raw is not None else 'ACTIVE'
             if status_filter and status_filter != 'all':
                 qs = qs.filter(status=status_filter.upper())
+                _applied['status'] = status_filter.upper()
 
             # Filter by stage
             stage_filter = payload.get('stage')
             if stage_filter:
                 qs = qs.filter(current_stage=int(stage_filter))
+                _applied['stage'] = int(stage_filter)
 
             # Filter by purpose/program — enums removed from schema to stop GPT
             # auto-filling defaults. Apply only when value looks intentional.
@@ -1632,11 +1644,13 @@ class ContentHandlersMixin:
             purpose_applied = purpose_filter not in _IGNORED_PURPOSE
             if purpose_applied:
                 qs = qs.filter(purpose=purpose_filter)
+                _applied['purpose'] = purpose_filter
 
             program_filter = payload.get('program', '').strip().lower()
             program_applied = program_filter not in _IGNORED_PROGRAM
             if program_applied:
                 qs = qs.filter(program=program_filter)
+                _applied['program'] = program_filter
 
             # Session 996: Filter by owner
             # Session 1077: 'all' means no owner filter (was searching for literal 'all' in owner_agent)
@@ -1654,6 +1668,7 @@ class ContentHandlersMixin:
                         user_obj = _User.objects.filter(id=user_id).first()
                         if user_obj:
                             qs = qs.filter(owner=user_obj)
+                            _applied['owner'] = 'me'
                     except Exception as e:
                         logger.warning(
                             "td_handlers_content: owner='me' filter lookup "
@@ -1664,13 +1679,16 @@ class ContentHandlersMixin:
                         )
                 elif owner_filter == 'unowned':
                     qs = qs.filter(owner__isnull=True, owner_agent='')
+                    _applied['owner'] = 'unowned'
                 else:
                     qs = qs.filter(owner_agent__icontains=owner_filter)
+                    _applied['owner'] = owner_filter
 
             # Session 1077: Filter by workspace
             ws_filter = payload.get('workspace') or payload.get('workspace_id')
             if ws_filter:
                 qs = qs.filter(workspace_id=ws_filter)
+                _applied['workspace_id'] = ws_filter
 
             # Session 1077: Annotate action item counts to avoid N+1 queries
             # (was 2 COUNT queries per initiative in the loop)
@@ -1742,13 +1760,22 @@ class ContentHandlersMixin:
                 'offset': start,
                 'limit': int(limit),
                 'items': items,
+                # Session 2730 F-OH-2 — align with deliverable_tool gold
+                # standard: `applied_filters` records only filters that
+                # actually fired. `status_defaulted` distinguishes
+                # explicit `status='ACTIVE'` from the implicit default
+                # that fires when caller omits the field.
+                'applied_filters': dict(_applied),
+                'status_defaulted': _status_defaulted,
+                # Preserved for backward compat with any callers that
+                # were reading `filters_applied` before S2730.
                 'filters_applied': {
                     'status': status_filter,
                     'stage': stage_filter or '',
                     'purpose': purpose_filter if purpose_applied else '',
                     'program': program_filter if program_applied else '',
                     'owner': owner_filter or '',
-                }
+                },
             }
 
         elif action == 'audit':
