@@ -4640,6 +4640,23 @@ class ContentHandlersMixin:
                 from core.models_document_registry import InitiativeStage
                 from core.models_unified_system import SelfBlog
 
+                # Session 2730 F-PS-3: surface silent-truncation of the
+                # 5000-char content cap so Rigby / analytics can tell
+                # "full doc fit" from "doc was clipped at 5000." Rigby's
+                # mental model of `content` is that it's the doc body;
+                # she was previously wrong for docs > 5000 chars.
+                _CONTENT_CAP = 5000
+
+                def _doc_content_with_signal(full_text: str) -> dict:
+                    total = len(full_text or '')
+                    truncated = total > _CONTENT_CAP
+                    return {
+                        'content': (full_text or '')[:_CONTENT_CAP],
+                        'content_truncated': truncated,
+                        'content_original_length': total,
+                        'content_cap': _CONTENT_CAP,
+                    }
+
                 stage = None
                 if stage_id:
                     stage = InitiativeStage.objects.select_related('document', 'initiative').filter(id=stage_id).first()
@@ -4653,7 +4670,7 @@ class ContentHandlersMixin:
                         'gateway': 'content_tool', 'action': action,
                         'document_id': str(doc.id),
                         'title': doc.title,
-                        'content': doc.full_text[:5000],
+                        **_doc_content_with_signal(doc.full_text),
                         'content_type': doc.content_type,
                         'created_at': doc.created_at.isoformat(),
                         'initiative': stage.initiative.name if stage else None,
@@ -4691,7 +4708,16 @@ class ContentHandlersMixin:
                     'initiative': stage.initiative.name,
                     'document_id': str(doc.id) if doc else None,
                     'title': doc.title if doc else None,
-                    'content': (doc.full_text[:5000] if doc else ''),
+                    # Session 2730 F-PS-3: same content-cap signal shape
+                    # as the doc_id branch. When there's no doc, all
+                    # fields are the zero form (empty content, not
+                    # truncated, length 0).
+                    **(_doc_content_with_signal(doc.full_text) if doc else {
+                        'content': '',
+                        'content_truncated': False,
+                        'content_original_length': 0,
+                        'content_cap': _CONTENT_CAP,
+                    }),
                     'content_type': doc.content_type if doc else None,
                 }
             except Exception as e:
