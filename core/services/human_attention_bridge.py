@@ -756,6 +756,152 @@ class HumanAttentionBridge:
             logger.error(f"Failed to create data pipeline stall attention: {e}")
 
     # =========================================================================
+    # COST BREACH  (Session 2735 — Cost Protection Campaign P1)
+    # =========================================================================
+
+    def create_cost_breach_attention(self, breaches, user=None):
+        """
+        Create ONE attention item summarizing every rolling-window spend
+        threshold currently breached — even when multiple windows breach
+        on the same tick.
+
+        Called by the ``check_cost_thresholds`` Celery beat task with
+        the full list of ``CostBreachResult`` snapshots that came back
+        with ``breached=True``. Rigby SIGN ``pa-188ec20f274c42e4`` Q3
+        refinement: a spike will trip hour + day + month simultaneously;
+        producing three critical HAIs spams the inbox and the fanout
+        channels. Consolidating into one HAI keeps the inbox clean
+        while still recording each window's individual metrics inside
+        the payload's ``breaches`` list.
+
+        Eleventh producer method on this bridge per Cost Protection
+        Campaign P1 scope.
+
+        Urgency policy: always ``critical``. A cost breach IS a
+        wake-someone-up event — the platform is spending money faster
+        than the budget allows. Via the HAI Delivery Fanout Extension
+        campaign receivers, ``critical`` HAIs fan out to Discord
+        (broadcast) and Web Push (per-user subscription) automatically
+        — no bespoke channel-adapter code required here.
+
+        Args:
+            breaches: List of ``cost_threshold_monitor.CostBreachResult``
+                each with ``breached=True``. Non-empty by contract of
+                the calling task. Order determines display order in the
+                payload.
+            user: Optional target user; defaults to admins.
+        """
+        try:
+            users = [user] if user else self.get_admin_users()
+
+            if not breaches:
+                return
+
+            # Compute worst-ratio breach for title / idempotency anchor.
+            def _ratio(b) -> float:
+                try:
+                    t = float(getattr(b, 'threshold_usd', 0) or 0)
+                    a = float(getattr(b, 'actual_usd', 0) or 0)
+                    return (a / t) if t > 0 else 0.0
+                except (TypeError, ValueError):
+                    return 0.0
+
+            ordered = sorted(breaches, key=_ratio, reverse=True)
+            worst = ordered[0]
+            worst_window = getattr(worst, 'window', 'unknown')
+            worst_ratio = _ratio(worst)
+            windows_str = ','.join(
+                getattr(b, 'window', '?') for b in ordered
+            )
+
+            # Idempotency key anchors to the worst breach's window_start
+            # so retries within the same tick collapse via the service's
+            # source_id dedup.
+            idempotency_key = (
+                getattr(worst, 'idempotency_key', '')
+                or f'cost_breach:{worst_window}'
+            )
+
+            title = (
+                f"Cost breach [{windows_str}] worst={worst_window} "
+                f"ratio={worst_ratio:.2f}x"
+            )
+
+            per_window = []
+            summary_lines = []
+            for b in ordered:
+                window = getattr(b, 'window', 'unknown')
+                actual = getattr(b, 'actual_usd', 0) or 0
+                threshold = getattr(b, 'threshold_usd', 0) or 0
+                top_service = getattr(b, 'top_service', '') or ''
+                top_provider = getattr(b, 'top_provider', '') or ''
+                top_usd = getattr(b, 'top_service_usd', 0) or 0
+                row_count = int(getattr(b, 'row_count', 0) or 0)
+                try:
+                    actual_f = float(actual)
+                    threshold_f = float(threshold) if threshold is not None else 0.0
+                    top_f = float(top_usd)
+                except (TypeError, ValueError):
+                    actual_f = 0.0
+                    threshold_f = 0.0
+                    top_f = 0.0
+                ratio = (actual_f / threshold_f) if threshold_f > 0 else 0.0
+                per_window.append({
+                    'window': window,
+                    'window_minutes': int(
+                        getattr(b, 'window_minutes', 0) or 0
+                    ),
+                    'window_start': getattr(b, 'window_start', None),
+                    'window_end': getattr(b, 'window_end', None),
+                    'threshold_usd': threshold_f,
+                    'actual_usd': actual_f,
+                    'ratio': ratio,
+                    'row_count': row_count,
+                    'top_provider': top_provider,
+                    'top_service': top_service,
+                    'top_service_usd': top_f,
+                    'idempotency_key': getattr(b, 'idempotency_key', '') or '',
+                })
+                summary_lines.append(
+                    f"{window}: ${actual_f:.4f} > "
+                    f"${threshold_f:.4f} ({ratio:.2f}x)"
+                )
+            summary = '; '.join(summary_lines)
+
+            payload = _serialize_for_json({
+                'worst_window': worst_window,
+                'worst_ratio': worst_ratio,
+                'breaches': per_window,
+                'idempotency_key': idempotency_key,
+                # Cost breach ships through the HAI Delivery Fanout
+                # receivers; no imperative Discord side-channel exists,
+                # so discord_sent=False (dispatch expected).
+                'discord_sent': False,
+            })
+
+            for target_user in users:
+                service = self.get_service(target_user)
+                service.create_attention_item(
+                    source_type='cost_breach',
+                    source_id=idempotency_key,
+                    source_agent='CostThresholdMonitor',
+                    item_type='alert',
+                    title=title[:200],
+                    summary=summary[:400],
+                    urgency='critical',
+                    payload=payload,
+                )
+                logger.info(
+                    "[HAI_BRIDGE] cost_breach attention created "
+                    "user=%s windows=%s worst=%s ratio=%.2fx count=%d",
+                    target_user.username, windows_str, worst_window,
+                    worst_ratio, len(per_window),
+                )
+
+        except Exception as e:
+            logger.error(f"Failed to create cost breach attention: {e}")
+
+    # =========================================================================
     # SYSTEM ALERTS
     # =========================================================================
 
