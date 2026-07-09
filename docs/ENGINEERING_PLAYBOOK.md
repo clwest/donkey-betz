@@ -1,33 +1,43 @@
 ---
 title: "Donkey Betz Engineering Playbook"
-version: "0.1.0"
+version: "0.2.0"
 version_status: ratified
 scope: platform
-parent_version: null
+parent_version: "0.1.0"
 supersedes: []
-compatible_with: []
+compatible_with: ["0.1.0"]
 ratifier: chris
-ratified_date: 2026-07-08
+ratified_date: 2026-07-09
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
-  deliverable_id: b083c034-5aba-4dc3-9758-57eba29b4bf2
+  deliverable_id: fbcfcfde-9da9-48b1-8bd8-187885382521
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
-branch_authored: playbook/v0.1.0-inaugural
-commit_sha: b372edfe127f1af59c4322871092aa7151669463
-content_hash: sha256:0205af5b74d34d686d064552b28989c472e2b4048c780a873e4e03193de988ab
-git_tag: playbook-v0.1.0
+branch_authored: playbook/v0.2.0-eos-rules-codification
+commit_sha: ab3c88fa1ddc689a3fbe4cb59d13a5f5fb71cb9b
+content_hash: sha256:ae3228d9b9673dec672300b56b2076790b1548d946852fe08f594c3a37b46938
+git_tag: playbook-v0.2.0
 schema_version: 1
-authoring_sessions: [2716, 2718, 2719, 2720, 2721]
+prior_ratification:
+  version: "0.1.0"
+  ratified_date: 2026-07-08
+  deliverable_id: b083c034-5aba-4dc3-9758-57eba29b4bf2
+  commit_sha: b372edfe127f1af59c4322871092aa7151669463
+  content_hash: sha256:0205af5b74d34d686d064552b28989c472e2b4048c780a873e4e03193de988ab
+  git_tag: playbook-v0.1.0
+authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736]
 correction_sessions: [2723, 2725, 2727]
 audit_sessions: [2722, 2724, 2725, 2727]
 ratification_package_session: 2726
 ratification_session: 2727
-rule_count: 190
+v0_2_0_authoring_session: 2736
+v0_2_0_ratification_session: 2736
+rule_count: 193
+rules_added_v0_2_0: [PLAYBOOK-5.2.2, PLAYBOOK-2.2.2, PLAYBOOK-3.2.2]
 evidence_manifest: docs/research/platform/engineering_playbook_evidence_manifest.md
 ---
 
-# Donkey Betz Engineering Playbook v0.1.0
+# Donkey Betz Engineering Playbook v0.2.0
 
 # Chapter 0 — Preamble and How to Read This Playbook
 
@@ -449,10 +459,10 @@ The Engineering Playbook does not create rules. It records rules whose existence
 
 **Chapter ID:** PLAYBOOK-CH-2
 **Purpose:** Establish constitutional scope for research methodology as it applies to Playbook amendments and platform decisions. Reference the peer Research Operating System.
-**Scope:** Research work conducted under the Research Operating System; SIGN cycle discipline for Playbook amendments; convergent research patterns supporting new rules.
-**Status:** STUB (v0.1). Full content deferred to v0.2+ MINOR amendments.
+**Scope:** Research work conducted under the Research Operating System; SIGN cycle discipline for Playbook amendments; convergent research patterns supporting new rules; Capability Discovery Record discipline for engineering campaigns.
+**Status:** STUB (v0.1). Partial normative content added in v0.2.0 MINOR (PLAYBOOK-2.2.2). Further content deferred to future MINOR amendments.
 **Introduced in:** v0.1.0
-**Last substantive change:** v0.1.0
+**Last substantive change:** v0.2.0
 **Evidence anchor:** `docs/research/platform/engineering_playbook_evidence_manifest.md`
 **Statement classes present:** [EP], [GR]
 **Rule ID range:** PLAYBOOK-2.1.1 through PLAYBOOK-2.3.1
@@ -466,6 +476,10 @@ The Engineering Playbook does not create rules. It records rules whose existence
 ## 2.2 Substantive discipline
 
 **[GR] PLAYBOOK-2.2.1** Research work that supports a Playbook amendment MUST follow the SIGN cycle discipline codified in the Research Operating System. The SIGN cycle exercised during Cycle 1A ratification is the canonical exemplar for the discipline as applied to Playbook amendments. [E2: RATIFICATION_20260708_0199_CYCLE_1_CLOSEOUT (`c883ebef-baa7-43c7-a6f0-dd8f3f22106d`) §Timeline (4-batch SIGN cycle exercised); E6: `docs/handoffs/SESSION_2707_0199_RATIFICATION_HANDOFF.md` §5 (SIGN findings table)]
+
+**[GR] PLAYBOOK-2.2.2** When a Category A investigation for a proposed engineering campaign materially changes the campaign scope — through deletion of substrate work already shipped, discovery of substrate satisfying the majority of the intended behavior, invalidation of prior scope claims, or expansion beyond the originally-scoped budget — a Capability Discovery Record MUST be authored before any implementation code lands for the campaign. The System Owner MUST ratify the Capability Discovery Record before any implementation code lands for the campaign. Capability Discovery Records MUST be located at `docs/research/platform/CDR_<NNN>_<slug>.md` with monotonically-increasing three-digit identifiers `<NNN>` across the platform's lifetime. The Capability Discovery Record body MUST contain at minimum the eleven sections established by the first two ratified Capability Discovery Records: §1 Original assumptions; §2 Repository evidence discovered; §3 Assumptions proven false; §4 Existing substrate identified; §5 New capability score; §6 Engineering work deleted; §7 Remaining work; §8 Whether the Capability Graph should be updated; §9 Ratification path; §10 Scope of the document; §11 Lessons Learned (permanent). Sections beyond §11 MUST be append-only. [E2: RATIFICATION_20260708_PLAYBOOK_v0_1_0 (`b083c034-5aba-4dc3-9758-57eba29b4bf2`) §Cycle 1A precedent (workspace ADRs 0110-0150 as the pre-CDR "discovery-artifact-before-code" pattern the rule generalizes to campaigns); E6: `docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md` §1.1 (CDR-001 + CDR-002 as first two ratified Capability Discovery Records establishing the 11-section template); E3: `docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md` §0-§11 (canonical structure exemplar — §16 "MISSING NotificationFanoutService" claim refuted by evidence of 3 shipped receiver-driven adapters, campaign downgraded from L-effort to wrap-up bundle before code landed); E3: `docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md` §0-§11 (canonical structure exemplar — §12 "PA turn does NOT auto-invoke either lane" claim refuted by evidence of `_build_context` line 3031 S943 auto-invocation, campaign scope reshaped from greenfield to extension of shipped substrate before code landed)]
+
+> **Commentary:** PLAYBOOK-2.2.2 codifies the discipline that engineering campaigns begin with an evidence-first investigation against the current repository, not with the campaign-scope hypothesis embedded in planning artifacts. The rule fires only when the investigation *materially* changes scope — an investigation that confirms the planning hypothesis does not produce a Capability Discovery Record. The rule's evidence base is two consecutive Category A investigations at Session 2736 close (§16 Notification Fanout and §12 Knowledge Retrieval) which both discovered material scope changes; the Capability Discovery Record primitive absorbed both discoveries and produced audit trails between planning and implementation. The three-digit monotonic identifier ensures no ambiguity in cross-reference. The eleven-section template is drawn from the first two ratified instances; future amendments MAY extend the template but MUST NOT reduce the required minimum.
 
 ## 2.3 Extension deferred
 
@@ -493,10 +507,10 @@ The Engineering Playbook does not create rules. It records rules whose existence
 
 **Chapter ID:** PLAYBOOK-CH-3
 **Purpose:** Establish constitutional scope for implementation discipline as it applies to platform code changes and ADR authoring. Reference the peer Implementation Operating System.
-**Scope:** Platform code changes with ADR intent; ADR authoring discipline; verify-before-build patterns.
-**Status:** STUB (v0.1). Full content deferred to v0.2+ MINOR amendments.
+**Scope:** Platform code changes with ADR intent; ADR authoring discipline; verify-before-build patterns; acceptance-tests-first discipline for engineering campaigns.
+**Status:** STUB (v0.1). Partial normative content added in v0.2.0 MINOR (PLAYBOOK-3.2.2). Further content deferred to future MINOR amendments.
 **Introduced in:** v0.1.0
-**Last substantive change:** v0.1.0
+**Last substantive change:** v0.2.0
 **Evidence anchor:** `docs/research/platform/engineering_playbook_evidence_manifest.md`
 **Statement classes present:** [EP], [GR]
 **Rule ID range:** PLAYBOOK-3.1.1 through PLAYBOOK-3.3.1
@@ -510,6 +524,10 @@ The Engineering Playbook does not create rules. It records rules whose existence
 ## 3.2 Substantive discipline
 
 **[GR] PLAYBOOK-3.2.1** Platform code changes with ADR intent MUST follow the Implementation Operating System. Cycle 1A implementation exercised across five workspace Architecture Decision Records is the canonical exemplar of the discipline. [E2: RATIFICATION_20260708_0199_CYCLE_1_CLOSEOUT §Timeline (Cycle 1A implementation exercised under IOS discipline); E6: `docs/handoffs/SESSION_2701_CYCLE_1A_IMPLEMENTATION_HANDOFF.md` (Cycle 1A implementation ledger)]
+
+**[GR] PLAYBOOK-3.2.2** Before implementation code lands for an engineering campaign, the acceptance tests that will prove the capability MUST be authored. Acceptance tests MUST be written prior to the implementation they exercise. Acceptance tests MUST NOT be reverse-engineered from the implementation after the fact. Each acceptance test MUST assert an observable property of the capability under test — a file:line-cited code path, an ORM query result, a log-line format, a latency bound, or a runtime effect. Each acceptance test MUST be verifiable at HEAD once the capability lands. A test authored to match what an implementation happens to do rather than what the capability specification requires MUST NOT be admitted as an acceptance test for the campaign. Amendment of an acceptance test's specification after implementation lands MUST be preceded by a Capability Discovery Record amendment that ratifies the specification change. [E2: RATIFICATION_20260708_PLAYBOOK_v0_1_0 (`b083c034-5aba-4dc3-9758-57eba29b4bf2`) §Timeline (SIGN cycle as pre-ratification testing precedent — every rule was verified before entering the corpus, analogous to acceptance-testing-first for capabilities); E6: `docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md` §6.5 (acceptance-tests-first pattern documented as reusable and cited as EOS Rule R3); E5: `core/tests/test_pa_knowledge_retrieval_capability.py:1-35` (23-test AT harness authored pre-implementation across AT-1 through AT-11, `@expectedFailure` markers removed at each phase close, module docstring codifying "Do NOT rewrite these tests to match an implementation. If an implementation cannot satisfy a test, either the implementation is wrong or the test needs a governance amendment via CDR-003+ before the test changes.")]
+
+> **Commentary:** PLAYBOOK-3.2.2 prevents the "assumed gap" failure mode named in the first two ratified Capability Discovery Records. Without acceptance tests written pre-implementation, an engineering campaign can drift into reorganization of shipped substrate rather than delivering new capability — the campaign satisfies its own assumptions rather than the capability specification. The rule's mechanism is the same discipline that produced 51/51 passing tests at Session 2736 close with zero regression across six sequential phases: define the observable property, write the test that asserts it, then ship the implementation until the test passes. The `@expectedFailure` marker convention preserves the test-authorship provenance across the phase boundary; a reviewer inspecting the diff observes both the test-body edit and the marker-removal as separate signals, closing the reverse-engineering loophole.
 
 ## 3.3 Extension deferred
 
@@ -583,11 +601,11 @@ The Engineering Playbook does not create rules. It records rules whose existence
 **Chapter ID:** PLAYBOOK-CH-5
 **Purpose:** Establish constitutional scope for Personal Assistant collaboration discipline. Reference the collaboration protocol codified in the auto-loaded MEMORY rules.
 **Scope:** Agent-mediated authoring work; PA tool call discipline; verifier-loop patterns.
-**Status:** STUB (v0.1). Full content deferred to v0.2+ MINOR amendments.
+**Status:** STUB (v0.1). Partial normative content added in v0.2.0 MINOR (PLAYBOOK-5.2.2). Further content deferred to future MINOR amendments.
 **Introduced in:** v0.1.0
-**Last substantive change:** v0.1.0
+**Last substantive change:** v0.2.0
 **Evidence anchor:** `docs/research/platform/engineering_playbook_evidence_manifest.md`
-**Statement classes present:** [EP]
+**Statement classes present:** [EP], [GR]
 **Rule ID range:** PLAYBOOK-5.1.1 through PLAYBOOK-5.3.1
 
 ---
@@ -599,6 +617,10 @@ The Engineering Playbook does not create rules. It records rules whose existence
 ## 5.2 Substantive discipline
 
 **[EP] PLAYBOOK-5.2.1** The collaboration protocol adopted for agent-mediated authoring work is: the author directs; the Personal Assistant executes; the author verifies. This protocol is codified in the MEMORY.md rule `feedback_claude_directs_rigby_then_verifies` and the verifier-loop pattern is codified in the MEMORY.md rule `feedback_verifier_loop_pattern`. [E5: `MEMORY.md` (`feedback_claude_directs_rigby_then_verifies`); E5: `MEMORY.md` (`feedback_verifier_loop_pattern`); E3: 2714 constitutional_ecosystem_inventory.md §6.3 (explicit statement: "Owner: Chris (ratifier). Author: Claude Code (per 2713). Reviewer: Rigby SIGN (default) or fallback Claude verifier-loop.") — part of the convergent 2708-2714 research chain per manifest §2.3]
+
+**[GR] PLAYBOOK-5.2.2** When the author dispatches a verification objective to the Personal Assistant, the author MUST state the verification objective. The author MUST state the expected return format. The author MAY state methodology-required constraints such as read-only verification, no mutations, runtime validation against a specific SHA, or convergent-evidence requirements. The author MUST NOT enumerate the platform tools the Personal Assistant is required to use to satisfy the objective. The Personal Assistant MUST select tools autonomously from its available surface to satisfy the objective. [E2: RATIFICATION_20260708_PLAYBOOK_v0_1_0 (`b083c034-5aba-4dc3-9758-57eba29b4bf2`) §Timeline (SIGN dispatch pattern the rule generalizes); E6: `docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md` §3 (Rigby SIGN checkpoint record demonstrating the rule producing substrate discoveries a tool-prescribed dispatch would have suppressed); E3: `docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md` §12.6 (the ratified precedent — the rule's initial codification in `docs/EOS_RULES.md` as R1 and its production exercise on the CDR-002 Rigby SIGN dispatch that discovered `PAKnowledgeInjector` S773 as a fifth substrate Claude's grep had missed)]
+
+> **Commentary:** PLAYBOOK-5.2.2 prevents two failure modes. When the author under-instructs the Personal Assistant, verification is superficial. When the author over-instructs the Personal Assistant, the author's tool assumptions become verification blind-spots — the Personal Assistant cannot apply its operational knowledge of tool correctness, coverage, or dedup characteristics. Rule 5.2.2 codifies the discipline that the author defines the *what*, the Personal Assistant chooses the *how*. The methodology-required exception preserves cases where the verification approach itself is a rule (for example, read-only verification against a specific SHA).
 
 ## 5.3 Extension deferred
 
