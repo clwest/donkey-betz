@@ -73,6 +73,11 @@ from .body_system_degradation_signals import (
     connect_body_system_degradation_signals,
 )
 
+from .mission_verdict_attention_signals import (
+    escalate_mission_verdict_to_hai,
+    connect_mission_verdict_attention_signals,
+)
+
 __all__ = [
     # Trigger signals
     'evaluate_triggers_for_spider_data',
@@ -119,4 +124,7 @@ __all__ = [
     # Session 2734 — Capability Chain §14 Platform Health HAI escalation
     'escalate_body_system_degradation',
     'connect_body_system_degradation_signals',
+    # Session 2734 — Platform Closure §1 Item 9 HAI on mission verdict
+    'escalate_mission_verdict_to_hai',
+    'connect_mission_verdict_attention_signals',
 ]
