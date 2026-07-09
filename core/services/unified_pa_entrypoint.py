@@ -2965,13 +2965,31 @@ class UnifiedPAEntrypoint:
                 # has no attribute 'experience'" on *every* PA turn,
                 # meaning PA never actually loaded the user's profile
                 # into context. Fixed to use the real field name.
+                #
+                # Session 2734 (F-PA-PROFILE-STALE): the remaining four
+                # fields (goals / work_preference / desired_income /
+                # availability) never existed on ExtendedUserProfile —
+                # verified 2026-07-09 against chris's row after fresh
+                # worker recycle exposed the same AttributeError shape.
+                # Guarded via getattr with sensible defaults so the
+                # context payload keeps its declared shape for
+                # downstream consumers while surviving schema drift.
+                # The real fields we can populate today are documented
+                # inline; the drifted keys stay to preserve payload
+                # contract until a matching schema field is authored.
                 context['profile'] = {
-                    'skills': profile.skills or [],  # type: ignore[attr-defined]
-                    'years_experience': profile.years_experience,  # type: ignore[attr-defined]
-                    'goals': profile.goals,  # type: ignore[attr-defined]
-                    'work_preference': profile.work_preference,  # type: ignore[attr-defined]
-                    'desired_income': profile.desired_income,  # type: ignore[attr-defined]
-                    'availability': profile.availability,  # type: ignore[attr-defined]
+                    'skills': getattr(profile, 'skills', None) or [],
+                    'years_experience': getattr(profile, 'years_experience', 0),
+                    'goals': getattr(profile, 'goals', None) or [],
+                    'work_preference': getattr(
+                        profile, 'work_preference',
+                        getattr(profile, 'remote_preference', ''),
+                    ),
+                    'desired_income': getattr(
+                        profile, 'desired_income',
+                        getattr(profile, 'desired_salary_max', None),
+                    ),
+                    'availability': getattr(profile, 'availability', ''),
                 }
         except asyncio.TimeoutError:
             logger.warning("Profile load timed out after 5s — skipping")
