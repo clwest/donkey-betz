@@ -85,6 +85,85 @@ def notify_critical_attention_item(item_id):
         logger.error('[PushTrigger] Critical attention notification failed: %s', e)
 
 
+# ── Trigger 1b: Session 2735 — HAI Delivery Fanout Extension PR 1 ───────────
+#
+# Discord fanout for HumanAttentionItem creations. Dispatched via
+# transaction.on_commit from core.signals_discord_notifications, so the
+# Discord API call cannot happen inside a rolled-back transaction and
+# cannot stall the caller of HumanAttentionItem.objects.create().
+#
+# Applies the same gates as the receiver (kill switch, urgency floor,
+# payload discord_sent flag, HumanPreference min_urgency + blocked_sources
+# + quiet_hours) after re-loading the row inside the worker, because
+# the caller's transaction has committed by the time this task runs.
+
+@shared_task(
+    name='notify_hai_discord',
+    queue='default',
+    ignore_result=True,
+    soft_time_limit=30,
+)
+def notify_hai_discord(item_id):
+    """Fire a Discord CHANNEL_STATUS alert for a critical HAI item.
+
+    Re-applies all guard logic against the just-committed row so a stale
+    receiver payload cannot fire an alert that the current DB state
+    would have suppressed.
+    """
+    from django.conf import settings
+    from core.models_human_interface import HumanAttentionItem
+    from core.signals_discord_notifications import _pref_gates_pass
+
+    if not getattr(settings, 'HAI_DISCORD_DISPATCH_ENABLED', True):
+        return {'skipped': 'kill_switch'}
+
+    try:
+        item = HumanAttentionItem.objects.get(id=item_id)
+    except HumanAttentionItem.DoesNotExist:
+        logger.warning('[HAI_DISCORD] HAI %s missing at task time', item_id)
+        return {'skipped': 'missing'}
+
+    if item.urgency != 'critical':
+        return {'skipped': 'urgency_not_critical'}
+
+    payload = item.payload or {}
+    if payload.get('discord_sent') is True:
+        logger.info(
+            '[HAI_DISCORD] task skip source_type=%s source_id=%s — '
+            'payload flagged discord_sent=True',
+            item.source_type, item.source_id,
+        )
+        return {'skipped': 'discord_sent_flag'}
+
+    if not _pref_gates_pass(item.user_id, item.source_type, item.urgency):
+        return {'skipped': 'preference_gate'}
+
+    try:
+        from core.services.discord_notifications import send_status_notification
+        title = f'[{item.urgency.upper()}] {(item.title or "")[:120]}'
+        summary = (item.summary or '')[:400]
+        # 'critical' → 'critical'; 'high' → 'warning' (unused in v1 floor)
+        status_type = 'critical' if item.urgency == 'critical' else 'warning'
+        send_status_notification(
+            title=title,
+            message=summary,
+            status_type=status_type,
+        )
+        logger.info(
+            '[HAI_DISCORD] task dispatched source_type=%s source_id=%s '
+            'user_id=%s urgency=%s',
+            item.source_type, item.source_id, item.user_id, item.urgency,
+        )
+        return {'dispatched': True, 'item_id': str(item.id)}
+    except Exception as e:  # pragma: no cover — defensive
+        logger.warning(
+            '[HAI_DISCORD] task dispatch failed source_type=%s (%s: %s); '
+            'HAI write unaffected',
+            item.source_type, type(e).__name__, e,
+        )
+        return {'skipped': f'adapter_error:{type(e).__name__}'}
+
+
 # ── Trigger 2: Artifact needs classification ─────────────────────────────────
 
 @shared_task(
