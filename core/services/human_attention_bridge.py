@@ -902,6 +902,130 @@ class HumanAttentionBridge:
             logger.error(f"Failed to create cost breach attention: {e}")
 
     # =========================================================================
+    # BEAT SCHEDULE HEALTH  (Session 2735 — Beat Schedule Health Campaign P1)
+    # =========================================================================
+
+    def create_beat_health_attention(self, snapshot, user=None):
+        """
+        Create ONE attention item summarizing every allowlisted beat
+        entry that failed to fire above the ``min_expected_fires``
+        threshold over the ``lookback_days`` window.
+
+        Called by the ``check_beat_health`` Celery beat task after
+        ``beat_health_monitor.compute_snapshot`` returns a
+        ``BeatHealthSnapshot`` with ``any_missing=True``. Twelfth
+        producer method on this bridge per Beat Schedule Health P1
+        scope.
+
+        Consolidates all missing beats into a single HAI per tick
+        (matches the Cost Protection consolidation pattern). Payload
+        carries the full per-beat detail list so operators can see
+        which specific beats regressed without opening the dashboard.
+
+        Urgency policy: always ``critical``. A beat entry that stopped
+        firing is a wake-someone-up regression — the platform's
+        autonomous cadence has silently broken. Via the HAI Delivery
+        Fanout Extension campaign receivers, ``critical`` HAIs fanout
+        to Discord + Web Push automatically.
+
+        Args:
+            snapshot: ``beat_health_monitor.BeatHealthSnapshot`` with
+                ``any_missing=True``. Rigby SIGN pa-bb5efc9a627f47ad
+                Q5 refinement: identifies each missing beat by its
+                ``beat_entry_name`` (dict key), not by task_name —
+                multiple entries can point at the same task with
+                different schedules.
+            user: Optional target user; defaults to admins.
+        """
+        try:
+            users = [user] if user else self.get_admin_users()
+
+            if not getattr(snapshot, 'any_missing', False):
+                return
+
+            missing_tuple = getattr(snapshot, 'missing', ()) or ()
+            missing_count = len(missing_tuple)
+            lookback_days = int(getattr(snapshot, 'lookback_days', 1) or 1)
+            min_fires = int(getattr(snapshot, 'min_expected_fires', 1) or 1)
+            checked = int(getattr(snapshot, 'checked', 0) or 0)
+            allowlist_size = int(
+                getattr(snapshot, 'allowlist_size', 0) or 0
+            )
+            idempotency_key = getattr(snapshot, 'idempotency_key', '') or ''
+
+            first_name = ''
+            if missing_tuple:
+                first_name = getattr(
+                    missing_tuple[0], 'beat_entry_name', ''
+                ) or ''
+
+            title = (
+                f"Beat Health: {missing_count} beat jobs did not fire "
+                f"in last {lookback_days}d"
+            )
+            if first_name:
+                title += f" (first: {first_name})"
+
+            per_beat = []
+            summary_lines = []
+            for mb in missing_tuple:
+                entry = {
+                    'beat_entry_name': getattr(mb, 'beat_entry_name', ''),
+                    'task_name': getattr(mb, 'task_name', ''),
+                    'schedule_hint': getattr(mb, 'schedule_hint', ''),
+                    'expected_min': int(getattr(mb, 'expected_min', 0) or 0),
+                    'observed_count': int(
+                        getattr(mb, 'observed_count', 0) or 0
+                    ),
+                }
+                per_beat.append(entry)
+                summary_lines.append(
+                    f"{entry['beat_entry_name']} "
+                    f"(task={entry['task_name']}): observed "
+                    f"{entry['observed_count']}, expected >= "
+                    f"{entry['expected_min']}"
+                )
+            summary = '; '.join(summary_lines)
+
+            payload = _serialize_for_json({
+                'lookback_days': lookback_days,
+                'min_expected_fires': min_fires,
+                'now': getattr(snapshot, 'now', None),
+                'cutoff': getattr(snapshot, 'cutoff', None),
+                'allowlist_size': allowlist_size,
+                'checked': checked,
+                'missing_count': missing_count,
+                'missing': per_beat,
+                'idempotency_key': idempotency_key,
+                # Beat-health HAI ships through the HAI Delivery Fanout
+                # receivers. No imperative Discord side-channel exists,
+                # so discord_sent=False (dispatch expected).
+                'discord_sent': False,
+            })
+
+            for target_user in users:
+                service = self.get_service(target_user)
+                service.create_attention_item(
+                    source_type='beat_health',
+                    source_id=idempotency_key or f'beat_health:{missing_count}',
+                    source_agent='BeatHealthMonitor',
+                    item_type='alert',
+                    title=title[:200],
+                    summary=summary[:400],
+                    urgency='critical',
+                    payload=payload,
+                )
+                logger.info(
+                    "[HAI_BRIDGE] beat_health attention created "
+                    "user=%s missing=%d checked=%d lookback=%dd",
+                    target_user.username, missing_count, checked,
+                    lookback_days,
+                )
+
+        except Exception as e:
+            logger.error(f"Failed to create beat health attention: {e}")
+
+    # =========================================================================
     # SYSTEM ALERTS
     # =========================================================================
 
