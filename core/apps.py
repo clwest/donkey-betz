@@ -149,6 +149,18 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Mission verdict signals not available
 
+        # Session 2734 — Capability Chain §6 Signal Detection.
+        # Post-save handler on SignalCluster escalates high-strength
+        # patterns (>= configurable threshold via SystemConfiguration
+        # key 'signal_pattern_criticality_threshold', default 0.9) into
+        # HumanAttentionItem via HumanAttentionBridge. Kill switch:
+        # ``settings.SIGNAL_PATTERN_CRITICALITY_ENABLED`` (default True).
+        try:
+            from core.signals import connect_signal_pattern_criticality_signals
+            connect_signal_pattern_criticality_signals()
+        except ImportError:
+            pass  # Signal pattern criticality signals not available
+
     def _should_run_startup_check(self):
         """Determine if we should run the startup health check"""
         # Check if DATABASE_AUDIT_ON_STARTUP is enabled
