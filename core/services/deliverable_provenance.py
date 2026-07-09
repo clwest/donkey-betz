@@ -56,8 +56,19 @@ def build_provenance_block(deliverable) -> Dict[str, Any]:
     metadata = deliverable.metadata or {}
     block: Dict[str, Any] = {
         'origin_execution_id': None,
+        # Session 2728 F-D-21 — expose metadata.source alongside trigger_source
+        # so detail responses carry the caller-declared origin ("pa_deliverables_tool",
+        # "content_pipeline", "agent_dispatch", etc.) without forcing callers to
+        # request `include_metadata=true`. trigger_source names WHO wrote (pa_tool /
+        # agent_execution / factory); source names WHAT PATH wrote it.
+        'source': metadata.get('source') or 'unknown',
         'trigger_source': metadata.get('trigger_source') or 'unknown',
         'created_by_agent': deliverable.agent_name or '',
+        # Session 2728 F-D-21 — mirror Chris's approved provenance shape:
+        # {agent_name, source, trigger_source, trace_id}. `agent_name` echoes
+        # `created_by_agent` under the schema-natural name so LLM callers can
+        # read either key.
+        'agent_name': deliverable.agent_name or '',
         'trace_id': None,
         'tool_calls': [],
         'legacy_no_provenance': False,

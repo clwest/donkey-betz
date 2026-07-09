@@ -1024,6 +1024,15 @@ class AgentHandlersMixin:
         if not task_text:
             raise ValueError("task is required")
 
+        # Session 2728 F-RA-2/F-RA-3 — track the caller's originally-requested
+        # agent_name so we can surface substitution in the dispatch response.
+        # Prior behavior silently substituted unknown agents to 'ResearchAgent'
+        # (WARN log only); Rigby had no response-side signal that the executed
+        # agent differed from the requested one. Chris ratified option (a) at
+        # Batch A tool 5 close: additive fields mirroring the F-D-2/F-D-4
+        # inference-envelope pattern.
+        _agent_name_requested = payload.get('agent_name') or None
+
         # GPT often passes tool names (snake_case) instead of agent class names
         if agent_name and '_' in agent_name:
             agent_name = self._tool_to_agent_name(agent_name)
@@ -1031,6 +1040,7 @@ class AgentHandlersMixin:
         # Session 1088: Validate agent name against AGENT_MAP and auto-extract
         # from task text if the name is invalid (e.g. LLM sends 'RunAgent' or
         # other hallucinated names via keyword routing without schema).
+        _substitution_reason = None
         router = AgentRouter()
         if agent_name and agent_name not in router.AGENT_MAP:
             # Try to find actual agent name in the task text
@@ -1041,9 +1051,11 @@ class AgentHandlersMixin:
                     break
             if extracted:
                 logger.info(f"[run_agent] Corrected '{agent_name}' -> '{extracted}' from task text")
+                _substitution_reason = f"agent_name '{agent_name}' not in AGENT_MAP; extracted '{extracted}' from task text"
                 agent_name = extracted
             else:
                 logger.warning(f"[run_agent] Unknown agent '{agent_name}', no match in task text, defaulting to ResearchAgent")
+                _substitution_reason = f"agent_name '{agent_name}' not in AGENT_MAP; no task-text match; defaulted to ResearchAgent"
                 agent_name = 'ResearchAgent'
 
         # Auto-route to best agent when no name given
@@ -1062,16 +1074,40 @@ class AgentHandlersMixin:
         # Was hardcoded to 'agents' queue which no worker consumes.
         celery_task = execute_agent_task.apply_async(args=[agent_name, task_text, context], queue='long_running')
 
-        return {
+        # Session 2728 F-RA-1 — surface auto_followup + follow_up_will_fire
+        # (mirrors F-CC-3 approved at Batch A tool 4). Same task-side gate
+        # as `_handle_agent_tool` in tool_dispatcher.py:1215-1237.
+        _auto_followup = context.get('auto_followup', True)
+        _auto_followup_effective = _auto_followup is not False
+        _conv_id_for_followup = context.get('conversation_id')
+        _follow_up_will_fire = bool(_conv_id_for_followup) and _auto_followup_effective
+
+        # Session 2728 F-RA-2/F-RA-3 — build substitution envelope. Substitution
+        # fires when caller requested a specific agent name and the effective
+        # agent differs; the `auto_routed` field (unchanged) still signals the
+        # no-name-given path.
+        _agent_substituted = bool(
+            _agent_name_requested
+            and _agent_name_requested != agent_name
+        )
+        _response = {
             'task_id': str(celery_task.id),
             'mode': 'async',
             'agent': agent_name,
+            'agent_name_requested': _agent_name_requested,
+            'agent_name_effective': agent_name,
+            'agent_substituted': _agent_substituted,
             'auto_routed': not payload.get('agent_name'),
+            'auto_followup': _auto_followup_effective,
+            'follow_up_will_fire': _follow_up_will_fire,
             'message': (
                 f'{agent_name} dispatched (task {celery_task.id}). '
                 f'Use job_status to check progress.'
             ),
         }
+        if _substitution_reason:
+            _response['substitution_reason'] = _substitution_reason
+        return _response
 
     def _serialize_workspace(self, workspace) -> Dict[str, Any]:
         """Return a compact workspace summary for tool responses."""
@@ -1555,18 +1591,42 @@ class AgentHandlersMixin:
 
         # Session 1077+: Smart action inference — GPT-5.2 sometimes drops the
         # action field or defaults to 'list' even when title+content indicate create.
+        # Session 2728 F-D-2/F-D-4 — inference is now consolidated at the
+        # direct-dispatcher (layer 1, `_handle_deliverable_direct` in
+        # td_handlers_content.py) which surfaces `original_action` +
+        # `inferred_action` in the response envelope. The layer-2 block here
+        # remains as a defence-in-depth safety net for callers that reach
+        # `_handle_deliverables` outside the PA gateway path (some legacy
+        # tests + `deliverables_tool` legacy schema); it now marks
+        # `_action_inferred_at_layer_2` so response injection works even on
+        # the direct path.
+        _action_original_at_l2 = payload.get('action', 'list')
+        _action_inferred_at_l2 = False
         if action == 'list':
-            keys = set(payload.keys())
             has_title = bool(payload.get('title', ''))
             has_content = bool(payload.get('content', ''))
             if has_title and has_content:
                 action = 'create'
+                _action_inferred_at_l2 = True
                 logger.info(f"[deliverables] Inferred action=create from title+content (was 'list')")
             elif has_content and payload.get('id'):
                 action = 'append'
+                _action_inferred_at_l2 = True
                 logger.info(f"[deliverables] Inferred action=append from id+content (was 'list')")
 
-        limit = min(payload.get('limit', 10), 50)
+        # Session 2728 F-D-5 — list/search limit is capped at 50 in the
+        # handler; prior response omitted any signal of the cap firing so
+        # callers requesting `limit=200` believed they got the full set. Now
+        # captures both the requested and effective limits so response builders
+        # can surface `limit_capped`.
+        _LIST_HARD_MAX = 50
+        _requested_limit = payload.get('limit', 10)
+        try:
+            _requested_limit_int = int(_requested_limit)
+        except (TypeError, ValueError):
+            _requested_limit_int = 10
+        limit = min(_requested_limit_int, _LIST_HARD_MAX)
+        _limit_capped = _requested_limit_int > _LIST_HARD_MAX
         offset = max(payload.get('offset', 0), 0)
 
         # Build base queryset scoped to user
@@ -1722,9 +1782,13 @@ class AgentHandlersMixin:
         # Session 1194 — add `status` so deliverable_tool.list and
         # content_tool.content_recent return the same shape (AC1 of
         # INITIATIVES_FIRST_BACKBONE.md).
+        # Session 2728 F-D-20 — include `updated_at` so callers can detect
+        # freshness / staleness of rows without a follow-up detail fetch.
+        # Auto_now on Deliverable keeps it live per S1231 P3.
         _LIST_FIELDS = (
             'id', 'title', 'deliverable_type', 'category',
             'agent_name', 'quality_score', 'is_saved', 'created_at',
+            'updated_at',
             'status',
             'initiative_id', 'initiative__name',
             'workspace_id', 'workspace__name',
@@ -1829,7 +1893,7 @@ class AgentHandlersMixin:
                 _sanitize_deliverable(d) for d in
                 qs.order_by('-created_at')[offset:offset + limit].values(*_LIST_FIELDS)
             ]
-            return {
+            _resp = {
                 'action': 'list', 'total': total, 'offset': offset,
                 'limit': limit, 'count': len(items), 'items': items,
                 # Session 1227 — applied_filters echo + show_all flag so
@@ -1837,6 +1901,15 @@ class AgentHandlersMixin:
                 'applied_filters': dict(_applied),
                 'show_all': _show_all,
             }
+            # Session 2728 F-D-5 — surface limit-cap when caller exceeded the
+            # handler's hard maximum so Rigby knows the returned set is a
+            # bounded slice, not the full result.
+            if _limit_capped:
+                _resp['limit_capped'] = True
+                _resp['requested_limit'] = _requested_limit_int
+                _resp['effective_limit'] = limit
+                _resp['hard_max'] = _LIST_HARD_MAX
+            return _resp
 
         elif action == 'search':
             query = payload.get('query', '')
@@ -1850,13 +1923,20 @@ class AgentHandlersMixin:
                 _sanitize_deliverable(d) for d in
                 qs.order_by('-created_at')[offset:offset + limit].values(*_LIST_FIELDS)
             ]
-            return {
+            _resp = {
                 'action': 'search', 'query': query, 'total': total,
                 'offset': offset, 'limit': limit, 'count': len(items), 'items': items,
                 # Session 1227 — same applied_filters surface as list action.
                 'applied_filters': dict(_applied),
                 'show_all': _show_all,
             }
+            # Session 2728 F-D-5 — surface limit-cap on search as well.
+            if _limit_capped:
+                _resp['limit_capped'] = True
+                _resp['requested_limit'] = _requested_limit_int
+                _resp['effective_limit'] = limit
+                _resp['hard_max'] = _LIST_HARD_MAX
+            return _resp
 
         elif action == 'detail':
             obj, disambiguation = _resolve_deliverable(_id_lookup_qs(), payload, 'detail')
@@ -2012,6 +2092,48 @@ class AgentHandlersMixin:
             data_sensitivity = payload.get('data_sensitivity', 'internal')
             is_pinned = bool(payload.get('is_pinned', False))
 
+            # Session 2728 F-D-6 — honor caller's `status` intent, default to
+            # 'ready' (not 'completed'). Prior behavior hardcoded 'completed'
+            # regardless of payload, so every PA-created row landed immutable
+            # (per Playbook §5.5 lifecycle intent) and Rigby's explicit
+            # `status='draft'` was silently dropped. Whitelist maps to
+            # Deliverable.STATUS_CHOICES ratified values; unknown values fall
+            # back to 'ready' with a WARNING (LLM string-drift defence).
+            # `completed` cannot be reached via create — it is a lifecycle
+            # terminal state and must be set via `content_tool.content_complete`
+            # / the approved completion path (see F-D-7).
+            _CREATE_STATUS_WHITELIST = {'draft', 'ready', 'published', 'archived'}
+            _raw_status = payload.get('status')
+            _requested_status = (_raw_status or '').strip().lower() if isinstance(_raw_status, str) else ''
+            if _requested_status == 'completed':
+                return {
+                    'action': 'create',
+                    'ok': False,
+                    'error_code': 'status_completed_not_allowed_on_create',
+                    'message': (
+                        "status='completed' cannot be set via deliverable_tool.create. "
+                        "Create the deliverable with status='ready' (or omit to use the "
+                        "default), then flip to completed via content_tool."
+                        "content_complete or deliverable_tool.set_status "
+                        "(status='completed')."
+                    ),
+                    'retry_suggestions': [
+                        "Retry create without status (defaults to 'ready').",
+                        "Retry create with status='ready', 'draft', or 'published'.",
+                    ],
+                    'trace_id': trace_id,
+                }
+            if _requested_status in _CREATE_STATUS_WHITELIST:
+                _create_status = _requested_status
+            else:
+                if _raw_status not in (None, ''):
+                    logger.warning(
+                        "[deliverables.create] Unknown status=%r requested; "
+                        "falling back to 'ready'. Whitelist=%s",
+                        _raw_status, sorted(_CREATE_STATUS_WHITELIST),
+                    )
+                _create_status = 'ready'
+
             from core.services.deliverable_factory import create_deliverable
             # Session 1168: trigger_source='pa_tool' tells the factory's gate 3
             # (min content length) that this is a legitimate PA-initiated save,
@@ -2049,7 +2171,7 @@ class AgentHandlersMixin:
                     },
                     slug=slug,
                     preview_content=preview,
-                    status='completed',
+                    status=_create_status,
                     data_sensitivity=data_sensitivity,
                     workspace=resolved_workspace,
                     raise_on_gated=True,
@@ -2214,8 +2336,40 @@ class AgentHandlersMixin:
                 obj.data_sensitivity = payload['data_sensitivity']
                 update_fields.append('data_sensitivity')
             if 'status' in payload and payload['status']:
+                # Session 2728 F-D-7 — status='completed' cannot be reached via
+                # update. It is a lifecycle terminal state governed by the
+                # PublishGate state machine (see MEMORY
+                # `feedback_deliverable_status_via_content_complete`). Prior
+                # behavior silently dropped 'completed' (whitelist match miss)
+                # which meant Rigby's flip attempt landed as a no-op and she
+                # could not detect the drop from the response shape. Now
+                # returns a typed Rigby-safe error pointing at the correct
+                # completion path.
+                new_status = payload['status'].strip().lower() if isinstance(payload['status'], str) else ''
+                if new_status == 'completed':
+                    return {
+                        'action': 'update',
+                        'ok': False,
+                        'error_code': 'status_completed_not_allowed_on_update',
+                        'id': str(obj.id),
+                        'title': obj.title,
+                        'message': (
+                            "status='completed' cannot be set via "
+                            "deliverable_tool.update. `completed` is a "
+                            "lifecycle terminal state governed by the "
+                            "PublishGate state machine. Use "
+                            "content_tool.content_complete "
+                            "(the approved completion path) or "
+                            "deliverable_tool.set_status status='completed' "
+                            "(surgical audited flip)."
+                        ),
+                        'retry_suggestions': [
+                            "content_tool.content_complete id=<uuid>",
+                            "deliverable_tool.set_status id=<uuid> status=completed",
+                        ],
+                        'trace_id': trace_id,
+                    }
                 valid_statuses = {'draft', 'ready', 'published', 'archived'}
-                new_status = payload['status'].lower()
                 if new_status in valid_statuses:
                     obj.status = new_status
                     update_fields.append('status')
@@ -2339,6 +2493,14 @@ class AgentHandlersMixin:
                 'action': 'update',
                 'id': str(obj.id),
                 'title': obj.title,
+                # Session 2728 F-D-8 — mirror the create-response shape and
+                # surface the persisted status so callers do not need a
+                # follow-up detail fetch to verify the write. Especially
+                # useful when combined with the F-D-7 gate: if a caller
+                # requests status='completed', the typed error surfaces the
+                # correct completion path; otherwise, this echoes the stored
+                # value that survived the update.
+                'status': obj.status,
                 'updated_fields': update_fields,
                 'message': f'Updated "{obj.title}" ({", ".join(update_fields)}).',
             }

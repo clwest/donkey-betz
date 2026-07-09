@@ -84,12 +84,53 @@ class ContentHandlersMixin:
     def _handle_deliverable_direct(self, tool_name, payload, user_id, trace_id):
         """Direct deliverable handler — maps deliverable_tool actions to deliverables_tool."""
         action = payload.get('action', 'list')
+        original_action = action
 
         # Session 1077+: Smart inference — GPT-5.2 sometimes drops action or
         # defaults to 'list' even when title+content clearly indicate create.
-        if action == 'list' and payload.get('title') and payload.get('content'):
-            action = 'create'
-            logger.info(f"[deliverable_tool] Inferred action=create from title+content")
+        # Session 2728 F-D-2/F-D-4 — expanded and consolidated: infer BOTH
+        # list→create and list→append here (previously only create was
+        # inferred at this layer), then surface original_action +
+        # inferred_action in the response so callers can detect and reason
+        # about the promotion. Prior response was silent about inference.
+        inferred_reason = None
+        if action == 'list':
+            has_title = bool(payload.get('title'))
+            has_content = bool(payload.get('content'))
+            has_id = bool(payload.get('id'))
+            if has_title and has_content:
+                action = 'create'
+                inferred_reason = 'title+content present with action=list'
+                logger.info("[deliverable_tool] Inferred action=create from title+content")
+            elif has_content and has_id:
+                action = 'append'
+                inferred_reason = 'id+content present with action=list'
+                logger.info("[deliverable_tool] Inferred action=append from id+content")
+        was_inferred = (action != original_action)
+
+        # Session 2728 F-D-3 — unknown actions must not silently pass through
+        # to the downstream handler. Layer 2's else-branch raises ValueError,
+        # so drift is caught, but the failure surface at this boundary was
+        # opaque. Reject known-invalid actions here with a typed envelope that
+        # names the enum for Rigby's retry.
+        _VALID_ACTIONS = {
+            'list', 'detail', 'create', 'update', 'append', 'search',
+            'save', 'unsave', 'stats', 'duplicates', 'set_status',
+            'normalize', 'export_pdf', 'bulk_archive',
+            'link_initiative', 'unlink_initiative', 'cleanup', 'delete',
+        }
+        if action not in _VALID_ACTIONS:
+            return {
+                'action': action,
+                'ok': False,
+                'error_code': 'unknown_deliverable_action',
+                'message': (
+                    f"Unknown deliverable_tool action={action!r}. Valid "
+                    f"actions: {sorted(_VALID_ACTIONS)}."
+                ),
+                'gateway': 'deliverable_tool',
+                'trace_id': trace_id,
+            }
 
         # Map direct actions to the deliverables handler action names
         ACTION_MAP = {
@@ -100,19 +141,29 @@ class ContentHandlersMixin:
             'duplicates': 'duplicates',  # Session 1227 PR2
             'set_status': 'set_status',  # Session 1227 PR3
             'normalize': 'normalize',  # Session 1227 PR4
+            'cleanup': 'cleanup',
+            'delete': 'delete',
         }
         mapped = ACTION_MAP.get(action, action)
         del_payload = dict(payload)
         del_payload['action'] = mapped
         # Route bulk_archive to the dedicated handler
         if action == 'bulk_archive':
-            return self._handle_bulk_archive(del_payload, user_id, trace_id)
+            result = self._handle_bulk_archive(del_payload, user_id, trace_id)
         # Session 1077: Link/unlink deliverable ↔ initiative
-        if action in ('link_initiative', 'unlink_initiative'):
-            return self._handle_deliverable_initiative_link(action, del_payload, user_id, trace_id)
-        result = self._handle_deliverables('deliverables_tool', del_payload, user_id, trace_id)
+        elif action in ('link_initiative', 'unlink_initiative'):
+            result = self._handle_deliverable_initiative_link(action, del_payload, user_id, trace_id)
+        else:
+            result = self._handle_deliverables('deliverables_tool', del_payload, user_id, trace_id)
         if isinstance(result, dict):
             result['gateway'] = 'deliverable_tool'
+            # Session 2728 F-D-2/F-D-4 — surface inference envelope so Rigby
+            # can detect when action was promoted from the requested value.
+            if was_inferred:
+                result['original_action'] = original_action
+                result['inferred_action'] = action
+                result['action_inferred'] = True
+                result['action_inferred_reason'] = inferred_reason
         return result
 
     def _handle_deliverable_initiative_link(self, action, payload, user_id, trace_id):

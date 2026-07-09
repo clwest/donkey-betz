@@ -1212,10 +1212,25 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # Was 'agents' queue which no worker consumes.
         celery_task = execute_agent_task.apply_async(args=[agent_name, task_text, context], queue='long_running')
 
+        # Session 2728 F-RA-1 — surface whether the completion banner will fire.
+        # Mirrors the F-CC-3 pattern (claude_code_tool) approved at Batch A tool
+        # 4. The task-side gate at `core/tasks_agents.py:258-264` skips the S1178
+        # PR-2 auto-wake `AgentFollowupSubscription` when either (a)
+        # `conversation_id` is not set or (b) `context['auto_followup']` is
+        # explicitly `False`. Prior response omitted both signals so Rigby had
+        # no way to detect the silent-no-banner consequence from the dispatch
+        # response — MEMORY rule `feedback_auto_followup_false_suppresses_banner`
+        # crystallizes ~30min lost on missing-banner debugging in Session 1184.
+        _auto_followup = context.get('auto_followup', True)
+        _auto_followup_effective = _auto_followup is not False
+        _conv_id_for_followup = context.get('conversation_id')
+        _follow_up_will_fire = bool(_conv_id_for_followup) and _auto_followup_effective
         return {
             'task_id': str(celery_task.id),
             'mode': 'async',
             'agent': agent_name,
+            'auto_followup': _auto_followup_effective,
+            'follow_up_will_fire': _follow_up_will_fire,
             'message': (
                 f'{agent_name} dispatched (task {celery_task.id}). '
                 f'Use job_status to check progress.'

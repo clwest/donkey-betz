@@ -187,7 +187,13 @@ class KbToolSemanticSearchTests(TestCase):
         ):
             self._call(query='x')
 
-        self.assertEqual(captured.get('similarity_threshold'), 0.6)
+        # Session 1234 D15 lowered the default from 0.6 to 0.4 — Chris's first
+        # verification run against "morning_brief workflow" at 0.6 returned 0
+        # chunks because text-embedding-3-small produces similarities in the
+        # 0.4-0.7 band for related-but-not-identical content. This assertion
+        # tracked the pre-D15 default and was stale ever since; refreshed
+        # opportunistically during Batch A tool 3 validation (S2728).
+        self.assertEqual(captured.get('similarity_threshold'), 0.4)
 
     def test_similarity_threshold_clamped_above_1(self):
         captured = {}
