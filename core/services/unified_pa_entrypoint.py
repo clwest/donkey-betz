@@ -43,6 +43,18 @@ from datetime import datetime
 
 from django.contrib.auth import get_user_model
 from django.conf import settings
+from django.db.utils import DatabaseError
+
+# Session 2730 F-CI-1 — narrow-except allowlist for the context injection
+# pipeline. Mirrors S1234 D17-D21 discipline extended in Batch B tool 1
+# (F-RG-1 in core/rag_integration.py) and Batch B tool 5 (F-WS-4 in
+# core/services/workspace_resolver.py). Environmental failures (DB down,
+# network unreachable, filesystem OSError) log WARNING and skip the
+# affected phase. Logic errors (AttributeError, TypeError, KeyError,
+# NameError, ValueError) propagate — the S1103c `profile.experience`
+# bug hid inside a broad-except for multiple sessions before it was
+# caught. Narrow-except discipline prevents recurrence.
+_CONTEXT_INJECTION_ENV_ERRORS = (DatabaseError, ConnectionError, OSError)
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -2868,8 +2880,9 @@ class UnifiedPAEntrypoint:
                 }
         except asyncio.TimeoutError:
             logger.warning("Profile load timed out after 5s — skipping")
-        except Exception as e:
-            logger.warning(f"Failed to load profile: {e}")
+        except _CONTEXT_INJECTION_ENV_ERRORS as e:
+            # Session 2730 F-CI-1: env errors log + skip; logic errors propagate
+            logger.warning(f"Profile load env error ({type(e).__name__}): {e}")
 
         # Add dynamic system knowledge if relevant (3s timeout)
         if self.knowledge_injector:
@@ -2884,8 +2897,9 @@ class UnifiedPAEntrypoint:
                     context['system_knowledge'] = knowledge_context
             except asyncio.TimeoutError:
                 logger.warning("Knowledge injection timed out after 3s — skipping")
-            except Exception as e:
-                logger.warning(f"Failed to inject knowledge: {e}")
+            except _CONTEXT_INJECTION_ENV_ERRORS as e:
+                # Session 2730 F-CI-1: env errors log + skip; logic errors propagate
+                logger.warning(f"Knowledge injection env error ({type(e).__name__}): {e}")
 
         # Add system stats (5s timeout)
         try:
@@ -2895,8 +2909,9 @@ class UnifiedPAEntrypoint:
             )
         except asyncio.TimeoutError:
             logger.warning("System stats timed out after 5s — skipping")
-        except Exception as e:
-            logger.warning(f"Failed to get system stats: {e}")
+        except _CONTEXT_INJECTION_ENV_ERRORS as e:
+            # Session 2730 F-CI-1: env errors log + skip; logic errors propagate
+            logger.warning(f"System stats env error ({type(e).__name__}): {e}")
 
         # Session 943: Inject docs context so PA knows about system architecture,
         # recent sessions, and what we've been working on (5s timeout)
@@ -2919,8 +2934,9 @@ class UnifiedPAEntrypoint:
                     logger.debug(f"[Session 943] PA docs context: {len(docs_context.get('relevant_docs', []))} docs")
             except asyncio.TimeoutError:
                 logger.warning("Docs context injection timed out after 5s — skipping")
-            except Exception as e:
-                logger.debug(f"Failed to inject docs context: {e}")
+            except _CONTEXT_INJECTION_ENV_ERRORS as e:
+                # Session 2730 F-CI-1: env errors log + skip; logic errors propagate
+                logger.warning(f"Docs context env error ({type(e).__name__}): {e}")
 
         # Workspace context (codebase structure from SKIN layer)
         try:
@@ -2963,8 +2979,9 @@ class UnifiedPAEntrypoint:
                     logger.debug(f"PA workspace context: {ws_ctx.get('workspace_name')} ({ws_ctx.get('total_files', 0)} files)")
         except asyncio.TimeoutError:
             logger.warning("Workspace context injection timed out after 3s — skipping")
-        except Exception as e:
-            logger.debug(f"Failed to inject workspace context: {e}")
+        except _CONTEXT_INJECTION_ENV_ERRORS as e:
+            # Session 2730 F-CI-1: env errors log + skip; logic errors propagate
+            logger.warning(f"Workspace context env error ({type(e).__name__}): {e}")
 
         # Merge user-provided context
         context.update(user_context)
@@ -2977,16 +2994,23 @@ class UnifiedPAEntrypoint:
         return context
 
     async def _get_system_stats(self) -> Dict[str, Any]:
-        """Get basic system stats for context."""
-        stats = {
+        """Get basic system stats for context.
+
+        Session 2730 F-CI-7: adds `stats_source: 'live' | 'fallback'` so
+        downstream callers can tell hardcoded defaults from live ORM
+        counts. Narrow-except discipline mirrors F-CI-1: env errors
+        (DB down, connection refused) return the fallback with
+        `stats_source='fallback'`; logic errors propagate.
+        """
+        stats: Dict[str, Any] = {
             'agent_count': 74,
             'spider_count': 77,
             'advisor_count': 25,
+            'stats_source': 'fallback',
         }
 
         try:
             from core.models_unified_system import Agent, LegacySpiderData, Opportunity
-            from django.db.models import Count
 
             # Real counts
             stats['agent_count'] = await asyncio.to_thread(Agent.objects.count)
@@ -2994,8 +3018,13 @@ class UnifiedPAEntrypoint:
             stats['opportunity_count'] = await asyncio.to_thread(
                 lambda: Opportunity.objects.filter(status='active').count()
             )
-        except Exception as e:
-            logger.debug(f"Failed to get real stats: {e}")
+            stats['stats_source'] = 'live'
+        except _CONTEXT_INJECTION_ENV_ERRORS as e:
+            # Session 2730 F-CI-7: env errors return fallback with signal;
+            # logic errors propagate so the S1103c-class bug (silent
+            # AttributeError swallowed for multiple sessions) cannot
+            # recur here.
+            logger.warning(f"System stats env error ({type(e).__name__}): {e} — using fallback counts")
 
         return stats
 
