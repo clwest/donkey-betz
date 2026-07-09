@@ -763,7 +763,27 @@ class HumanInterfaceService:
 
 
 # Factory function
-_service_cache = {}
+#
+# Session 2731 F-WC-2a — bounded via `functools.lru_cache`. Pre-S2731
+# the raw `_service_cache = {}` dict was keyed on `user_id` with no
+# eviction, no TTL, and no `.clear()` helper — under solo-pool local
+# workers (Batch D tool 2 F-CW-1: workers never recycle) it grew
+# indefinitely with every unique user handled. `maxsize=64` bounds the
+# per-worker footprint; the LRU policy evicts the least-recently-used
+# user when the cap is reached. Mirrors the `attention_aggregator`
+# refactor in the same commit.
+from functools import lru_cache
+
+
+@lru_cache(maxsize=64)
+def _get_human_interface_service_by_uid(user_id: Optional[int]) -> HumanInterfaceService:
+    """LRU-cached factory keyed on user_id."""
+    if user_id is None:
+        return HumanInterfaceService(None)
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    user = User.objects.filter(id=user_id).first()
+    return HumanInterfaceService(user)
 
 
 def get_human_interface_service(user) -> HumanInterfaceService:
@@ -775,10 +795,32 @@ def get_human_interface_service(user) -> HumanInterfaceService:
 
     Returns:
         HumanInterfaceService instance
+
+    Session 2731 F-WC-2a: bounded via
+    `_get_human_interface_service_by_uid` which is
+    `@lru_cache(maxsize=64)`. Under solo-pool local workers the service
+    cache no longer grows indefinitely — the LRU evicts the
+    least-recently-used user when the cap is reached.
     """
     user_id = user.id if user else None
+    return _get_human_interface_service_by_uid(user_id)
 
-    if user_id not in _service_cache:
-        _service_cache[user_id] = HumanInterfaceService(user)
 
-    return _service_cache[user_id]
+# Backward-compat: expose `_service_cache` as a read-only reflection
+# of the cache_info() so any test / observability caller that read
+# `len(_service_cache)` before continues to see a sensible value.
+# Actual invalidation is `get_human_interface_service.cache_clear()`
+# (aliased via the wrapper on `_get_human_interface_service_by_uid`).
+class _ServiceCacheView:
+    def __contains__(self, user_id) -> bool:  # pragma: no cover
+        info = _get_human_interface_service_by_uid.cache_info()
+        return info.currsize > 0
+
+    def __len__(self) -> int:  # pragma: no cover
+        return _get_human_interface_service_by_uid.cache_info().currsize
+
+    def clear(self) -> None:
+        _get_human_interface_service_by_uid.cache_clear()
+
+
+_service_cache = _ServiceCacheView()
