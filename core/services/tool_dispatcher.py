@@ -159,6 +159,46 @@ class ToolErrorCode:
     AGENT_EXECUTION_FAILED = "AGENT_EXECUTION_FAILED"
 
 
+# Session 2730 F-RB-1 — retry classification per error code. Rigby's LLM
+# (and any direct caller) can read `ToolResult.is_retryable` to decide
+# whether to retry the call, without having to string-match on
+# `error_code`. Rationale per code:
+#
+#   TOOL_TIMEOUT           → True   (transient — network/DB/slow op)
+#   TOOL_DEPENDENCY_FAILED → True   (transient — upstream service down)
+#   TOOL_EXCEPTION         → True   (ambiguous — assume retryable; LLM
+#                                    can inspect error_message to override)
+#   AGENT_EXECUTION_FAILED → True   (ambiguous — same rationale)
+#   TOOL_NOT_FOUND         → False  (permanent — tool doesn't exist)
+#   TOOL_PERMISSION_DENIED → False  (permanent — auth/allowlist decision)
+#   TOOL_INVALID_PAYLOAD   → False  (permanent — payload must change first)
+#
+# The S1177 F1 `TOOL_ARGS_JSON_MALFORMED` envelope carries its own
+# richer `retry_hint` dict (recommended_action + max_chunk_chars_suggestion);
+# it isn't routed through this map because it doesn't produce a
+# ToolResult — it's constructed in the unified_pa_entrypoint agentic
+# loop before dispatch is even attempted.
+_ERROR_CODE_RETRYABLE = {
+    ToolErrorCode.TOOL_TIMEOUT: True,
+    ToolErrorCode.TOOL_DEPENDENCY_FAILED: True,
+    ToolErrorCode.TOOL_EXCEPTION: True,
+    ToolErrorCode.AGENT_EXECUTION_FAILED: True,
+    ToolErrorCode.TOOL_NOT_FOUND: False,
+    ToolErrorCode.TOOL_PERMISSION_DENIED: False,
+    ToolErrorCode.TOOL_INVALID_PAYLOAD: False,
+}
+
+
+def _classify_retryable(error_code: Optional[str]) -> Optional[bool]:
+    """Return `is_retryable` for the given error_code, or None on
+    successful results / unknown codes. `None` is the safe default —
+    downstream code that expects `bool` should treat it as
+    "don't-know; use existing heuristics" rather than as `False`."""
+    if error_code is None:
+        return None
+    return _ERROR_CODE_RETRYABLE.get(error_code)
+
+
 @dataclass
 class ToolResult:
     """Structured result from tool execution."""
@@ -169,6 +209,10 @@ class ToolResult:
     error_message: Optional[str]
     trace_id: str
     result: Optional[Any]
+    # Session 2730 F-RB-1 — retry classification. `None` on successful
+    # results (ok=True); True/False on failures per `_ERROR_CODE_RETRYABLE`.
+    # Callers should prefer this field over string-matching on `error_code`.
+    is_retryable: Optional[bool] = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -702,6 +746,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                             error_code='TOOL_PERMISSION_DENIED',
                             error_message=f'Tool {tool_name} is not available for your account.',
                             trace_id=trace_id, result=None,
+                            is_retryable=_classify_retryable('TOOL_PERMISSION_DENIED'),
                         )
                         if record_telemetry:
                             await self._record_tool_call_async(
@@ -732,7 +777,8 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                 error_code=ToolErrorCode.TOOL_NOT_FOUND,
                 error_message=f"Tool '{tool_name}' is not registered",
                 trace_id=trace_id,
-                result=None
+                result=None,
+                is_retryable=_classify_retryable(ToolErrorCode.TOOL_NOT_FOUND),
             )
             if record_telemetry:
                 await self._record_tool_call_async(
@@ -820,7 +866,8 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                 error_code=None,
                 error_message=None,
                 trace_id=trace_id,
-                result=result
+                result=result,
+                is_retryable=None,  # F-RB-1: successful result — no retry decision needed
             )
             if record_telemetry:
                 await self._record_tool_call_async(
@@ -849,7 +896,8 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                 error_code=ToolErrorCode.TOOL_TIMEOUT,
                 error_message=f"Tool execution exceeded {timeout}s timeout",
                 trace_id=trace_id,
-                result=None
+                result=None,
+                is_retryable=_classify_retryable(ToolErrorCode.TOOL_TIMEOUT),
             )
             if record_telemetry:
                 await self._record_tool_call_async(
@@ -878,7 +926,8 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                 error_code=ToolErrorCode.TOOL_EXCEPTION,
                 error_message=str(e),
                 trace_id=trace_id,
-                result=None
+                result=None,
+                is_retryable=_classify_retryable(ToolErrorCode.TOOL_EXCEPTION),
             )
             if record_telemetry:
                 await self._record_tool_call_async(
