@@ -161,6 +161,19 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Signal pattern criticality signals not available
 
+        # Session 2734 — Capability Chain §14 Platform Health.
+        # Post-save handler on HeartBeat escalates critical/offline
+        # ``overall_status`` into HumanAttentionItem via
+        # HumanAttentionBridge. Includes 1-hour dedup gate to prevent
+        # 6× duplicate HAI rows across a persistent-critical hour of
+        # 10-min scans. Kill switch:
+        # ``settings.BODY_SYSTEM_DEGRADATION_HAI_ENABLED`` (default True).
+        try:
+            from core.signals import connect_body_system_degradation_signals
+            connect_body_system_degradation_signals()
+        except ImportError:
+            pass  # Body system degradation signals not available
+
     def _should_run_startup_check(self):
         """Determine if we should run the startup health check"""
         # Check if DATABASE_AUDIT_ON_STARTUP is enabled
