@@ -112,7 +112,12 @@ class SessionToolRetireTests(TestCase):
         self.assertIn(self.bound, result['pin_rotation_notice'])
 
     def test_retire_idempotent_second_call_zero_update(self):
-        _dispatch_session(
+        # Session 2728 F-S-6 patch — second retire on an already-retired
+        # target now returns `retired: False + reason: "already_retired"`
+        # instead of the prior misleading `retired: True + updated_count: 0`.
+        # Chris ratified option (b) at Batch A tool 2 close: distinguish
+        # not_found from already_retired via an existence check.
+        first = _dispatch_session(
             self.alice.id,
             {
                 'action': 'retire',
@@ -120,6 +125,8 @@ class SessionToolRetireTests(TestCase):
                 '_bound_conversation_id': self.bound,
             },
         )
+        self.assertTrue(first['retired'])
+        self.assertGreater(first['updated_count'], 0)
         second = _dispatch_session(
             self.alice.id,
             {
@@ -128,9 +135,12 @@ class SessionToolRetireTests(TestCase):
                 '_bound_conversation_id': self.bound,
             },
         )
-        self.assertTrue(second['retired'])
+        # Second call is a no-op — rows exist but none session_active=True.
+        self.assertFalse(second['retired'])
         self.assertEqual(second['updated_count'], 0)
         self.assertFalse(second['previously_active'])
+        self.assertEqual(second['reason'], 'already_retired')
+        self.assertIn('already retired', second.get('message', ''))
 
     def test_retire_missing_conversation_id_errors(self):
         result = _dispatch_session(
