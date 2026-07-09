@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-09T13:26:25+00:00",
+    "generated": "2026-07-09T14:12:59+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "ad9a5665a831",
-    "doc_count": 2483,
-    "commit_count": 7839,
+    "git_head": "47b40d5b8833",
+    "doc_count": 2487,
+    "commit_count": 7857,
     "confidence_breakdown": {
-      "HIGH": 1594,
-      "MEDIUM": 389,
+      "HIGH": 1595,
+      "MEDIUM": 392,
       "LOW": 5,
       "UNKNOWN": 495
     },
@@ -2540,9 +2540,10 @@
         2504,
         2707,
         2726,
-        2727
+        2727,
+        2731
       ],
-      "commit_count": 1279,
+      "commit_count": 1280,
       "prs": [
         10,
         11,
@@ -7395,9 +7396,10 @@
         2504,
         2707,
         2726,
-        2727
+        2727,
+        2731
       ],
-      "commit_count": 235,
+      "commit_count": 236,
       "prs": [
         2213,
         2219,
@@ -19087,6 +19089,19 @@
       "first_commit_subject": "docs(session-2729-close): handoff + 00-START rewrite for Batch B close + next-step options",
       "sessions_touched": [
         2729
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_2731_TOOL_VALIDATION_BATCH_C_CLOSED.md": {
+      "originating_session": 2731,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "c53fcca2",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "docs(session-2731-close): handoff + 00-START rewrite for Batch C close",
+      "sessions_touched": [
+        2731
       ],
       "commit_count": 1,
       "prs": []
@@ -32082,9 +32097,10 @@
         1150,
         1157,
         1158,
-        1159
+        1159,
+        2731
       ],
-      "commit_count": 6,
+      "commit_count": 7,
       "prs": [
         2249,
         2256,
@@ -36505,6 +36521,19 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/research/tools/validation/celery_worker_lifecycle_validation.md": {
+      "originating_session": 2731,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "345aec7f",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "docs(validation): close Batch D tool 2 verdict \u2014 3 patches + 14 tests",
+      "sessions_touched": [
+        2731
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
     "docs/research/tools/validation/claude_code_tool_validation.md": {
       "originating_session": 2728,
       "confidence": "MEDIUM",
@@ -36564,6 +36593,19 @@
       "first_commit_subject": "docs(validation): close Batch C tool 4 verdict \u2014 2 patches + 18 tests",
       "sessions_touched": [
         2730
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/validation/pa_use_function_calling_env_validation.md": {
+      "originating_session": 2731,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "7770b7a2",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "docs(validation): close Batch D tool 1 verdict \u2014 4 patches + 10 tests",
+      "sessions_touched": [
+        2731
       ],
       "commit_count": 1,
       "prs": []
@@ -36651,6 +36693,19 @@
       "first_commit_subject": "docs(tools-validation-batch-a): campaign plan + Batch A validation reports + research provenance",
       "sessions_touched": [
         2728
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/tools/validation/worker_cache_behavior_validation.md": {
+      "originating_session": 2731,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "9aec393f",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "docs(validation): close Batch D tool 3 verdict \u2014 closes Batch D + campaign",
+      "sessions_touched": [
+        2731
       ],
       "commit_count": 1,
       "prs": []
