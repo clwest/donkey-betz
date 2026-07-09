@@ -1065,7 +1065,21 @@ class UnifiedPAEntrypoint:
                     if enrichment_sections:
                         from core.services.pa_security import scrub_enrichment_context
                         enrichment_sections = scrub_enrichment_context(enrichment_sections)
-                    logger.info(f"[{trace_id}] FC enrichment: {int((time.time()-t2)*1000)}ms sections={list(enrichment_sections.keys())}")
+                    # Session 2730 F-CI-9: emit envelope summary — content
+                    # section keys plus a compact metadata snapshot so
+                    # operators can see gated-out / failed / truncated
+                    # counts without grepping DEBUG logs.
+                    _md = enrichment_sections.get('_metadata', {}) if isinstance(enrichment_sections, dict) else {}
+                    _content_keys = [k for k in enrichment_sections.keys() if not k.startswith('_')] if isinstance(enrichment_sections, dict) else []
+                    logger.info(
+                        f"[{trace_id}] FC enrichment: {int((time.time()-t2)*1000)}ms "
+                        f"sections={_content_keys} "
+                        f"run={_md.get('services_run', [])} "
+                        f"failed={_md.get('services_failed', [])} "
+                        f"gated={_md.get('services_gated_out', [])} "
+                        f"unavail={_md.get('services_unavailable', [])} "
+                        f"truncated={_md.get('sections_truncated', [])}"
+                    )
             else:
                 # ── Existing path: keyword routing ──────────────
                 # 2. Detect intent and route
@@ -1163,7 +1177,20 @@ class UnifiedPAEntrypoint:
                         if enrichment_sections:
                             from core.services.pa_security import scrub_enrichment_context
                             enrichment_sections = scrub_enrichment_context(enrichment_sections)
-                        logger.info(f"[{trace_id}] Step 3b enrichment: {int((time.time()-t2)*1000)}ms sections={list(enrichment_sections.keys())}")
+                        # Session 2730 F-CI-9: same envelope-summary log format
+                        # as the FC path so the two branches produce
+                        # comparable telemetry.
+                        _md = enrichment_sections.get('_metadata', {}) if isinstance(enrichment_sections, dict) else {}
+                        _content_keys = [k for k in enrichment_sections.keys() if not k.startswith('_')] if isinstance(enrichment_sections, dict) else []
+                        logger.info(
+                            f"[{trace_id}] Step 3b enrichment: {int((time.time()-t2)*1000)}ms "
+                            f"sections={_content_keys} "
+                            f"run={_md.get('services_run', [])} "
+                            f"failed={_md.get('services_failed', [])} "
+                            f"gated={_md.get('services_gated_out', [])} "
+                            f"unavail={_md.get('services_unavailable', [])} "
+                            f"truncated={_md.get('sections_truncated', [])}"
+                        )
 
                         # Generate response from tool result + enrichment
                         t3 = time.time()
@@ -4443,7 +4470,7 @@ class UnifiedPAEntrypoint:
         message: str,
         intent: str,
         trace_id: str,
-    ) -> Dict[str, str]:
+    ) -> Dict[str, Any]:
         """
         Session 959: Gather intelligence enrichment sections for the current query.
 
@@ -4451,15 +4478,43 @@ class UnifiedPAEntrypoint:
         was declared but never referenced in the function body. Only
         `message` and `intent` shape enrichment service selection.
 
-        Returns a dict of named sections (each truncated to its cap).
-        One service failure never blocks others.
-        """
-        sections: Dict[str, str] = {}
+        Session 2730 F-CI-2 + F-CI-3 + F-CI-9: surfaces `_metadata`
+        sub-dict on the return payload with `services_requested`,
+        `services_run`, `services_failed`, `services_gated_out`,
+        `services_unavailable`, and `sections_truncated`. Downstream
+        `_build_analytical_prompt` filters `_metadata` out via the
+        existing `section_labels` iteration (already scoped to 9 known
+        section keys). Per-service failures now log with `exc_info=True`
+        so future logic-bug-hiding-in-except (S1103c pattern) is easier
+        to catch.
 
+        Returns a dict of named sections (each truncated to its cap)
+        plus a `_metadata` sub-dict. One service failure never blocks
+        others.
+        """
+        sections: Dict[str, Any] = {}
         canonical_intent = self.INTENT_ALIASES.get(intent, intent)
         enrichment_services = self.INTENT_ENRICHMENT_MAP.get(canonical_intent, [])
 
+        # Session 2730 F-CI-9: metadata envelope tracks each service's
+        # outcome so callers can distinguish "enrichment ran and produced
+        # nothing" from "enrichment silently failed" from "enrichment
+        # was gated out for relevance."
+        services_run: List[str] = []
+        services_failed: List[tuple] = []
+        services_gated_out: List[str] = []
+        sections_truncated: List[tuple] = []
+
         if not enrichment_services:
+            sections['_metadata'] = {
+                'canonical_intent': canonical_intent,
+                'services_requested': [],
+                'services_run': [],
+                'services_failed': [],
+                'services_gated_out': [],
+                'services_unavailable': [],
+                'sections_truncated': [],
+            }
             return sections
 
         is_direct = canonical_intent in self.DIRECT_RELEVANCE_INTENTS
@@ -4467,6 +4522,7 @@ class UnifiedPAEntrypoint:
         for service_key in enrichment_services:
             try:
                 if service_key == 'intelligence_enricher' and self.intelligence_enricher:
+                    services_run.append(service_key)
                     result = await asyncio.to_thread(
                         self.intelligence_enricher.enrich_context, message
                     )
@@ -4487,6 +4543,7 @@ class UnifiedPAEntrypoint:
                         sections['learning_insights'] = text
 
                 elif service_key == 'blog_performance' and self.blog_performance_fn:
+                    services_run.append(service_key)
                     text = await asyncio.to_thread(
                         self.blog_performance_fn,
                         limit=10, include_learning_rules=True
@@ -4495,14 +4552,18 @@ class UnifiedPAEntrypoint:
                         sections['blog_performance'] = str(text)
 
                 elif service_key == 'domain_context' and self.domain_context_builder:
+                    services_run.append(service_key)
                     text = await asyncio.to_thread(
                         self.domain_context_builder.build_context, topic=message
                     )
                     if text:
                         if is_direct or self._passes_relevance_gate(message, str(text)):
                             sections['domain_context'] = str(text)
+                        else:
+                            services_gated_out.append(service_key)
 
                 elif service_key == 'spider_trends' and self.spider_context_builder:
+                    services_run.append(service_key)
                     result = await asyncio.to_thread(
                         self.spider_context_builder.build_context_for_agent,
                         'personal_assistant', message, hours=48, max_trends=5
@@ -4520,8 +4581,11 @@ class UnifiedPAEntrypoint:
                                 hours = freshness.get('hours_covered', 0)
                                 text += f"\nData quality: {quality}, {hours}h window"
                             sections['spider_trends'] = text
+                        else:
+                            services_gated_out.append(service_key)
 
                 elif service_key == 'advisor' and self.advisor_context_builder:
+                    services_run.append(service_key)
                     result = await asyncio.to_thread(
                         self.advisor_context_builder.build_context_for_agent,
                         'personal_assistant', message
@@ -4546,6 +4610,7 @@ class UnifiedPAEntrypoint:
                         sections['advisor'] = '\n'.join(parts)
 
                 elif service_key == 'strategic_memory':
+                    services_run.append(service_key)
                     # Session 962 Phase 2: Strategic Memory Service
                     try:
                         from core.services.strategic_memory_service import get_strategic_memory_service
@@ -4564,6 +4629,7 @@ class UnifiedPAEntrypoint:
                         )
 
                 elif service_key == 'proactive_intelligence' and self.proactive_intelligence_service:
+                    services_run.append(service_key)
                     pi_result = await asyncio.to_thread(
                         self.proactive_intelligence_service.get_relevant_intelligence,
                         message, None, 3, 24
@@ -4572,11 +4638,14 @@ class UnifiedPAEntrypoint:
                     if text:
                         if is_direct or self._passes_relevance_gate(message, text):
                             sections['proactive_intelligence'] = text
+                        else:
+                            services_gated_out.append(service_key)
 
                 # Session 992: Platform Intelligence Briefing
                 # Skip relevance gate — only fires for system_overview/execution_history
                 # where platform activity is inherently relevant
                 elif service_key == 'platform_briefing' and self.platform_briefing_service:
+                    services_run.append(service_key)
                     text = await asyncio.to_thread(
                         self.platform_briefing_service.get_formatted_briefing
                     )
@@ -4584,14 +4653,40 @@ class UnifiedPAEntrypoint:
                         sections['platform_briefing'] = text
 
             except Exception as e:
-                logger.warning(f"[{trace_id}] Enrichment '{service_key}' failed: {e}")
+                # Session 2730 F-CI-2: use exc_info=True to include
+                # traceback so future logic-bug-hiding-in-except
+                # (S1103c-class pattern) is easier to catch. Per-service
+                # isolation preserved — one failure does not block others.
+                logger.warning(
+                    f"[{trace_id}] Enrichment '{service_key}' failed: {e}",
+                    exc_info=True,
+                )
+                services_failed.append((service_key, type(e).__name__))
 
-        # Truncate each section to its cap
-        for key, text in sections.items():
+        # Session 2730 F-CI-3: truncation loop now records
+        # `sections_truncated` so callers can tell truncated from full.
+        truncatable_keys = [k for k in sections.keys() if not k.startswith('_')]
+        for key in truncatable_keys:
+            text = sections[key]
             cap = self.ENRICHMENT_CAPS.get(key, 600)
             if len(text) > cap:
+                sections_truncated.append((key, len(text), cap))
                 sections[key] = text[:cap] + '...'
 
+        # Compute unavailable: services in the requested list that never
+        # entered any branch (guard failed at `and self.X:`).
+        run_or_failed = set(services_run) | {name for name, _ in services_failed}
+        services_unavailable = [s for s in enrichment_services if s not in run_or_failed]
+
+        sections['_metadata'] = {
+            'canonical_intent': canonical_intent,
+            'services_requested': list(enrichment_services),
+            'services_run': services_run,
+            'services_failed': services_failed,
+            'services_gated_out': services_gated_out,
+            'services_unavailable': services_unavailable,
+            'sections_truncated': sections_truncated,
+        }
         return sections
 
     @staticmethod
@@ -4730,7 +4825,13 @@ Only describe features and capabilities that actually exist. Never fabricate con
         """
         user_name = context.get('user_name', 'there')
         enrichment_sections = enrichment_sections or {}
-        has_enrichment = any(v for v in enrichment_sections.values())
+        # Session 2730 F-CI-9: skip `_metadata` (and any future underscore-
+        # prefixed envelope keys) — those are provenance carriers, not
+        # content. The analytical LLM branch should only fire when at
+        # least one content section is non-empty.
+        has_enrichment = any(
+            v for k, v in enrichment_sections.items() if not k.startswith('_')
+        )
 
         # Always generate the compact structured list (users need IDs to act)
         structured_output = self._format_tool_result(tool_result, intent, user_name)
