@@ -62,6 +62,28 @@ User = get_user_model()
 # Canonical PA identity — import from pa_identity.py (no circular risk)
 from core.services.pa_identity import PA_IDENTITY  # noqa: E402
 
+# Session 2731 F-WF-3 — emit one-shot startup log declaring the PA routing
+# path at module import time. Previously the flag state was only observable
+# indirectly via `[PA_TASK_SUMMARY]` lines after a Rigby request fired,
+# which meant a misconfigured worker required a full reproduction to
+# diagnose (S1184 lost 30 min on this class). This log fires once per
+# worker at import and makes the routing path visible in the first ~50
+# lines of any worker's log.
+#
+# The env-var raw value is emitted alongside the effective boolean so
+# operators can distinguish "env unset (using code default)" from "env
+# set to 'true'" from "env set to some non-canonical value like 'yes'
+# that fell through to False".
+_pa_routing_env_raw = os.environ.get('PA_USE_FUNCTION_CALLING', '<unset>')
+_pa_routing_effective = bool(getattr(settings, 'PA_USE_FUNCTION_CALLING', False))
+logger.info(
+    "[PA_ROUTING_INIT] PA_USE_FUNCTION_CALLING env=%r effective=%s "
+    "→ routing_path=%s",
+    _pa_routing_env_raw,
+    _pa_routing_effective,
+    'fc' if _pa_routing_effective else 'keyword',
+)
+
 # Deterministic memory intent detection patterns (Task D)
 _MEMORY_PATTERNS = [
     re.compile(r'(?:please\s+)?remember\s+(?:that\s+)?(.{10,200})', re.IGNORECASE),
@@ -1285,15 +1307,21 @@ class UnifiedPAEntrypoint:
             # Structured task summary for cost/performance analysis
             tool_names = [r.get('tool', '') for r in tool_runs] if tool_runs else []
             silent_fallback = bool(getattr(self, '_silent_fallback_detected', False))
+            # Session 2731 F-WF-4: emit `routing_path=fc|keyword` so log
+            # parsers get the definitive signal without inferring from
+            # `tools=none intent=X` heuristics. `tools=none` fires
+            # legitimately for many intents; `routing_path` is unambiguous.
+            _routing_path = 'fc' if getattr(settings, 'PA_USE_FUNCTION_CALLING', False) else 'keyword'
             logger.info(
                 "[PA_TASK_SUMMARY] trace_id=%s latency_ms=%d llm_iterations=%d "
                 "tool_calls=%d tools=%s history_turns=%d intent=%s "
-                "silent_fallback=%s",
+                "silent_fallback=%s routing_path=%s",
                 trace_id, latency_ms,
                 len(tool_call_metadata) if tool_call_metadata else 1,
                 len(tool_names), ','.join(tool_names) or 'none',
                 len(self._conversation_history), intent,
                 'true' if silent_fallback else 'false',
+                _routing_path,
             )
 
             # Record learning readback event (Phase 1 + Phase 3 telemetry)
