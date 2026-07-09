@@ -128,6 +128,28 @@ class ToolCallRecord(models.Model):
         default=0,
         help_text="Size of the full result in bytes"
     )
+    # Session 2730 F-PS-2a/F-PS-2b: silent-truncation signals so
+    # analytics can distinguish "truncated summary" from "full-fit
+    # summary" and "dropped-oversize full_result" from "genuinely
+    # empty result" without inferring from other fields.
+    summary_truncated = models.BooleanField(
+        default=False, db_index=True,
+        help_text=(
+            "True when result_summary was truncated at 4096 chars "
+            "(i.e., result_size_bytes > 4096). Set by the dispatcher "
+            "at write time so analytics can filter for truncated rows "
+            "without comparing lengths."
+        )
+    )
+    full_result_dropped = models.BooleanField(
+        default=False, db_index=True,
+        help_text=(
+            "True when full_result was blanked because the payload "
+            "exceeded the 64KB size cap. Distinguishes 'oversize; "
+            "recompute from tool call' from 'genuinely empty result' "
+            "(full_result='' AND result_size_bytes<=65536)."
+        )
+    )
 
     # Status
     success = models.BooleanField(
@@ -216,15 +238,23 @@ class ToolCallRecord(models.Model):
         result_size = len(result_bytes)
 
         # Create summary (first 4KB)
+        # Session 2730 F-PS-2a: `summary_truncated` boolean surfaces the
+        # truncation as a first-class analytics signal (previously only
+        # inferable from `result_size_bytes > len(result_summary)`).
+        summary_truncated = len(result_str) > 4096
         result_summary = result_str[:4096]
-        if len(result_str) > 4096:
+        if summary_truncated:
             result_summary += '... [truncated]'
 
         # Hash the full result
         result_hash = f"sha256:{hashlib.sha256(result_bytes).hexdigest()}"
 
         # Store full result only if under 64KB
-        full_result = result_str if result_size < 65536 else ''
+        # Session 2730 F-PS-2b: `full_result_dropped` distinguishes
+        # "oversize-and-blanked" from "genuinely empty" (both produce
+        # full_result='').
+        full_result_dropped = result_size >= 65536
+        full_result = '' if full_result_dropped else result_str
 
         # Arc I-0100 P2 (IB-1799-T1-01): resolve trace_id via
         # feature-flagged helper. Preserves the pre-flag swallow-and-NULL
@@ -248,6 +278,8 @@ class ToolCallRecord(models.Model):
             result_hash=result_hash,
             full_result=full_result,
             result_size_bytes=result_size,
+            summary_truncated=summary_truncated,
+            full_result_dropped=full_result_dropped,
             latency_ms=latency_ms,
             success=success,
             error_message=error_message or '',
