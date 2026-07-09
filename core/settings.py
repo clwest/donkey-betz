@@ -534,6 +534,31 @@ except Exception as e:
     logger = logging.getLogger(__name__)
     logger.warning(f'Redis connection failed, using local memory cache: {e}')
 
+# Session 2731 F-WC-1a — declare the effective cache backend at settings
+# import time. Pre-S2731 the Redis→LocMemCache silent fallback was only
+# signalled via one WARNING log (line above) that fired ONLY on failure;
+# a caller reading log tails could not tell "cache is Redis (healthy)"
+# from "cache is Redis (unknown state)" without grepping for the
+# fallback WARNING. This `[DJANGO_CACHE_INIT]` log makes the effective
+# backend visible in the first ~100 lines of any worker/web log at
+# import time.
+#
+# The `REDIS_HEALTHY` flag is still set at line 523/525 but has zero
+# downstream consumers in the codebase — it's exposed here in the log
+# so operators can grep for `REDIS_HEALTHY=False` post-startup instead
+# of relying on the earlier warning surviving log rotation. See
+# `docs/research/tools/validation/worker_cache_behavior_validation.md`
+# for the analysis.
+import logging as _dcinit_logging
+_dcinit_logger = _dcinit_logging.getLogger(__name__)
+_dcinit_backend = CACHES['default']['BACKEND'].rsplit('.', 1)[-1]
+_dcinit_logger.info(
+    "[DJANGO_CACHE_INIT] backend=%s REDIS_HEALTHY=%s redis_url=%s",
+    _dcinit_backend,
+    REDIS_HEALTHY,
+    REDIS_URL,
+)
+
 # AI Provider Configuration
 AI_PROVIDERS = {
     'OPENAI_API_KEY': os.environ.get('OPENAI_API_KEY', ''),
