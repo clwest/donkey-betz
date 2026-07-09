@@ -223,6 +223,90 @@ class HumanAttentionBridge:
             logger.error(f"Failed to create arbitrage attention: {e}")
 
     # =========================================================================
+    # SIGNAL PATTERN CRITICALITY  (Session 2734 — Capability Chain §6)
+    # =========================================================================
+
+    def create_signal_pattern_attention(self, cluster, user=None):
+        """
+        Create attention item for a high-strength ``SignalCluster``.
+
+        Called by ``core/signals/signal_pattern_criticality_signals.py``
+        when a newly-created cluster's ``strength`` crosses the
+        configurable ``signal_pattern_criticality_threshold`` (default
+        0.9). Extends the existing 5-category bridge with a sixth
+        producer per Platform Capability Graph §6 wire-up.
+
+        Args:
+            cluster: ``SignalCluster`` instance with ``pattern_type``,
+                ``strength``, ``name``, ``keywords``, etc.
+            user: Optional target user; defaults to all admins.
+
+        Chain:
+            SignalCluster written by SignalAggregationService
+            → post_save receiver checks strength >= threshold
+            → transaction.on_commit → this method
+            → HumanInterfaceService.create_attention_item()
+            → HumanAttentionItem row
+            → Frontend inbox / cockpit surface
+        """
+        try:
+            users = [user] if user else self.get_admin_users()
+
+            strength = float(getattr(cluster, 'strength', 0.0) or 0.0)
+            pattern_type = getattr(cluster, 'pattern_type', 'unknown') or 'unknown'
+            cluster_name = getattr(cluster, 'name', '') or 'Unnamed pattern'
+            keywords = list(getattr(cluster, 'keywords', []) or [])[:5]
+            source_breakdown = getattr(cluster, 'source_breakdown', {}) or {}
+
+            urgency = 'critical' if strength >= 0.95 else 'high'
+            pattern_label = pattern_type.replace('_', ' ').title()
+
+            summary_parts = [
+                f"{pattern_label} detected at strength {strength:.2f}"
+            ]
+            if keywords:
+                summary_parts.append(f"Keywords: {', '.join(keywords)}")
+            if source_breakdown:
+                sources_summary = ', '.join(
+                    f"{k}={v}" for k, v in list(source_breakdown.items())[:3]
+                )
+                summary_parts.append(f"Sources: {sources_summary}")
+            summary = '. '.join(summary_parts) + '.'
+
+            payload = _serialize_for_json({
+                'cluster_id': str(getattr(cluster, 'id', '')),
+                'pattern_type': pattern_type,
+                'strength': strength,
+                'urgency_score': float(getattr(cluster, 'urgency', 0.0) or 0.0),
+                'confidence': float(getattr(cluster, 'confidence', 0.0) or 0.0),
+                'novelty': float(getattr(cluster, 'novelty', 0.0) or 0.0),
+                'name': cluster_name,
+                'keywords': keywords,
+                'source_breakdown': source_breakdown,
+            })
+
+            for target_user in users:
+                service = self.get_service(target_user)
+                service.create_attention_item(
+                    source_type='signal_pattern',
+                    source_id=str(getattr(cluster, 'id', '')),
+                    source_agent='SignalAggregationService',
+                    item_type='alert',
+                    title=f"Signal: {cluster_name[:80]}",
+                    summary=summary[:400],
+                    urgency=urgency,
+                    payload=payload,
+                )
+                logger.info(
+                    "[HAI_BRIDGE] signal_pattern attention created "
+                    "user=%s cluster_id=%s strength=%.3f urgency=%s",
+                    target_user.username, cluster.id, strength, urgency,
+                )
+
+        except Exception as e:
+            logger.error(f"Failed to create signal pattern attention: {e}")
+
+    # =========================================================================
     # SYSTEM ALERTS
     # =========================================================================
 

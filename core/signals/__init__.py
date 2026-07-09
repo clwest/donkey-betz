@@ -63,6 +63,11 @@ from .mission_verdict_signals import (
     connect_mission_verdict_signals,
 )
 
+from .signal_pattern_criticality_signals import (
+    escalate_signal_pattern,
+    connect_signal_pattern_criticality_signals,
+)
+
 __all__ = [
     # Trigger signals
     'evaluate_triggers_for_spider_data',
@@ -103,4 +108,7 @@ __all__ = [
     # Session 2734 — Capability Chain §1 Mission Completion WS broadcast
     'broadcast_mission_verdict',
     'connect_mission_verdict_signals',
+    # Session 2734 — Capability Chain §6 Signal Detection HAI escalation
+    'escalate_signal_pattern',
+    'connect_signal_pattern_criticality_signals',
 ]
