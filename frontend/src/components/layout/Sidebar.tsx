@@ -33,6 +33,7 @@ import {
   ChevronRight,
   BookOpen,
 } from 'lucide-react'
+import { authApi } from '@/lib/api'
 import { useAuthStore } from '@/stores/authStore'
 import { usePAStore } from '@/stores/paStore'
 import {
@@ -353,7 +354,30 @@ export default function Sidebar() {
             <button
               type="button"
               role="menuitem"
-              onClick={() => { setUserMenuOpen(false); syncUser(null); logout() }}
+              onClick={async () => {
+                // Session 2735 — Platform Closure §18 F-D-SIDEBAR-1:
+                // Revoke the backend Token BEFORE clearing Zustand.
+                // The axios request interceptor at lib/api.ts reads
+                // the token from the store on every call, so the
+                // authApi.logout() dispatch must run while the token
+                // is still present. On failure (network flake /
+                // backend down) we still clear client state so the
+                // user is not stranded in a half-logged-in UI —
+                // server-side token cleanup can be reconciled by TTL
+                // or a manual admin sweep at that point.
+                setUserMenuOpen(false)
+                try {
+                  await authApi.logout()
+                } catch (e) {
+                  console.warn(
+                    '[Sidebar] Server-side logout failed; clearing client state anyway',
+                    e,
+                  )
+                }
+                syncUser(null)
+                logout()
+                navigate('/login')
+              }}
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-300 hover:bg-dark-hover"
             >
               <LogOut size={16} /> Logout
