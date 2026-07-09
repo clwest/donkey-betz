@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-07-09 10:20
+**Generated:** 2026-07-09 10:47
 **Current Session:** 2733
 **Total Documentation:** 3041 files | 924,625 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 7,782 |
+| Total cross-references | 7,812 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -38,7 +38,7 @@
 | `docs/INDEX.md` | 174 | INDEX |
 | `docs/research/ARCHITECTURE_INDEX.md` | 139 | ARCHITECTURE INDEX |
 | `docs/research/OPEN_ARCS.md` | 135 | OPEN ARCS |
-| `docs/archive/SYSTEM_CAPABILITIES-original/06_Decision_Systems/README.md` | 122 | 🎯 DECISION COMMAND SYSTEMS - AI-Powered Decision I |
+| `docs/archive/old-structure/priorities/README.md` | 122 | PRIORITIES |
 | `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` | 113 | DOMAIN RESEARCH PLAYBOOK |
 | `docs/AGENTS.md` | 83 | AGENTS |
 | `docs/00-START-HERE/DOC_LIFECYCLE.md` | 81 | DOC LIFECYCLE |
@@ -256,7 +256,7 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| INDEX.md | docs | 400 | 2026-07-09 09:47 |
+| INDEX.md | docs | 400 | 2026-07-09 10:22 |
 | platform_capability_graph.md | research | 713 | 2026-07-09 09:29 |
 | integration_readiness_matrix.md | research | 295 | 2026-07-09 09:29 |
 | SESSION_2733_CAMPAIGN_RETROSPECTIVE.md | handoffs | 418 | 2026-07-09 08:22 |
