@@ -307,6 +307,89 @@ class HumanAttentionBridge:
             logger.error(f"Failed to create signal pattern attention: {e}")
 
     # =========================================================================
+    # MISSION VERDICT ATTENTION  (Session 2734 — Capability Chain §1 closure)
+    # =========================================================================
+
+    def create_mission_verdict_attention(self, run, verdict: str, user=None):
+        """
+        Create attention item when a MissionRunner emits a non-certified
+        verdict — Category B closure of §1 Item 9 HAI production.
+
+        Called by ``core/signals/mission_verdict_attention_signals.py``
+        with the parent ``OpsRun`` (mission-domain) and the raw verdict
+        string ('rejected' | 'deferred').
+
+        Urgency policy (per Rigby SIGN pa-47bd5d75158948f5 refinement):
+          * ``rejected`` → ``urgency='high'`` — inbox visibility only.
+            Explicitly NOT ``critical`` because critical would trigger
+            Expo push via ``signals_push_notifications.on_critical_
+            attention_item`` and risks double-alerting when another
+            escalation (agent execution failure / body-system critical)
+            already fired for the same underlying incident.
+          * ``deferred`` → ``urgency='medium'`` — action-worthy but not
+            page-worthy. Rigby couldn't decide; a human should look
+            same-day but not immediately.
+          * ``certified`` NEVER reaches this method — filtered upstream
+            in the signal receiver.
+
+        Args:
+            run: Parent ``OpsRun`` with ``domain='mission'``.
+            verdict: ``'rejected'`` or ``'deferred'``.
+            user: Optional target user; defaults to admins.
+        """
+        try:
+            users = [user] if user else self.get_admin_users()
+
+            verdict_lc = (verdict or '').lower()
+            urgency = 'high' if verdict_lc == 'rejected' else 'medium'
+
+            title_verb = 'rejected' if verdict_lc == 'rejected' else 'deferred'
+            title = f"Mission {title_verb}: {getattr(run, 'title', '')[:60]}"
+
+            summary = (
+                f"MissionRunner emitted verdict '{verdict_lc}' on mission "
+                f"{getattr(run, 'mission_id', None)} "
+                f"(run_kind='{getattr(run, 'run_kind', '') or 'unknown'}'). "
+                f"Review the run's OpsRunEvent timeline for rationale."
+            )
+
+            payload = _serialize_for_json({
+                'run_id': str(getattr(run, 'id', '')),
+                'mission_id': (
+                    str(getattr(run, 'mission_id', None))
+                    if getattr(run, 'mission_id', None) else None
+                ),
+                'verdict': verdict_lc,
+                'run_kind': getattr(run, 'run_kind', '') or '',
+                'run_type': getattr(run, 'run_type', '') or '',
+                'title': getattr(run, 'title', ''),
+                'summary_snapshot': getattr(run, 'summary', {}) or {},
+                'started_at': getattr(run, 'started_at', None),
+                'finished_at': getattr(run, 'finished_at', None),
+            })
+
+            for target_user in users:
+                service = self.get_service(target_user)
+                service.create_attention_item(
+                    source_type='mission_verdict',
+                    source_id=str(getattr(run, 'id', '')),
+                    source_agent='MissionRunner',
+                    item_type='review',
+                    title=title[:120],
+                    summary=summary[:400],
+                    urgency=urgency,
+                    payload=payload,
+                )
+                logger.info(
+                    "[HAI_BRIDGE] mission_verdict attention created "
+                    "user=%s run_id=%s verdict=%s urgency=%s",
+                    target_user.username, run.id, verdict_lc, urgency,
+                )
+
+        except Exception as e:
+            logger.error(f"Failed to create mission verdict attention: {e}")
+
+    # =========================================================================
     # BODY-SYSTEM DEGRADATION  (Session 2734 — Capability Chain §14)
     # =========================================================================
 
