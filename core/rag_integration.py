@@ -34,6 +34,24 @@ _AUTHORITY_WEIGHTS = {
 }
 
 
+# Session 2728 F-RG-1 — Batch B tool 1 close: narrow-except allowlist for
+# `search_embeddings`. Extends the S1234 D17-D21 discipline (already applied
+# to `search_personal_memories` at line ~441-445 as
+# `_PERSONAL_MEMORY_ENV_ERRORS`) to the sibling document-search path so
+# environmental errors return `[]` with an error log, but logic errors
+# propagate to callers instead of silently degrading to zero-results
+# (indistinguishable from "no relevant content"). Same tuple shape as the
+# D20 invariant (`test_d20_views_rag_embeddings_narrow_except.py::
+# test_all_four_allowlists_have_same_shape` — this becomes the fifth
+# allowlist under the D17-D21 pattern). Chris ratified at Batch B tool 1
+# close (S2728 handoff).
+_RAG_EMBEDDINGS_ENV_ERRORS = (
+    __import__('django.db.utils', fromlist=['DatabaseError']).DatabaseError,
+    ConnectionError,
+    OSError,
+)
+
+
 def _get_authority_weight(authority):
     """Return the authority-tier weight in [1.0, 2.0]; unknown → 1.0."""
     return _AUTHORITY_WEIGHTS.get(authority or '', 1.0)
@@ -339,8 +357,20 @@ def search_embeddings(
         )
         return documents
 
-    except Exception as e:
-        logger.error(f"Error searching embeddings: {e}", exc_info=True)
+    except _RAG_EMBEDDINGS_ENV_ERRORS as e:
+        # Session 2728 F-RG-1 — narrow except discipline. Pre-patch this
+        # branch caught EVERY Exception (ORM, decrypt, math, TypeError from
+        # a caller-side bug, etc.) and returned []. That silent zero-results
+        # is indistinguishable from "no relevant content" and is the same
+        # anti-pattern S1234 D21 fixed for `search_personal_memories`. Now
+        # only environmental errors (DB connection lost, network down, OS
+        # I/O) return [] with the error log; logic errors propagate so
+        # future refactors that break the retrieval path are visible.
+        logger.error(
+            f"search_embeddings: environmental error: "
+            f"{type(e).__name__}: {e}",
+            exc_info=True,
+        )
         return []
 
 def get_rag_context(query: str, max_tokens: int = 2000, include_personal: bool = False) -> Dict[str, Any]:
