@@ -1055,7 +1055,7 @@ class UnifiedPAEntrypoint:
                     try:
                         enrichment_sections = await asyncio.wait_for(
                             self._enrich_tool_result(
-                                message, intent or 'general', {}, trace_id
+                                message, intent or 'general', trace_id
                             ),
                             timeout=15.0
                         )
@@ -1152,7 +1152,7 @@ class UnifiedPAEntrypoint:
                         try:
                             enrichment_sections = await asyncio.wait_for(
                                 self._enrich_tool_result(
-                                    message, intent, tool_result.result, trace_id
+                                    message, intent, trace_id
                                 ),
                                 timeout=15.0
                             )
@@ -4420,11 +4420,14 @@ class UnifiedPAEntrypoint:
         self,
         message: str,
         intent: str,
-        tool_result: Any,
-        trace_id: str
+        trace_id: str,
     ) -> Dict[str, str]:
         """
         Session 959: Gather intelligence enrichment sections for the current query.
+
+        Session 2730 F-CI-6: removed dead `tool_result` parameter — it
+        was declared but never referenced in the function body. Only
+        `message` and `intent` shape enrichment service selection.
 
         Returns a dict of named sections (each truncated to its cap).
         One service failure never blocks others.
