@@ -2,11 +2,11 @@
 
 ---
 
-## READ THIS FIRST — TOOL VALIDATION CAMPAIGN CLOSED + RETROSPECTIVE WRITTEN (SESSION 2733)
+## READ THIS FIRST — §12 KNOWLEDGE RETRIEVAL CAMPAIGN CLOSED (SESSION 2736)
 
-**Refreshed 2026-07-09 (SESSION 2733: post-campaign retrospective written; no code changes. Prior session S2732 closed the campaign's original 4-batch / 18-tool scope. Retrospective at [`docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md`](docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md) is input into the Playbook v0.1.1 PATCH work.).**
+**Refreshed 2026-07-09 (SESSION 2736: §12 Knowledge Retrieval Campaign shipped end-to-end across 6 phases (P0 → P1 → P1.1 → P2 → P2.1 → P3 → P3.1 → P4). Three new EOS rules ratified (R1 Tool Autonomy, R2 CDR discipline, R3 Acceptance-tests-first). Two Capability Discovery Records authored — CDR-001 (§16 Notification Fanout downgraded to wrap-up bundle) + CDR-002 (§12 Knowledge Retrieval closed via 3-service extension). 51 tests pass (23 acceptance + 28 S2728 regression); zero regression across the campaign arc.).**
 
-Prior anchor context: Engineering Playbook v0.1.0 ratified at Session 2727 close. Sessions 2728 → 2732 executed the Rigby Tool Validation Engineering Campaign end-to-end. **All 18 tools verified at DEFECT-PATCHED-VERIFIED.** Session 2733 wrote the retrospective identifying 6 methodology moves that worked + 6 reusable patterns + 2 anti-patterns caught in flight + 6 sections proposed for Playbook v0.1.1 codification.
+Campaign anchor: [`docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md`](docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md). Read it first.
 
 ---
 
@@ -15,128 +15,124 @@ Prior anchor context: Engineering Playbook v0.1.0 ratified at Session 2727 close
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD (post PR #3019 + PR #3020) | `8906904a` — will advance again with the S2732 handoff commit |
+| HEAD | `2c2c6cc2` — session-2736 campaign work in working tree, awaiting a single close PR |
+| Working tree | 4 modified + 6 new files (see §1 below) |
 | Playbook body commit_sha | `b372edfe127f1af59c4322871092aa7151669463` (unchanged from S2727) |
-| Git tag | `playbook-v0.1.0` (unchanged) |
-| Batch D close PR | #3019 merged as `47b40d5b` (patches + tests + reports) |
-| Docs cascade PR | #3020 merged as `8906904a` (INDEX + provenance refresh) |
-| Pending migrations | 0 (0379 was Batch C tool 2's; no Batch D migrations) |
-| PA worker | Post-S2728-restart with Batch A patches active. **NEEDS RESTART** to load Batches B + C + D patches when Rigby cross-check dispatches begin. Use `make celery-recycle` (F-CW-1) or `make celery-stop && make celery`. |
-| Docs cascade state | 3,037/3,037 Documents embedded; INDEX.md regenerated (3,037 docs); `_provenance.json` fresh (HIGH=1595 / MEDIUM=392 / LOW=5 / UNKNOWN=495) |
+| Playbook git tag | `playbook-v0.1.0` (unchanged) |
+| Pending migrations | 0 |
+| PA worker | Post-S2728 restart with Batches A-D. **NEEDS RESTART** to load S2736 P1-P3.1 code when Rigby dispatches begin. Run `make celery-recycle` (F-CW-1 helper from S2732 Batch D). |
+| Campaign SIGN pin | `pa-5c76b58f70654409` (title `campaign-s2736-knowledge-retrieval`) — RETIRED at P4 close. |
+| Wrapper default pin | `pa-5c76b58f70654409` still in `tools/pa_local.sh:512` at HEAD — next session should rotate to a fresh pin at open, OR retain if directly continuing §12 wrap-up work. |
+| Test suite | 51 passed / 0 failed / 0 skipped / 0 xfailed at HEAD (`test_pa_knowledge_retrieval_capability.py` 23 + `test_context_injection_pipeline_validation_2728.py` 28) |
 
 ---
 
 ## Current constitutional state (unchanged from S2727)
 
-**Engineering Playbook v0.1.0: RATIFIED.** No amendments across the campaign (S2728 → S2732). CD-47 RESOLVED; CD-48 + CD-49 targeted for v0.1.1 PATCH.
+**Engineering Playbook v0.1.0: RATIFIED.** No amendments across §12 campaign.
+CD-47 RESOLVED; CD-48 + CD-49 targeted for v0.1.1 PATCH.
+
+**New for S2736** — three EOS rules ratified live at [`docs/EOS_RULES.md`](docs/EOS_RULES.md):
+- **R1** Tool Autonomy Principle
+- **R2** Capability Discovery Records precede engineering (2 reference CDRs shipped)
+- **R3** Acceptance-tests-first (23-test AT harness shipped as reference)
+
+All three queued for Playbook v0.1.1 codification.
 
 ---
 
-## Campaign summary — 18 of 18 tools closed
+## Campaign summary — §12 Knowledge Retrieval
 
-| Batch | Tools | Session | Defects | Tests | Notable |
-|---|---|---|---|---|---|
-| **A** | 5 | S2728 | 17 | 64 | 3 MEMORY annotations |
-| **B** | 5 | S2729 | 10 | 51 | **2 SECURITY-class fixes** (kb_ingest cross-user provenance leak + SSRF surface) |
-| **C** | 5 | S2731 | 19 | 110 | **4 shared primitives extracted**, 1 migration |
-| **D** | 3 | S2731 → S2732 | 11 | 45 | 3 substrate observability additions, 2 bounded LRU refactors, 1 mgmt command target |
-| **Total** | **18** | 4 sessions | **57** | **270** | 4 primitives, 1 migration |
+| Gap | Phase | Substrate shipped | Status |
+|---|---|---|---|
+| Gap 1 — PA turn embedding-lane enrichment | P2 + P2.1 | `_retrieve_embedding_context` + `_build_context` embedding block via `ScopedRetrievalService`; citable-path polish (Rigby O5) | ✅ |
+| Gap 2 — Runtime lane selector LOCAL vs PROD | P1 + P1.1 | `core/services/rag_lane_selector.py` + `[PA_ROUTING_INIT]` extension; narrow-except polish (Rigby O5) | ✅ |
+| Gap 3 — PA/BaseAgent asymmetry closure | P3 + P3.1 | `core/services/relevant_knowledge_service.py` extraction + BaseAgent delegation + PA `_build_context` invocation; empty-keyword guard + docstring correction (Rigby O2/O6) | ✅ |
 
-**All 18 tools verified at DEFECT-PATCHED-VERIFIED.**
+**All 3 CDR-002 gaps closed.** Capability at HEAD satisfies every requirement of the §10.1 R4 capability statement.
 
-**Batch D highlights (fresh from S2732):**
+**Observability at HEAD** — `[PA_TASK_SUMMARY]` emits:
+```
+docs_context_hit=<bool> embedding_context_hit=<bool> agent_knowledge_hit=<bool>
+```
+One grep answers per turn: "did all three enrichment lanes fire?"
 
-- **Substrate observability layer completed** — every PA/Rigby substrate now emits a startup log declaring its state:
-  - `[PA_ROUTING_INIT]` (Batch D tool 1 F-WF-3) — env=`true`/`false`/`<unset>`, effective bool, routing_path.
-  - `[CELERY_WORKER_INIT]` + `[CELERY_WORKER_SHUTDOWN]` (Batch D tool 2 F-CW-2) — pid, ppid, hostname, app, exitcode.
-  - `[DJANGO_CACHE_INIT]` (Batch D tool 3 F-WC-1a) — cache backend (RedisCache vs LocMemCache), REDIS_HEALTHY, REDIS_URL.
-  - `[PA_TASK_SUMMARY].routing_path=fc|keyword` (Batch D tool 1 F-WF-4) — per-turn signal.
-- **`make celery-recycle`** — one-command worker recycle for the chronic-drift class the MEMORY rule targets.
-- **`make celery-status`** now checks all 5 workers (added `pa` + `code_jobs` with tail-log failure hints).
-- **`_aggregator_cache` + `_service_cache`** — bounded via `@lru_cache(maxsize=64)` matching `platform_config` gold standard.
-- **Procfile PA_USE_FUNCTION_CALLING=true** on every celery-* line as belt-and-suspenders against Railway env drift.
-
-**MEMORY rules reinforcement (Batch D):**
-
-- `feedback_pa_worker_function_calling_env` — VERIFIED at HEAD; 3-test source-level guard added.
-- `feedback_local_celery_stall_playbook` — VERIFIED at HEAD; 6-step diagnostic sequence still valid; underlying substrate intact. 2nd verification pass in the campaign.
-- `feedback_openai_client_factory` + `feedback_anthropic_client_factory` — 3rd + 2nd verification pass respectively.
-
-**Batches remaining:** **NONE — campaign complete.**
-
-**Combined batch-close deferred work (~35 cross-tool consistency observations across A + B + C + D):** carried forward for a future doc-pass sweep. Notable Batch D additions:
-- F-CW-5 companion — worker_recycled `CeleryTaskEvent` marker (extending F-CW-2 into audit substrate).
-- 43 `django.core.cache` users not individually audited (`KEY_PREFIX='udb'` tenant isolation closes the immediate coherence risk).
+**Rigby SIGN checkpoints:** 3 dispatches (P1, P2, P3), 9 CONFIRMED + 7 REFINEMENTS across all objectives. Every refinement landed as `.1` polish before the next phase opened.
 
 ---
 
-## Current Rigby SIGN pin state
+## Files awaiting a single close PR
 
-**Active pin at session-2732 close:** `pa-44a6eb70d8814e34` (T4 Group 1700 Observability paused-research pin; preserved through the entire campaign for cross-check dispatches).
+### Modified
+- `core/agents/base_agent.py` — `_get_relevant_knowledge_for_task` delegation refactor
+- `core/services/unified_pa_entrypoint.py` — P1/P2/P3 enrichment blocks + `[PA_TASK_SUMMARY]` extension
+- `docs/research/platform/platform_capability_graph.md` — §25 append-only fold
+- `tools/pa_local.sh` — wrapper pin rotation
 
-**Fresh-session decision:** on next session open, decide based on task:
-- **Combined batch-close doc pass / retrospective** — no new pin needed; paused-research pin remains usable.
-- **Rigby cross-check of Batches B + C + D patches** — no new pin; but requires PA worker restart to load 47+ patches (see below).
-- **Anything other than campaign-adjacent work** — mint a new pin per playbook §16 fresh-thread discipline.
-
-**Default PA wrapper (`tools/pa_local.sh`) currently points at:** `pa-44a6eb70d8814e34` (unchanged from S2727 close).
-
-**PA worker restart REQUIRED before Rigby-side Batches B + C + D verification:** current worker (PID 12820 from S2728 restart) has Batch A patches loaded but NOT Batches B, C, or D. To verify any of the 40+ patches shipped across those 3 batches via Rigby dispatch, run `make celery-recycle` (F-CW-1 helper shipped in Batch D).
+### New
+- `core/services/rag_lane_selector.py` — P1 runtime lane selector
+- `core/services/relevant_knowledge_service.py` — P3 shared knowledge substrate
+- `core/tests/test_pa_knowledge_retrieval_capability.py` — 23 acceptance tests across 11 classes
+- `docs/EOS_RULES.md` — R1/R2/R3 live rule ledger
+- `docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md`
+- `docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md`
 
 ---
 
-## Current recommended first task
+## Current recommended first task (Chris-choice)
 
-**Chris-choice among four options** (per S2732 handoff §9, with option 4 completed at S2733):
-
-1. **Combined batch-close doc pass** — sweep the ~35 cross-tool consistency observations logged across A + B + C + D into a single cleanup PR. High leverage for uniformity.
-2. **PA worker restart + Rigby cross-check of Batches B + C + D patches** — ~40+ defects patched but not yet loaded into the running worker. Rigby dispatches would still hit Batch A code. Use `make celery-recycle` (F-CW-1 helper shipped in Batch D).
-3. **Playbook v0.1.1 PATCH** — CD-48 + CD-49 codification (from S2727 handoff §5). **Session 2733 retrospective is direct input** — §6 of the retrospective proposes 6 specific sections for v0.1.1 codification. Constitutional work; independent of the campaign.
-4. ~~Post-campaign retrospective~~ — **completed at S2733.** See [`docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md`](docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md).
-5. **Something else** — the campaign is closed; the queue is open.
+1. **Merge the §12 campaign PR** — single PR consolidating all working-tree
+   changes. This is the natural first task if the goal is landing S2736
+   work on main.
+2. **CDR-001 §16 wrap-up bundle** — 4-item S-M polish (Inbox receiver +
+   cross-channel HAIDispatchLog + `channels_fired` convention + dispatch-
+   contract normalization). Not a campaign; 1-2 sessions.
+3. **Playbook v0.1.1 PATCH** — codify R1 + R2 + R3 from `docs/EOS_RULES.md`
+   into the ratified Playbook body. Also folds S2733 retrospective §6
+   sections that were queued for v0.1.1.
+4. **Next Category A campaign selection** — the Capability Graph has
+   §17 Cost Protection P2+, §18 Auth full scope, §19 Conversation
+   Lifecycle telemetry, and several other candidates. **MUST run
+   Category A per Rule R2 before proposing a campaign scope.**
+5. **Rigby CDR-002 §17.4 integration test harness** — deferred future
+   arc for a proper Django TestCase-based `_build_context` fixture set.
+6. **Something else** — the campaign queue is open.
 
 Recommended session-open protocol:
 1. `context-kit orient` (mandatory session-open).
-2. Read `docs/handoffs/SESSION_2732_TOOL_VALIDATION_CAMPAIGN_CLOSED.md` in full.
-3. Confirm PA worker state — `ps aux | grep hostname=pa` — restart via `make celery-recycle` if any cross-check dispatch is planned.
-4. If Chris chooses (1): read the 4 batch-close handoffs (S2728, S2729, S2731, S2732) OR the 18 validation reports at `docs/research/tools/validation/` and consolidate the deferred observations.
-5. If Chris chooses (4): draft the retrospective referencing the campaign plan, the 18 validation reports, and this handoff.
+2. Read `docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md` in full.
+3. Read `docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md` §11 Lessons Learned + §12+ reconciliation folds.
+4. Read `docs/EOS_RULES.md` R1/R2/R3.
+5. If Chris chooses (2) or (4): run Category A investigation FIRST per Rule R2.
+6. If any Rigby dispatch is planned: `make celery-recycle` to load S2736 code into the PA worker.
 
 ---
 
 ## Reference documents (read order for post-campaign sessions)
 
-Campaign-closure + retrospective anchors (S2732 / S2733):
+Campaign-closure anchors (S2736):
 
-1. [`docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md`](docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md) — **Session 2733 retrospective.** Input into Playbook v0.1.1 methodology chapters.
-2. [`docs/handoffs/SESSION_2732_TOOL_VALIDATION_CAMPAIGN_CLOSED.md`](docs/handoffs/SESSION_2732_TOOL_VALIDATION_CAMPAIGN_CLOSED.md) — Session 2732 handoff + campaign-close artifacts.
-3. [`docs/research/tools/tools_validation_engineering_campaign_plan.md`](docs/research/tools/tools_validation_engineering_campaign_plan.md) — the campaign plan Chris ratified. Now historical; scope complete.
-4. [`docs/research/tools/validation/`](docs/research/tools/validation/) — **18 validation reports** across the 4 batches.
-
-Prior batch-close handoffs:
-
-4. [`docs/handoffs/SESSION_2731_TOOL_VALIDATION_BATCH_C_CLOSED.md`](docs/handoffs/SESSION_2731_TOOL_VALIDATION_BATCH_C_CLOSED.md) — Session 2731 handoff + Batch C close.
-5. [`docs/handoffs/SESSION_2729_TOOL_VALIDATION_BATCH_B_CLOSED.md`](docs/handoffs/SESSION_2729_TOOL_VALIDATION_BATCH_B_CLOSED.md) — Session 2729 handoff + Batch B close.
-6. [`docs/handoffs/SESSION_2728_TOOL_VALIDATION_BATCH_A_CLOSED.md`](docs/handoffs/SESSION_2728_TOOL_VALIDATION_BATCH_A_CLOSED.md) — Session 2728 handoff + Batch A close.
+1. [`docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md`](docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md) — **Session 2736 close.** All governance + code + tests + Rigby SIGN checkpoints in one place.
+2. [`docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md`](docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md) — 19-section §12 campaign record.
+3. [`docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md`](docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md) — first CDR + §16 wrap-up backlog.
+4. [`docs/EOS_RULES.md`](docs/EOS_RULES.md) — R1/R2/R3 live rules ratified this session.
 
 Pre-campaign anchors (unchanged):
 
-7. [`docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md`](docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md) — Playbook v0.1.0 ratification ledger.
-8. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified Playbook v0.1.0 body.
-9. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap.
+5. [`docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md`](docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md) — Rigby Tool Validation Campaign retrospective.
+6. [`docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md`](docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md) — Playbook v0.1.0 ratification ledger.
+7. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified Playbook v0.1.0 body.
+8. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap.
 
 ---
 
-## Session close summary (Session 2732)
+## Session close summary (Session 2736)
 
-- **Merged PRs:** #3019 (Batch D close — 3 tools, 11 defects, 45 regression tests, 3 observability additions, 2 bounded LRU refactors, 1 mgmt target), #3020 (docs cascade — INDEX + provenance refresh).
-- **Engineering campaign:** Batch D closed; **CAMPAIGN COMPLETE** (4 of 4 batches, **18 of 18 tools**).
-- **Docs cascade:** 3,037/3,037 Documents embedded; Rigby's RAG surface current at HEAD.
-- **Cross-tool regression:** 293/293 substantive tests pass across all 18 validation-2728 files + `test_td_autofill_safety.py` + `test_pa_tool_args_malformed.py`. Zero regressions.
-- **Total campaign delivery:** 57 defects patched, 270 regression tests added, 4 shared primitives extracted, 1 migration, ~35 observations deferred for combined-doc-pass sweep.
-- **Substrate observability layer complete** — every PA/Rigby substrate now emits a startup log declaring its state; misconfigured workers detectable in ≤30 seconds via log grep.
-- **Constitutional debt state:** unchanged from S2727 (CD-47 RESOLVED; CD-48/CD-49 v0.1.1 PATCH targets).
-- **Handoff + anchor updates:** this file + `docs/handoffs/SESSION_2732_TOOL_VALIDATION_CAMPAIGN_CLOSED.md`.
-- **PA worker restart** deferred to next session (Batches B + C + D patches loaded from repo but not yet in the running worker).
+- **Chapter closed**: §12 Knowledge Retrieval campaign shipped end-to-end. All 3 gaps closed via extension of shipped substrate — zero parallel abstractions, zero regression.
+- **Governance advances**: two Capability Discovery Records + three EOS rules + one graph fold — the CDR + Rule primitives are now first-class artifacts, not experimental patterns.
+- **Rigby-Claude collaboration**: the R1-governed SIGN cycle produced material improvements at every gate. Rule R1 proved itself in production use across 3 phase gates.
+- **Test discipline**: 23 acceptance tests written pre-implementation per R3; 28 S2728 regressions preserved; 51 tests total pass at HEAD.
+- **PA worker restart** deferred to next session (S2736 P1-P3.1 code shipped but not loaded into the running worker).
+- **Handoff + anchor updates:** this file + `docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md` + `docs/EOS_RULES.md` + CDR-001 + CDR-002 + graph §25.
 
 ---

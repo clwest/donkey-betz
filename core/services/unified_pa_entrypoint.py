@@ -74,15 +74,43 @@ from core.services.pa_identity import PA_IDENTITY  # noqa: E402
 # operators can distinguish "env unset (using code default)" from "env
 # set to 'true'" from "env set to some non-canonical value like 'yes'
 # that fell through to False".
-_pa_routing_env_raw = os.environ.get('PA_USE_FUNCTION_CALLING', '<unset>')
-_pa_routing_effective = bool(getattr(settings, 'PA_USE_FUNCTION_CALLING', False))
-logger.info(
-    "[PA_ROUTING_INIT] PA_USE_FUNCTION_CALLING env=%r effective=%s "
-    "→ routing_path=%s",
-    _pa_routing_env_raw,
-    _pa_routing_effective,
-    'fc' if _pa_routing_effective else 'keyword',
-)
+def _emit_pa_routing_init() -> None:
+    """Emit the ``[PA_ROUTING_INIT]`` startup log.
+
+    Extracted to a callable so tests can invoke it under
+    ``assertLogs`` (see acceptance test AT-7.1). Called once at module
+    import time (below) to preserve the S2728 Batch D substrate
+    observability behavior.
+
+    CDR-002 P1 extension: the log now includes ``rag_lane=LOCAL|PROD``
+    from ``core.services.rag_lane_selector.pick_lane()`` so an operator
+    can grep this one line to answer "which routing path AND which
+    RAG lane is this worker on?".
+    """
+    _pa_routing_env_raw = os.environ.get('PA_USE_FUNCTION_CALLING', '<unset>')
+    _pa_routing_effective = bool(getattr(settings, 'PA_USE_FUNCTION_CALLING', False))
+    # CDR-002 P1: import locally so this module is not import-blocked if
+    # the selector module has a transient issue.
+    try:
+        from core.services.rag_lane_selector import pick_lane, RAG_LANE_ENV_VAR
+        _rag_lane = pick_lane().value
+        _rag_lane_env_raw = os.environ.get(RAG_LANE_ENV_VAR, '<unset>')
+    except Exception as exc:  # pragma: no cover — defensive
+        _rag_lane = 'UNKNOWN'
+        _rag_lane_env_raw = f'<selector-error: {type(exc).__name__}>'
+
+    logger.info(
+        "[PA_ROUTING_INIT] PA_USE_FUNCTION_CALLING env=%r effective=%s "
+        "→ routing_path=%s rag_lane=%s rag_lane_env=%r",
+        _pa_routing_env_raw,
+        _pa_routing_effective,
+        'fc' if _pa_routing_effective else 'keyword',
+        _rag_lane,
+        _rag_lane_env_raw,
+    )
+
+
+_emit_pa_routing_init()
 
 # Deterministic memory intent detection patterns (Task D)
 _MEMORY_PATTERNS = [
@@ -1312,16 +1340,31 @@ class UnifiedPAEntrypoint:
             # `tools=none intent=X` heuristics. `tools=none` fires
             # legitimately for many intents; `routing_path` is unambiguous.
             _routing_path = 'fc' if getattr(settings, 'PA_USE_FUNCTION_CALLING', False) else 'keyword'
+            # CDR-002 P2 + P3 (AT-7.2, AT-11): per-turn observability of
+            # docs + embedding + agent-knowledge lane hits. Values are set
+            # in `_build_context` (reset at start to `False`, promoted to
+            # `True` on successful enrichment). Reading via `getattr(...)`
+            # is defensive — legacy code paths that reach
+            # `_emit_pa_task_summary` without first calling `_build_context`
+            # will see `False`.
+            _docs_hit = 'true' if getattr(self, '_pa_last_docs_hit', False) else 'false'
+            _embedding_hit = 'true' if getattr(self, '_pa_last_embedding_hit', False) else 'false'
+            _agent_knowledge_hit = 'true' if getattr(self, '_pa_last_agent_knowledge_hit', False) else 'false'
             logger.info(
                 "[PA_TASK_SUMMARY] trace_id=%s latency_ms=%d llm_iterations=%d "
                 "tool_calls=%d tools=%s history_turns=%d intent=%s "
-                "silent_fallback=%s routing_path=%s",
+                "silent_fallback=%s routing_path=%s "
+                "docs_context_hit=%s embedding_context_hit=%s "
+                "agent_knowledge_hit=%s",
                 trace_id, latency_ms,
                 len(tool_call_metadata) if tool_call_metadata else 1,
                 len(tool_names), ','.join(tool_names) or 'none',
                 len(self._conversation_history), intent,
                 'true' if silent_fallback else 'false',
                 _routing_path,
+                _docs_hit,
+                _embedding_hit,
+                _agent_knowledge_hit,
             )
 
             # Record learning readback event (Phase 1 + Phase 3 telemetry)
@@ -2930,12 +2973,103 @@ class UnifiedPAEntrypoint:
                 return intent
         return 'general'
 
+    def _retrieve_embedding_context(self, message: str) -> Dict[str, Any]:
+        """CDR-002 P2 (Gap 1): sync helper for embedding-lane retrieval.
+
+        Selects the RAG lane via the CDR-002 P1
+        ``rag_lane_selector.pick_lane()`` and invokes the appropriate
+        retrieval path:
+
+        - ``RagLane.LOCAL`` → ``core.rag.top_k(message, k=8, boost_hints=False)``
+          reads ``.rag/corpus.jsonl`` and returns list of dict rows.
+        - ``RagLane.PROD`` → ``ScopedRetrievalService.search(query=message, limit=8)``
+          reads ``Document + DocumentEmbedding`` via ORM and returns
+          list of ``RetrievalResult`` dataclasses.
+
+        Returns a normalized dict of shape::
+
+            {
+                'has_embeddings': bool,
+                'lane': 'LOCAL' | 'PROD',
+                'results': [
+                    {'path': str, 'title': str, 'snippet': str, ...},
+                    ...
+                ],
+            }
+
+        Called via ``asyncio.to_thread`` from ``_build_context`` with a
+        5s timeout wrapping the call. The method itself is synchronous —
+        the async guard lives at the call site.
+
+        Errors: does NOT catch its own exceptions. The caller
+        ``_build_context`` applies the ``_CONTEXT_INJECTION_ENV_ERRORS``
+        narrow-except allowlist per the D17-D21 discipline. Logic errors
+        (AttributeError, TypeError, KeyError, NameError) propagate
+        fail-loud so tests + prod logs see them.
+        """
+        from core.services.rag_lane_selector import pick_lane, RagLane
+        lane = pick_lane()
+
+        # CDR-002 §16 P2.1 (Rigby SIGN O5): require a citable `path` for
+        # `has_embeddings=True`. Prevents the case where an embedding-lane
+        # hit is reported but the result contributes nothing to
+        # `merged_unique_paths` (which filters on truthy path). Keeps
+        # `has_embeddings`, `results`, and `merged_unique_paths` all
+        # aligned on the same "citable result" concept.
+        if lane == RagLane.LOCAL:
+            from core.rag import top_k
+            rows = top_k(message, k=8, boost_hints=False)
+            citable = [r for r in rows if r.get('file')]
+            return {
+                'has_embeddings': bool(citable),
+                'lane': 'LOCAL',
+                'results': [
+                    {
+                        'path': r['file'],
+                        'title': r['file'].rsplit('/', 1)[-1] or r['file'],
+                        'snippet': ' '.join(r.get('text', '').split())[:400],
+                        'chunk_id': r.get('chunk_id', ''),
+                    }
+                    for r in citable
+                ],
+            }
+
+        # PROD lane
+        from core.services.scoped_retrieval import get_scoped_retrieval_service
+        service = get_scoped_retrieval_service()
+        results = service.search(query=message, limit=8)
+        citable = [r for r in results if getattr(r, 'path', None)]
+        return {
+            'has_embeddings': bool(citable),
+            'lane': 'PROD',
+            'results': [
+                {
+                    'path': r.path,
+                    'title': r.title,
+                    'snippet': (r.content_snippet or '')[:400],
+                    'document_id': r.document_id,
+                    'similarity_score': r.similarity_score,
+                }
+                for r in citable
+            ],
+        }
+
     async def _build_context(
         self,
         message: str,
         user_context: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Build full context for the request."""
+        # CDR-002 P2/P3 telemetry: reset per-turn context-hit flags. Read
+        # by the [PA_TASK_SUMMARY] emit for observability of docs +
+        # embedding + agent-knowledge enrichment behavior. Extended by
+        # the S943 docs_context block, the CDR-002 P2 embedding-lane
+        # block, and the CDR-002 P3 (Option 1) shared knowledge-service
+        # block, all below.
+        self._pa_last_docs_hit = False
+        self._pa_last_embedding_hit = False
+        self._pa_last_agent_knowledge_hit = False
+
         context = {
             'user_id': self.user.id,  # type: ignore[attr-defined]
             'username': self.user.username,  # type: ignore[attr-defined]
@@ -3044,12 +3178,94 @@ class UnifiedPAEntrypoint:
                 )
                 if docs_context.get('has_docs'):
                     context['docs_context'] = docs_context
+                    self._pa_last_docs_hit = True
                     logger.debug(f"[Session 943] PA docs context: {len(docs_context.get('relevant_docs', []))} docs")
             except asyncio.TimeoutError:
                 logger.warning("Docs context injection timed out after 5s — skipping")
             except _CONTEXT_INJECTION_ENV_ERRORS as e:
                 # Session 2730 F-CI-1: env errors log + skip; logic errors propagate
                 logger.warning(f"Docs context env error ({type(e).__name__}): {e}")
+
+        # CDR-002 P2 (Gap 1): Embedding-lane enrichment via
+        # ScopedRetrievalService (PROD lane) or core.rag.top_k (LOCAL lane).
+        # Complements the S943 docs-lane enrichment above with the
+        # DocumentEmbedding lane so PA turns can auto-retrieve handoffs /
+        # research artifacts / CDRs not surfaced by `_index.json`. Lane
+        # selected at runtime via CDR-002 P1 selector
+        # `core.services.rag_lane_selector.pick_lane()`.
+        # 5s async timeout + narrow-except mirrors the docs block.
+        try:
+            embedding_context = await asyncio.wait_for(
+                asyncio.to_thread(self._retrieve_embedding_context, message),
+                timeout=5.0,
+            )
+            if embedding_context and embedding_context.get('has_embeddings'):
+                # Compute cross-lane dedup (merged unique paths across docs
+                # + embedding lanes). AT-3 asserts this property. If the
+                # same path is surfaced by both lanes, it appears once in
+                # `merged_unique_paths`.
+                docs_paths = {
+                    d.get('path', '')
+                    for d in (context.get('docs_context', {}) or {}).get('relevant_docs', [])
+                    if d.get('path')
+                }
+                embedding_paths = {
+                    r.get('path', '')
+                    for r in embedding_context.get('results', [])
+                    if r.get('path')
+                }
+                embedding_context['merged_unique_paths'] = sorted(docs_paths | embedding_paths)
+                context['relevant_knowledge'] = embedding_context
+                self._pa_last_embedding_hit = True
+                logger.debug(
+                    "[CDR-002 P2] PA embedding context: lane=%s %d results "
+                    "(%d unique across lanes)",
+                    embedding_context.get('lane'),
+                    len(embedding_context.get('results') or []),
+                    len(embedding_context['merged_unique_paths']),
+                )
+        except asyncio.TimeoutError:
+            logger.warning("Embedding context injection timed out after 5s — skipping")
+        except _CONTEXT_INJECTION_ENV_ERRORS as e:
+            # CDR-002 P2 (Gap 1) narrow-except discipline — env errors log
+            # + skip; logic errors (AttributeError, TypeError, KeyError,
+            # etc.) propagate fail-loud. Mirrors S2730 F-CI-1 + S1234
+            # D17-D21.
+            logger.warning(f"Embedding context env error ({type(e).__name__}): {e}")
+
+        # CDR-002 P3 (Gap 3, Option 1): shared knowledge-service invocation.
+        # Closes the PA/BaseAgent substrate asymmetry named in CDR-002 §7 —
+        # the same `get_relevant_knowledge_for_task` used by
+        # `BaseAgent._get_relevant_knowledge_for_task` (S400) is now the
+        # single source of retrieval semantics. Adds three phases of
+        # agent-side signal (spider semantic + AgentKnowledgeSource +
+        # SharedKnowledge) to the PA turn context — complementary to the
+        # docs-index lane (P2 upstream) and embedding lane (P2 above).
+        # 5s async timeout + narrow-except mirrors the pattern above.
+        try:
+            from core.services.relevant_knowledge_service import (
+                get_relevant_knowledge_for_task,
+            )
+            agent_knowledge = await asyncio.wait_for(
+                asyncio.to_thread(get_relevant_knowledge_for_task, message, 5),
+                timeout=5.0,
+            )
+            if agent_knowledge:
+                context['agent_knowledge'] = {
+                    'has_agent_knowledge': True,
+                    'items': agent_knowledge,
+                    'count': len(agent_knowledge),
+                }
+                self._pa_last_agent_knowledge_hit = True
+                logger.debug(
+                    "[CDR-002 P3] PA agent knowledge: %d items", len(agent_knowledge),
+                )
+        except asyncio.TimeoutError:
+            logger.warning("Agent knowledge injection timed out after 5s — skipping")
+        except _CONTEXT_INJECTION_ENV_ERRORS as e:
+            # CDR-002 P3 (Gap 3) narrow-except discipline — env errors log
+            # + skip; logic errors propagate fail-loud.
+            logger.warning(f"Agent knowledge env error ({type(e).__name__}): {e}")
 
         # Workspace context (codebase structure from SKIN layer)
         try:

@@ -711,3 +711,107 @@ first chain to complete is §1 Mission Completion (S effort, 11 of
 becomes second, blocked on discovery pass per F2 tracked
 uncertainty. Chris ratification is the gate to any implementation
 begin.**
+
+---
+
+## §25. Post-CDR refinements — §16 + §12 (append-only, 2026-07-09)
+
+Two Capability Discovery Records were authored and Chris-ratified
+after §1–§24 landed. Both materially refined chain scoring based
+on repository evidence. Append-only per playbook §14 discipline:
+§1–§24 bodies remain verbatim; readers cross-reference §25 for
+the latest verdict on §16 and §12.
+
+### §25.1 CDR-001 — §16 Notification Delivery
+
+Full record: `docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md`.
+
+- **Score refinement.** §16 completeness at HEAD `2c2c6cc2`:
+  8/15 (Claude draft) or 6/15 (§23 F2 refinement) → **12/15**
+  (CDR-001 §5 evidence-based).
+- **Missing-links refinement.** Item 14 3-item list from CDR-001 §7
+  supersedes the graph §16 Item 14 4-item list. Add Gap 4 from
+  CDR-001 §12.3 (Rigby's cross-channel dispatch contract
+  normalization) → **4-item list at HEAD**.
+- **Substrate confirmed shipped:** DocsContextBuilder-style receivers
+  for Expo (`signals_push_notifications.on_critical_attention_item`
+  S742-era PR #1458), Discord (S2735 PR #3038), Web Push (S2735
+  PR #3040), all on `HumanAttentionItem.post_save` with
+  `transaction.on_commit` + Celery task pattern. `HumanPreference`
+  model (5 gate fields) + `_pref_gates_pass` shared helper.
+- **§20 Tier reclassification.** §16 removed from Tier A (HIGHEST
+  leverage); reclassified to Tier B / wrap-up bundle. 4 remaining
+  items = 1–2 session wrap-up PR bundle, NOT a campaign.
+- **§21 recommendation supersession.** F3's "§16 becomes second,
+  blocked on discovery pass" is superseded — §16 no longer needs
+  a campaign; wrap-up bundle queued behind the next campaign.
+- **Canonical fanout pattern.** The receiver-driven pattern
+  (`post_save` on unified event → `transaction.on_commit` →
+  Celery task → re-load + re-gate → adapter) is the platform's
+  ratified fanout shape. Any future chain proposing "fan-out"
+  reads CDR-001 §2.3 as the reference implementation.
+
+### §25.2 CDR-002 — §12 Knowledge Retrieval
+
+Full record: `docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md`.
+
+- **Trigger refinement.** §12 Item 4 (Trigger) — add: "PA turn
+  `_build_context` auto-invocation via S773
+  `PAKnowledgeInjector.get_context_for_query` (3s timeout,
+  keyword-triggered system-state injection) + S943
+  `DocsContextBuilder.build_context_for_agent` (5s timeout,
+  docs-index lane)."
+- **Failure-mode refinement.** §12 Item 10 — replace "PA turn
+  does NOT auto-invoke either lane (retrieval is tool-call-only
+  — asymmetry with `BaseAgent`)" with "PA turn auto-invokes
+  keyword-triggered system-state (S773) + docs-index lane
+  (S943); PA turn does NOT auto-invoke the embedding lane
+  (`DocumentEmbedding` + pgvector). Two operational gates limit
+  invocation: availability gate at `unified_pa_entrypoint.py:459-476`
+  and early-return command paths at `:945-975`."
+- **Missing-links refinement.** Item 14 — replace 2-item list
+  ("(a) runtime lane selector, (b) PA symmetry") with 3-item
+  list from CDR-002 §7:
+  - Gap 1 — PA turn embedding-lane enrichment (M).
+  - Gap 2 — runtime lane selector LOCAL vs PROD (S-M).
+  - Gap 3 — PA/BaseAgent asymmetry closure OR design doc (S).
+- **Score refinement.** §12 completeness 11/15 → **12/15**
+  (CDR-002 §5).
+- **Substrate confirmed shipped:** DocsContextBuilder (S798+S943,
+  598 LOC), KnowledgeFirstRouter (S744, 729 LOC),
+  ScopedRetrievalService (S786+S949, 712 LOC), BaseAgent hook
+  (base_agent.py:1435), plus PAKnowledgeInjector (S773) —
+  ~2,700+ LOC of already-shipped substrate. Two of the four
+  are Rigby-SIGN-confirmed (Docs + KnowledgeFirstRouter); the
+  other two carry a "cited-but-not-SIGN-verified" annotation
+  discharged in P0.
+- **Canonical PA turn enrichment surface.** The
+  `UnifiedPAEntrypoint._build_context` sequence is the platform's
+  canonical "auto-enrichment on every conversation" hook. Any
+  future chain proposing "auto-invoke retrieval" should extend
+  this hook, not parallel it.
+
+### §25.3 Governance impact
+
+- **Rule R2 (CDR discipline) discharged twice.** CDR-001 + CDR-002
+  vindicate the CDR primitive across two consecutive Category A
+  investigations. Playbook v0.1.1 methodology chapter should cite
+  both when defining the pattern.
+- **Rule R1 (Tool Autonomy Principle) proved out.** CDR-002 §12
+  reconciliation is the reference case: Rigby's autonomy discovered
+  PAKnowledgeInjector (S773) that Claude's grep missed, precisely
+  because Claude did NOT prescribe grep patterns for her pass.
+- **Graph scoring discipline.** Two consecutive graph "MISSING"
+  claims (§16 + §12) proved to be under-credited shipped substrate.
+  Future campaign selection MUST run Category A + optionally
+  produce a CDR before treating a graph "MISSING" as a build
+  directive. Cross-referenced: CDR-001 §11.1 + CDR-002 §11.1.
+
+### §25.4 Active campaign
+
+**§12 Knowledge Retrieval** — Chris ratified 2026-07-09.
+Campaign SIGN pin `pa-5c76b58f70654409` (title
+`campaign-s2736-knowledge-retrieval`). P0 begins immediately:
+acceptance tests + independent substrate verification. P1-P4 per
+CDR-002 §10.4. Any subsequent update to §12 in this graph MUST
+cite CDR-002 (and any CDR-003+ that emerges) as authority.
