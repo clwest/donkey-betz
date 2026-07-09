@@ -24,6 +24,30 @@ def _d14_resolve_min_session(raw):
         return None
     return v if v > 0 else None
 
+
+def _resolve_originating_session(raw):
+    """Session 2728 F-SD-1 — LLM-autofill guard for the originating_session
+    filter on search_docs.
+
+    Same pattern as `_d14_resolve_min_session` for kb_tool's min_session. The
+    LLM autofills `originating_session=0` and the pre-patch handler applied
+    a "restrict to session 0" filter, which silently returned zero results
+    for every RAG query the LLM did not explicitly session-scope. This was
+    documented in memory rule `feedback_ratification_workflow_gotchas` with
+    the workaround "use kb_tool instead" — the workaround becomes obsolete
+    once this guard is in place.
+
+    Contract: return the int only when > 0; otherwise None (no filter).
+    Chris ratified the positive-only shape at Batch A tool 3 close.
+    """
+    if raw is None:
+        return None
+    try:
+        v = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return v if v > 0 else None
+
 """
 Tool Dispatcher - Centralized Tool Execution with No Silent Failures
 =====================================================================
@@ -4123,13 +4147,33 @@ class OpsHandlersMixin:
                 'by_agent_type': by_agent_type,
             }
 
-            # 'list' includes the top-50 agent preview; 'stats' is aggregates only
+            # 'list' includes the agent preview; 'stats' is aggregates only.
+            # Session 2728 F-AI-2 — honor the caller's `limit` up to the hard
+            # cap so the schema-declared default (20) is applied instead of
+            # the prior hard-coded `[:50]` slice. When the caller-requested
+            # limit exceeds the cap, surface `limit_capped/requested_limit/
+            # effective_limit/hard_max` (mirrors F-D-5 / F-KB-1 / F-S-3
+            # pattern approved at earlier Batch A tools).
             if action == 'list':
+                _AGENT_LIST_HARD_MAX = 50
+                _requested_limit = payload.get('limit', 20)
+                try:
+                    _requested_limit_int = int(_requested_limit)
+                except (TypeError, ValueError):
+                    _requested_limit_int = 20
+                _effective_limit = min(max(_requested_limit_int, 1), _AGENT_LIST_HARD_MAX)
+                _limit_capped = _requested_limit_int > _AGENT_LIST_HARD_MAX
                 agent_list = list(
                     all_agents.values('name', 'agent_type', 'specialization', 'effectiveness_score')
-                    .order_by('-effectiveness_score', 'name')[:50]
+                    .order_by('-effectiveness_score', 'name')[:_effective_limit]
                 )
                 result['agents'] = agent_list
+                result['limit'] = _effective_limit
+                if _limit_capped:
+                    result['limit_capped'] = True
+                    result['requested_limit'] = _requested_limit_int
+                    result['effective_limit'] = _effective_limit
+                    result['hard_max'] = _AGENT_LIST_HARD_MAX
 
             return result
 
@@ -5223,7 +5267,28 @@ class OpsHandlersMixin:
     def _handle_kb_browse(self, tool_name, payload, user_id, trace_id):
         """R2-6: Browse KB documents, embedding collections, and chunk counts."""
         action = payload.get('action', 'stats')
-        limit = min(int(payload.get('limit', 20)), 50)
+        # Session 2728 F-KB-1 — surface the hard cap on `limit` explicitly so
+        # Rigby knows when a returned set is a bounded slice, not the full
+        # result. Mirrors the F-D-5 (deliverable_tool) and F-S-3 (session_tool)
+        # patterns approved earlier in Batch A. Applied to all list-shaped
+        # actions: documents, chunks, search_embeddings, semantic_search.
+        _KB_HARD_MAX = 50
+        _requested_limit = payload.get('limit', 20)
+        try:
+            _requested_limit_int = int(_requested_limit)
+        except (TypeError, ValueError):
+            _requested_limit_int = 20
+        limit = min(_requested_limit_int, _KB_HARD_MAX)
+        _limit_capped = _requested_limit_int > _KB_HARD_MAX
+
+        def _apply_limit_envelope(resp: Dict[str, Any]) -> Dict[str, Any]:
+            """Attach limit-cap fields when caller exceeded the hard maximum."""
+            if _limit_capped:
+                resp['limit_capped'] = True
+                resp['requested_limit'] = _requested_limit_int
+                resp['effective_limit'] = limit
+                resp['hard_max'] = _KB_HARD_MAX
+            return resp
 
         try:
             if action == 'stats':
@@ -5327,7 +5392,7 @@ class OpsHandlersMixin:
                 qs = qs.order_by('-is_pinned', '-retrieval_boost', '-created_at')
 
                 docs = qs[:limit]
-                return {
+                return _apply_limit_envelope({
                     'action': 'documents',
                     'count': len(docs),
                     'applied_filters': {
@@ -5349,7 +5414,7 @@ class OpsHandlersMixin:
                         'chunk_count': d.chunk_count,
                         'created_at': d.created_at.isoformat() if hasattr(d, 'created_at') and d.created_at else None,
                     } for d in docs],
-                }
+                })
 
             elif action == 'chunks':
                 doc_id = payload.get('document_id', '') or payload.get('id', '')
@@ -5357,7 +5422,7 @@ class OpsHandlersMixin:
                     return {'error': 'document_id required for chunks action'}
                 from content.models import DocumentEmbedding
                 chunks = DocumentEmbedding.objects.filter(document_id=doc_id).order_by('chunk_index')[:limit]
-                return {
+                return _apply_limit_envelope({
                     'action': 'chunks',
                     'document_id': doc_id,
                     'count': len(chunks),
@@ -5367,7 +5432,7 @@ class OpsHandlersMixin:
                         'text_preview': c.chunk_text[:300],
                         'has_embedding': c.embedding is not None if hasattr(c, 'embedding') else None,
                     } for c in chunks],
-                }
+                })
 
             elif action == 'search_embeddings':
                 query = payload.get('query', '').strip()
@@ -5384,7 +5449,7 @@ class OpsHandlersMixin:
                         DQ(content_text__icontains=query) | DQ(content_title__icontains=query)
                     )
                 qs = qs.order_by('-created_at')[:limit]
-                return {
+                return _apply_limit_envelope({
                     'action': 'search_embeddings',
                     'count': len(qs),
                     'results': [{
@@ -5395,7 +5460,7 @@ class OpsHandlersMixin:
                         'source_system': e.source_system,
                         'created_at': e.created_at.isoformat() if hasattr(e, 'created_at') and e.created_at else None,
                     } for e in qs],
-                }
+                })
 
             elif action == 'semantic_search':
                 # Session 1234 D13 — native vector similarity over
@@ -5459,7 +5524,7 @@ class OpsHandlersMixin:
                     authority_weighted=f_authority_weighted,
                 )
 
-                return {
+                return _apply_limit_envelope({
                     'action': 'semantic_search',
                     'count': len(chunks),
                     'applied_filters': {
@@ -5491,7 +5556,7 @@ class OpsHandlersMixin:
                         'authority_weight': c.get('authority_weight'),
                         'weighted_score': c.get('weighted_score'),
                     } for c in chunks],
-                }
+                })
 
             return {'error': f'Unknown kb_tool action: {action}. Valid: stats, documents, chunks, search_embeddings, semantic_search'}
 
@@ -5525,16 +5590,32 @@ class OpsHandlersMixin:
             max_chars = 6000
 
         # Session 1145 P2: optional originating_session filter.
+        # Session 2728 F-SD-1: LLM-autofill guard. Prior handler applied a
+        # "restrict to originating_session=0" filter whenever GPT-5.2 autofilled
+        # the optional integer with 0 — the same LLM-autofill pattern documented
+        # in memory rule `feedback_llm_autofills_boolean_params_with_false` for
+        # booleans. Autofilled zero filter silently returned zero results and
+        # crystallized memory rule `feedback_ratification_workflow_gotchas`
+        # (workaround: "use kb_tool instead"). `_resolve_originating_session`
+        # applies the same positive-only guard kb_tool uses for min_session
+        # via `_d14_resolve_min_session`. A non-int payload still returns the
+        # typed error (only guard non-int → error remains); int 0 or negative
+        # now falls through as no-filter, matching the schema description
+        # "Optional. Restrict results to chunks from docs whose originating
+        # session matches" (emphasis on Optional).
         originating_session_raw = payload.get('originating_session')
         originating_session: Optional[int] = None
         if originating_session_raw is not None:
+            # Reject non-int inputs with a typed error (unchanged behavior).
             try:
-                originating_session = int(originating_session_raw)
+                _tmp = int(originating_session_raw)
             except (TypeError, ValueError):
                 return {
                     'error': 'originating_session must be an integer (e.g. 1142)',
                     'query': query,
                 }
+            # Apply positive-only guard for int inputs (autofill defense).
+            originating_session = _resolve_originating_session(originating_session_raw)
 
         try:
             from core.rag import top_k, CORPUS_PATH
