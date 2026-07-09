@@ -19,7 +19,7 @@ import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useUnifiedStore } from '@/stores/unifiedStore'
 import { usePAStore } from '@/stores/paStore'
-import { useWebSocket } from '@/hooks/useWebSocket'
+import { useWebSocket, useSystemEvents } from '@/hooks/useWebSocket'
 import PAConversationSidebar from '@/components/PAConversationSidebar'
 import { ChatMarkdown } from '@/components/ChatMarkdown'
 import AsyncJobTracker from '@/components/AsyncJobTracker'
@@ -937,6 +937,16 @@ export default function CommandCenterPage() {
     queryFn: () => orchestrationApi.activeWork(),
     enabled: isAuthenticated,
     refetchInterval: 30000,
+  })
+
+  // Session 2734 — Capability Chain §1 Mission Completion:
+  // subscribe to system events so a mission verdict pushed from
+  // ``core/signals/mission_verdict_signals.py`` immediately refreshes
+  // the NowHub active-work view instead of waiting for the 30s poll.
+  useSystemEvents({
+    onMissionVerdict: () => {
+      queryClient.invalidateQueries({ queryKey: ['active-work'] })
+    },
   })
 
   // System control state

@@ -282,6 +282,7 @@ export type SystemEventType =
   | 'dream_generated'
   | 'level_up'
   | 'hive_mind_started'
+  | 'mission_verdict'
   | 'system_status'
   | 'pong'
   | 'error'
@@ -339,6 +340,17 @@ export interface HiveMindEvent extends SystemEvent {
   }
 }
 
+// Session 2734 — Capability Chain §1 Mission Completion
+export interface MissionVerdictEvent extends SystemEvent {
+  type: 'mission_verdict'
+  data: {
+    mission_id: string | null
+    verdict: string
+    run_id: string | null
+    label: string
+  }
+}
+
 export interface SystemEventHandlers {
   onAgentExecutionComplete?: (event: AgentExecutionEvent) => void
   onAgentExecutionFailed?: (event: AgentExecutionEvent) => void
@@ -350,6 +362,7 @@ export interface SystemEventHandlers {
   onDreamGenerated?: (event: DreamEvent) => void
   onLevelUp?: (event: SystemEvent) => void
   onHiveMindStarted?: (event: HiveMindEvent) => void
+  onMissionVerdict?: (event: MissionVerdictEvent) => void
   onAnyEvent?: (event: SystemEvent) => void
 }
 
@@ -406,6 +419,9 @@ export function useSystemEvents(handlers: SystemEventHandlers = {}) {
         break
       case 'hive_mind_started':
         handlers.onHiveMindStarted?.(event as HiveMindEvent)
+        break
+      case 'mission_verdict':
+        handlers.onMissionVerdict?.(event as MissionVerdictEvent)
         break
     }
   }, [handlers])

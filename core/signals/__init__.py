@@ -58,6 +58,11 @@ from .rigby_delegation_signals import (
     connect_rigby_delegation_signals,
 )
 
+from .mission_verdict_signals import (
+    broadcast_mission_verdict,
+    connect_mission_verdict_signals,
+)
+
 __all__ = [
     # Trigger signals
     'evaluate_triggers_for_spider_data',
@@ -95,4 +100,7 @@ __all__ = [
     # Session 1250 PR 8 — Rigby Mission Delegation lifecycle signals
     'on_delegation_lifecycle',
     'connect_rigby_delegation_signals',
+    # Session 2734 — Capability Chain §1 Mission Completion WS broadcast
+    'broadcast_mission_verdict',
+    'connect_mission_verdict_signals',
 ]
