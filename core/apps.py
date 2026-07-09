@@ -174,6 +174,19 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Body system degradation signals not available
 
+        # Session 2734 — Platform Closure Category B: Capability Chain
+        # §1 Item 9 HAI on mission verdict. Second post_save receiver
+        # on OpsRunEvent (distinct dispatch_uid from the WS-broadcast
+        # receiver). Filters on mission-domain rows with label
+        # 'verdict_issued:rejected' or 'verdict_issued:deferred' and
+        # dispatches HumanAttentionBridge.create_mission_verdict_attention.
+        # Kill switch: settings.MISSION_VERDICT_HAI_ENABLED (default True).
+        try:
+            from core.signals import connect_mission_verdict_attention_signals
+            connect_mission_verdict_attention_signals()
+        except ImportError:
+            pass  # Mission verdict attention signals not available
+
     def _should_run_startup_check(self):
         """Determine if we should run the startup health check"""
         # Check if DATABASE_AUDIT_ON_STARTUP is enabled
