@@ -191,6 +191,23 @@ class SystemEventsConsumer(AsyncWebsocketConsumer):
             "timestamp": event.get("timestamp")
         }))
 
+    # ========== Session 2734: Mission Completion Chain §1 ==========
+
+    async def mission_verdict(self, event):
+        """A MissionRunner emitted a terminal verdict.
+
+        Fired by ``core/signals/mission_verdict_signals.py`` post_save
+        receiver on ``OpsRunEvent(label='verdict_issued:*')``. Frontend
+        CommandCenter NowHub invalidates the ``['active-work']`` query
+        on receipt so the mission's ``run.status`` transition is
+        visible without waiting for the 15s poll.
+        """
+        await self.send(text_data=json.dumps({
+            "type": "mission_verdict",
+            "data": event.get("data", {}),
+            "timestamp": event.get("timestamp")
+        }))
+
     # ========== Session 768: Orchestration Events ==========
 
     async def orchestration_started(self, event):
