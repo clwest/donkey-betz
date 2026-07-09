@@ -125,6 +125,17 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # HAI→Discord signals not available
 
+        # Session 2735 — HAI Delivery Fanout Extension PR 2:
+        # HumanAttentionItem.post_save → Web Push (browser) dispatch
+        # for urgency='critical' items on the target user's active
+        # PushSubscription rows. Same on_commit+Celery pattern as PR 1.
+        # Kill switch: settings.HAI_WEBPUSH_DISPATCH_ENABLED (default
+        # True). Independent of Discord + Expo kill switches.
+        try:
+            import core.signals_webpush_notifications  # noqa: F401
+        except ImportError:
+            pass  # HAI→Web Push signals not available
+
         # Session 1115 batch-7: Connect Document + NarrativeShift signals so
         # process_document_async and trigger_content_from_shift fire when
         # their source rows are saved.
