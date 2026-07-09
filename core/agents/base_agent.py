@@ -1433,134 +1433,27 @@ Use delegation when you need expertise outside your specialty. For example:
             return []
 
     def _get_relevant_knowledge_for_task(self, task: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """Retrieve relevant learned knowledge for the current task.
+
+        Session 400 original substrate; extracted to
+        ``core.services.relevant_knowledge_service`` in CDR-002 P3
+        (Option 1 — shared service extraction) so both BaseAgent
+        and ``UnifiedPAEntrypoint._build_context`` consume the same
+        retrieval semantics. See that module for the three-phase
+        contract (spider semantic + AgentKnowledgeSource +
+        SharedKnowledge) and the narrow-except allowlist that
+        replaced the pre-P3 broad ``except Exception`` sites.
+
+        This wrapper preserves the S400 call-signature and
+        return-shape contract with the three self call-sites (grep-
+        verified at HEAD: ``base_agent.py:1583, 1777, 2219`` — line
+        numbers drift with edits, so grep for ``self._get_relevant_knowledge_for_task(``
+        rather than trust the annotations). Do not add logic here —
+        keep the shared service the single source of retrieval
+        semantics.
         """
-        Session 400: Retrieve relevant learned knowledge for the current task.
-
-        This queries AgentKnowledgeSource for knowledge that might help with
-        the current task, including:
-        - Knowledge from this agent's past executions
-        - Knowledge shared by other agents
-        - Spider-derived intelligence
-
-        Uses a hybrid approach:
-        1. First tries semantic search on spider data (embeddings)
-        2. Falls back to keyword matching on AgentKnowledgeSource
-
-        Args:
-            task: The current task to find relevant knowledge for
-            limit: Maximum knowledge items to retrieve
-
-        Returns:
-            List of relevant knowledge dicts with title, summary, source
-        """
-        results = []
-
-        # Try semantic search on spider data first
-        # Session 434: Was disabled due to slow on-the-fly embedding generation
-        # Session 452: RE-ENABLED - Celery task now pre-generates embeddings (~20% coverage)
-        # Embeddings are generated every 10 min by backfill_spider_embeddings task
-        ENABLE_SEMANTIC_SEARCH = True  # Re-enabled with pre-generated embeddings
-
-        if ENABLE_SEMANTIC_SEARCH:
-            try:
-                from core.services.spider_semantic_search import get_spider_semantic_search
-                search = get_spider_semantic_search()
-                # Session 468: Use pre-computed embeddings to avoid on-the-fly generation
-                # This is MUCH faster than semantic_search() which generates embeddings
-                # for every spider data entry on each call
-                semantic_results = search.semantic_search_with_db_embeddings(task, limit=3)
-
-                for sr in semantic_results:
-                    results.append({
-                        'source_agent': 'SpiderNetwork',
-                        'title': sr.title[:60] if sr.title else 'Spider Intelligence',
-                        # Session 483: SemanticSearchResult has 'description', not 'content'
-                        'summary': sr.description[:200] if sr.description else '',
-                        'knowledge_type': 'spider_data',
-                        'confidence': sr.similarity,
-                        'spider_sources': [sr.source] if sr.source else [],
-                    })
-            except Exception as e:
-                logger.debug(f"Semantic search not available: {e}")
-
-        # Also query AgentKnowledgeSource for learned knowledge
-        try:
-            from core.models_unified_system import AgentKnowledgeSource
-            from django.db.models import Q
-
-            # Extract keywords from task for matching
-            task_lower = task.lower()
-            keywords = [w for w in task_lower.split() if len(w) > 3][:5]
-
-            # Build query - look for knowledge matching task keywords
-            query = Q(is_active=True)
-
-            # Add keyword filters
-            keyword_q = Q()
-            for keyword in keywords:
-                keyword_q |= Q(title__icontains=keyword)
-                keyword_q |= Q(summary__icontains=keyword)
-
-            if keywords:
-                query &= keyword_q
-
-            # Query for relevant knowledge, prioritize by confidence and freshness
-            remaining_limit = limit - len(results)
-            if remaining_limit > 0:
-                knowledge_items = AgentKnowledgeSource.objects.filter(query).order_by(
-                    '-confidence_score',
-                    '-freshness_score',
-                    '-last_updated_at'
-                )[:remaining_limit]
-
-                for ks in knowledge_items:
-                    results.append({
-                        'source_agent': ks.agent.name if ks.agent else 'Unknown',
-                        'title': ks.title[:60] if ks.title else '',
-                        'summary': ks.summary[:300] if ks.summary else '',
-                        'knowledge_type': ks.knowledge_type,
-                        'confidence': ks.confidence_score,
-                        'spider_sources': ks.source_spider_names or [],
-                    })
-
-        except Exception as e:
-            logger.warning(f"Failed to retrieve agent knowledge: {e}")
-
-        # Session 1085: Also query SharedKnowledge and track consumption
-        try:
-            from core.models_unified_system import SharedKnowledge
-            from django.db.models import F
-
-            remaining = limit - len(results)
-            if remaining > 0:
-                task_lower = task.lower()
-                sk_keywords = [w for w in task_lower.split() if len(w) > 3][:3]
-                sk_query = SharedKnowledge.objects.filter(effectiveness_score__gte=0.5)
-                if sk_keywords:
-                    from django.db.models import Q
-                    kw_q = Q()
-                    for kw in sk_keywords:
-                        kw_q |= Q(title__icontains=kw) | Q(description__icontains=kw)
-                    sk_query = sk_query.filter(kw_q)
-
-                for sk in sk_query.order_by('-effectiveness_score')[:remaining]:
-                    results.append({
-                        'source_agent': sk.source_agent,
-                        'title': sk.title[:60] if sk.title else '',
-                        'summary': sk.description[:300] if sk.description else '',
-                        'knowledge_type': sk.knowledge_type,
-                        'confidence': sk.effectiveness_score,
-                        'spider_sources': [],
-                    })
-                    # Track that this knowledge was consumed
-                    SharedKnowledge.objects.filter(id=sk.id).update(applied_count=F('applied_count') + 1)
-        except Exception as e:
-            logger.debug(f"SharedKnowledge query failed (non-critical): {e}")
-
-        if results:
-            logger.debug(f"Found {len(results)} relevant knowledge items for task")
-
-        return results[:limit]
+        from core.services.relevant_knowledge_service import get_relevant_knowledge_for_task
+        return get_relevant_knowledge_for_task(task, limit=limit)
 
     def _get_relevant_docs_for_task(self, task: str, limit: int = 3) -> List[Dict[str, Any]]:
         """
