@@ -4800,8 +4800,19 @@ Only describe features and capabilities that actually exist. Never fabricate con
 
         # Add the data to analyze
         # Session 1006: Raised from 3000 → 8000; tool results were losing most of their data
+        # Session 2730 F-CI-10: log WARNING on 8000-char truncation so
+        # operators can spot tool_results that are getting cut off before
+        # the analytical LLM sees them. Silent truncation with no signal
+        # was the anti-pattern surfaced across the whole context injection
+        # pipeline (see F-CI-3 for the enrichment-section analog).
         tool_str = str(tool_result)
-        if len(tool_str) > 8000:
+        _tool_str_original_len = len(tool_str)
+        if _tool_str_original_len > 8000:
+            logger.warning(
+                "analytical prompt: tool_result truncated %d → 8000 chars "
+                "(intent=%s) — LLM sees only the first 8000 chars",
+                _tool_str_original_len, intent,
+            )
             tool_str = tool_str[:8000] + '...'
 
         parts.append(f'\n=== DATA TO ANALYZE ===\nUser asked: "{message}"\nTool returned: {tool_str}')
