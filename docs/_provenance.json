@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-09T14:12:59+00:00",
+    "generated": "2026-07-09T15:32:59+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "47b40d5b8833",
-    "doc_count": 2487,
-    "commit_count": 7857,
+    "git_head": "7ded646c5001",
+    "doc_count": 2491,
+    "commit_count": 7866,
     "confidence_breakdown": {
-      "HIGH": 1595,
-      "MEDIUM": 392,
+      "HIGH": 1597,
+      "MEDIUM": 394,
       "LOW": 5,
       "UNKNOWN": 495
     },
@@ -2541,9 +2541,10 @@
         2707,
         2726,
         2727,
-        2731
+        2731,
+        2732
       ],
-      "commit_count": 1280,
+      "commit_count": 1281,
       "prs": [
         10,
         11,
@@ -7397,9 +7398,10 @@
         2707,
         2726,
         2727,
-        2731
+        2731,
+        2732
       ],
-      "commit_count": 236,
+      "commit_count": 237,
       "prs": [
         2213,
         2219,
@@ -19102,6 +19104,32 @@
       "first_commit_subject": "docs(session-2731-close): handoff + 00-START rewrite for Batch C close",
       "sessions_touched": [
         2731
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_2732_TOOL_VALIDATION_CAMPAIGN_CLOSED.md": {
+      "originating_session": 2732,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "7b342c0d",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "docs(session-2732-close): campaign-close handoff + 00-START rewrite",
+      "sessions_touched": [
+        2732
+      ],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md": {
+      "originating_session": 2733,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "29d5d5ee",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "docs(session-2733): post-campaign retrospective \u2014 6 patterns + 6 codification proposals",
+      "sessions_touched": [
+        2733
       ],
       "commit_count": 1,
       "prs": []
@@ -36062,6 +36090,21 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/research/platform/integration_readiness_matrix.md": {
+      "originating_session": 2734,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "7ded646c",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "Capability Chain \u00a71 Mission Completion \u2014 WS push on verdict_issued (S2734) (#3023)",
+      "sessions_touched": [
+        2734
+      ],
+      "commit_count": 2,
+      "prs": [
+        3023
+      ]
+    },
     "docs/research/platform/platform_architecture_workspace_boundary_analysis.md": {
       "originating_session": 2726,
       "confidence": "MEDIUM",
@@ -36075,6 +36118,21 @@
       ],
       "commit_count": 1,
       "prs": []
+    },
+    "docs/research/platform/platform_capability_graph.md": {
+      "originating_session": 2734,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "7ded646c",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "Capability Chain \u00a71 Mission Completion \u2014 WS push on verdict_issued (S2734) (#3023)",
+      "sessions_touched": [
+        2734
+      ],
+      "commit_count": 2,
+      "prs": [
+        3023
+      ]
     },
     "docs/research/platform/platform_constitutional_architecture.md": {
       "originating_session": 2726,
