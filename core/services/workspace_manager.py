@@ -1713,10 +1713,35 @@ class WorkspaceManager:
         ).order_by('-total_operations', '-created_at').first()
 
         # Session 1085: Superusers can see any active workspace
+        # Session 2728 F-WS-1 — log-only visibility on the cross-user
+        # fallback. The S1085 behavior is intentional (Chris ratified) and
+        # remains unchanged, but when a superuser lands in another user's
+        # workspace via this fallback the CALL SITE previously had no
+        # diagnostic trail. If Rigby dispatches as `chris` (superuser)
+        # without her own active workspace, prior behavior silently
+        # returned another user's most-active workspace with no signal.
+        # This WARNING log names the fallback workspace's owner + id so
+        # operators can diagnose cross-user attribution after the fact.
+        # Chris ratified log-only shape at Batch B tool 5 close.
         if not workspace and self.user.is_superuser:
             workspace = ProjectWorkspace.objects.filter(
                 is_active=True
             ).order_by('-total_operations', '-created_at').first()
+            if workspace and workspace.user_id != getattr(self.user, 'id', None):
+                logger.warning(
+                    "workspace_manager.get_active_workspace: S1085 "
+                    "superuser cross-user fallback fired — "
+                    "requesting_user=%s (id=%s) has no active workspace; "
+                    "returning workspace %s (id=%s) owned by user_id=%s. "
+                    "Downstream writes / provenance will attribute to "
+                    "that workspace's owner unless caller explicitly "
+                    "scopes.",
+                    getattr(self.user, 'username', '?'),
+                    getattr(self.user, 'id', '?'),
+                    workspace.name,
+                    workspace.id,
+                    workspace.user_id,
+                )
 
         # Session 855: Create default workspace for system user if needed
         if not workspace and self.user.username == 'system_autonomous':
