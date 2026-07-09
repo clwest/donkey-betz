@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "generated": "2026-07-08T22:33:59+00:00",
+    "generated": "2026-07-09T00:02:06+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "d24f738ecb94",
+    "git_head": "eefeca22e6a1",
     "doc_count": 2460,
-    "commit_count": 7780,
+    "commit_count": 7790,
     "confidence_breakdown": {
       "HIGH": 1591,
       "MEDIUM": 374,
@@ -1987,9 +1987,9 @@
       "originating_session": 2716,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "d24f738e",
+      "first_commit_sha": "c4bc832d",
       "first_commit_date": "2026-07-08",
-      "first_commit_subject": "feat(playbook): inaugural Engineering Playbook v0.1.0 body",
+      "first_commit_subject": "chore(playbook): Session 2727 Step 8 post-ratification frontmatter fill v0.1.0",
       "sessions_touched": [
         2716,
         2720,
@@ -1999,7 +1999,7 @@
         2726,
         2727
       ],
-      "commit_count": 1,
+      "commit_count": 3,
       "prs": []
     },
     "docs/ERROR_TRACKING.md": {
@@ -2537,9 +2537,12 @@
         2499,
         2500,
         2502,
-        2504
+        2504,
+        2707,
+        2726,
+        2727
       ],
-      "commit_count": 1275,
+      "commit_count": 1276,
       "prs": [
         10,
         11,
@@ -7389,9 +7392,12 @@
         2499,
         2500,
         2502,
-        2504
+        2504,
+        2707,
+        2726,
+        2727
       ],
-      "commit_count": 231,
+      "commit_count": 232,
       "prs": [
         2213,
         2219,
@@ -10187,9 +10193,10 @@
         1143,
         1144,
         1145,
-        1146
+        1146,
+        2727
       ],
-      "commit_count": 6,
+      "commit_count": 7,
       "prs": [
         127,
         2186,
@@ -36028,19 +36035,23 @@
       "prs": []
     },
     "docs/research/platform/platform_constitutional_transition_review.md": {
-      "originating_session": 2716,
+      "originating_session": 2715,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "5513edd6",
+      "first_commit_sha": "81c71548",
       "first_commit_date": "2026-07-08",
-      "first_commit_subject": "docs(playbook): commit Session 2727 constitutional transition review",
+      "first_commit_subject": "docs(playbook): Session 2727 165\u2192190 rule-count corrections to derived summaries",
       "sessions_touched": [
+        2715,
         2716,
         2720,
         2721,
+        2723,
+        2724,
+        2725,
         2727
       ],
-      "commit_count": 1,
+      "commit_count": 2,
       "prs": []
     },
     "docs/research/platform/playbook_authoring_session_2716.md": {
@@ -36100,17 +36111,24 @@
       "prs": []
     },
     "docs/research/platform/playbook_authoring_session_2721.md": {
-      "originating_session": 2726,
+      "originating_session": 2715,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "6147f844",
+      "first_commit_sha": "81c71548",
       "first_commit_date": "2026-07-08",
-      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "first_commit_subject": "docs(playbook): Session 2727 165\u2192190 rule-count corrections to derived summaries",
       "sessions_touched": [
+        2715,
+        2716,
+        2720,
+        2721,
+        2723,
+        2724,
+        2725,
         2726,
         2727
       ],
-      "commit_count": 1,
+      "commit_count": 2,
       "prs": []
     },
     "docs/research/platform/playbook_authoring_validation_and_chapter6_preparation.md": {
@@ -36128,17 +36146,24 @@
       "prs": []
     },
     "docs/research/platform/playbook_constitutional_correction_pass_session_2723.md": {
-      "originating_session": 2726,
+      "originating_session": 2715,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "6147f844",
+      "first_commit_sha": "81c71548",
       "first_commit_date": "2026-07-08",
-      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "first_commit_subject": "docs(playbook): Session 2727 165\u2192190 rule-count corrections to derived summaries",
       "sessions_touched": [
+        2715,
+        2716,
+        2720,
+        2721,
+        2723,
+        2724,
+        2725,
         2726,
         2727
       ],
-      "commit_count": 1,
+      "commit_count": 2,
       "prs": []
     },
     "docs/research/platform/playbook_constitutional_correction_session_2725.md": {
@@ -36156,17 +36181,24 @@
       "prs": []
     },
     "docs/research/platform/playbook_constitutional_sign_audit_session_2722.md": {
-      "originating_session": 2726,
+      "originating_session": 2715,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "6147f844",
+      "first_commit_sha": "81c71548",
       "first_commit_date": "2026-07-08",
-      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "first_commit_subject": "docs(playbook): Session 2727 165\u2192190 rule-count corrections to derived summaries",
       "sessions_touched": [
+        2715,
+        2716,
+        2720,
+        2721,
+        2723,
+        2724,
+        2725,
         2726,
         2727
       ],
-      "commit_count": 1,
+      "commit_count": 2,
       "prs": []
     },
     "docs/research/platform/playbook_final_constitutional_verification.md": {
@@ -36198,17 +36230,24 @@
       "prs": []
     },
     "docs/research/platform/playbook_v0_1_ratification_package.md": {
-      "originating_session": 2726,
+      "originating_session": 2715,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "6147f844",
+      "first_commit_sha": "81c71548",
       "first_commit_date": "2026-07-08",
-      "first_commit_subject": "docs(playbook): commit Sessions 2708-2726 constitutional research chain",
+      "first_commit_subject": "docs(playbook): Session 2727 165\u2192190 rule-count corrections to derived summaries",
       "sessions_touched": [
+        2715,
+        2716,
+        2720,
+        2721,
+        2723,
+        2724,
+        2725,
         2726,
         2727
       ],
-      "commit_count": 1,
+      "commit_count": 2,
       "prs": []
     },
     "docs/research/platform/workspace_architecture_and_constitution_proposal.md": {
