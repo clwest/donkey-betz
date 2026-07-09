@@ -115,6 +115,16 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # Push notification signals not available
 
+        # Session 2735 — HAI Delivery Fanout Extension PR 1:
+        # HumanAttentionItem.post_save → Discord CHANNEL_STATUS
+        # dispatch for urgency='critical' items. Mirrors the Expo
+        # push receiver pattern above. Kill switch:
+        # settings.HAI_DISCORD_DISPATCH_ENABLED (default True).
+        try:
+            import core.signals_discord_notifications  # noqa: F401
+        except ImportError:
+            pass  # HAI→Discord signals not available
+
         # Session 1115 batch-7: Connect Document + NarrativeShift signals so
         # process_document_async and trigger_content_from_shift fire when
         # their source rows are saved.

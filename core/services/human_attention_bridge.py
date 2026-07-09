@@ -452,6 +452,17 @@ class HumanAttentionBridge:
                 'components_degraded': components_degraded,
                 'components': components,
                 'recorded_at': getattr(heartbeat, 'recorded_at', None),
+                # Session 2735 HAI Delivery Fanout PR 1 — double-Discord
+                # guard: heart.alert_if_critical (services/heart.py:667)
+                # already fires an imperative Discord CHANNEL_STATUS
+                # alert for critical/offline HeartBeat rows at the same
+                # call site that record_heartbeat runs from (see
+                # heart_check.py:132-133, views_heart.py:42-45,
+                # tasks_misc.py:3033-3036). Flagging discord_sent=True
+                # tells signals_discord_notifications.on_hai_discord_
+                # dispatch to skip this row so the operator does not
+                # receive the same alert twice on the same channel.
+                'discord_sent': True,
             })
 
             for target_user in users:
@@ -586,6 +597,12 @@ class HumanAttentionBridge:
                 ),
                 'urgency_band': urgency_band,
                 'idempotency_key': idempotency_key,
+                # Session 2735 HAI Delivery Fanout PR 1 — failure clusters
+                # currently have NO imperative Discord alert path. The
+                # HAI→Discord receiver at signals_discord_notifications
+                # SHOULD fire for these. Explicit False keeps the payload
+                # shape uniform + auditable.
+                'discord_sent': False,
             })
 
             for target_user in users:
@@ -708,6 +725,13 @@ class HumanAttentionBridge:
                 'recent_intake': int(recent_intake or 0),
                 'window_bucket': window_bucket,
                 'idempotency_key': idempotency_key,
+                # Session 2735 HAI Delivery Fanout PR 1 — double-Discord
+                # guard: BodyCoordinator._handle_digestive_blocked already
+                # calls send_status_notification imperatively BEFORE
+                # dispatching this bridge method (see
+                # body_coordinator.py:836-844). Flagging discord_sent=True
+                # tells the HAI→Discord receiver to skip.
+                'discord_sent': True,
             })
 
             for target_user in users:
