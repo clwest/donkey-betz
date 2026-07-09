@@ -2383,17 +2383,21 @@ class UnifiedPAEntrypoint:
         degraded-turn recovery paths (LLM failed / degenerate response /
         duplicate-sig loop break).
 
-        Previously three sites (`_process_message` degraded branches at
+        Previously three sites (`_run_agentic_loop` degraded branches at
         lines 1821, 1879, 2026) did naive `str(r.get('result', ''))[:4000]`
         per-result plus `[:4000]` on the outer JSON. The S1065 docstring
         on `_truncate_tool_output` explicitly names this as the anti-pattern
         that broke JSON mid-object and made GPT-5.2 see partial results.
 
-        This helper: (a) per-result, JSON-encodes each result and runs the
-        smart truncator so `_truncated: {shown, total}` markers survive;
-        (b) JSON-encodes the summary list; (c) runs the smart truncator
-        again against total_limit so mid-object breakage cannot escape
-        into the LLM's next turn.
+        This helper:
+        1. Per-result, JSON-encodes each result and runs the smart
+           truncator so `_truncated: {shown, total}` markers survive.
+        2. Wraps the summary list in `{'runs': [...]}` so the smart
+           truncator (which requires a dict input with a list field)
+           can prune runs from the tail if the outer envelope
+           overshoots `total_limit`.
+        3. Returns the JSON-encoded envelope. The LLM sees a valid
+           JSON dict either way — no mid-object breakage.
         """
         summarized = []
         for r in tool_runs:
@@ -2408,7 +2412,10 @@ class UnifiedPAEntrypoint:
                 'ok': r.get('ok'),
                 'result': trimmed,
             })
-        outer = json.dumps(summarized, default=str)
+        # Wrap in a dict envelope so `_truncate_tool_output` can find
+        # the `runs` list field and prune from the tail. Without this
+        # wrap, a raw list input falls back to naive slicing.
+        outer = json.dumps({'runs': summarized}, default=str)
         return cls._truncate_tool_output(outer, total_limit)
 
     @staticmethod
