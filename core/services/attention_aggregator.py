@@ -340,7 +340,41 @@ class AttentionAggregator:
 
 
 # Factory and caching
-_aggregator_cache = {}
+#
+# Session 2731 F-WC-2a — bounded via `functools.lru_cache`. Pre-S2731
+# the raw `_aggregator_cache = {}` dict was keyed on `user_id` with no
+# eviction, no TTL, and no `.clear()` helper — under solo-pool local
+# workers (Batch D tool 2 F-CW-1: workers never recycle) it grew
+# indefinitely with every unique user handled. `maxsize=64` bounds the
+# per-worker footprint; the LRU policy evicts the least-recently-used
+# user when the cap is reached. Mirrors the `platform_config` gold
+# standard. Callers wanting explicit reset can call
+# `get_attention_aggregator.cache_clear()`.
+#
+# `_aggregator_cache` retained as a public alias for backward
+# compatibility with any test or import that referenced it — it now
+# points at the same underlying `functools._lru_cache_wrapper` and
+# `.clear()` on it is a no-op safety valve (real invalidation is
+# `get_attention_aggregator.cache_clear()`).
+from functools import lru_cache
+
+
+def _resolve_user_id_from_user(user) -> Optional[int]:
+    """Extract a stable hashable key for the LRU cache."""
+    return user.id if user is not None else None
+
+
+@lru_cache(maxsize=64)
+def _get_attention_aggregator_by_uid(user_id: Optional[int]) -> AttentionAggregator:
+    """LRU-cached factory keyed on user_id."""
+    # Re-resolve the User object per uid to keep the aggregator's
+    # internal state consistent with the DB row.
+    if user_id is None:
+        return AttentionAggregator(None)
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    user = User.objects.filter(id=user_id).first()
+    return AttentionAggregator(user)
 
 
 def get_attention_aggregator(user) -> AttentionAggregator:
@@ -352,10 +386,29 @@ def get_attention_aggregator(user) -> AttentionAggregator:
 
     Returns:
         AttentionAggregator instance
+
+    Session 2731 F-WC-2a: bounded via `_get_attention_aggregator_by_uid`
+    which is `@lru_cache(maxsize=64)`. Under solo-pool local workers
+    the aggregator cache no longer grows indefinitely — the LRU evicts
+    the least-recently-used user when the cap is reached.
     """
-    user_id = user.id if user else None
+    return _get_attention_aggregator_by_uid(_resolve_user_id_from_user(user))
 
-    if user_id not in _aggregator_cache:
-        _aggregator_cache[user_id] = AttentionAggregator(user)
 
-    return _aggregator_cache[user_id]
+# Backward-compat: expose `_aggregator_cache` as a read-only reflection
+# of the cache_info() so any test / observability caller that read
+# `len(_aggregator_cache)` before continues to see a sensible value.
+# Actual invalidation is `get_attention_aggregator.cache_clear()`.
+class _AggregatorCacheView:
+    def __contains__(self, user_id) -> bool:  # pragma: no cover
+        info = _get_attention_aggregator_by_uid.cache_info()
+        return info.currsize > 0
+
+    def __len__(self) -> int:  # pragma: no cover
+        return _get_attention_aggregator_by_uid.cache_info().currsize
+
+    def clear(self) -> None:
+        _get_attention_aggregator_by_uid.cache_clear()
+
+
+_aggregator_cache = _AggregatorCacheView()

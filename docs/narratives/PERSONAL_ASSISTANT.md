@@ -83,7 +83,7 @@ keyword router to that position.
 | **`previous_response_id` caching** | GPT-5.2 mechanism. When set, follow-up turns hit a 90% cached-input discount ($0.18/1M vs $1.75/1M). PA stores the prior `response_id` in `ChatConversation.metadata` and threads it back on the next turn. |
 | **`global` vs `workspace` modes** | Scope discriminator. Global = no workspace_id; workspace = explicit workspace context (`workspace_id`, `AssistantProfile.workspace`, or workspace-aware UI). Never inferred from message text. Workspace-scoped tools (initiative_list, deliverable_list, file_tool) honor the scope. |
 | **Tool count drift** | Three different numbers float in the docs: 104 (PLATFORM_INVENTORY 2026-05-25), 106 (topic doc / Session 1142 note), 171 handlers. They're not contradictory: schemas count tool *definitions* the model sees, handlers count dispatcher entries (some handlers correspond to action enums *inside* a single schema). PLATFORM_INVENTORY is authoritative for both. |
-| **`PA_USE_FUNCTION_CALLING` flag** | Env var. `true` (default on Railway) → GPT-5.2 function calling path. `false` → falls back to the pre-Session-1036 506-line keyword router. Both paths still exist in code. |
+| **`PA_USE_FUNCTION_CALLING` flag** | Env var read at `core/settings.py:1662`. **Code default is `'true'` as of Session 2731 F-WF-1** (was `'false'` pre-S2731 — see the docs/research/tools/validation/pa_use_function_calling_env_validation.md report for context). `true` → GPT-5.2 function calling path; `false` → falls back to the pre-Session-1036 506-line keyword router. Both paths still exist in code. Every celery-* line in `Procfile` also declares `PA_USE_FUNCTION_CALLING=true` explicitly (F-WF-2 belt-and-suspenders) so intentional flips are visible in infra config, not silent-code-default territory. |
 | **PA-chat audit table** | The warn-only audit log of every PA call's auth posture, fleet origin, and validation result. Session 1131-1133 arc. Reject-mode flip queued for after ≥ 3 days of clean telemetry. |
 | **Fleet HMAC sign-key** | Required for every fleet-app→u-d-b call. Sign key = `sha256(raw_secret).hexdigest()`, **not** the raw secret. `FleetServiceKey.secret_hash` stores the hex digest. Wrong key → 401 `signature_mismatch`. |
 
@@ -495,7 +495,7 @@ reset state when tool registration changes during development.
 | Enrichment char caps (1500–2000) | Constants in enrichment service modules |
 | Cached-input discount math (90%) | OpenAI Responses-API pricing — see provider docs |
 | Fleet HMAC sign-key recipe | `sha256(raw_secret).hexdigest()` — code path in `core/services/fleet_*` |
-| `PA_USE_FUNCTION_CALLING` default | Env var; default is `true` on Railway + locally |
+| `PA_USE_FUNCTION_CALLING` default | Env var read at `core/settings.py:1662`. **Code default `'true'` as of Session 2731 F-WF-1** (was `'false'` pre-S2731). Set explicitly on every celery-* line in `Procfile` + every celery target in `Makefile`. |
 | PA-chat audit table mode (warn vs reject) | Config flag + the audit middleware |
 
 If you spot drift between this doc and code/config, **code wins**
