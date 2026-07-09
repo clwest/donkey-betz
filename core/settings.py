@@ -1659,7 +1659,17 @@ USE_CLEAN_AGENT_ARCHITECTURE = os.environ.get('USE_CLEAN_AGENT_ARCHITECTURE', 'T
 # Session 1036: LLM-driven function calling for PA (replaces keyword router)
 # When True, PA uses GPT-5.2 function calling to route messages instead of
 # the 506-line _detect_intent_and_route() keyword matching chain.
-PA_USE_FUNCTION_CALLING = os.environ.get('PA_USE_FUNCTION_CALLING', 'false').lower() == 'true'
+#
+# Session 2731 F-WF-1: code default flipped from 'false' to 'true' to
+# match the S1036 architectural intent and the narrative doc claim in
+# docs/narratives/PERSONAL_ASSISTANT.md. Pre-S2731 the code default was
+# 'false' — a worker started without the env variable would silently
+# drop to the keyword router; for source='claude-code' messages the
+# router's hard short-circuit (line 3127) would produce text-only
+# responses that looked like model refusal. Procfile still declares
+# the flag explicitly on every celery-* line as belt-and-suspenders
+# (see F-WF-2) so intentional flips are visible in infra config.
+PA_USE_FUNCTION_CALLING = os.environ.get('PA_USE_FUNCTION_CALLING', 'true').lower() == 'true'
 
 # Learning feedback loop flags
 # Session 1078: Both enabled by default — learning loop fully closed
