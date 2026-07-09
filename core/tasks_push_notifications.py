@@ -164,6 +164,136 @@ def notify_hai_discord(item_id):
         return {'skipped': f'adapter_error:{type(e).__name__}'}
 
 
+# ── Trigger 1c: Session 2735 — HAI Delivery Fanout Extension PR 2 ───────────
+#
+# Web Push fanout for HumanAttentionItem creations. Same async/on_commit
+# structure as notify_hai_discord (PR 1). Iterates the item.user's
+# active PushSubscription rows and dispatches Web Push per subscription
+# via the pre-existing PushNotificationService. Writes NotificationLog
+# audit rows per dispatch (delivered=True/False).
+
+@shared_task(
+    name='notify_hai_webpush',
+    queue='default',
+    ignore_result=True,
+    soft_time_limit=60,
+)
+def notify_hai_webpush(item_id):
+    """Fan out a critical HAI item to the target user's active browser
+    Web Push subscriptions.
+
+    Re-applies all guard logic against the just-committed row so state
+    changes between receiver enqueue and worker run cannot leak a
+    dispatch the current DB state would suppress.
+    """
+    from django.conf import settings
+    from core.models_human_interface import HumanAttentionItem
+    from core.models_push_notifications import (
+        NotificationLog,
+        PushSubscription,
+    )
+    from core.signals_discord_notifications import _pref_gates_pass
+
+    if not getattr(settings, 'HAI_WEBPUSH_DISPATCH_ENABLED', True):
+        return {'skipped': 'kill_switch'}
+
+    try:
+        item = HumanAttentionItem.objects.get(id=item_id)
+    except HumanAttentionItem.DoesNotExist:
+        logger.warning('[HAI_WEBPUSH] HAI %s missing at task time', item_id)
+        return {'skipped': 'missing'}
+
+    if item.urgency != 'critical':
+        return {'skipped': 'urgency_not_critical'}
+
+    payload = item.payload or {}
+    if payload.get('webpush_sent') is True:
+        logger.info(
+            '[HAI_WEBPUSH] task skip source_type=%s source_id=%s — '
+            'payload flagged webpush_sent=True',
+            item.source_type, item.source_id,
+        )
+        return {'skipped': 'webpush_sent_flag'}
+
+    if not item.user_id:
+        # Web Push is per-user by definition — no subscription rows means
+        # nothing to dispatch. Not an error; just no-op.
+        return {'skipped': 'no_user'}
+
+    if not _pref_gates_pass(item.user_id, item.source_type, item.urgency):
+        return {'skipped': 'preference_gate'}
+
+    subscriptions = list(
+        PushSubscription.objects.filter(user_id=item.user_id, is_active=True)
+    )
+    if not subscriptions:
+        return {'skipped': 'no_active_subscriptions'}
+
+    try:
+        from core.services.push_notification_service import get_push_service
+        push_service = get_push_service()
+    except Exception as e:  # pragma: no cover — defensive
+        logger.warning(
+            '[HAI_WEBPUSH] push_service init failed (%s: %s); HAI write '
+            'unaffected',
+            type(e).__name__, e,
+        )
+        return {'skipped': f'service_error:{type(e).__name__}'}
+
+    dispatched = 0
+    failed = 0
+    title = f'[{item.urgency.upper()}] {(item.title or "")[:100]}'
+    body = (item.summary or '')[:200]
+    data = {
+        'type': 'system',
+        'source_type': item.source_type,
+        'source_id': item.source_id,
+        'item_id': str(item.id),
+        'urgency': item.urgency,
+    }
+
+    for sub in subscriptions:
+        try:
+            success = push_service.send_notification(
+                subscription_info=sub.get_subscription_info(),
+                title=title,
+                body=body,
+                notification_type='system',
+                data=data,
+            )
+            NotificationLog.objects.create(
+                subscription=sub,
+                notification_type='system',
+                title=title,
+                body=body,
+                data=data,
+                delivered=bool(success),
+            )
+            if success:
+                sub.mark_success()
+                dispatched += 1
+            else:
+                sub.mark_failed()
+                failed += 1
+        except Exception as e:  # pragma: no cover — defensive
+            logger.warning(
+                '[HAI_WEBPUSH] dispatch to sub %s failed (%s: %s)',
+                sub.id, type(e).__name__, e,
+            )
+            failed += 1
+
+    logger.info(
+        '[HAI_WEBPUSH] task dispatched source_type=%s source_id=%s '
+        'user_id=%s sent=%d failed=%d',
+        item.source_type, item.source_id, item.user_id, dispatched, failed,
+    )
+    return {
+        'dispatched': dispatched,
+        'failed': failed,
+        'item_id': str(item.id),
+    }
+
+
 # ── Trigger 2: Artifact needs classification ─────────────────────────────────
 
 @shared_task(
