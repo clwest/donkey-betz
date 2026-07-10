@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-10T04:28:48+00:00",
+    "generated": "2026-07-10T04:54:14+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "a5f79e5b70ea",
-    "doc_count": 2500,
-    "commit_count": 7947,
+    "git_head": "26e8a21eb2af",
+    "doc_count": 2501,
+    "commit_count": 7951,
     "confidence_breakdown": {
-      "HIGH": 1606,
+      "HIGH": 1607,
       "MEDIUM": 394,
       "LOW": 5,
       "UNKNOWN": 495
@@ -1999,14 +1999,16 @@
         2726,
         2727,
         2736,
-        2738
+        2738,
+        2740
       ],
-      "commit_count": 13,
+      "commit_count": 14,
       "prs": [
         3048,
         3058,
         3059,
-        3062
+        3062,
+        3063
       ]
     },
     "docs/EOS_RULES.md": {
@@ -2570,9 +2572,10 @@
         2736,
         2737,
         2738,
-        2739
+        2739,
+        2740
       ],
-      "commit_count": 1317,
+      "commit_count": 1319,
       "prs": [
         10,
         11,
@@ -3118,7 +3121,8 @@
         3055,
         3057,
         3059,
-        3061
+        3061,
+        3063
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7451,9 +7455,10 @@
         2735,
         2736,
         2737,
-        2739
+        2739,
+        2740
       ],
-      "commit_count": 271,
+      "commit_count": 273,
       "prs": [
         2213,
         2219,
@@ -7606,7 +7611,8 @@
         3054,
         3055,
         3057,
-        3061
+        3061,
+        3063
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -10269,15 +10275,17 @@
         1145,
         1146,
         2727,
-        2738
+        2738,
+        2740
       ],
-      "commit_count": 9,
+      "commit_count": 11,
       "prs": [
         127,
         2186,
         2208,
         2216,
-        3059
+        3059,
+        3063
       ]
     },
     "docs/canon/creative/DAVINCI_RESOLVE_WORKFLOW.md": {
@@ -19288,6 +19296,21 @@
       "prs": [
         2199,
         2241
+      ]
+    },
+    "docs/handoffs/SESSION_2740_PLAYBOOK_V0_4_0_RATIFIED.md": {
+      "originating_session": 2740,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "47ae7eda",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "docs(session-2740): Playbook v0.4.0 ratified \u2014 cascade + handoff + anchors + 00-START (#3063)",
+      "sessions_touched": [
+        2740
+      ],
+      "commit_count": 2,
+      "prs": [
+        3063
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -36305,20 +36328,21 @@
       "originating_session": 2734,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "be9b9b1c",
+      "first_commit_sha": "26e8a21e",
       "first_commit_date": "2026-07-09",
-      "first_commit_subject": "feat(cost-protection-p2): observation-period foothold \u2014 would_freeze shadow + graph \u00a717 refresh (S2739) (#3060)",
+      "first_commit_subject": "docs(graph): full freshness sweep \u2014 \u00a729 + \u00a730 + \u00a731 append-only refresh (S2741) (#3064)",
       "sessions_touched": [
         2734,
         2736,
         2737
       ],
-      "commit_count": 8,
+      "commit_count": 10,
       "prs": [
         3023,
         3047,
         3056,
-        3060
+        3060,
+        3064
       ]
     },
     "docs/research/platform/platform_constitutional_architecture.md": {
