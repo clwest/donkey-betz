@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-10T05:10:04+00:00",
+    "generated": "2026-07-10T05:30:31+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "0805a3329b31",
-    "doc_count": 2502,
-    "commit_count": 7955,
+    "git_head": "7d866d1a4bd1",
+    "doc_count": 2503,
+    "commit_count": 7959,
     "confidence_breakdown": {
-      "HIGH": 1608,
+      "HIGH": 1609,
       "MEDIUM": 394,
       "LOW": 5,
       "UNKNOWN": 495
@@ -2000,16 +2000,18 @@
         2727,
         2736,
         2738,
-        2740
+        2740,
+        2742
       ],
-      "commit_count": 16,
+      "commit_count": 18,
       "prs": [
         3048,
         3058,
         3059,
         3062,
         3063,
-        3066
+        3066,
+        3067
       ]
     },
     "docs/EOS_RULES.md": {
@@ -2575,9 +2577,10 @@
         2738,
         2739,
         2740,
-        2741
+        2741,
+        2742
       ],
-      "commit_count": 1321,
+      "commit_count": 1323,
       "prs": [
         10,
         11,
@@ -3125,7 +3128,8 @@
         3059,
         3061,
         3063,
-        3065
+        3065,
+        3067
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7460,9 +7464,10 @@
         2737,
         2739,
         2740,
-        2741
+        2741,
+        2742
       ],
-      "commit_count": 275,
+      "commit_count": 277,
       "prs": [
         2213,
         2219,
@@ -7617,7 +7622,8 @@
         3057,
         3061,
         3063,
-        3065
+        3065,
+        3067
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -10281,16 +10287,18 @@
         1146,
         2727,
         2738,
-        2740
+        2740,
+        2742
       ],
-      "commit_count": 11,
+      "commit_count": 13,
       "prs": [
         127,
         2186,
         2208,
         2216,
         3059,
-        3063
+        3063,
+        3067
       ]
     },
     "docs/canon/creative/DAVINCI_RESOLVE_WORKFLOW.md": {
@@ -19331,6 +19339,21 @@
       "commit_count": 2,
       "prs": [
         3065
+      ]
+    },
+    "docs/handoffs/SESSION_2742_PLAYBOOK_V0_4_1_RATIFIED.md": {
+      "originating_session": 2742,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "9557d70f",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(session-2742): Playbook v0.4.1 PATCH ratified \u2014 cascade + handoff + anchors + 00-START (#3067)",
+      "sessions_touched": [
+        2742
+      ],
+      "commit_count": 2,
+      "prs": [
+        3067
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
