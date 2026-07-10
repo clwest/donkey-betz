@@ -170,13 +170,19 @@ class AgentExecutionViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend]
     filterset_class = AgentExecutionFilter  # Use custom filter class
     
-    def get_permissions(self):
-        """Dynamic permissions based on query params"""
-        # If querying by game_id, allow any access
-        if self.request.query_params.get('input_data__game_id'):
-            return [permissions.AllowAny()]
-        # Otherwise require authentication
-        return [permissions.IsAuthenticated()]
+    # I-0301 Phase 3 Stage 3 PR B — Bucket D dynamic AllowAny path
+    # eliminated. Prior get_permissions() returned AllowAny when the
+    # request carried an ``input_data__game_id`` query param, but:
+    #   * The ViewSet is not registered on any active router in
+    #     core/urls.py (see Stage 2b PR B evidence)
+    #   * Frontend has zero callers passing the input_data__game_id
+    #     query param (grep across .ts/.tsx: 0 hits)
+    #   * PR archaeology traces the branch to commit 7d42377f
+    #     (Session 728 agents/ Migration Phase 3, 2+ years old)
+    # Dead code should not preserve access exceptions. Collapsed to
+    # unconditional IsAuthenticated so re-routing later can't silently
+    # revive the AllowAny path (Rigby S2742 Stage 3 SIGN Q4).
+    permission_classes = [permissions.IsAuthenticated]
     
     def get_serializer_class(self):
         if self.action == 'list':
