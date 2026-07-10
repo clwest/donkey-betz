@@ -15,7 +15,7 @@ import logging
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +26,14 @@ class BlogPerformanceContextView(APIView):
 
     Returns the performance context that gets injected into ContentWriterAgent.
     Useful for debugging and understanding what the agent "knows" about past performance.
+
+    I-0301 Phase 3 Stage 2a (Bucket B remediation) — was AllowAny with self-labeled
+    "Public for debugging, change to IsAuthenticated in production" comment. Data
+    returned is platform-wide performance aggregates; not per-user rows. IsAuthenticated
+    is sufficient — no queryset scoping required. See I-0301 audit ledger deliverable
+    1ca36f84 (workspace fcd7e683).
     """
-    permission_classes = [AllowAny]  # Public for debugging, change to IsAuthenticated in production
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         try:
@@ -78,8 +84,10 @@ class BlogPerformanceMetricsView(APIView):
     GET /api/content-learning/metrics/
 
     Returns structured performance metrics for dashboards.
+
+    I-0301 Phase 3 Stage 2a — Bucket B remediation. Platform-wide aggregates only.
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         try:
@@ -106,8 +114,11 @@ class LearningRulesView(APIView):
     GET /api/content-learning/rules/
 
     Returns active learning rules from PipelineLearningInsight.
+
+    I-0301 Phase 3 Stage 2a — Bucket B remediation. PipelineLearningInsight rows
+    are platform-wide learning rules (not per-user); IsAuthenticated sufficient.
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         try:
@@ -152,8 +163,11 @@ class ContentQualityTrendsView(APIView):
     GET /api/content-learning/trends/
 
     Returns quality score trends over time.
+
+    I-0301 Phase 3 Stage 2a — Bucket B remediation. SelfBlog aggregate trends;
+    platform-wide, not per-user.
     """
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         try:
