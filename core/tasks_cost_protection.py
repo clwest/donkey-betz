@@ -30,6 +30,52 @@ from celery import shared_task
 logger = logging.getLogger(__name__)
 
 
+# S2743 Cat 3 (c1): once-per-worker startup log flag. Flipped True on
+# first task execution to prevent per-tick log spam; also flipped True
+# on failure to avoid retry-spam if the log block itself is broken.
+_STARTUP_LOGGED = False
+
+
+def _log_startup_thresholds():
+    """S2743 Cat 3 (c1): emit configured cost-protection thresholds once
+    per worker process at first ``check_cost_thresholds`` invocation.
+
+    Zero-side-effect visibility hook so operators see the configured
+    mode + thresholds without ORM inspection. Fires INSIDE task
+    execution (not at import time) so the DB is guaranteed ready.
+    Failure semantics: swallow all exceptions, flip the flag TRUE
+    regardless to prevent retry-spam if the log block is broken.
+    """
+    global _STARTUP_LOGGED
+    if _STARTUP_LOGGED:
+        return
+    try:
+        from core.services.cost_threshold_monitor import (
+            read_thresholds_snapshot,
+            read_enforce_mode,
+        )
+        snapshot = read_thresholds_snapshot()
+        mode = read_enforce_mode()
+        parts = []
+        for window in ('hour', 'day', 'month'):
+            threshold = snapshot.get(window)
+            if threshold is not None:
+                parts.append(f'{window}=${threshold:.2f}')
+            else:
+                parts.append(f'{window}=unset')
+        logger.info(
+            '[COST_MONITOR] startup: enforce_mode=%s thresholds: %s',
+            mode, ' '.join(parts),
+        )
+    except Exception as e:  # pragma: no cover — defensive
+        logger.warning(
+            '[COST_MONITOR] startup log failed (%s: %s); task continues '
+            'without startup-visibility line',
+            type(e).__name__, e,
+        )
+    _STARTUP_LOGGED = True
+
+
 @shared_task(
     name='check_cost_thresholds',
     queue='default',
@@ -54,6 +100,8 @@ def check_cost_thresholds():
         read_enforce_mode,
     )
     from core.services.human_attention_bridge import attention_bridge
+
+    _log_startup_thresholds()
 
     mode = read_enforce_mode()
     if mode == 'freeze':
