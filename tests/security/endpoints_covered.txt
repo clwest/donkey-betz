@@ -1,0 +1,44 @@
+# I-0301 Phase 3 endpoint coverage snapshot.
+#
+# This file pins the user-facing HTTP endpoints under active safety-contract
+# regression testing. Each line is a single endpoint identifier in the form:
+#
+#     <bucket>  <url>  <view_class>  <status>
+#
+# where:
+#   <bucket>  = A | A2 | B | C | D (from Phase 1 audit ledger; see workspace
+#               fcd7e683 deliverable 1ca36f84)
+#   <url>     = URL path template as declared in urls.py
+#   <view_class> = module_path:ClassName (or module_path:ViewSet.action)
+#   <status>  = pending | remediated | dead-gated | in-flight
+#
+# Bucket B endpoints (12 total, per audit ledger):
+#   4 remediated in Stage 2a (this file's initial version)
+#   8 remaining for Stage 2b (Rigby SIGN pending)
+#
+# The regression suite tests/security/test_bucket_b_remediation.py exercises
+# every "remediated" row: anonymous request MUST receive a safety-envelope
+# response with reason_code=not_authenticated. Adding a new endpoint here
+# without a corresponding remediation is CI-blocking.
+#
+# HEAD at file creation: 40959cd6 (Stage 1 substrate merged 2026-07-10)
+
+# Bucket B — content_learning (Stage 2a):
+B  /api/content-learning/performance-context/  core.views_content_learning:BlogPerformanceContextView  remediated
+B  /api/content-learning/metrics/              core.views_content_learning:BlogPerformanceMetricsView  remediated
+B  /api/content-learning/rules/                core.views_content_learning:LearningRulesView          remediated
+B  /api/content-learning/trends/               core.views_content_learning:ContentQualityTrendsView   remediated
+
+# Bucket B — intelligence.views (deferred to Stage 2b, pending Rigby SIGN on
+# filesystem-vs-DB architecture and cross-user data ownership design):
+B  /api/action-plans/persistence/     intelligence.views:ActionPlanPersistenceView   pending
+B  /api/action-plans/execute/         intelligence.views:ExecuteActionPlanView       pending
+B  /api/generated-files/<filename>/   intelligence.views:ViewGeneratedFileView       pending
+B  /api/revenue-opportunities/        intelligence.views:RevenueOpportunitiesView    pending
+B  /api/proposals/submit/             intelligence.views:SubmitProposalView          pending
+B  /api/revenue-metrics/              intelligence.views:RevenueMetricsView          pending
+B  /api/agent-plans/execute/          intelligence.views:ExecuteAgentPlanView        pending
+
+# Bucket B — agents ViewSet action (deferred to Stage 2b — coupled with the
+# Bucket D dynamic get_permissions() finding on the same ViewSet):
+B  /api/agents/executions/with_results/  core.views.agents:AgentExecutionViewSet.with_results  pending
