@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-09T23:32:42+00:00",
+    "generated": "2026-07-10T00:08:24+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "3dc2c588d96e",
-    "doc_count": 2495,
-    "commit_count": 7917,
+    "git_head": "a3b04af77f21",
+    "doc_count": 2496,
+    "commit_count": 7921,
     "confidence_breakdown": {
-      "HIGH": 1601,
+      "HIGH": 1602,
       "MEDIUM": 394,
       "LOW": 5,
       "UNKNOWN": 495
@@ -2563,9 +2563,10 @@
         2732,
         2734,
         2735,
-        2736
+        2736,
+        2737
       ],
-      "commit_count": 1305,
+      "commit_count": 1307,
       "prs": [
         10,
         11,
@@ -3104,7 +3105,8 @@
         3041,
         3043,
         3045,
-        3047
+        3047,
+        3049
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7435,9 +7437,10 @@
         2732,
         2734,
         2735,
-        2736
+        2736,
+        2737
       ],
-      "commit_count": 261,
+      "commit_count": 263,
       "prs": [
         2213,
         2219,
@@ -7584,7 +7587,8 @@
         3041,
         3043,
         3045,
-        3047
+        3047,
+        3049
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19195,6 +19199,21 @@
       "commit_count": 2,
       "prs": [
         3047
+      ]
+    },
+    "docs/handoffs/SESSION_2737_PLAYBOOK_V0_2_0_RATIFIED.md": {
+      "originating_session": 2737,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "5bcb9777",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "docs(session-2737): Playbook v0.2.0 ratified \u2014 handoff + 00-START refresh + cascade (#3049)",
+      "sessions_touched": [
+        2737
+      ],
+      "commit_count": 2,
+      "prs": [
+        3049
       ]
     },
     "docs/handoffs/SESSION_273_DOCUMENTATION_OVERHAUL.md": {
