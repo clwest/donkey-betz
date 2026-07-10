@@ -1173,6 +1173,19 @@ runs THREE runtime assertions:
 
 ### 17.4 Deferred — Rigby O4 recommendation A (integration test)
 
+**DISCHARGED 2026-07-09 via CDR-003 + Capability Graph §C5.** The
+deferred `_build_context` integration-test-harness arc is closed
+by the ratified Celery Eager-Mode Integration Verification pattern
+codified at `docs/testing/RUNTIME_INTEGRATION_TESTS.md` and the
+narrow §C5 candidate chain in the Capability Graph. Any future
+`_build_context` integration test reaches for the `TestCase` +
+`captureOnCommitCallbacks(execute=True)` +
+`override_settings(CELERY_TASK_ALWAYS_EAGER=True)` pattern with a
+new exemplar appended to that doc's `canonical_exemplars`
+frontmatter list.
+
+Original deferral rationale preserved below for record:
+
 Rigby's O4 recommendation A — a minimal `IsolatedAsyncioTestCase` on
 `_build_context` proving both lanes populate + merge — was **attempted
 and reverted** during P2.1. The full `_build_context` flow has 6+ DB-
