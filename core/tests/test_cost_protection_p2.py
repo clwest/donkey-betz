@@ -283,3 +283,89 @@ class EnforcementGateStillHeldTests(TestCase):
         self.assertTrue(result['would_freeze'])
         # HAI shipped, governance flip did not happen.
         self.assertEqual(result['hai_dispatched'], 1)
+
+
+class StartupThresholdLogTests(TestCase):
+    """S2743 Cat 3 (c1): once-per-worker startup log emits configured
+    mode + thresholds on first ``check_cost_thresholds`` invocation.
+    Zero cost-protection behavior change."""
+
+    def setUp(self):
+        super().setUp()
+        _admin_user()
+        # Reset the module-level singleton so each test observes a fresh
+        # worker-boot state. Directly poke the module attribute — this is
+        # the intended test surface for the flag.
+        import core.tasks_cost_protection as tcp
+        tcp._STARTUP_LOGGED = False
+
+    def test_first_tick_emits_startup_log_line(self):
+        _set_threshold('hour', '10.00')
+        _set_threshold('day', '100.00')
+        # month intentionally unset
+
+        with patch(
+            'core.tasks_push_notifications.notify_hai_discord.delay'
+        ), patch(
+            'core.tasks_push_notifications.notify_hai_webpush.delay'
+        ), self.assertLogs(
+            'core.tasks_cost_protection', level=logging.INFO,
+        ) as log_ctx, self.captureOnCommitCallbacks(execute=True):
+            check_cost_thresholds()
+
+        joined = '\n'.join(log_ctx.output)
+        self.assertIn('[COST_MONITOR] startup:', joined)
+        self.assertIn('enforce_mode=monitor', joined)
+        self.assertIn('hour=$10.00', joined)
+        self.assertIn('day=$100.00', joined)
+        self.assertIn('month=unset', joined)
+
+    def test_second_tick_does_not_re_emit_startup_log(self):
+        _set_threshold('hour', '10.00')
+
+        with patch(
+            'core.tasks_push_notifications.notify_hai_discord.delay'
+        ), patch(
+            'core.tasks_push_notifications.notify_hai_webpush.delay'
+        ), self.captureOnCommitCallbacks(execute=True):
+            # First tick — startup log emitted.
+            check_cost_thresholds()
+
+            # Second tick — startup log MUST NOT re-emit.
+            with self.assertLogs(
+                'core.tasks_cost_protection', level=logging.INFO,
+            ) as log_ctx:
+                check_cost_thresholds()
+
+        joined = '\n'.join(log_ctx.output)
+        self.assertNotIn('[COST_MONITOR] startup:', joined)
+
+    def test_startup_log_failure_swallowed_and_flag_flipped(self):
+        """If the snapshot read raises, the startup log block must
+        swallow the exception, emit a WARNING breadcrumb, flip the flag
+        TRUE to prevent per-tick retry-spam, and the task result must
+        remain intact."""
+        import core.tasks_cost_protection as tcp
+
+        _set_threshold('day', '50.00')
+
+        with patch(
+            'core.services.cost_threshold_monitor.read_thresholds_snapshot',
+            side_effect=RuntimeError('simulated DB blip'),
+        ), patch(
+            'core.tasks_push_notifications.notify_hai_discord.delay'
+        ), patch(
+            'core.tasks_push_notifications.notify_hai_webpush.delay'
+        ), self.assertLogs(
+            'core.tasks_cost_protection', level=logging.WARNING,
+        ) as log_ctx, self.captureOnCommitCallbacks(execute=True):
+            result = check_cost_thresholds()
+
+        joined = '\n'.join(log_ctx.output)
+        self.assertIn('[COST_MONITOR] startup log failed', joined)
+        self.assertIn('simulated DB blip', joined)
+        # Flag flipped TRUE to prevent retry-spam.
+        self.assertTrue(tcp._STARTUP_LOGGED)
+        # Task result unaffected by the log-block failure.
+        self.assertEqual(result['mode'], 'monitor')
+        self.assertIn('windows_checked', result)

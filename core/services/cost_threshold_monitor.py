@@ -196,6 +196,21 @@ def check_all_windows(now: Optional[datetime] = None) -> list[CostBreachResult]:
     ]
 
 
+def read_thresholds_snapshot() -> dict[str, Optional[Decimal]]:
+    """S2743 Cat 3 (c1): return the configured cost-protection thresholds
+    for hour/day/month windows as a ``{window: Decimal|None}`` snapshot.
+
+    ``None`` for a window means the threshold is unset (SystemConfiguration
+    row absent or empty). This is the public read surface used by observers
+    such as the startup config log — callers avoid importing the
+    leading-underscore ``_read_threshold`` helper.
+    """
+    return {
+        window: _read_threshold(window)
+        for window in ('hour', 'day', 'month')
+    }
+
+
 def read_enforce_mode() -> str:
     """Return 'monitor' (default) or 'freeze' per SystemConfiguration.
 
