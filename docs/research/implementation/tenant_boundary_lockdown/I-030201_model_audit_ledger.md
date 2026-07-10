@@ -215,6 +215,35 @@ Excluded from grep: `docs/`, `.git/`, `node_modules/`, `.venv/`. Phase 2 exhaust
 3. `core/tasks.py` — mixed `.get(id=...)` paths; some trust caller-supplied id
 4. `core/employees/mission_runner.py:1305, 1434` — employee code path; may intentionally bypass, Phase 2 clarify
 
+#### §5.1.a Amendment — Phase 3 Sub-phase D1 pre-flight caller re-audit + Option A staff-tightening (2026-07-10)
+
+Ratified via Rigby SIGN Q1-Q7 on D1. Three amendments captured here:
+
+**Caller-surface undercount** — Phase 1 §5.1 focused on the reg-risk hotspot list; the un-capped view-file grep on HEAD `0f6cefe4` returns **19 hits across 8 view files** (some superuser-gated from B2b/B2c already). New view files not in the Phase 1 §5.1 sample:
+
+| File | Sites | Phase 1 §5.1 documented? | Classification |
+|---|---|---|---|
+| views_workspace_templates.py | 2 (:180, :618) | :618 flagged as REG-RISK ✓ | :180 transitively scoped via `_get_workspace(user)` — no wiring; :618 wired |
+| views_research_demo.py | 2 (:1798, :1963) | ❌ NEW | Both scoped via predicate |
+| views_vip_invite.py | 1 (:56) | ❌ NEW | Scoped via predicate |
+| views_diagnostics.py | 4 (:1083, :1971, :4279, :4287) | Ops-adjacent | Inside `cockpit_*` functions already `@superuser_required` from B2b — no wiring |
+| views_deliverables.py | 4 (:70, :305, :550, :804) | ❌ NEW (canonical CRUD) | All wired (list + clone source-fetch + stats + syntheses) |
+| views_trace_viewer.py | 1 (:98) | Debug/ops | Inside `TraceViewerView.get` already `@method_decorator(superuser_required)` from B2c — no wiring |
+| views_project_hub.py | 3 (:38, :54, :102) | ❌ NEW | All scoped via predicate |
+| views_user_learning_api.py | 2 (:100, :587) | ❌ NEW | Both GET sites wired via query-time predicate |
+
+**Option A staff-tightening applied to `views_deliverables.py`** — the `list_deliverables` and `get_deliverable_stats` endpoints previously used `if request.user.is_staff: pass` blocks that let staff see ALL deliverables across all users. D1 replaces those with the ratified predicate: staff sees own workspaces + workspace-null rows (Phase 2 §6.1 F3 carve-out), NOT cross-user rows. This mirrors the C1 Option A tightening on `views_personal_assistant.py` and is a deliberate security hardening — F3 amendment explicitly said "do NOT let this transitional fallback become permanent."
+
+**Source-fetch scoping on `clone_deliverable`** — previously used `get_object_or_404(Deliverable, id=deliverable_id)` which let a caller clone any deliverable whose id they knew. D1 scopes the source-fetch via the predicate so callers can only clone deliverables they can read.
+
+**Deferred to Sub-phase D-followup (Phase 0 flip trigger)** — same rationale as C2 §5.3.b:
+
+- `core/agents/distribution_agent.py:189` — agent code path
+- `core/tasks.py` mixed `.get(id=...)` paths — Celery system-context
+- `core/employees/mission_runner.py:1305, 1434` — Employee OS system code path
+
+Entry criteria to reopen: Phase 0 multi-tenant flip / new staff-support role / external user exposure / regression finding traces to a D1-scope file. Inventory retained in this ledger and referenced from Rigby workspace deliverables `69b317b3` (B1) + `74846a3b` (B2a) + `778acfc3` (B2b) + `c79f9a3b` (Sub-phase B close) chain of custody.
+
 ### §5.2 Initiative (Q7 per-user) — dominant category: **UNSCOPED (REG RISK)**
 
 **Critical §4 finding: 100% of Initiative rows have `owner=NULL`.** No caller uses `owner=` filter (grep confirmed). Every read currently returns ALL initiatives to ALL users. Backfill is a hard Phase 3 blocker.
