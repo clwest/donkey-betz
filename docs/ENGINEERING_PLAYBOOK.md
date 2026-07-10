@@ -1,46 +1,49 @@
 ---
 title: "Donkey Betz Engineering Playbook"
-version: "0.3.0"
+version: "0.4.0"
 version_status: ratified
 scope: platform
-parent_version: "0.2.0"
+parent_version: "0.3.0"
 supersedes: []
-compatible_with: ["0.1.0", "0.2.0"]
+compatible_with: ["0.1.0", "0.2.0", "0.3.0"]
 ratifier: chris
 ratified_date: 2026-07-10
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
-  deliverable_id: 548d4aab-88bf-470f-9dea-b3b7400ce36e
+  deliverable_id: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
-branch_authored: playbook/v0.3.0-cd48-cd49-codification
-commit_sha: 16e5d3deb27a71b9c9de45aae6c06d0f661117c8
-content_hash: sha256:4a42ca9f2b96160c637de30cdc7050e76c0420ca7280036930241b4903fcd36f
-git_tag: playbook-v0.3.0
+branch_authored: playbook/v0.4.0-verify-substrate-cd50-codification
+commit_sha: PLACEHOLDER_TO_BE_FILLED_POST_MERGE
+content_hash: PLACEHOLDER_TO_BE_FILLED_POST_MERGE
+git_tag: playbook-v0.4.0
 schema_version: 1
 prior_ratification:
-  version: "0.2.0"
-  ratified_date: 2026-07-09
-  deliverable_id: fbcfcfde-9da9-48b1-8bd8-187885382521
-  commit_sha: ab3c88fa1ddc689a3fbe4cb59d13a5f5fb71cb9b
-  content_hash: sha256:ae3228d9b9673dec672300b56b2076790b1548d946852fe08f594c3a37b46938
-  git_tag: playbook-v0.2.0
-authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738]
+  version: "0.3.0"
+  ratified_date: 2026-07-10
+  deliverable_id: 548d4aab-88bf-470f-9dea-b3b7400ce36e
+  commit_sha: 16e5d3deb27a71b9c9de45aae6c06d0f661117c8
+  content_hash: sha256:4a42ca9f2b96160c637de30cdc7050e76c0420ca7280036930241b4903fcd36f
+  git_tag: playbook-v0.3.0
+authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740]
 correction_sessions: [2723, 2725, 2727]
-audit_sessions: [2722, 2724, 2725, 2727, 2738]
+audit_sessions: [2722, 2724, 2725, 2727, 2738, 2740]
 ratification_package_session: 2726
 ratification_session: 2727
 v0_2_0_authoring_session: 2736
 v0_2_0_ratification_session: 2736
 v0_3_0_authoring_session: 2738
 v0_3_0_ratification_session: 2738
-rule_count: 195
+v0_4_0_authoring_session: 2740
+v0_4_0_ratification_session: 2740
+rule_count: 196
 rules_added_v0_2_0: [PLAYBOOK-5.2.2, PLAYBOOK-2.2.2, PLAYBOOK-3.2.2]
 rules_added_v0_3_0: [PLAYBOOK-6.6.14, PLAYBOOK-6.10.5]
+rules_added_v0_4_0: [PLAYBOOK-6.10.6]
 evidence_manifest: docs/research/platform/engineering_playbook_evidence_manifest.md
 ---
 
-# Donkey Betz Engineering Playbook v0.3.0
+# Donkey Betz Engineering Playbook v0.4.0
 
 # Chapter 0 — Preamble and How to Read This Playbook
 
@@ -862,7 +865,7 @@ The platform hosts a corpus-tracking system at `docs/_provenance.json` that clas
 
 ## 6.10 Verification of provenance
 
-Verification is the discipline of establishing, before an amendment is dispatched to SIGN, that every rule in the amendment satisfies its evidence admission threshold, that every citation resolves, and that the amendment's provenance is coherent. Verification is a joint responsibility split between the author and the SIGN reviewer.
+Verification is the discipline of establishing, before an amendment is dispatched to SIGN, that every rule in the amendment satisfies its evidence admission threshold, that every citation resolves, and that the amendment's provenance is coherent. Verification is a joint responsibility split between the author and the SIGN reviewer. From v0.4.0 forward, §6.10 also covers the verification an implementation session performs before Category A work begins on a candidate whose admission ticket is a research-authored gap claim; the same "verify-before-you-act" discipline extends from amendment dispatch to implementation start.
 
 **[GR] PLAYBOOK-6.10.1** Before an amendment to the Playbook is dispatched to SIGN, the author MUST run the eight-check verification protocol enumerated below. The verification result MUST be recorded in the amendment provenance. [E2: RATIFICATION_20260708_0199_CYCLE_1_CLOSEOUT §Ratification ledger summary (verification recorded as part of the ratification act); E6: `docs/handoffs/SESSION_2707_0199_RATIFICATION_HANDOFF.md` §6 (correction passes 1 and 2 applied following verification-driven findings)]
 
@@ -887,7 +890,9 @@ The eight verifications are the following:
 
 **[GR] PLAYBOOK-6.10.5** A SIGN reviewer verifying a rule that cites workspace-canonical E1 or E2 evidence MUST have `deliverable_tool` access provisioned within the SIGN conversation before rendering a verdict on that rule. A verdict rendered without provisioned workspace access MUST be classified as partial pending workspace-provisioned re-verification. [E2: v0.1.0 ratification record body §6 Constitutional debt disposition (deliverable `b083c034-5aba-4dc3-9758-57eba29b4bf2`); E3: `docs/research/platform/platform_constitutional_transition_review.md` (expanded SIGN methodology finding); E6: `docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md` (CD-49 origin — expanded SIGN pass)]
 
-> **Commentary:** The eight-check protocol is a discipline, not a bureaucracy. Its cost is proportional to the amendment's scope. A PATCH amendment (typo fix, broken-link repair) that touches one rule may complete all six author verifications in minutes. A MAJOR amendment (rule removal, chapter restructuring) that touches many rules requires proportional verification effort. The discipline scales with the amendment; the amendment does not scale with the discipline.
+**[GR] PLAYBOOK-6.10.6** Before an implementation session begins Category A work where the admission ticket for the work is a research-authored gap claim — specifically a capability graph missing-link entry, a cross-domain integration audit gap-list row, an integration readiness matrix cell, a Capability Discovery Record (CDR) derived roadmap entry, or an `OPEN_ARCS.md`-derived candidate list item — the author MUST independently verify at HEAD that (a) the substrate the artifact names for the candidate's fix path is still the substrate in production, and (b) the fix itself has not already been shipped. Verification MUST cite the HEAD state (via `git rev-parse HEAD` output OR an equivalent commit SHA / tag reference) alongside file-and-line evidence resolving to exactly one of three outcomes: (i) substrate unchanged AND fix unshipped — proceed to Cat A; (ii) substrate has changed since the artifact was authored — rescope to the actual substrate before Cat A begins; (iii) fix has already been shipped — the candidate is closed; the session MUST either select an alternative candidate OR refresh the research artifact before further Cat A work. Verification results MUST be recorded in the Cat A brief before Rigby SIGN dispatch. [E2: v0.3.0 ratification record body §6 (deliverable `548d4aab-88bf-470f-9dea-b3b7400ce36e`) — precedent that a MINOR amendment discharges a Constitutional Debt; E3: `docs/research/platform/platform_capability_graph.md` §27 (Trigger 1 — §17 Cost Protection substrate mismatch: `LLMCallEvent` named in graph vs `CostTracking` shipped in production per `core/services/cost_threshold_monitor.py:18-30`); E4: commit `86152f9f` (Trigger 2 — F-D-SIDEBAR-1 already-shipped: `frontend/src/components/layout/Sidebar.tsx:370` invokes `await authApi.logout()` despite graph §18 line 498 listing it as a missing link); E6: `docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md` §2.1 (five-dimensional verify-before-build methodology — the in-wild practice this rule codifies constitutionally); E6: `docs/handoffs/SESSION_2739_COST_PROTECTION_P2_OBSERVATION.md` §4 + §10.4 (Trigger 1 methodology callout, first-trigger threshold record)]
+
+> **Commentary:** The eight-check protocol is a discipline, not a bureaucracy. Its cost is proportional to the amendment's scope. A PATCH amendment (typo fix, broken-link repair) that touches one rule may complete all six author verifications in minutes. A MAJOR amendment (rule removal, chapter restructuring) that touches many rules requires proportional verification effort. The discipline scales with the amendment; the amendment does not scale with the discipline. The same proportionality applies to §6.10.6 verification: a small candidate whose substrate is trivially at HEAD may complete verification in one grep; a large candidate whose substrate spans multiple files requires a proportional sweep. What §6.10.6 forbids is skipping the verification because the artifact "looks authoritative" — research artifacts drift; HEAD does not lie.
 
 ## 6.11 Cross-references
 
@@ -1278,3 +1283,4 @@ The Constitutional Debt Register records items intentionally deferred by prior a
 | v0.1.0 | null | [] | PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION | PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION | Inaugural version. |
 | v0.2.0 | v0.1.0 | [] | 2026-07-09 | playbook-v0.2.0 | MINOR — codify R1/R2/R3 EOS rules as PLAYBOOK-5.2.2 (Tool Autonomy), PLAYBOOK-2.2.2 (CDR discipline), PLAYBOOK-3.2.2 (Acceptance-tests-first). |
 | v0.3.0 | v0.2.0 | [] | 2026-07-10 | playbook-v0.3.0 | MINOR — codify CD-48 (catalog admission) as PLAYBOOK-6.6.14 and CD-49 (SIGN workspace tool provisioning) as PLAYBOOK-6.10.5. Discharges Constitutional Debt CD-48 + CD-49 carried from v0.1.0. |
+| v0.4.0 | v0.3.0 | [] | 2026-07-10 | playbook-v0.4.0 | MINOR — codify CD-50 (verify-substrate-before-implement) as PLAYBOOK-6.10.6. Two-trigger threshold met at S2739 §17 Cost Protection substrate mismatch + S2740 §18 F-D-SIDEBAR-1 already-shipped discovery. Extends §6.10 preamble scope from amendment-dispatch to Cat A research-artifact-derived candidates. |
