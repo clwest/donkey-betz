@@ -22,6 +22,11 @@ from asgiref.sync import async_to_sync
 # Session 1129 Move 1 — fleet signed-request authentication
 from core.services.fleet_auth_drf import FleetSignatureAuthentication
 
+from core.security import (
+    can_read_chat_conversation,
+    scope_queryset_chat_conversation,
+)
+
 logger = logging.getLogger(__name__)
 
 PersonalAIAssistant = None  # Legacy PA removed — all traffic routes through Rigby
@@ -537,11 +542,14 @@ def pa_conversation_post_message(request, conversation_id):
 
         from core.models import ChatConversation
 
-        # Security: verify user has access to this conversation (or is creating a new one)
-        if not request.user.is_staff:
-            existing = ChatConversation.objects.filter(conversation_id=conversation_id).first()
-            if existing and existing.user_id and existing.user_id != request.user.id:
-                return Response({'error': 'Conversation not found'}, status=404)
+        # Security: verify user has access to this conversation (or is creating a new one).
+        # I-0302 Phase 3 Sub-phase C1 (2026-07-10): Option A — replace legacy
+        # is_staff bypass with the ratified predicate (staff-tightening; F3
+        # amendment). Non-superuser staff no longer bypass — they must own
+        # the conversation or share workspace access.
+        existing = ChatConversation.objects.filter(conversation_id=conversation_id).first()
+        if existing and not can_read_chat_conversation(request.user, existing):
+            return Response({'error': 'Conversation not found'}, status=404)
 
         # Auto-detect whether to trigger PA if not explicitly set
         if trigger_pa is None:
@@ -634,22 +642,32 @@ def pa_conversation_messages(request, conversation_id):
     """
     from core.models import ChatConversation
 
-    # Security: verify user has access to this conversation
-    if not request.user.is_staff:
-        has_access = ChatConversation.objects.filter(
-            conversation_id=conversation_id, user=request.user
-        ).exists()
-        if not has_access:
-            return Response({'error': 'Conversation not found'}, status=404)
+    # Security: verify user has access to this conversation.
+    # I-0302 Phase 3 Sub-phase C1 (2026-07-10): Option A — predicate replaces
+    # the legacy is_staff bypass. Sample-row lookup because the predicate
+    # boundary is per-conversation, not per-message.
+    sample = ChatConversation.objects.filter(conversation_id=conversation_id).first()
+    if not sample or not can_read_chat_conversation(request.user, sample):
+        return Response({'error': 'Conversation not found'}, status=404)
 
     after_id = request.query_params.get('after')
     limit = min(int(request.query_params.get('limit', 50)), 100)
 
-    qs = ChatConversation.objects.filter(conversation_id=conversation_id).order_by('created_at')
+    # I-0302 Phase 3 Sub-phase C1: defense-in-depth — re-scope the LIST at
+    # point-of-use so downstream serialization can't drift back to
+    # unscoped access.
+    qs = scope_queryset_chat_conversation(
+        request.user,
+        ChatConversation.objects.filter(conversation_id=conversation_id),
+    ).order_by('created_at')
 
     if after_id:
         try:
-            after_row = ChatConversation.objects.get(id=after_id)
+            # I-0302 Phase 3 Sub-phase C1: scope the after-row lookup so a
+            # caller can't use another user's message id as the pivot.
+            after_row = scope_queryset_chat_conversation(
+                request.user, ChatConversation.objects.all()
+            ).get(id=after_id)
             qs = qs.filter(created_at__gt=after_row.created_at)
         except ChatConversation.DoesNotExist:
             pass
@@ -1529,16 +1547,23 @@ def list_pa_conversations(request):
     try:
         from core.models import ChatConversation
 
-        # Find conversation_ids the user has participated in
+        # Find conversation_ids the user has participated in.
+        # I-0302 Phase 3 Sub-phase C1 (2026-07-10): use predicate to
+        # accept both user-owned and workspace-scoped conversations.
         user_conv_ids = (
-            ChatConversation.objects
-            .filter(user=request.user).exclude(platform='discord')
+            scope_queryset_chat_conversation(
+                request.user, ChatConversation.objects.all()
+            ).exclude(platform='discord')
             .values_list('conversation_id', flat=True)
             .distinct()
         )
         # Show ALL messages in those conversations (includes claude-code, ops_digest, etc.)
+        # I-0302 Phase 3 Sub-phase C1: defense-in-depth — re-scope even
+        # though conversation_ids were sourced from a scoped queryset.
         conversations = (
-            ChatConversation.objects
+            scope_queryset_chat_conversation(
+                request.user, ChatConversation.objects.all()
+            )
             .filter(conversation_id__in=user_conv_ids)
             .values('conversation_id')
             .annotate(
@@ -1550,8 +1575,10 @@ def list_pa_conversations(request):
 
         results = []
         for conv in conversations:
-            first_row = ChatConversation.objects.filter(
-                conversation_id=conv['conversation_id']
+            # I-0302 Phase 3 Sub-phase C1: scope at point-of-use.
+            first_row = scope_queryset_chat_conversation(
+                request.user,
+                ChatConversation.objects.filter(conversation_id=conv['conversation_id']),
             ).order_by('created_at').first()
 
             # Session 998B: Guard against None user_message
@@ -1598,30 +1625,39 @@ def get_pa_conversation(request, conversation_id):
     try:
         from core.models import ChatConversation
 
-        # Access control: user must have at least one message in the conversation,
-        # or be staff/superuser.  Prevents cross-user conversation leakage.
-        if not request.user.is_staff:
-            has_access = ChatConversation.objects.filter(
-                conversation_id=conversation_id,
-                user=request.user,
-            ).exists()
-            if not has_access:
-                # Allow access to brand-new conversations (no rows yet)
-                if not ChatConversation.objects.filter(conversation_id=conversation_id).exists():
-                    if conversation_id.startswith('pa-'):
-                        return Response({
-                            'success': True,
-                            'conversation_id': conversation_id,
-                            'title': 'New Conversation',
-                            'messages': [],
-                        })
-                return Response({
-                    'success': False,
-                    'error': 'Conversation not found',
-                }, status=404)
+        # Access control: user must have at least one message in the
+        # conversation OR share workspace access. Prevents cross-user
+        # conversation leakage.
+        # I-0302 Phase 3 Sub-phase C1 (2026-07-10): Option A — predicate
+        # replaces the legacy is_staff bypass. Non-superuser staff no
+        # longer bypass; must own or share workspace.
+        has_access = scope_queryset_chat_conversation(
+            request.user,
+            ChatConversation.objects.filter(conversation_id=conversation_id),
+        ).exists()
+        if not has_access:
+            # Allow access to brand-new conversations (no rows yet).
+            # Global existence check is safe here — the fallback only
+            # returns a bare "New Conversation" shell, no cross-user
+            # content, and only when the id starts with `pa-`.
+            if not ChatConversation.objects.filter(conversation_id=conversation_id).exists():
+                if conversation_id.startswith('pa-'):
+                    return Response({
+                        'success': True,
+                        'conversation_id': conversation_id,
+                        'title': 'New Conversation',
+                        'messages': [],
+                    })
+            return Response({
+                'success': False,
+                'error': 'Conversation not found',
+            }, status=404)
 
-        rows = ChatConversation.objects.filter(
-            conversation_id=conversation_id,
+        # I-0302 Phase 3 Sub-phase C1: defense-in-depth — re-scope the LIST
+        # at point-of-use so serialization can't drift back to unscoped.
+        rows = scope_queryset_chat_conversation(
+            request.user,
+            ChatConversation.objects.filter(conversation_id=conversation_id),
         ).order_by('created_at')
 
         if not rows.exists():

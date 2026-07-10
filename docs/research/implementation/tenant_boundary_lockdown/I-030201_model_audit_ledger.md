@@ -262,6 +262,27 @@ Sample-vs-actual gap likely explained by grep `--head_limit=40` in Phase 1 §5.0
 
 **Reg-risk hotspot summary (ChatConversation):** The `.filter(conversation_id=...)` pattern in views_personal_assistant.py + views_session_handoff.py is the primary Phase 2 predicate target. UUID guess-difficulty helps, but predicate should enforce `(conversation_id, user)` tuple lookup as defense-in-depth.
 
+#### §5.3.a Amendment — Phase 3 Sub-phase C1 pre-flight caller re-audit + Option A staff-tightening (2026-07-10)
+
+Ratified via Rigby SIGN Q1-Q7 on Sub-phase C1. Two amendments captured here:
+
+**Caller-surface undercount** — Phase 1 §5.3 documented ChatConversation caller sites across `views_personal_assistant.py` (9) + `views_session_handoff.py` (7). Un-capped grep on HEAD `0a86c1a7` returns **18 hits across 3 view files** — one file was missed:
+
+| File | Sites | Phase 1 §5.3 documented? | Classification |
+|---|---|---|---|
+| views_personal_assistant.py | 9 | ✅ | predicate-scoped LIST + GET; Option A staff-tightening applied |
+| views_session_handoff.py | 7 | ✅ | predicate + Discord union (Discord fallback preserved for cross-platform continuity) |
+| views_project_hub.py | 2 | ❌ NEW | predicate applied BEFORE `icontains` filter per Rigby SIGN Q7 (prevents cross-tenant search leakage) |
+
+**Option A staff-tightening** — this is a **deliberate security hardening**, NOT a bug. Prior code paths in `views_personal_assistant.py` (:542, :639, :1604) used `if not request.user.is_staff:` bypasses that let non-superuser staff read any user's conversation. Rigby F3 amendment on the Phase 2 predicate design explicitly said "do NOT let this transitional fallback become permanent." Sub-phase C1 replaces those bypasses with the ratified `can_read_chat_conversation` + `scope_queryset_chat_conversation` predicates. Under the ChatConversation contract (unlike AgentExecution), there is NO superuser carve-out; ops/support access should be granted via a separate `@superuser_required` surface, not via silent staff bypass in user endpoints.
+
+**Under single-user pre-prod:** Chris is the only user; no functional change.
+**Under Phase 0 multi-tenant:** non-superuser staff no longer see other users' conversations; must own or share workspace access.
+
+**Discord ID mapping** (Rigby SIGN Q7 answer) — retained as `discord_user_id=request.user.discord_id` OR'd on top of the predicate. Discord is orthogonal to workspaces; the Discord-scoped queryset is filtered by the authenticated user's `discord_id` (never by an arbitrary input parameter), preserving the "auth mapping, not any row" invariant.
+
+**Deferred to Sub-phase C2** (per Rigby SIGN Q6) — ~126 non-view sites across ~43 files (services, tasks, tests, consumers, mgmt commands). Different auth models (system tokens, Discord user mapping, internal calls); classification pass required before wiring.
+
 ### §5.4 AgentExecution (Q7 per-user, canonical `core.models_unified_system.AgentExecution:882`) — dominant category: **UNSCOPED (REG RISK) for dashboards**
 
 | Category | Sample callers | Classification | Notes / Reg Risk |
