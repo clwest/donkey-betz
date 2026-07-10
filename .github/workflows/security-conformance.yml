@@ -1,0 +1,98 @@
+name: Failure-Data Safety Contract conformance
+
+# I-0301 Phase 3 Stage 1 — CI-blocking regression suite per safety contract
+# §8.4. Runs the tests/security/ suite on every PR that touches any file
+# involved in envelope construction / enforcement / testing. Blocks the PR
+# if any conformance probe fails.
+#
+# Contract ref:
+#   docs/research/implementation/tenant_boundary_lockdown/failure_data_safety_contract.md
+#   docs/research/implementation/RATIFICATION_2026-07-10_i0301_safety_contract.md
+#
+# Test discipline:
+# - Substrate conformance tests are DB-free (they run without Postgres);
+#   they exercise envelope construction + regex probes + RequestFactory-
+#   based middleware invocation.
+# - OpsRunEvent write tests are marked pytest.mark.django_db and use
+#   Django's TestCase transaction rollback — they run against SQLite in
+#   this workflow to keep CI fast + provider-free.
+
+on:
+  pull_request:
+    paths:
+      - 'core/security/**'
+      - 'tests/security/**'
+      - 'core/settings.py'
+      - 'core/models_ops_runs.py'
+      - '.github/workflows/security-conformance.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'core/security/**'
+      - 'tests/security/**'
+      - 'core/settings.py'
+      - 'core/models_ops_runs.py'
+
+jobs:
+  security-conformance:
+    name: Failure-Data Safety Contract conformance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    env:
+      # Force SQLite for CI so we don't need a Postgres service.
+      # pgvector-dependent code paths are not exercised by this suite.
+      DJANGO_SETTINGS_MODULE: core.settings
+      # Minimal env for settings.py to import without external services.
+      DEBUG: '0'
+      SECRET_KEY: 'ci-conformance-secret-key-not-used-for-anything-else'
+      DATABASE_URL: 'sqlite:///:memory:'
+      REDIS_URL: 'redis://localhost:6379/0'
+      CI_SECURITY_CONFORMANCE: '1'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install minimal dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Install runtime deps + pytest. This is a minimal subset — the
+          # full requirements.txt is heavy and not needed for
+          # substrate-only conformance tests.
+          pip install \
+            'Django==5.0.6' \
+            'djangorestframework' \
+            'pytest' \
+            'pytest-django'
+
+      - name: Run safety-contract conformance suite
+        run: |
+          pytest tests/security/ -v \
+            --tb=short \
+            --strict-markers
+
+      - name: Summarize in job summary
+        if: always()
+        run: |
+          {
+            echo "## Failure-Data Safety Contract conformance"
+            echo ""
+            echo "I-0301 Phase 3 Stage 1 — CI-blocking regression suite per contract §8.4."
+            echo ""
+            echo "**Enforced probes:**"
+            echo "- §3.1 permitted-fields allowlist (JSON-schema shape)"
+            echo "- §3.2 prohibited-content probes (filesystem paths, stack traces, exception values, provider names, credentials, UUIDs)"
+            echo "- §5.1 support_code format"
+            echo "- §6 operator envelope isolation from user envelope"
+            echo "- §8.1 DRF exception handler layer coverage"
+            echo "- §8.2 Django middleware layer coverage"
+            echo ""
+            echo "Contract: \`docs/research/implementation/tenant_boundary_lockdown/failure_data_safety_contract.md\`"
+            echo "Ratification: \`docs/research/implementation/RATIFICATION_2026-07-10_i0301_safety_contract.md\`"
+          } >> "$GITHUB_STEP_SUMMARY"
