@@ -268,6 +268,19 @@ MIDDLEWARE = [
     'core.vip_middleware.VIPReadOnlyMiddleware',  # OVL: Block writes from VIP demo viewers
     'core.auth_middleware.APILoggingMiddleware',  # API request/response logging
     'core.middleware_error_capture.RequestErrorCaptureMiddleware',  # Session 1069: HTTP errors → PA telemetry
+    # I-0301 Phase 3 Stage 1 — Failure-Data Safety Contract Layer 2 enforcement.
+    # Placement invariant (Rigby S2742 SIGN Q5):
+    #   * AFTER auth middleware (request.user populated for operator envelope)
+    #   * AFTER RequestErrorCaptureMiddleware (raw errors reach PA telemetry
+    #     first, then this middleware wraps the response into the safety
+    #     envelope)
+    #   * BEFORE any debug/whitenoise error-rendering middleware (none late
+    #     in this stack)
+    #   * Safe for anonymous requests (operator envelope tolerates missing
+    #     request.user)
+    # Contract:
+    #   docs/research/implementation/tenant_boundary_lockdown/failure_data_safety_contract.md
+    'core.security.error_envelope.RURErrorEnvelopeMiddleware',
     'core.middleware.RangeRequestMiddleware',  # Session 111: HTTP range requests for video streaming
 
     # Unified platform middleware (will be created)
@@ -714,6 +727,10 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,
+    # I-0301 Phase 3 Stage 1 — Failure-Data Safety Contract Layer 1 enforcement.
+    # Custom exception handler that wraps every DRF error response into the
+    # ratified §3.1 envelope. See contract §8.1.
+    'EXCEPTION_HANDLER': 'core.security.error_envelope.drf_exception_handler',
     # Session 789: Disabled throttling for Railway deployment
     # All internal services share IPs, causing false rate limits
     # TODO: Implement IP whitelist for internal services instead
