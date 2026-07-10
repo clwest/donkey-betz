@@ -11,6 +11,8 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
+from core.security.object_authz import scope_queryset_agent_execution
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,15 +37,25 @@ def analytics_overview(request):
     active_agents = Agent.objects.filter(is_active=True).count()
 
     # Execution stats
-    total_executions = AgentExecution.objects.count()
-    executions_30d = AgentExecution.objects.filter(created_at__gte=last_30d).count()
-    executions_7d = AgentExecution.objects.filter(created_at__gte=last_7d).count()
-    executions_24h = AgentExecution.objects.filter(created_at__gte=last_24h).count()
+    # I-0302 Phase 3 Sub-phase B: scoped to user via scope_queryset_agent_execution.
+    # Predicate handles superuser carve-out for null-user Celery runs.
+    total_executions = scope_queryset_agent_execution(
+        request.user, AgentExecution.objects.all()
+    ).count()
+    executions_30d = scope_queryset_agent_execution(
+        request.user, AgentExecution.objects.filter(created_at__gte=last_30d)
+    ).count()
+    executions_7d = scope_queryset_agent_execution(
+        request.user, AgentExecution.objects.filter(created_at__gte=last_7d)
+    ).count()
+    executions_24h = scope_queryset_agent_execution(
+        request.user, AgentExecution.objects.filter(created_at__gte=last_24h)
+    ).count()
 
     # Success rate
-    successful_executions = AgentExecution.objects.filter(
-        created_at__gte=last_30d,
-        status='completed'
+    successful_executions = scope_queryset_agent_execution(
+        request.user,
+        AgentExecution.objects.filter(created_at__gte=last_30d, status='completed'),
     ).count()
     success_rate = (successful_executions / executions_30d * 100) if executions_30d > 0 else 0
 
@@ -84,8 +96,10 @@ def analytics_overview(request):
     memories_30d = AgentMemory.objects.filter(created_at__gte=last_30d).count()
 
     # Token usage
-    token_stats = AgentExecution.objects.filter(
-        created_at__gte=last_30d
+    # I-0302 Phase 3 Sub-phase B: scoped to user via scope_queryset_agent_execution.
+    token_stats = scope_queryset_agent_execution(
+        request.user,
+        AgentExecution.objects.filter(created_at__gte=last_30d),
     ).aggregate(
         total_tokens=Sum('tokens_used'),
         total_cost=Sum('cost'),
@@ -94,9 +108,11 @@ def analytics_overview(request):
 
     # Calculate trends (compare 7d to previous 7d)
     prev_7d_start = last_7d - timedelta(days=7)
-    executions_prev_7d = AgentExecution.objects.filter(
-        created_at__gte=prev_7d_start,
-        created_at__lt=last_7d
+    executions_prev_7d = scope_queryset_agent_execution(
+        request.user,
+        AgentExecution.objects.filter(
+            created_at__gte=prev_7d_start, created_at__lt=last_7d
+        ),
     ).count()
 
     execution_trend = 0
@@ -154,8 +170,10 @@ def analytics_summary(request):
     last_24h = now - timedelta(hours=24)
 
     # Quick summary stats
-    executions_today = AgentExecution.objects.filter(
-        created_at__gte=last_24h
+    # I-0302 Phase 3 Sub-phase B: scoped to user via scope_queryset_agent_execution.
+    executions_today = scope_queryset_agent_execution(
+        request.user,
+        AgentExecution.objects.filter(created_at__gte=last_24h),
     ).count()
 
     knowledge_transfers = KnowledgeTransfer.objects.filter(
@@ -173,8 +191,10 @@ def analytics_summary(request):
     # ranking incorrectly. Use agent__name form per ADR-0002 F1 fold
     # equivalent (Postgres JSONField NULL-semantics make the
     # input_data__source='pa' form unsafe for pre-flag-flip rows).
-    top_agents = AgentExecution.objects.filter(
-        created_at__gte=last_24h
+    # I-0302 Phase 3 Sub-phase B: scoped to user via scope_queryset_agent_execution.
+    top_agents = scope_queryset_agent_execution(
+        request.user,
+        AgentExecution.objects.filter(created_at__gte=last_24h),
     ).exclude(agent__name='PersonalAssistant').values('agent__name').annotate(
         count=Count('id')
     ).order_by('-count')[:5]

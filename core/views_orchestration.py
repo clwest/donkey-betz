@@ -864,9 +864,15 @@ class OrchestrationStepIntelligenceView(View):
             }
 
             # If we have an execution_id, fetch the underlying execution data
+            # I-0302 Phase 3 Sub-phase B: query-time scoping via the predicate
+            # queryset scoper — captures superuser null-user carve-out (a plain
+            # `.filter(user=…)` would exclude null-user Celery runs for superusers).
             if step_exec.execution_id:
                 try:
-                    agent_exec = AgentExecution.objects.get(id=step_exec.execution_id)
+                    from core.security.object_authz import scope_queryset_agent_execution
+                    agent_exec = scope_queryset_agent_execution(
+                        request.user, AgentExecution.objects.all()
+                    ).get(id=step_exec.execution_id)
 
                     # Session 767: Get full task from input_data (task field is truncated to 500 chars)
                     # Session 881: Defensive check - input_data might be a list in some edge cases
@@ -1009,7 +1015,12 @@ class ActiveWorkView(View):
                 })
 
             # Agent executions in last 24h
-            recent_execs = AgentExecution.objects.filter(created_at__gte=cutoff)
+            # I-0302 Phase 3 Sub-phase B: scoped to user via scope_queryset_agent_execution.
+            from core.security.object_authz import scope_queryset_agent_execution
+            recent_execs = scope_queryset_agent_execution(
+                request.user,
+                AgentExecution.objects.filter(created_at__gte=cutoff),
+            )
             exec_total = recent_execs.count()
             exec_completed = recent_execs.filter(status='completed').count()
             exec_failed = recent_execs.filter(status='failed').count()
