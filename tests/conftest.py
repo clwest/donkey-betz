@@ -571,3 +571,18 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "golden_path: mark test as a golden path smoke test"
     )
+    # CDR-003 Gap 2 (§16 wrap-up bundle successor / test infrastructure).
+    # Marks a test that exercises the full receiver → on_commit → Celery
+    # task → ORM adapter chain against a running test database. Use with
+    # ``TransactionTestCase`` and
+    # ``@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)``.
+    # See docs/testing/RUNTIME_INTEGRATION_TESTS.md for the canonical
+    # pattern + when-to-reach-for-it guide. Class-of-bug the pattern is
+    # designed to catch: SESSION_2737 §10.8.2/10.8.3 (wrong ORM import
+    # path + invalid model-field values) — bugs that surface only when
+    # the task body actually executes against a real DB.
+    config.addinivalue_line(
+        "markers",
+        "integration_celery: mark test as exercising the full Celery task body "
+        "against a real DB — see docs/testing/RUNTIME_INTEGRATION_TESTS.md",
+    )
