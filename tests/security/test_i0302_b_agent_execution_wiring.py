@@ -332,3 +332,53 @@ class TestB2bOpsSuperuserGate:
         assert resp.status_code == 200, (
             f"Superuser must pass ops gate with 200; got {resp.status_code}"
         )
+
+
+# ==========================================================================
+# B2c additions — tail cleanup (predicate + one superuser-gate trace surface)
+# ==========================================================================
+
+
+class TestB2cPredicateAndTraceViewer:
+    """B2c: dashboard-stats + trace-viewer wiring — Rigby SIGN Q3 minimum."""
+
+    def test_dashboard_stats_regular_user_sees_own_only(
+        self, client, user_a, executions
+    ):
+        # views_dashboard_stats.dashboard_stats (:85) — predicate-scoped LIST.
+        # user_a has 2 executions; user_b has 1; null_user has 1.
+        # user_a on a personal dashboard should see own 2, not b1/null_user.
+        client.force_login(user_a)
+        resp = client.get("/api/dashboard/stats/")
+        assert resp.status_code == 200
+        body = resp.json()
+        # agent_executions_24h field is the predicate-scoped 24h count.
+        # user_a has 2 rows created inside test scope; count must equal 2,
+        # not 3 (which would include b1) or 4 (which would include null_user).
+        assert body.get("agent_executions_24h") == 2, (
+            f"user_a must see own 24h count only; got "
+            f"{body.get('agent_executions_24h')}"
+        )
+
+    def test_trace_viewer_anonymous_gets_401(self):
+        # views_trace_viewer.TraceViewerView (:31) — superuser-gated
+        # (B2b pattern applied to B2c debug/ops surface).
+        random_trace = uuid.uuid4()
+        resp = Client().get(f"/api/traces/{random_trace}/")
+        # DRF IsAuthenticated returns 403 for anonymous by default; the
+        # @method_decorator(superuser_required) inside returns 401. Either
+        # is acceptable as "unauthenticated blocked" for the gate contract.
+        assert resp.status_code in (401, 403), (
+            f"Anonymous must be blocked from trace-viewer; got "
+            f"{resp.status_code}"
+        )
+
+    def test_trace_viewer_non_superuser_gets_403(self, client, user_a):
+        # Authenticated non-superuser must be 403 (superuser-gate).
+        client.force_login(user_a)
+        random_trace = uuid.uuid4()
+        resp = client.get(f"/api/traces/{random_trace}/")
+        assert resp.status_code == 403, (
+            f"Non-superuser must be 403 on trace-viewer; got "
+            f"{resp.status_code}"
+        )
