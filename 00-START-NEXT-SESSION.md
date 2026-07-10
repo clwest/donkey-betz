@@ -2,17 +2,16 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2742 CLOSED (2 PRs) + PLAYBOOK v0.4.1 PATCH RATIFIED (first PATCH in the chain)
+## READ THIS FIRST — SESSION 2743 CLOSED (1 PR) — COST PROTECTION CAT 3 SHIPPED
 
-**Refreshed 2026-07-10 (SESSION 2742 CLOSED. Arc ratified Playbook v0.4.1 PATCH — first PATCH in the chain. Informative-only §6.12 bullet + §10.15 cross-link + Appendix D row. NO NEW RULES. Rule count still 196. Session 2743 opens fresh — awaiting Chris candidate selection.).**
+**Refreshed 2026-07-10 (SESSION 2743 CLOSED. Arc shipped §17 Cost Protection Cat 3 (c1) startup config log — deferred at S2739. Zero governance side effect; pure operational visibility hook. Startup log line VERIFIED LIVE. Production spend snapshot surfaced ($246.82 30d, all thresholds unset). Session 2744 opens fresh — awaiting Chris candidate selection.).**
 
 Session anchors (read in order):
 
-1. [`docs/handoffs/SESSION_2742_PLAYBOOK_V0_4_1_RATIFIED.md`](docs/handoffs/SESSION_2742_PLAYBOOK_V0_4_1_RATIFIED.md) — v0.4.1 first-PATCH arc; §8 first-PATCH precedent notes; §9 meta-methodology
-2. [`docs/handoffs/SESSION_2741_GRAPH_FRESHNESS_SWEEP.md`](docs/handoffs/SESSION_2741_GRAPH_FRESHNESS_SWEEP.md) — S2741 §29 sweep = Trigger 2 for CD-50 informative codification
-3. [`docs/handoffs/SESSION_2740_PLAYBOOK_V0_4_0_RATIFIED.md`](docs/handoffs/SESSION_2740_PLAYBOOK_V0_4_0_RATIFIED.md) — S2740 CD-50 → PLAYBOOK-6.10.6 (the rule that made this arc's verify-before-build possible)
-4. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.4.1 body (196 rules; §6.12 refreshed with capability graph refresh cadence extension point)
-5. [`docs/research/platform/platform_capability_graph.md`](docs/research/platform/platform_capability_graph.md) §29 + §30 + §31 — the graph freshness sweep this PATCH references
+1. [`docs/handoffs/SESSION_2743_COST_PROTECTION_CAT3.md`](docs/handoffs/SESSION_2743_COST_PROTECTION_CAT3.md) — S2743 arc: Cat 3 (c1) shipment + §6 meta-methodology + §3.4 live production snapshot
+2. [`docs/handoffs/SESSION_2742_PLAYBOOK_V0_4_1_RATIFIED.md`](docs/handoffs/SESSION_2742_PLAYBOOK_V0_4_1_RATIFIED.md) — S2742: v0.4.1 PATCH (per-chain refresh cadence extension point)
+3. [`docs/handoffs/SESSION_2741_GRAPH_FRESHNESS_SWEEP.md`](docs/handoffs/SESSION_2741_GRAPH_FRESHNESS_SWEEP.md) — S2741: full-graph freshness sweep + three-class candidate framework
+4. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.4.1 body (196 rules)
 
 ---
 
@@ -21,100 +20,100 @@ Session anchors (read in order):
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | `0805a332` (body PR #3066 merged; tag `playbook-v0.4.1` applied) + cascade PR pending |
-| Playbook version | **v0.4.1** (first PATCH; git tag `playbook-v0.4.1` on merge commit `0805a332`) |
-| Playbook rule count | **196** (UNCHANGED — PATCH does not add rules) |
-| Constitutional Debt | **Zero outstanding CDs from v0.1.0 forward** — CD-47/48/49/50 all RESOLVED |
-| Session pin | `pa-04322bd323eb4543` retired at S2742 close; new pin minted at S2743 open |
-| Wrapper default pin | `tools/pa_local.sh:532` — matches S2743 open pin (to be minted) |
+| HEAD | `7d866d1a` (PR #3068 merged; Cat 3 startup log shipped) |
+| Playbook version | **v0.4.1** (git tag `playbook-v0.4.1` on merge commit `0805a332`) |
+| Playbook rule count | **196** |
+| Constitutional Debt | **Zero outstanding CDs from v0.1.0 forward** |
+| Session pin | `pa-0963d4aa1f5b484f` — retire at S2744 open, mint fresh |
+| Wrapper default pin | `tools/pa_local.sh:532` — matches S2743 arc pin (to be rotated at S2744 open) |
 
 ---
 
-## Current constitutional state (post-Playbook v0.4.1 PATCH)
+## What S2743 shipped
 
-**Engineering Playbook v0.4.1: RATIFIED** (2026-07-10, first PATCH in the chain).
+**PR #3068** (squash-merged as `7d866d1a`): §17 Cost Protection Cat 3 (c1) — deferred startup config log slice from S2739 §27.2.
 
-- **CD-47 RESOLVED** (v0.1.0)
-- **CD-48 RESOLVED** (v0.3.0 PLAYBOOK-6.6.14)
-- **CD-49 RESOLVED** (v0.3.0 PLAYBOOK-6.10.5)
-- **CD-50 RESOLVED** (v0.4.0 PLAYBOOK-6.10.6)
-- **v0.4.1 introduces NO new debt** (PATCH is informative-only)
+**Files changed:** 4 files, +150/-1 LOC
+- `core/services/cost_threshold_monitor.py` — new public `read_thresholds_snapshot()` helper
+- `core/tasks_cost_protection.py` — module-level flag + `_log_startup_thresholds()` + call site
+- `core/tests/test_cost_protection_p2.py` — 3 new tests in `StartupThresholdLogTests` class
+- `tools/pa_local.sh` — arc pin rotation
 
-Ratified constitutional codification chain: **v0.1.0 → v0.2.0 → v0.3.0 → v0.4.0 → v0.4.1**.
+**Behavior:** Once per worker process at first `check_cost_thresholds` invocation:
+```
+[COST_MONITOR] startup: enforce_mode=monitor thresholds: hour=$X.XX day=$Y.YY month=$Z.ZZ
+```
 
-**Governance artifacts at HEAD:**
+**Rigby SIGN provenance (arc pin `pa-0963d4aa1f5b484f`):**
+- Cat A: 0.90 confidence → PICK Option C (first-tick module-level flag)
+- Cat B: 0.92 confidence → APPROVE zero F-BLOCKING
 
-- 3 Capability Discovery Records ratified: CDR-001, CDR-002, CDR-003
-- 5 Playbook versions ratified: v0.1.0 (inaugural), v0.2.0 (R1/R2/R3), v0.3.0 (CD-48+CD-49), v0.4.0 (CD-50), v0.4.1 (first PATCH — capability graph refresh cadence extension point)
-
-**Queued methodology candidates (do NOT codify without explicit ask):**
-
-- *"PATCH-scope record template"* — v0.4.1 record is the first PATCH instance. Awaits second PATCH before template codification.
-- *"Sub-precedent: body SIGN pass-on-first-attempt as PATCH signal"* — v0.4.1 body SIGN passed on first attempt (v0.3.0/v0.4.0 both had F-BLOCKING). Not two-trigger yet.
-- *"Cadence-based amendment classes"* — the informative extension-point in §6.12 that v0.4.1 records. A future MINOR amendment MAY formalize periodic refresh as a [GR] rule.
-- *"Same-session discovery + codification arc class"* — CX-P11 CANDIDATE from S2740 §9.2 / S2741 §8. Two-trigger threshold met but disambiguation still needed.
-
----
-
-## Session 2742 delivery ledger
-
-| # | Commit / PR | Purpose |
-|---|---|---|
-| 1 | `0805a332` / PR #3066 | feat(playbook): v0.4.1 PATCH — codify capability graph refresh cadence as §6.12 extension point |
-| 2 | (cascade PR) | docs(session-2742): Playbook v0.4.1 ratified — cascade + handoff + anchors + 00-START |
-
-**Rigby SIGN dispatches this session:** 2 substantive (Cat A scope 0.88 PICK + Body SIGN APPROVE zero-F-BLOCKING) + 1 deliverable authoring. **First Playbook amendment where body SIGN passed on first attempt.**
-
-**Ledger totals for S2742:** 2 PRs · 1 feat + 1 docs · **0 rules added** (PATCH) · zero regressions.
+**Live production snapshot revealed at S2743 close:**
+- Hour window: $0.6754 (65 rows)
+- Day window: $14.9463 (1,012 rows)
+- Month window: **$246.8192 (12,252 rows)**
+- All thresholds unset — nothing breaching but non-trivial spend accumulating
 
 ---
 
-## Candidate queue for S2743
+## Notable arc characteristic
 
-Continuing the post-sweep THREE-CLASS framework from S2741. **PLAYBOOK-6.10.6 verify-before-build applies to every candidate.** With v0.4.1 shipped, PLAYBOOK-6.10.6 verify-before-build now applies to Playbook substrate too — as demonstrated in S2742 arc opening.
+**5-arc meta-methodology streak capped with tangible polish.** S2739 → S2740 → S2741 → S2742 all shaped by PLAYBOOK-6.10.6; S2743 breaks the meta chain with a concrete platform improvement while still demonstrating PLAYBOOK-6.10.6 discipline in-wild.
+
+**Zero-F-BLOCKING streak now at 2 arcs.** S2742 v0.4.1 body SIGN passed first attempt; S2743 Cat B SIGN also passed first attempt. Both small-scope. Two-trigger threshold candidate for "body SIGN pass-on-first-attempt as small-scope signal" — awaits mid-scope arc to establish scope-independence.
+
+---
+
+## Candidate queue for S2744
+
+Continuing three-class framework from S2741 (post-sweep). PLAYBOOK-6.10.6 verify-before-build applies to every candidate.
+
+**S2743 signal-driven observation:** production spend accumulation at $246/month with no thresholds set. This shifts §17 Cat 1 enforcement flip readiness signal — a threshold could reasonably be exercised now for observation data.
 
 ### Class 1 — POLISH (Tier B residuals; small S-M PRs)
 
-1. **§8 HAI Escalation residuals** — small-scope after all 4 named bridge methods shipped. Verify at HEAD.
-2. **§14 Platform Health autonomic Governance reaction** — Tier B; requires Chris ADR on trigger-to-freeze mapping.
-3. **§17 Cat 3 startup config log** — deferred at S2739 per Rigby recommendation. XS/S effort.
+1. **§17 threshold configuration exercise** — Chris sets `cost_threshold_month_usd=500` (or similar) via SystemConfiguration to begin observation period for Cat 1 enforcement flip. Not code — configuration. Would start the "monitor observation period + explicit approval" gate discipline.
+2. **§8 HAI Escalation residuals** — small-scope after all 4 named bridge methods shipped.
+3. **§14 Platform Health autonomic Governance reaction** — Tier B; requires Chris ADR on trigger-to-freeze mapping.
 4. **§19 Conversation Lifecycle envelope-shape telemetry** — envelope ABSENT at HEAD per §29.
 
 ### Class 2 — CONSTITUTIONAL-ADR UNBLOCKING (Tier D)
 
 5. **§4 Content Published** — 4 Chris ADRs D65a-D65e blocking
 6. **§7 Revenue Opportunity** — 5 Chris ADRs T1-T8 blocking
-7. **§9 Governance Enforcement** — Chris ADR R.AUTHORITY.ENFORCE-MODE-TOGGLE-FIELDS blocking
-8. **§10 Authority Violation** — STAGE 3 Symbol Mapping (2-3 cycles) blocking
+7. **§9 Governance Enforcement** — Chris ADR blocking
+8. **§10 Authority Violation** — STAGE 3 Symbol Mapping blocking
 9. **§11 Memory Creation** — Chris D-verdict D80 blocking
-10. **§17 Cat 1 enforcement flip** — Chris explicit approval + observation-period data required
+10. **§17 Cat 1 enforcement flip** — Chris explicit approval + observation-period data required (now has S2743 baseline)
 11. **§18 Auth full scope** — Chris D-verdict on 4-axis §14.14 blocking
 12. **§19 Cat C2 session-lifecycle Auth cascade** — Chris D-verdict per §14.14
 
 ### Class 3 — META-METHODOLOGY
 
-13. **CDR-002 receiver-driven fanout canonical pattern** — Rigby recommended at S2741 §29.5.
-14. **CX-P11 CANDIDATE disambiguation** — S2740 codification arc + S2741 sweep are two-trigger candidates. Third occurrence may disambiguate. Do NOT codify at two.
-15. **§29-style verdict template codification** — future sweeps produce comparable outputs. Post two-trigger threshold.
-16. **PATCH-scope record template** — v0.4.1 was first instance. Awaits second PATCH before template codification.
-17. **Capability graph refresh cadence formalization** — v0.4.1 recorded the extension-point; a future MINOR MAY formalize periodic refresh as a [GR] rule. Prerequisite: third refresh instance beyond §27 + §29.
+13. **CDR-002 receiver-driven fanout canonical pattern** — Rigby recommended at S2741 §29.5
+14. **CX-P11 CANDIDATE disambiguation** — needs third organic instance
+15. **§29-style verdict template codification** — post two-trigger threshold
+16. **PATCH-scope record template** — v0.4.1 was first instance; awaits second PATCH
+17. **Capability graph refresh cadence formalization** — v0.4.1 recorded extension point; MINOR MAY formalize
+18. **NEW: "Body SIGN pass-on-first-attempt as small-scope signal"** — S2742 + S2743 both passed first attempt; two-trigger candidate but both small-scope. Do NOT codify.
+19. **NEW: "Visibility-hook arcs surface prod data as bonus"** — S2743 §3.4 first instance. Single-trigger; awaits second.
 
 ### External signal-driven
 
-18. **Production observation** — `would_freeze` shadow live from S2739; watch `[COST_MONITOR] would_freeze=True` warnings + `HAI(source_type='cost_breach').payload['would_freeze']` for real cost-breach signal accumulating toward Cat 1 enforcement flip readiness.
+20. **Production observation** — `would_freeze` shadow live from S2739; `[COST_MONITOR] startup:` line now live from S2743; watch for real cost-breach signal accumulating toward Cat 1 enforcement flip readiness.
 
 ---
 
-## Recommended session-open protocol (for S2743)
+## Recommended session-open protocol (for S2744)
 
 1. `context-kit orient`
-2. Read `docs/handoffs/SESSION_2742_PLAYBOOK_V0_4_1_RATIFIED.md` in full — first-PATCH arc + §8 precedent notes + §9 meta-methodology
-3. Read `docs/ENGINEERING_PLAYBOOK.md` §6.12 (new v0.4.1 bullet) + §10.15 (new cross-link) — the informative additions
-4. Verify runtime state: `git log --oneline -3`, `git tag -l 'playbook-*'` (chain now: v0.1.0 → v0.2.0 → v0.3.0 → v0.4.0 → v0.4.1)
-5. Retire `pa-04322bd323eb4543` (S2742 arc pin) + mint fresh S2743 open pin
+2. Read `docs/handoffs/SESSION_2743_COST_PROTECTION_CAT3.md` in full — Cat 3 shipment + production snapshot + meta-methodology
+3. Verify runtime state: `git log --oneline -3`, `celery inspect ping`
+4. **Check for startup log line in celery logs:** `grep 'COST_MONITOR.*startup' /path/to/celery.log` — should show one line per worker recycle since S2743 merge
+5. Retire `pa-0963d4aa1f5b484f` (S2743 arc pin) + mint fresh S2744 open pin
 6. Rotate `tools/pa_local.sh` line 532 to new pin
 7. **Await Chris candidate selection**
-8. **On candidate acceptance:** apply PLAYBOOK-6.10.6 verify-before-build FIRST (30s), THEN Cat A (per S2741 §9.5 recommendation)
+8. **On candidate acceptance:** apply PLAYBOOK-6.10.6 verify-before-build FIRST (30s), THEN Cat A
 
 ---
 
@@ -123,26 +122,26 @@ Continuing the post-sweep THREE-CLASS framework from S2741. **PLAYBOOK-6.10.6 ve
 Ordered by frequency of use:
 
 1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (L7 anchor v0.4.1)
-2. [`docs/EOS_RULES.md`](docs/EOS_RULES.md) — R1/R2/R3 (also codified as PLAYBOOK-5.2.2/2.2.2/3.2.2)
-3. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.4.1 body (196 rules; §6.12 refreshed)
-4. [`docs/research/platform/platform_capability_graph.md`](docs/research/platform/platform_capability_graph.md) — capability chains §1-§19 + append-only refreshes §23-§31 (§27 + §29 are the two triggers for the v0.4.1 informative note)
+2. [`docs/EOS_RULES.md`](docs/EOS_RULES.md) — R1/R2/R3
+3. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.4.1 body (196 rules)
+4. [`docs/research/platform/platform_capability_graph.md`](docs/research/platform/platform_capability_graph.md) — capability chains §1-§19 + append-only refreshes §23-§31
 5. [`docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md`](docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md)
 6. [`docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md`](docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md)
 7. [`docs/research/platform/CDR_003_runtime_celery_integration_test_harness.md`](docs/research/platform/CDR_003_runtime_celery_integration_test_harness.md)
 
 ---
 
-## Session close summary (Session 2742 — for archive)
+## Session close summary (Session 2743 — for archive)
 
-- **Chapter closed:** Playbook v0.4.1 PATCH ratified — first PATCH in the chain; informative-only §6.12 extension-point note + §10.15 cross-link + Appendix D row; NO NEW RULES
-- **Governance advances:** ratified codification chain now v0.1.0 → v0.2.0 → v0.3.0 → v0.4.0 → v0.4.1; §6.12 grew from 7 → 8 bullets; capability graph refresh cadence now recorded as future-MINOR candidate
-- **Notable event:** Rigby body SIGN passed on FIRST ATTEMPT with zero F-BLOCKING findings. First Playbook amendment where scope-SIGN-to-body-SIGN pipeline required zero REVISE cycles. Rigby-authored bullet text folded verbatim from scope SIGN to body write. Fastest amendment pipeline in the chain so far.
-- **Meta-observation:** v0.4.1 is the smallest amendment (+22/-17 LOC) after v0.4.0 (~50 LOC) and v0.3.0 (~40 LOC). Scope proportionality codified in PLAYBOOK-6.10 commentary is now in-wild demonstrated at PATCH scope.
-- **Rigby-Claude collaboration:** 2 substantive SIGN dispatches (scope + body) + 1 deliverable authoring. Deliverable title cleanup via ORM per feedback memory pattern.
-- **Constitutional debt at close:** Zero (unchanged from S2740; PATCH does not discharge or introduce CDs)
-- **Cross-arc pattern posture:** v0.4.1 NOT the CX-P11 codification. Scope-narrow codification of specific artifact-refresh cadence pattern with concrete two-trigger evidence (§27 + §29). CX-P11 still awaits disambiguation.
-- **PA worker state:** No `celery-recycle` needed this session (docs-only PR)
+- **Arc shipped:** §17 Cost Protection Cat 3 (c1) — once-per-worker startup config log; zero governance side effect; closes S2739 §27.2 deferred slice
+- **Governance advances:** production spend snapshot surfaced as byproduct of visibility hook ($246.82/30d, all thresholds unset); Cat 1 enforcement flip readiness signal now has baseline data
+- **Notable event:** startup log line VERIFIED LIVE via manual task invocation immediately post-merge. New `read_thresholds_snapshot()` public helper avoids importing leading-underscore `_read_threshold`. Zero-F-BLOCKING body SIGN streak now at 2 (S2742 + S2743).
+- **Meta-observation:** first application of PLAYBOOK-6.10.6 verify-before-build to a code substrate (S2742 was Playbook substrate; S2741 was capability graph). Rule scales across all three substrate classes.
+- **Rigby-Claude collaboration:** 2 substantive SIGN dispatches (Cat A scope + Cat B implementation); both refinements folded before merge; Rigby-authored refinement text folded verbatim (matches S2742 pattern).
+- **Constitutional debt at close:** Zero (unchanged from S2742)
+- **Cross-arc pattern posture:** 5-arc meta-methodology streak broken with tangible polish; CX-P11 CANDIDATE unchanged (S2743 is small polish, not same-session discovery + codification).
+- **PA worker state:** all 5 workers alive under post-merge recycle PIDs; `check_cost_thresholds` registered on all 5.
 
 ---
 
-**Awaiting Chris candidate selection for S2743.** No Category A begins until candidate is named. PLAYBOOK-6.10.6 verify-before-build applies FIRST to every candidate — including Playbook amendment candidates (as v0.4.1 arc demonstrated in-wild).
+**Awaiting Chris candidate selection for S2744.** No Category A begins until candidate is named. PLAYBOOK-6.10.6 verify-before-build applies FIRST to every candidate.
