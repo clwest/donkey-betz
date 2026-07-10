@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-10T16:38:11+00:00",
+    "generated": "2026-07-10T17:01:26+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "3e994c880d22",
-    "doc_count": 2508,
-    "commit_count": 7731,
+    "git_head": "9909e1a3afc8",
+    "doc_count": 2509,
+    "commit_count": 7737,
     "confidence_breakdown": {
       "HIGH": 1612,
       "MEDIUM": 394,
       "LOW": 5,
-      "UNKNOWN": 497
+      "UNKNOWN": 498
     },
     "excludes": [
       "docs/archive/",
@@ -2583,7 +2583,7 @@
         2744,
         2745
       ],
-      "commit_count": 1216,
+      "commit_count": 1218,
       "prs": [
         10,
         11,
@@ -3136,7 +3136,8 @@
         3069,
         3071,
         3072,
-        3075
+        3075,
+        3077
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7477,7 +7478,7 @@
         2744,
         2745
       ],
-      "commit_count": 172,
+      "commit_count": 174,
       "prs": [
         2213,
         2219,
@@ -7637,7 +7638,8 @@
         3069,
         3071,
         3072,
-        3075
+        3075,
+        3077
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -36287,6 +36289,20 @@
       "prs": [
         3074,
         3076
+      ]
+    },
+    "docs/research/implementation/tenant_boundary_lockdown/I-0301_scoping.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "9909e1a3",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2742): I-0301 scoping ratification \u2014 Chris approved 3 material amendments; Phase 1 unblocked (#3079)",
+      "sessions_touched": [],
+      "commit_count": 4,
+      "prs": [
+        3078,
+        3079
       ]
     },
     "docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md": {
