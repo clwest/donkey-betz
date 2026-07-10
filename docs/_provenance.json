@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-10T04:00:56+00:00",
+    "generated": "2026-07-10T04:28:48+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "be9b9b1c3c11",
-    "doc_count": 2499,
-    "commit_count": 7941,
+    "git_head": "a5f79e5b70ea",
+    "doc_count": 2500,
+    "commit_count": 7947,
     "confidence_breakdown": {
-      "HIGH": 1605,
+      "HIGH": 1606,
       "MEDIUM": 394,
       "LOW": 5,
       "UNKNOWN": 495
@@ -2001,11 +2001,12 @@
         2736,
         2738
       ],
-      "commit_count": 10,
+      "commit_count": 13,
       "prs": [
         3048,
         3058,
-        3059
+        3059,
+        3062
       ]
     },
     "docs/EOS_RULES.md": {
@@ -2568,9 +2569,10 @@
         2735,
         2736,
         2737,
-        2738
+        2738,
+        2739
       ],
-      "commit_count": 1315,
+      "commit_count": 1317,
       "prs": [
         10,
         11,
@@ -3115,7 +3117,8 @@
         3054,
         3055,
         3057,
-        3059
+        3059,
+        3061
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7447,9 +7450,10 @@
         2734,
         2735,
         2736,
-        2737
+        2737,
+        2739
       ],
-      "commit_count": 269,
+      "commit_count": 271,
       "prs": [
         2213,
         2219,
@@ -7601,7 +7605,8 @@
         3051,
         3054,
         3055,
-        3057
+        3057,
+        3061
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19247,6 +19252,21 @@
       "commit_count": 2,
       "prs": [
         3059
+      ]
+    },
+    "docs/handoffs/SESSION_2739_COST_PROTECTION_P2_OBSERVATION.md": {
+      "originating_session": 2739,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "1647b940",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "docs(session-2739): cost protection P2+ handoff + 00-START refresh + cascade (#3061)",
+      "sessions_touched": [
+        2739
+      ],
+      "commit_count": 2,
+      "prs": [
+        3061
       ]
     },
     "docs/handoffs/SESSION_273_DOCUMENTATION_OVERHAUL.md": {
