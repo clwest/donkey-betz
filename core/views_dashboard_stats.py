@@ -24,6 +24,7 @@ from core.models import (
     Revenue, Opportunity, Application,
     LegacySpiderData, Advisor, Collaboration
 )
+from core.security import scope_queryset_agent_execution
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -82,9 +83,12 @@ def dashboard_stats(request):
     ).count()
 
     # Get agent execution stats
-    agent_executions_24h = AgentExecution.objects.filter(
-        user=user,
-        created_at__gte=timezone.now() - timedelta(hours=24)
+    # I-0302 Phase 3 Sub-phase B2c: scoped via predicate (own + null-user for superuser).
+    agent_executions_24h = scope_queryset_agent_execution(
+        user,
+        AgentExecution.objects.filter(
+            created_at__gte=timezone.now() - timedelta(hours=24),
+        ),
     ).count()
 
     # Get opportunities by category
@@ -131,9 +135,12 @@ def dashboard_stats(request):
     ]
 
     # Calculate AI token usage and costs
-    token_usage_24h = AgentExecution.objects.filter(
-        user=user,
-        created_at__gte=timezone.now() - timedelta(hours=24)
+    # I-0302 Phase 3 Sub-phase B2c: scoped via predicate (own + null-user for superuser).
+    token_usage_24h = scope_queryset_agent_execution(
+        user,
+        AgentExecution.objects.filter(
+            created_at__gte=timezone.now() - timedelta(hours=24),
+        ),
     ).aggregate(
         total_tokens=Sum('tokens_used'),
         total_cost=Sum('cost')

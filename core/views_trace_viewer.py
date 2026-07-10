@@ -5,6 +5,11 @@ Provides API endpoint to view all artifacts linked to a trace_id.
 This enables debugging and visualization of complete workflow executions.
 
 GET /api/traces/<trace_id>/ - View all artifacts linked to a trace
+
+I-0302 Phase 3 Sub-phase B2c (2026-07-10) — trace-viewer is a debug/ops
+surface (see file docstring). Superuser-gated + predicate-scoped like
+the B2b cluster. Do not remove ``@method_decorator(superuser_required)``
+without ratified policy change.
 """
 import uuid
 import logging
@@ -12,6 +17,9 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.utils import timezone
+from django.utils.decorators import method_decorator
+
+from core.security import scope_queryset_agent_execution, superuser_required
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +36,7 @@ class TraceViewerView(APIView):
     """
     permission_classes = [IsAuthenticated]
 
+    @method_decorator(superuser_required)
     def get(self, request, trace_id):
         """Get all artifacts for a trace."""
         try:
@@ -44,21 +53,32 @@ class TraceViewerView(APIView):
         }
 
         # Query all artifact types
-        result['artifacts'] = self._gather_artifacts(trace_uuid)
+        # I-0302 Phase 3 Sub-phase B2c: pass request so helper can scope
+        # AgentExecution reads via the predicate module.
+        result['artifacts'] = self._gather_artifacts(trace_uuid, request)
         result['timeline'] = self._build_timeline(result['artifacts'])
         result['wiring_defects'] = self._get_defects(trace_uuid)
         result['summary'] = self._build_summary(result)
 
         return Response(result)
 
-    def _gather_artifacts(self, trace_id: uuid.UUID) -> dict:
-        """Gather all artifacts linked to trace_id."""
+    def _gather_artifacts(self, trace_id: uuid.UUID, request) -> dict:
+        """Gather all artifacts linked to trace_id.
+
+        I-0302 Phase 3 Sub-phase B2c (2026-07-10): ``request`` added so
+        AgentExecution reads can be scoped via ``scope_queryset_agent_execution``.
+        Caller is guaranteed superuser (``@method_decorator(superuser_required)``
+        on ``get``), so the predicate returns own + null-user Celery runs.
+        """
         artifacts = {}
 
         # Agent Executions (from core.models_unified_system)
         try:
             from core.models_unified_system import AgentExecution
-            executions = AgentExecution.objects.filter(trace_id=trace_id).order_by('created_at')
+            executions = scope_queryset_agent_execution(
+                request.user,
+                AgentExecution.objects.filter(trace_id=trace_id),
+            ).order_by('created_at')
             artifacts['agent_executions'] = [{
                 'id': str(e.id),
                 'agent': e.agent.name if e.agent else e.owner_agent,

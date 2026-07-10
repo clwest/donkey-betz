@@ -120,7 +120,15 @@ def get_memory_detail(request, memory_id):
         execution_data = None
         if memory.source_type in ('execution', 'task') and memory.source_id:
             try:
-                execution = AgentExecution.objects.get(id=memory.source_id)
+                # I-0302 Phase 3 Sub-phase B2c: query-time scoping via
+                # scope_queryset_agent_execution captures the null-user
+                # superuser carve-out (a plain `.get(id=)` would leak
+                # cross-user rows to non-owners; a plain `.filter(user=)`
+                # would incorrectly drop null-user rows for superusers).
+                from core.security import scope_queryset_agent_execution
+                execution = scope_queryset_agent_execution(
+                    request.user, AgentExecution.objects.all()
+                ).get(id=memory.source_id)
                 if execution.output_data:
                     execution_data = {
                         'output_data': execution.output_data,
