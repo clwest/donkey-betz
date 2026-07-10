@@ -452,6 +452,32 @@ Ratified via Rigby SIGN Q1-Q5 on B2c classification. B2c closes AgentExecution w
 
 **Reg-risk hotspot summary (Document):** Small — most user-facing paths already filter by `owner=`. Primary Phase 2 targets: (1) verify the `is_staff` gate at `content/views.py:122` guards the `.all()` branch; (2) audit `content/consumers.py:288, :320` for owner filter; (3) staff-gate `dashboard/views.py:230` aggregate view.
 
+#### §5.5.a Amendment — Phase 3 Sub-phase D2 wiring outcome (2026-07-10)
+
+Ratified via Rigby SIGN Q1-Q7 on D2 (design SIGN carried over from D1 with per-file classification adjustments):
+
+**Wired sites (3):**
+
+| File | Site | Wiring |
+|---|---|---|
+| `dashboard/views.py` | :230 `by_type` aggregate | Wrapped in `if request.user.is_superuser: … else: type_breakdown = {}` — non-superuser callers get the `{'unknown': 0}` default; superuser sees the true distribution. Chosen over blanket `@superuser_required` on the endpoint because the surrounding `embeddings_stats` also returns a public `DocumentEmbedding` chunk count that has no cross-user leakage. |
+| `core/views_rag_observability.py` | `rag_run_classification` (site at :251) | `@superuser_required` on the whole endpoint. This is a mutating batch classification job over Document rows — ops-only per §5.1.a-style discipline. |
+| `core/views_rag_embeddings.py` | `:1573` `_video_document_details` helper | Signature refactored to accept `user`; caller `ingest_video_status` at `:1516` passes `request.user`; predicate applied inside so a caller can't receive metadata for another user's video document (transitively-safe today because `job_id` is user-scoped, but defense-in-depth per Rigby Q3). |
+
+**Verified-already-scoped (no wiring needed):**
+
+| File | Sites | Existing pattern | Verdict |
+|---|---|---|---|
+| `content/views.py` | :125 :128 :176 :379 :641 :646 | `is_superuser` bypass at :124 + `Q(is_public=True, is_active=True) \| Q(owner=user) \| Q(allowed_users=user)` sharing model at :128 | KEEP AS-IS. The `is_public`/`allowed_users` sharing model is semantically richer than the predicate (`filter(owner=user)`); applying the predicate would REMOVE the public-document and shared-document access paths. This is a **product decision** to keep the sharing model; not a security exemption. |
+| `core/views_rag_embeddings.py` | :212 :365 :366 :391 :424 :425 :426 :742 :877 (LIST/aggregate) + :470 :836 :1144 :1189 (GET) + :93 :1005 :1084 :1274 :1342 :1444 (CREATE) | All use `.filter(owner=user, …)` or `.get(id=X, owner=user)` or `.create(…, owner=request.user)` server-side | ALREADY SCOPED. Predicate would return equivalent semantics; no wiring needed to preserve the ratified boundary. |
+| `content/consumers.py` | :288 :320 :508 (Phase 1 §5.5 AMBIGUOUS) | WebSocket consumers | DEFERRED to Sub-phase D2-followup per Rigby Q6 (WebSocket auth models — consumer-user resolution differs from HTTP request.user). Same rationale as C2 deferral: identity primitives crystallize at Phase 0 flip. |
+
+**Non-canonical Document siblings excluded from I-0302 scope:**
+
+`LegalDocument`, `LitigationDocument`, `CaseDocument`, `ReviewDocument` are distinct models per Phase 1 §2.5 (canonical Document is `content.models.Document` only). These siblings appear in `views_legal.py`, `views_legal_cases.py`, `views_artifacts.py` but are not I-0302 targets — separate arc if their tenant boundary matters.
+
+**Sub-phase D close statement:** D1 (12 Deliverable sites, Option A staff-tightening) + D2 (3 Document sites, verified 20+ already-scoped) = **15 sites wired across 9 view files under Sub-phase D**. Phase 3 wiring is COMPLETE across all 5 canonical models — I-0302 arc now unblocks Phase 4 (regression harness) opening.
+
 ### §5.6 Phase 1 → Phase 2 handoff summary
 
 **Per-model regression-risk rank (highest first):**
