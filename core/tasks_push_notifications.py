@@ -467,16 +467,45 @@ def notify_hai_inbox(item_id):
         return {'skipped': 'preference_gate'}
 
     try:
-        from core.models_unified_system import DirectMessage
-        subject = f'[{item.urgency.upper()}] {(item.title or "")[:120]}'
-        body = (item.summary or '')[:2000]
+        from core.models_messaging import (
+            DirectMessage, MessageThread, ThreadParticipant,
+        )
+        # DirectMessage lives on a MessageThread (recipient is a
+        # participant, not a direct FK). Reuse an existing HAI-scoped
+        # system-notification thread for this user if present so the
+        # Inbox UI groups repeat notifications; otherwise create one.
+        thread = (
+            MessageThread.objects.filter(
+                thread_type='rigby_routed',
+                participants=item.user,
+            ).order_by('-created_at').first()
+        )
+        if thread is None:
+            thread = MessageThread.objects.create(
+                thread_type='rigby_routed',
+                subject='System notifications',
+                metadata={
+                    'routed_by': 'hai_inbox_dispatch',
+                    'source_type': item.source_type,
+                },
+            )
+            ThreadParticipant.objects.create(thread=thread, user=item.user)
+
+        title = f'[{item.urgency.upper()}] {(item.title or "")[:120]}'
+        summary = (item.summary or '')[:2000]
+        body = f'{title}\n\n{summary}' if summary else title
         DirectMessage.objects.create(
-            recipient_id=item.user_id,
-            subject=subject,
+            thread=thread,
+            sender=None,  # System notifications have no sender FK
             body=body,
-            message_type='system_notification',
-            source_type=item.source_type,
-            source_id=str(item.source_id or ''),
+            sender_type='system',
+            metadata={
+                'routed_by': 'hai_inbox_dispatch',
+                'source_type': item.source_type,
+                'source_id': str(item.source_id or ''),
+                'urgency': item.urgency,
+                'hai_id': str(item.id),
+            },
         )
         # Mark channel fired on the HAI payload so downstream inspections
         # (audit, cross-channel dedup) can see the outcome without querying
