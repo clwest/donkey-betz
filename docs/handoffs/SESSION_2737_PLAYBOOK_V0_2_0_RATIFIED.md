@@ -123,4 +123,96 @@ The doc should NOT be deleted — the "Codification path" annotations at the bot
 
 ---
 
-**End of Session 2737.** Engineering Playbook v0.2.0 ratified. Reference for future MINOR amendments.
+## 10. Post-ratification bundle — §16 Notification Fanout wrap-up (CDR-001 §7 Gap 1-4)
+
+Immediately after the v0.2.0 ratification landed (merge commit `5bcb9777`),
+the §16 Notification Fanout wrap-up bundle from CDR-001 §7 was shipped as
+**the first engineering work authored under the ratified Playbook v0.2.0
+rules**. It exercises PLAYBOOK-2.2.2 (Category A before code) and
+PLAYBOOK-3.2.2 (acceptance-tests-first) in production for the first time.
+
+### 10.1 Category A verification (per PLAYBOOK-2.2.2)
+
+At HEAD `5bcb9777`, grepped each of the 4 gap markers:
+
+| Gap | Symbol | Files matching | Verdict |
+|---|---|---|---|
+| 1 — Inbox receiver | `signals_inbox*` / `@receiver.*DirectMessage` | 0 | Real |
+| 2 — HAIDispatchLog | `HAIDispatchLog` | 0 in code | Real |
+| 3 — channels_fired convention | `channels_fired` | 0 in code | Real |
+| 4 — Cross-channel contract | `payload_channel_dispatch_state` | 0 | Real |
+
+**Cat A confirms CDR-001 §7 scope.** No material scope change → no CDR-003
+required. Existing CDR-001 §7 remains authoritative scope for the bundle.
+
+### 10.2 Acceptance tests authored pre-implementation (per PLAYBOOK-3.2.2)
+
+`core/tests/test_hai_wrap_up_bundle.py` — 14 tests across 4 AT classes +
+meta guard. Test file docstring cites PLAYBOOK-3.2.2 and the Cat A audit
+verbatim; guard against reverse-engineering codified per PLAYBOOK-3.2.2
+last sentence.
+
+### 10.3 Shipped code (PR #3050 merged as `a3b04af7`)
+
+- **Gap 3+4 shared helper** — `core/services/hai_dispatch_state.py`:
+  `ChannelDispatchState` enum (6 canonical states) + 3 payload helpers
+  (`mark_channel_fired`, `has_channel_fired`, `channels_fired`) with
+  backward-compat legacy `discord_sent` read.
+- **Gap 2 audit table** — `core/models_hai_dispatch_log.py` +
+  hand-authored migration `0380_session_2737_hai_dispatch_log.py`.
+  10-field `HAIDispatchLog` model with UniqueConstraint (user,
+  source_type, source_id, channel) + 3 indexes + identity carriage per
+  CDR-001 §21 F6 (executor_actor + sponsor_actor + principal_user).
+  Migration was hand-authored to scope to only HAIDispatchLog — Django's
+  makemigrations at HEAD would have batched in unrelated pending
+  Narrative* drift out-of-scope for the bundle.
+- **Gap 1 Inbox receiver** — `core/signals_inbox_notifications.py`
+  (`@receiver(post_save, sender='core.HumanAttentionItem')`) +
+  `notify_hai_inbox` Celery task appended to
+  `core/tasks_push_notifications.py`. Kill switch
+  `settings.HAI_INBOX_DISPATCH_ENABLED` (default True). Urgency floor
+  `'critical'`. Reuses `_pref_gates_pass` from Discord signal module.
+  Writes `DirectMessage` + `HAIDispatchLog` per dispatch. Registered
+  in `core/apps.py._register_signals`.
+
+### 10.4 Test suite state at bundle close
+
+- **14 passed, 0 failed** — all AT-16 tests green
+- **Regression:** 77 passed across S2728 + S2736 + S2735 test surfaces
+- **5 pre-existing test-DB cleanup errors** on
+  `test_hai_discord_fanout.py` — `psycopg2.errors.DuplicateDatabase` /
+  `ObjectInUse` from stale fixture state; unrelated to this bundle
+
+### 10.5 Runtime state
+
+- **PA worker:** post-S2728 restart; S2736 §12 P1-P3.1 + S2737 v0.2.0
+  body + S2737 §16 bundle all in `main` but the worker has NOT been
+  restarted. Run `make celery-recycle` before the next Inbox HAI is
+  produced so `notify_hai_inbox` loads into the worker.
+- **Migration state:** `0380` applied locally + at HEAD.
+
+### 10.6 Governance stamps
+
+- **PLAYBOOK-2.2.2 exercised** — Cat A run + CDR-001 confirmed → no
+  CDR-003
+- **PLAYBOOK-3.2.2 exercised** — 14 acceptance tests authored
+  pre-implementation, `@skip`/`@expectedFailure` markers not used (all
+  tests write the code path they exercise, so were red-then-green as
+  each Gap shipped)
+- **PLAYBOOK-5.2.2** not exercised — no Rigby SIGN dispatched
+  (bundle-scale work does not require SIGN per PLAYBOOK-10.4.2
+  lightweight discretion; the wrap-up bundle is not a Playbook amendment)
+
+### 10.7 Commit graph
+
+```
+a3b04af7  feat(session-2737): §16 Notification Fanout — wrap-up bundle (#3050)
+5bcb9777  docs(session-2737): Playbook v0.2.0 ratified — handoff + cascade (#3049)
+3dc2c588  feat(playbook): v0.2.0 MINOR — codify R1/R2/R3 (#3048)
+```
+
+---
+
+**End of Session 2737.** Engineering Playbook v0.2.0 ratified + §16
+Notification Fanout wrap-up bundle (CDR-001 §7 Gap 1-4) shipped as
+first engineering work under ratified v0.2.0 rules.
