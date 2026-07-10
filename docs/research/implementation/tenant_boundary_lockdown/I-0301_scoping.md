@@ -20,7 +20,11 @@ sibling_arcs:
   - I-0302 (Object-Level Authorization) — waits for I-0301 safety contract SIGN
   - I-0303 (Async Tenant-Boundary Enforcement) — waits for I-0301 safety contract SIGN
 head_at_scoping: 0825df46
-current_phase: Phase 3 (HTTP Remediation) — UNBLOCKED by Phase 2 close 2026-07-10 (Chris ratified frozen safety contract); pending Chris authorization to open. First code-touching phase.
+current_phase: Arc CLOSED 2026-07-10 (Chris ratified I-030199 close doc)
+arc_status: CLOSED
+arc_close_doc: docs/research/implementation/tenant_boundary_lockdown/I-030199_tenant_boundary_lockdown_implementation_close.md
+arc_close_ratification: docs/research/implementation/RATIFICATION_2026-07-10_i0301_arc_close.md
+arc_close_date: 2026-07-10
 phase_1_audit_ledger_deliverable: 1ca36f84-ae40-415c-b482-768415d13fd9  # workspace fcd7e683
 phase_1_closed: 2026-07-10 (Rigby SIGN-PASS on audit ledger; no material amendments)
 phase_2_closed: 2026-07-10 (Chris ratified frozen safety contract; downstream unlocks per §13)
@@ -544,7 +548,7 @@ Live tracker of I-0301 phase progress. Updated as each phase opens / closes.
 | **Phase 2 — Safety Contract Draft + Rigby SIGN + Chris Ratification** | **CLOSED 2026-07-10** — Rigby SIGN-WITH-EDITS (11/12 PASS, 1 material amendment TIGHTENING §3.2 applied); Chris ratified frozen contract. Contract lives at `failure_data_safety_contract.md`, `frozen: true`. Ratification record `RATIFICATION_2026-07-10_i0301_safety_contract.md`. | Phase 1 close ✅ | Contract frozen + ratified ✅; downstream unlocks in effect |
 | **Phase 3 — HTTP Remediation** | **21/27 REMEDIATED 2026-07-10.** Stage 1 SHIPPED (PR #3085 substrate + CI); Stage 2a SHIPPED (4 content_learning); Stage 2b SHIPPED (PR A intelligence x7, PR B agents @action); Stage 3 SHIPPED (PR A autonomous_system DELETED + 5 nervous Bucket B + 1 nervous Bucket A frozen + Bucket D reclassifications; PR B agents get_permissions() collapse). Remaining 6 endpoints: 2 sports Bucket A (schema audit), 2 tokens Bucket A2 (substrate verify), 2 dead-code (NervousStatusView + AgentExecutionViewSet). Stage 2c ENVELOPE UNIFICATION still open as follow-on with cross-platform blast radius. | Phase 2 close ✅ | All 27+ endpoints remediated per bucket; base DRF exception handler + Django middleware + template overrides + regression suite scaffolded conforming to safety contract §8; envelope unification landed OR documented cross-substrate acceptance; first tests pass; CI-blocking |
 | **Phase 4 — Coverage Denominator Machinery** | **SHIPPED 2026-07-10** — Rigby SIGN-PASS applied. `enumerate_public_http_endpoints` + `regenerate_endpoint_snapshot` management commands + `tests/security/http_endpoint_snapshot.json` (2261 endpoints, 203 AllowAny) + `test_endpoint_drift.py` (5 drift categories) + `security-conformance.yml` extended. **Discovered: 203 AllowAny endpoints in the wild** vs the 27 my Phase 1 grep found — validates Rigby SIGN §1 material amendment at scale. Existing AllowAny grandfathered in snapshot; NEW additions blocked by drift test. Regression NON-AllowAny → AllowAny = hard fail. | Phase 3 close ✅ | Phase 4 close criteria met ✅ |
-| **Phase 5 — I-0301 Close** | BLOCKED on Phase 4 close | Phase 4 close | All buckets remediated; regression suite green + CI-blocking; coverage machinery live; `I-030199_close.md` written + Chris-ratified |
+| **Phase 5 — I-0301 Close** | **CLOSED 2026-07-10** — Rigby close SIGN initial BLOCK on 3 material metric/arithmetic/terminology issues; amendments applied post-SIGN; re-SIGN PASS. Chris ratified frozen `I-030199_tenant_boundary_lockdown_implementation_close.md`. Ratification record `RATIFICATION_2026-07-10_i0301_arc_close.md`. Downstream unlocks (RUR-C2 + I-0302 + I-0303 already active from Phase 2 close) confirmed. **RUR-C1 parent remains OPEN** pending I-0302 + I-0303 close per Chris Q2 D-verdict. | Phase 4 close ✅ | Arc CLOSED ✅ |
 
 **Downstream unlocks activated by Phase 2 close (each requires separate Chris authorization to open):**
 - **Phase 3** (this arc) — HTTP Remediation (first code-touching phase)

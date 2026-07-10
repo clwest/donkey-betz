@@ -1,9 +1,14 @@
 ---
 title: "I-0301 Tenant Boundary Lockdown — HTTP + AllowAny Surface Remediation + Failure-Data Safety Contract — Implementation Close"
-status: draft
-authority: arc-close-draft  # becomes 'arc-close-frozen' after Chris ratification
+status: active
+authority: arc-close-frozen
+frozen: true
 session_added: 2742
 session_close_drafted: 2742
+session_arc_ratified: 2742
+arc_ratification_date: 2026-07-10
+arc_ratifier: chris
+arc_ratification_record: docs/research/implementation/RATIFICATION_2026-07-10_i0301_arc_close.md
 last_updated: 2026-07-10
 arc_id: I-0301
 arc_close_date: 2026-07-10
@@ -30,8 +35,10 @@ parent_close_gate:
 
 # I-0301 Tenant Boundary Lockdown — Arc Implementation Close
 
-> **DRAFT arc close — pending Rigby SIGN + Chris ratification.**
-> On ratification, this doc becomes `authority: arc-close-frozen`. The arc is preserved as-shipped; any post-close work happens via new sub-arcs or a follow-on program.
+> **FROZEN — RATIFIED 2026-07-10 (S2742).**
+> Rigby close SIGN cycle closed at SIGN-PASS after one initial BLOCK on accounting/terminology (3 material amendments applied post-SIGN). Chris ratified the frozen text. This arc is preserved as-shipped; any post-close work happens via new sub-arcs (I-0302 / I-0303 / follow-on program).
+>
+> Ratification record: [`RATIFICATION_2026-07-10_i0301_arc_close.md`](../RATIFICATION_2026-07-10_i0301_arc_close.md).
 
 ---
 
@@ -299,8 +306,10 @@ Non-material tweaks applied:
 - Phase 3 Stage 2b PR B row: replaced "reclassified to Bucket C dead-gated" with "action-level override removed; source-level fix stands even though ViewSet not routed."
 - Phase 4 mechanism explanation: dropped the specific `WrappedAPIView` name and softened to "function-based DRF views via `@api_view` + `@permission_classes` decorators."
 
-Re-SIGN request sent to Rigby post-amendments; ratification-block resolves on her PASS on the corrected doc.
+Rigby re-SIGN verdict on the corrected doc: **SIGN-PASS**. "No further edits required before Chris ratification."
+
+Chris D-verdict 2026-07-10 (S2742): **RATIFY**. All four ratification-package items in §8 (Phase 1–4 outcomes / Follow-on scope §5 / Grandfathered 181 baseline / Downstream unlock §6) accepted as reported. Frontmatter transitioned to `authority: arc-close-frozen` in the same commit as this note.
 
 ---
 
-**End of I-0301 Tenant Boundary Lockdown implementation close (draft; pending Rigby re-SIGN confirmation + Chris ratification).**
+**End of I-0301 Tenant Boundary Lockdown implementation close. RATIFIED + FROZEN 2026-07-10.**
