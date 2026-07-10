@@ -31,13 +31,13 @@ B  /api/content-learning/trends/               core.views_content_learning:Conte
 
 # Bucket B — intelligence.views (deferred to Stage 2b, pending Rigby SIGN on
 # filesystem-vs-DB architecture and cross-user data ownership design):
-B  /api/action-plans/persistence/     intelligence.views:ActionPlanPersistenceView   pending
-B  /api/action-plans/execute/         intelligence.views:ExecuteActionPlanView       pending
-B  /api/generated-files/<filename>/   intelligence.views:ViewGeneratedFileView       pending
-B  /api/revenue-opportunities/        intelligence.views:RevenueOpportunitiesView    pending
-B  /api/proposals/submit/             intelligence.views:SubmitProposalView          pending
-B  /api/revenue-metrics/              intelligence.views:RevenueMetricsView          pending
-B  /api/agent-plans/execute/          intelligence.views:ExecuteAgentPlanView        pending
+B  /api/v1/intelligence/income-builder/plans/                        intelligence.views:ActionPlanPersistenceView   remediated
+B  /api/v1/intelligence/income-builder/execute/                      intelligence.views:ExecuteActionPlanView       remediated
+B  /api/v1/intelligence/income-builder/file/<filename>/              intelligence.views:ViewGeneratedFileView       remediated
+B  /api/v1/intelligence/revenue/opportunities/                       intelligence.views:RevenueOpportunitiesView    remediated
+B  /api/v1/intelligence/revenue/submit/                              intelligence.views:SubmitProposalView          remediated
+B  /api/v1/intelligence/revenue/metrics/                             intelligence.views:RevenueMetricsView          remediated
+B  /api/v1/intelligence/agent-execute/                               intelligence.views:ExecuteAgentPlanView        remediated
 
 # Bucket B — agents ViewSet action (deferred to Stage 2b — coupled with the
 # Bucket D dynamic get_permissions() finding on the same ViewSet):
