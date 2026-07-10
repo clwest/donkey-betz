@@ -20,7 +20,9 @@ sibling_arcs:
   - I-0302 (Object-Level Authorization) — waits for I-0301 safety contract SIGN
   - I-0303 (Async Tenant-Boundary Enforcement) — waits for I-0301 safety contract SIGN
 head_at_scoping: 0825df46
-current_phase: Phase 1 (Audit Ledger) — unblocked by scoping ratification; not yet started
+current_phase: Phase 2 (Safety Contract Draft) — unblocked by Phase 1 close (Rigby SIGN-PASS on audit ledger 2026-07-10); pending Chris authorization to open
+phase_1_audit_ledger_deliverable: 1ca36f84-ae40-415c-b482-768415d13fd9  # workspace fcd7e683
+phase_1_closed: 2026-07-10 (Rigby SIGN-PASS on audit ledger; no material amendments)
 sign_history:
   - session: 2742
     reviewer: rigby
@@ -535,9 +537,9 @@ Live tracker of I-0301 phase progress. Updated as each phase opens / closes.
 
 | Phase | Status | Opens on | Closes on |
 |---|---|---|---|
-| **Phase 1 — Audit Ledger** | **UNBLOCKED (2026-07-10, S2742 Chris ratification of scoping)** — not yet started | Chris scoping ratification ✅ | Audit ledger deliverable materialized in workspace `fcd7e683`; every AllowAny occurrence + dynamic-permission audit result classified into A/A2/B/C/D bucket; Rigby ledger SIGN |
-| **Phase 2 — Safety Contract Draft + Rigby SIGN** | BLOCKED on Phase 1 close | Phase 1 close | Failure-data safety contract frozen at durable doc location; Rigby SIGN-with-PASS on the contract; Chris ratification of the frozen contract |
-| **Phase 3 — HTTP Remediation** | BLOCKED on Phase 2 close (safety contract Chris-ratified) | Phase 2 close | All 26+ endpoints remediated per bucket; base exception handler + envelope live; regression suite scaffolded + first tests pass; CI-blocking |
+| **Phase 1 — Audit Ledger** | **CLOSED 2026-07-10** — Rigby SIGN-PASS on ledger deliverable `1ca36f84-ae40-415c-b482-768415d13fd9`; no material amendments; denominator 27 (26 static + 1 dynamic); bucket tally A=2 / A2=2 / B=12 / C=4 (preliminary) / D=7 | Chris scoping ratification ✅ | Audit ledger materialized + Rigby ledger SIGN ✅ |
+| **Phase 2 — Safety Contract Draft + Rigby SIGN** | **UNBLOCKED 2026-07-10** — Phase 1 close cleared prereq. Awaiting Chris authorization to open. | Phase 1 close ✅ | Failure-data safety contract frozen at durable doc location; Rigby SIGN-with-PASS on the contract; Chris ratification of the frozen contract |
+| **Phase 3 — HTTP Remediation** | BLOCKED on Phase 2 close (safety contract Chris-ratified) | Phase 2 close | All 27+ endpoints remediated per bucket; base exception handler + envelope live; regression suite scaffolded + first tests pass; CI-blocking |
 | **Phase 4 — Coverage Denominator Machinery** | BLOCKED on Phase 3 close | Phase 3 close | CI route-list generator live; snapshot drift detection blocks unreviewed new routes |
 | **Phase 5 — I-0301 Close** | BLOCKED on Phase 4 close | Phase 4 close | All buckets remediated; regression suite green + CI-blocking; coverage machinery live; `I-030199_close.md` written + Chris-ratified |
 
