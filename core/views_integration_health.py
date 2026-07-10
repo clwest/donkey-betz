@@ -8,7 +8,13 @@ Provides:
 3. Alert Log - Silent failures tracked
 4. Execution Quality Scores - Context vs outcome correlation
 
-Session 758 Update: Added Dream System and Body Systems tracking
+Session 758 Update: Added Dream System and Body Systems tracking.
+
+I-0302 Phase 3 Sub-phase B2b (2026-07-10) — every AgentExecution-touching
+view here is gated with ``@superuser_required`` and predicate-scoped for
+defense-in-depth. Ops health/observability data still leaks per-user
+volumes if left unscoped under multi-tenant. Do not remove the
+``@superuser_required`` decorators without ratified policy change.
 """
 
 import logging
@@ -22,6 +28,8 @@ from django.views.decorators.http import require_GET
 from django.db.models import Count, Avg, Q, F
 from django.db.models.functions import TruncHour, TruncDay
 
+from core.security import scope_queryset_agent_execution, superuser_required
+
 logger = logging.getLogger(__name__)
 
 
@@ -30,6 +38,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 @require_GET
+@superuser_required
 def integration_health(request):
     """
     GET /api/integration/health/
@@ -120,10 +129,17 @@ def integration_health(request):
     # 4. Feedback Loop Health
     try:
         from core.models_unified_system import AgentExecution
-        executions_7d = AgentExecution.objects.filter(created_at__gte=last_7d).count()
-        successful_7d = AgentExecution.objects.filter(
-            created_at__gte=last_7d,
-            status='completed'
+        # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
+        executions_7d = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=last_7d),
+        ).count()
+        successful_7d = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(
+                created_at__gte=last_7d,
+                status='completed',
+            ),
         ).count()
 
         success_rate = (successful_7d / executions_7d * 100) if executions_7d > 0 else 0
@@ -251,7 +267,11 @@ def integration_health(request):
         # Tracking started when context_injected field was added
         tracking_start = timezone.make_aware(datetime(2026, 1, 15, 0, 0, 0))
 
-        recent_execs = AgentExecution.objects.filter(created_at__gte=last_24h).order_by('-created_at')
+        # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
+        recent_execs = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=last_24h),
+        ).order_by('-created_at')
         total_recent = recent_execs.count()
 
         # Count executions WITH tracking (have context_injected key)
@@ -305,6 +325,7 @@ def integration_health(request):
 # =============================================================================
 
 @require_GET
+@superuser_required
 def context_injection_metrics(request):
     """
     GET /api/integration/metrics/
@@ -324,9 +345,13 @@ def context_injection_metrics(request):
         hour_start = now - timedelta(hours=hour_offset + 1)
         hour_end = now - timedelta(hours=hour_offset)
 
-        execs = AgentExecution.objects.filter(
-            created_at__gte=hour_start,
-            created_at__lt=hour_end
+        # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
+        execs = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(
+                created_at__gte=hour_start,
+                created_at__lt=hour_end,
+            ),
         )
 
         total = execs.count()
@@ -356,8 +381,10 @@ def context_injection_metrics(request):
     # per-agent integration-health breakdown treats each agent__name
     # as a router-agent target; PA agentic loop is a distinct
     # execution model.
-    agent_metrics = AgentExecution.objects.filter(
-        created_at__gte=last_7d
+    # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
+    agent_metrics = scope_queryset_agent_execution(
+        request.user,
+        AgentExecution.objects.filter(created_at__gte=last_7d),
     ).exclude(agent__name='PersonalAssistant').values('agent__name').annotate(
         total=Count('id'),
         avg_time=Avg('execution_time_ms'),
@@ -394,8 +421,10 @@ class IntegrationAlertView(View):
         # Session 758: Only count executions that HAVE tracking (context_injected key exists)
         no_context_execs = []
         untracked_count = 0
-        recent_execs = AgentExecution.objects.filter(
-            created_at__gte=last_24h
+        # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
+        recent_execs = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=last_24h),
         ).order_by('-created_at')[:100]
 
         for ex in recent_execs:
@@ -430,9 +459,10 @@ class IntegrationAlertView(View):
             })
 
         # Check for failed executions (exclude seeded test failures from bootstrap)
-        failed_execs = AgentExecution.objects.filter(
-            created_at__gte=last_24h,
-            status='failed'
+        # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
+        failed_execs = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=last_24h, status='failed'),
         ).exclude(
             error_message='Simulated failure for testing'
         ).count()
@@ -477,6 +507,7 @@ class IntegrationAlertView(View):
 # =============================================================================
 
 @require_GET
+@superuser_required
 def execution_quality_analysis(request):
     """
     GET /api/integration/quality/
@@ -490,8 +521,10 @@ def execution_quality_analysis(request):
     last_7d = now - timedelta(days=7)
 
     # Analyze executions with vs without context
-    recent_execs = AgentExecution.objects.filter(
-        created_at__gte=last_7d
+    # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
+    recent_execs = scope_queryset_agent_execution(
+        request.user,
+        AgentExecution.objects.filter(created_at__gte=last_7d),
     ).order_by('-created_at')[:500]
 
     with_context = {'total': 0, 'success': 0, 'avg_time': 0, 'times': []}
