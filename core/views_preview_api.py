@@ -384,9 +384,11 @@ class FeedbackItemViewSet(viewsets.ModelViewSet):
         priority = priority_map.get(item.severity, InitiativeActionItem.Priority.MEDIUM)
 
         # Find or use the preview system initiative
+        # I-0302 Phase 3 Sub-phase A2: query-time owner scoping — surfaces as
+        # `Initiative not found` (existing 400) if the caller doesn't own it.
         initiative_id = request.data.get("initiative_id", "2870f089-2439-4089-8d0e-b801e9ae0edf")
         try:
-            initiative = Initiative.objects.get(id=initiative_id)
+            initiative = Initiative.objects.filter(owner=request.user).get(id=initiative_id)
         except Initiative.DoesNotExist:
             return Response(
                 {"error": "Initiative not found"},

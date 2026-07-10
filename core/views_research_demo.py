@@ -13,6 +13,8 @@ from django.utils import timezone
 from django.db import models
 from datetime import timedelta
 
+from core.security.object_authz import scope_queryset_initiative
+
 logger = logging.getLogger(__name__)
 
 # Category colors for D3.js visualization
@@ -1359,7 +1361,13 @@ def initiatives_api(request):
 
         # Session 897: Use prefetch_related to batch load stages and decisions
         # This reduces ~3000 queries to just 3 queries total
-        initiatives = Initiative.objects.all().prefetch_related(
+        # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
+        # Under single-user pre-prod, anonymous callers hitting this
+        # unauthenticated endpoint receive an empty list (predicate returns .none()).
+        initiatives = scope_queryset_initiative(
+            request.user,
+            Initiative.objects.all(),
+        ).prefetch_related(
             Prefetch('stages', queryset=InitiativeStage.objects.all()),
             Prefetch('source_decisions'),
         )
@@ -1520,7 +1528,8 @@ def initiatives_api(request):
             })
 
         # Session 901: Calculate portfolio stats for tabs
-        all_initiatives = Initiative.objects.all()
+        # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
+        all_initiatives = scope_queryset_initiative(request.user, Initiative.objects.all())
         stats = {
             'total': all_initiatives.count(),
             'active': all_initiatives.filter(status='ACTIVE').count(),
@@ -1606,7 +1615,7 @@ def initiative_origin_trace_api(request, initiative_id):
 
         # Get the initiative
         try:
-            initiative = Initiative.objects.get(id=initiative_id)
+            initiative = Initiative.objects.filter(owner=request.user).get(id=initiative_id)  # I-0302 A2: query-time owner scoping
         except Initiative.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Initiative not found'}, status=404)
 
@@ -1889,6 +1898,16 @@ def populate_initiatives_api(request):
     one initiative per group (if no matching initiative already exists).
     Links the deliverables to the new initiative.
     """
+    # I-0302 Phase 3 Sub-phase A2: this endpoint has no auth decorator (see
+    # PR body Known Risk block); Initiative.owner is NOT NULL post-A1, so
+    # unauthenticated callers must be rejected before create/dedup can
+    # bind owner=request.user. Follow-on arc will add auth decorators to
+    # the entire views_research_demo.py surface.
+    if not getattr(request.user, "is_authenticated", False):
+        return JsonResponse(
+            {'success': False, 'error': 'Authentication required'},
+            status=401,
+        )
     try:
         from django.db.models import Count
         from core.models_deliverables import Deliverable
@@ -1915,15 +1934,21 @@ def populate_initiatives_api(request):
             name = f"{ws_name}: {category.replace('_', ' ').title()}"
 
             # Skip if initiative with this name already exists
-            if Initiative.objects.filter(name=name).exists():
+            # I-0302 Phase 3 Sub-phase A2: per-user dedup scope (Rigby SIGN Q3).
+            # Global dedup would leak a name-existence oracle across tenants.
+            if Initiative.objects.filter(name=name, owner=request.user).exists():
                 continue
 
+            # I-0302 Phase 3 Sub-phase A2: owner=request.user is mandatory
+            # post-A1 (Initiative.owner is NOT NULL); missing owner raises
+            # IntegrityError.
             initiative = Initiative.objects.create(
                 name=name,
                 description=f"Auto-populated from {group['count']} {category} deliverables in {ws_name}",
                 status='ACTIVE',
                 created_by='auto_populate',
                 current_stage=1,
+                owner=request.user,
             )
 
             # Session 1191: bootstrap last_activity_at so freshly-created
@@ -2030,7 +2055,7 @@ def initiative_action_items_api(request, initiative_id):
 
         # Verify initiative exists
         try:
-            initiative = Initiative.objects.get(id=initiative_id)
+            initiative = Initiative.objects.filter(owner=request.user).get(id=initiative_id)  # I-0302 A2: query-time owner scoping
         except Initiative.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Initiative not found'}, status=404)
 
@@ -2255,7 +2280,7 @@ def action_item_create_api(request, initiative_id):
 
         # Verify initiative exists
         try:
-            initiative = Initiative.objects.get(id=initiative_id)
+            initiative = Initiative.objects.filter(owner=request.user).get(id=initiative_id)  # I-0302 A2: query-time owner scoping
         except Initiative.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Initiative not found'}, status=404)
 
@@ -2381,7 +2406,7 @@ def extract_action_items_api(request, initiative_id=None):
                     return JsonResponse({'success': False, 'error': 'Invalid initiative ID'}, status=400)
 
             try:
-                initiative = Initiative.objects.get(id=initiative_id)
+                initiative = Initiative.objects.filter(owner=request.user).get(id=initiative_id)  # I-0302 A2: query-time owner scoping
             except Initiative.DoesNotExist:
                 return JsonResponse({'success': False, 'error': 'Initiative not found'}, status=404)
 
@@ -2492,7 +2517,7 @@ def initiative_rhythm_api(request, initiative_id):
                 return JsonResponse({'success': False, 'error': 'Invalid initiative ID'}, status=400)
 
         try:
-            initiative = Initiative.objects.get(id=initiative_id)
+            initiative = Initiative.objects.filter(owner=request.user).get(id=initiative_id)  # I-0302 A2: query-time owner scoping
         except Initiative.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Initiative not found'}, status=404)
 
@@ -2565,7 +2590,7 @@ def set_founder_intent_api(request, initiative_id):
                 return JsonResponse({'success': False, 'error': 'Invalid initiative ID'}, status=400)
 
         try:
-            initiative = Initiative.objects.get(id=initiative_id)
+            initiative = Initiative.objects.filter(owner=request.user).get(id=initiative_id)  # I-0302 A2: query-time owner scoping
         except Initiative.DoesNotExist:
             return JsonResponse({'success': False, 'error': 'Initiative not found'}, status=404)
 

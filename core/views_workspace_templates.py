@@ -223,8 +223,13 @@ def workspace_dashboard(request, workspace_id):
             })
 
     # Initiative count for this workspace
+    # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
     from core.models_document_registry import Initiative
-    initiative_count = Initiative.objects.filter(target_workspace=workspace).count()
+    from core.security.object_authz import scope_queryset_initiative
+    initiative_count = scope_queryset_initiative(
+        request.user,
+        Initiative.objects.filter(target_workspace=workspace),
+    ).count()
 
     return Response({
         'success': True,

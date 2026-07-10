@@ -22,6 +22,7 @@ from rest_framework.response import Response
 from core.models import Agent, LegacySpiderData, UserProfile
 from core.models_document_registry import Initiative
 from core.models_unified_system import AgentDream, AgentDecisionSummary
+from core.security.object_authz import scope_queryset_initiative
 
 
 def get_time_of_day():
@@ -101,10 +102,14 @@ def home_boot(request):
     ).count()
 
     # Initiatives that progressed (updated_at since last visit, but created before)
-    initiatives_progressed = Initiative.objects.filter(
-        updated_at__gte=last_visit,
-        created_at__lt=last_visit,
-        status='ACTIVE',
+    # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
+    initiatives_progressed = scope_queryset_initiative(
+        user,
+        Initiative.objects.filter(
+            updated_at__gte=last_visit,
+            created_at__lt=last_visit,
+            status='ACTIVE',
+        ),
     ).count()
 
     # Pending decisions (boardroom decisions awaiting user input)
@@ -129,8 +134,10 @@ def home_boot(request):
 
     # --- Active Projects ---
     # Get active initiatives with their stages
-    active_initiatives = Initiative.objects.filter(
-        status='ACTIVE'
+    # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
+    active_initiatives = scope_queryset_initiative(
+        user,
+        Initiative.objects.filter(status='ACTIVE'),
     ).prefetch_related('stages').order_by('-updated_at')[:5]
 
     active_projects = []
