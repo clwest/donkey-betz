@@ -12,9 +12,12 @@
 #   <view_class> = module_path:ClassName (or module_path:ViewSet.action)
 #   <status>  = pending | remediated | dead-gated | in-flight
 #
-# Bucket B endpoints (12 total, per audit ledger):
-#   4 remediated in Stage 2a (this file's initial version)
-#   8 remaining for Stage 2b (Rigby SIGN pending)
+# Bucket B endpoints (12 total, per audit ledger + Stage 3 reclassifications):
+#   4 remediated in Stage 2a (content_learning)
+#   7 remediated in Stage 2b PR A (intelligence)
+#   1 reclassified to Bucket C dead-gated in Stage 2b PR B (agents @action)
+#   +5 reclassified from Bucket D → Bucket B in Stage 3 PR A (nervous
+#      Status/Feel/Vitals/History/Consumers)
 #
 # The regression suite tests/security/test_bucket_b_remediation.py exercises
 # every "remediated" row: anonymous request MUST receive a safety-envelope
@@ -38,6 +41,28 @@ B  /api/v1/intelligence/revenue/opportunities/                       intelligenc
 B  /api/v1/intelligence/revenue/submit/                              intelligence.views:SubmitProposalView          remediated
 B  /api/v1/intelligence/revenue/metrics/                             intelligence.views:RevenueMetricsView          remediated
 B  /api/v1/intelligence/agent-execute/                               intelligence.views:ExecuteAgentPlanView        remediated
+
+# Bucket A — genuinely public (Stage 3 reclassifications; response
+# shape frozen by regression suite; no UUIDs / provider names /
+# internal fields / session variance):
+A  /api/nervous/is-responsive/       core.views_nervous:NervousIsResponsiveView    remediated
+
+# Bucket B — nervous views reclassified from Bucket D in Stage 3 PR A.
+# NervousStatusView is imported at core/urls.py:4442 but has no
+# corresponding path() entry — dead code, not routed. Reclassified to
+# Bucket C dead-gated after Stage 3 evidence check; AllowAny removal
+# in view class still lands as defense-in-depth.
+B  /api/nervous/feel/                core.views_nervous:NervousFeelView            remediated
+B  /api/nervous/vitals/              core.views_nervous:NervousVitalsView          remediated
+B  /api/nervous/history/             core.views_nervous:NervousHistoryView         remediated
+B  /api/nervous/consumers/           core.views_nervous:NervousConsumersView       remediated
+
+# Bucket C — NervousStatusView is imported but not routed (dead code):
+C  /api/nervous/status/              core.views_nervous:NervousStatusView          dead-gated
+
+# Bucket C — autonomous_system_api DELETED at Stage 3 PR A (see
+# core/urls.py + ai_core/api/autonomous_system_api.py deletion + frontend
+# api.ts export removal). Rows pruned; endpoints no longer exist.
 
 # Bucket C — agents ViewSet action (Stage 2b PR B evidence check per Rigby
 # S2742 Stage 2b SIGN §5 material amendment requirement flipped the
