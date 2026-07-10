@@ -28,6 +28,7 @@ from core.models_unified_system import (
     Agent, Advisor, Collaboration, AgentExecution,
     AgentMemory, AgentKnowledgeSource  # Session 310: Added for stats
 )
+from core.security.object_authz import scope_queryset_agent_execution
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -1490,9 +1491,10 @@ def get_chart_content_production(request):
         # for pre-flag-flip rows).
         content_agents = ['ImageAgent', 'VideoAgent', 'AudioAgent', 'ContentWriterAgent',
                          'PodcastCoordinatorAgent', 'ResearchAgent', 'ThreeDAgent']
-        executions = AgentExecution.objects.filter(
-            created_at__gte=cutoff,
-            status='completed'
+        # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+        executions = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=cutoff, status='completed'),
         ).exclude(agent__name='PersonalAssistant')
         for exec in executions:
             agent_name = exec.agent_name or 'other'
@@ -1519,10 +1521,14 @@ def get_chart_content_production(request):
             # agent__name form per ADR-0002 F1 fold equivalent
             # (Postgres JSONField NULL-semantics make the
             # input_data__source='pa' form unsafe for pre-flag-flip rows).
-            count = AgentExecution.objects.filter(
-                created_at__gte=day_start,
-                created_at__lt=day_end,
-                status='completed'
+            # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+            count = scope_queryset_agent_execution(
+                request.user,
+                AgentExecution.objects.filter(
+                    created_at__gte=day_start,
+                    created_at__lt=day_end,
+                    status='completed',
+                ),
             ).exclude(agent__name='PersonalAssistant').count()
             executions_by_day.append({
                 'date': day_start.strftime('%Y-%m-%d'),
@@ -1579,9 +1585,13 @@ def get_chart_revenue(request):
             # ADR-0002 F1 fold equivalent (Postgres JSONField
             # NULL-semantics make the input_data__source='pa' form
             # unsafe for pre-flag-flip rows).
-            executions = AgentExecution.objects.filter(
-                created_at__gte=day_start,
-                created_at__lt=day_end
+            # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+            executions = scope_queryset_agent_execution(
+                request.user,
+                AgentExecution.objects.filter(
+                    created_at__gte=day_start,
+                    created_at__lt=day_end,
+                ),
             ).exclude(agent__name='PersonalAssistant')
             day_cost = sum(float(e.cost or 0) for e in executions)
             total_cost += day_cost
@@ -1642,8 +1652,10 @@ def get_chart_user_engagement(request):
         )
 
     try:
-        engagement_data['executions'] = AgentExecution.objects.filter(
-            created_at__gte=cutoff
+        # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+        engagement_data['executions'] = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=cutoff),
         ).count()
     except Exception as _e:
         logger.warning(
@@ -2383,9 +2395,13 @@ def top_performers_v2(request):
         # bucket that we already know we don't want to rank.
         agents = Agent.objects.exclude(name='PersonalAssistant')[:50]  # Limit for performance
         for agent in agents:
-            executions = AgentExecution.objects.filter(
-                agent_name=agent.name,
-                created_at__gte=cutoff
+            # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+            executions = scope_queryset_agent_execution(
+                request.user,
+                AgentExecution.objects.filter(
+                    agent_name=agent.name,
+                    created_at__gte=cutoff,
+                ),
             )
             total = executions.count()
             if total == 0:
@@ -2438,7 +2454,11 @@ def anomalies_v2(request):
     anomalies = []
     try:
         # Check for high failure rates
-        executions = AgentExecution.objects.filter(created_at__gte=cutoff)
+        # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+        executions = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=cutoff),
+        )
         total = executions.count()
         failed = executions.filter(status='failed').count()
 
@@ -2532,14 +2552,22 @@ def forecast_v2(request):
             # NULL-semantics make the input_data__source='pa' form
             # unsafe for pre-flag-flip rows).
             if metric == 'executions':
-                value = AgentExecution.objects.filter(
-                    created_at__gte=day_start,
-                    created_at__lt=day_end
+                # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+                value = scope_queryset_agent_execution(
+                    request.user,
+                    AgentExecution.objects.filter(
+                        created_at__gte=day_start,
+                        created_at__lt=day_end,
+                    ),
                 ).exclude(agent__name='PersonalAssistant').count()
             elif metric == 'cost':
-                execs = AgentExecution.objects.filter(
-                    created_at__gte=day_start,
-                    created_at__lt=day_end
+                # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+                execs = scope_queryset_agent_execution(
+                    request.user,
+                    AgentExecution.objects.filter(
+                        created_at__gte=day_start,
+                        created_at__lt=day_end,
+                    ),
                 ).exclude(agent__name='PersonalAssistant')
                 value = sum(float(e.cost or 0) for e in execs)
             else:
@@ -2611,9 +2639,13 @@ def trends_v2(request):
             # ADR-0002 F1 fold equivalent (Postgres JSONField
             # NULL-semantics make the input_data__source='pa' form
             # unsafe for pre-flag-flip rows).
-            execs = AgentExecution.objects.filter(
-                created_at__gte=day_start,
-                created_at__lt=day_end
+            # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+            execs = scope_queryset_agent_execution(
+                request.user,
+                AgentExecution.objects.filter(
+                    created_at__gte=day_start,
+                    created_at__lt=day_end,
+                ),
             ).exclude(agent__name='PersonalAssistant')
 
             if metric == 'executions':
@@ -2666,7 +2698,11 @@ def comparison_v2(request):
     }
 
     try:
-        executions = AgentExecution.objects.filter(created_at__gte=cutoff)
+        # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+        executions = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=cutoff),
+        )
 
         # By status
         for exec in executions:
@@ -2721,7 +2757,11 @@ def breakdown_v2(request):
     breakdown = {}
 
     try:
-        executions = AgentExecution.objects.filter(created_at__gte=cutoff)
+        # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+        executions = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=cutoff),
+        )
         # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows when
         # dimension='agent' — per-agent breakdown treats each agent as
         # a router-agent dispatch target; PA agentic loop volume would
@@ -2794,8 +2834,12 @@ def export_v2(request):
         # form per ADR-0002 F1 fold equivalent (Postgres JSONField
         # NULL-semantics make the input_data__source='pa' form
         # unsafe for pre-flag-flip rows).
-        executions = AgentExecution.objects.filter(
-            created_at__gte=cutoff
+        # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+        # This is a "download my recent activity" surface — user-scoping is
+        # doubly important because the payload is emitted verbatim.
+        executions = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=cutoff),
         ).exclude(agent__name='PersonalAssistant').order_by('-created_at')[:100]
 
         for exec in executions:
