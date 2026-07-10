@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-10T15:54:16+00:00",
+    "generated": "2026-07-10T16:38:11+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "53cdaa200b61",
-    "doc_count": 2507,
-    "commit_count": 7727,
+    "git_head": "3e994c880d22",
+    "doc_count": 2508,
+    "commit_count": 7731,
     "confidence_breakdown": {
       "HIGH": 1612,
       "MEDIUM": 394,
       "LOW": 5,
-      "UNKNOWN": 496
+      "UNKNOWN": 497
     },
     "excludes": [
       "docs/archive/",
@@ -2583,7 +2583,7 @@
         2744,
         2745
       ],
-      "commit_count": 1214,
+      "commit_count": 1216,
       "prs": [
         10,
         11,
@@ -3135,7 +3135,8 @@
         3067,
         3069,
         3071,
-        3072
+        3072,
+        3075
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7476,7 +7477,7 @@
         2744,
         2745
       ],
-      "commit_count": 170,
+      "commit_count": 172,
       "prs": [
         2213,
         2219,
@@ -7635,7 +7636,8 @@
         3067,
         3069,
         3071,
-        3072
+        3072,
+        3075
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -36109,6 +36111,19 @@
         2980
       ]
     },
+    "docs/research/implementation/RATIFICATION_2026-07-10_real_user_readiness.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "3e994c88",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2742): Real User Readiness parent campaign ratification + Wave 1 authorization (#3076)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3076
+      ]
+    },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -36264,13 +36279,14 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "53cdaa20",
+      "first_commit_sha": "3e994c88",
       "first_commit_date": "2026-07-10",
-      "first_commit_subject": "docs(s2741): Real User Readiness Campaign parent document \u2014 DRAFT / planning-only (#3074)",
+      "first_commit_subject": "docs(s2742): Real User Readiness parent campaign ratification + Wave 1 authorization (#3076)",
       "sessions_touched": [],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        3074
+        3074,
+        3076
       ]
     },
     "docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md": {
