@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-10T00:28:53+00:00",
+    "generated": "2026-07-10T01:58:54+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "fe6a1b3d6895",
-    "doc_count": 2496,
-    "commit_count": 7929,
+    "git_head": "eac0f4daad1c",
+    "doc_count": 2498,
+    "commit_count": 7933,
     "confidence_breakdown": {
-      "HIGH": 1602,
+      "HIGH": 1604,
       "MEDIUM": 394,
       "LOW": 5,
       "UNKNOWN": 495
@@ -2566,7 +2566,7 @@
         2736,
         2737
       ],
-      "commit_count": 1309,
+      "commit_count": 1311,
       "prs": [
         10,
         11,
@@ -3107,7 +3107,9 @@
         3045,
         3047,
         3049,
-        3051
+        3051,
+        3054,
+        3055
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7441,7 +7443,7 @@
         2736,
         2737
       ],
-      "commit_count": 265,
+      "commit_count": 267,
       "prs": [
         2213,
         2219,
@@ -7590,7 +7592,9 @@
         3045,
         3047,
         3049,
-        3051
+        3051,
+        3054,
+        3055
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -36107,15 +36111,32 @@
       "originating_session": 2736,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "fe25cbd1",
+      "first_commit_sha": "eac0f4da",
       "first_commit_date": "2026-07-09",
-      "first_commit_subject": "feat(session-2736): \u00a712 Knowledge Retrieval Campaign \u2014 CLOSED (#3047)",
+      "first_commit_subject": "feat(session-2737): \u00a7C5 Celery Eager-Mode Integration Verification \u2014 CDR-003 bundle (#3056)",
       "sessions_touched": [
-        2736
+        2736,
+        2737
+      ],
+      "commit_count": 4,
+      "prs": [
+        3047,
+        3056
+      ]
+    },
+    "docs/research/platform/CDR_003_runtime_celery_integration_test_harness.md": {
+      "originating_session": 2737,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "eac0f4da",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "feat(session-2737): \u00a7C5 Celery Eager-Mode Integration Verification \u2014 CDR-003 bundle (#3056)",
+      "sessions_touched": [
+        2737
       ],
       "commit_count": 2,
       "prs": [
-        3047
+        3056
       ]
     },
     "docs/research/platform/constitutional_ecosystem_inventory.md": {
@@ -36239,17 +36260,19 @@
       "originating_session": 2734,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "fe25cbd1",
+      "first_commit_sha": "eac0f4da",
       "first_commit_date": "2026-07-09",
-      "first_commit_subject": "feat(session-2736): \u00a712 Knowledge Retrieval Campaign \u2014 CLOSED (#3047)",
+      "first_commit_subject": "feat(session-2737): \u00a7C5 Celery Eager-Mode Integration Verification \u2014 CDR-003 bundle (#3056)",
       "sessions_touched": [
         2734,
-        2736
+        2736,
+        2737
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         3023,
-        3047
+        3047,
+        3056
       ]
     },
     "docs/research/platform/platform_constitutional_architecture.md": {
@@ -41058,6 +41081,21 @@
       "sessions_touched": [],
       "commit_count": 2,
       "prs": []
+    },
+    "docs/testing/RUNTIME_INTEGRATION_TESTS.md": {
+      "originating_session": 2737,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "eac0f4da",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "feat(session-2737): \u00a7C5 Celery Eager-Mode Integration Verification \u2014 CDR-003 bundle (#3056)",
+      "sessions_touched": [
+        2737
+      ],
+      "commit_count": 2,
+      "prs": [
+        3056
+      ]
     },
     "docs/the_future_of_ai/3D_PRINTING_SPECS.md": {
       "originating_session": 66,
