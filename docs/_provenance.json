@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-10T05:30:31+00:00",
+    "generated": "2026-07-10T13:27:03+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "7d866d1a4bd1",
-    "doc_count": 2503,
-    "commit_count": 7959,
+    "git_head": "20747b6e36f4",
+    "doc_count": 2504,
+    "commit_count": 7963,
     "confidence_breakdown": {
-      "HIGH": 1609,
+      "HIGH": 1610,
       "MEDIUM": 394,
       "LOW": 5,
       "UNKNOWN": 495
@@ -2578,9 +2578,10 @@
         2739,
         2740,
         2741,
-        2742
+        2742,
+        2743
       ],
-      "commit_count": 1323,
+      "commit_count": 1325,
       "prs": [
         10,
         11,
@@ -3129,7 +3130,8 @@
         3061,
         3063,
         3065,
-        3067
+        3067,
+        3069
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7465,9 +7467,10 @@
         2739,
         2740,
         2741,
-        2742
+        2742,
+        2743
       ],
-      "commit_count": 277,
+      "commit_count": 279,
       "prs": [
         2213,
         2219,
@@ -7623,7 +7626,8 @@
         3061,
         3063,
         3065,
-        3067
+        3067,
+        3069
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19354,6 +19358,21 @@
       "commit_count": 2,
       "prs": [
         3067
+      ]
+    },
+    "docs/handoffs/SESSION_2743_COST_PROTECTION_CAT3.md": {
+      "originating_session": 2743,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "72c9fd70",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(session-2743): cost protection Cat 3 handoff + 00-START refresh + cascade (#3069)",
+      "sessions_touched": [
+        2743
+      ],
+      "commit_count": 2,
+      "prs": [
+        3069
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
