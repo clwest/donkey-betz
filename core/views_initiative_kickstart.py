@@ -32,6 +32,8 @@ from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from django.utils import timezone
 
+from core.security.object_authz import scope_queryset_initiative
+
 logger = logging.getLogger(__name__)
 
 
@@ -83,11 +85,17 @@ def kickstart_initiatives(request):
     }
 
     # Find stuck initiatives
+    # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
     if specific_id:
-        initiatives = list(Initiative.objects.filter(id=specific_id))
+        initiatives = list(
+            scope_queryset_initiative(request.user, Initiative.objects.filter(id=specific_id))
+        )
     else:
         initiatives = [
-            i for i in Initiative.objects.filter(status='ACTIVE', current_stage=1)
+            i for i in scope_queryset_initiative(
+                request.user,
+                Initiative.objects.filter(status='ACTIVE', current_stage=1),
+            )
             if i.stages_with_work == 0
         ]
 
@@ -260,12 +268,16 @@ def fix_initiative_stages(request):
     }
 
     # Find initiatives with inconsistent stages
+    # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
     if specific_id:
-        initiatives = Initiative.objects.filter(id=specific_id).prefetch_related('stages')
+        initiatives = scope_queryset_initiative(
+            request.user,
+            Initiative.objects.filter(id=specific_id),
+        ).prefetch_related('stages')
     else:
-        initiatives = Initiative.objects.filter(
-            current_stage__gt=1,
-            status='ACTIVE'
+        initiatives = scope_queryset_initiative(
+            request.user,
+            Initiative.objects.filter(current_stage__gt=1, status='ACTIVE'),
         ).prefetch_related('stages')
 
     result['initiatives_checked'] = initiatives.count()
@@ -429,8 +441,12 @@ def retry_stuck_initiatives(request):
     }
 
     # Find stuck initiatives: Stage 1 started (DRAFT) but not progressing
+    # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
     stuck_initiatives = []
-    for initiative in Initiative.objects.filter(status='ACTIVE', current_stage=1):
+    for initiative in scope_queryset_initiative(
+        request.user,
+        Initiative.objects.filter(status='ACTIVE', current_stage=1),
+    ):
         # Check if Stage 1 exists and is in DRAFT or IN_REVIEW (started but not approved)
         stage_1 = InitiativeStage.objects.filter(initiative=initiative, stage=1).first()
         if stage_1 and stage_1.status in ['DRAFT', 'IN_REVIEW']:
@@ -688,7 +704,11 @@ def cleanup_initiatives(request):
         }, status=400)
 
     # Find initiatives to clean up
-    initiatives = Initiative.objects.filter(status=status_filter)
+    # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
+    initiatives = scope_queryset_initiative(
+        request.user,
+        Initiative.objects.filter(status=status_filter),
+    )
 
     # Filter by completion percentage
     to_cleanup = []
@@ -799,8 +819,10 @@ def backfill_stage_documents(request):
     }
 
     # Find initiatives missing documents for this stage
-    all_initiatives = Initiative.objects.filter(
-        current_stage__gte=stage_num
+    # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
+    all_initiatives = scope_queryset_initiative(
+        request.user,
+        Initiative.objects.filter(current_stage__gte=stage_num),
     ).order_by('-created_at')[:limit * 2]
 
     initiatives_needing_docs = []
@@ -901,7 +923,11 @@ def fix_initiative_titles(request):
 
     try:
         # Find initiatives with bad titles
-        initiatives = Initiative.objects.all().order_by('-created_at')[:limit]
+        # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
+        initiatives = scope_queryset_initiative(
+            request.user,
+            Initiative.objects.all(),
+        ).order_by('-created_at')[:limit]
 
         bad_titles = []
         for init in initiatives:
@@ -1009,7 +1035,11 @@ def reset_premature_completed(request):
 
     try:
         # Find COMPLETED initiatives
-        completed_initiatives = Initiative.objects.filter(status='COMPLETED')
+        # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
+        completed_initiatives = scope_queryset_initiative(
+            request.user,
+            Initiative.objects.filter(status='COMPLETED'),
+        )
         result['total_completed'] = completed_initiatives.count()
 
         # Check each one for premature completion
@@ -1112,7 +1142,11 @@ def pipeline_health(request):
 
     try:
         # === SUMMARY STATS ===
-        active_initiatives = Initiative.objects.filter(status='ACTIVE')
+        # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
+        active_initiatives = scope_queryset_initiative(
+            request.user,
+            Initiative.objects.filter(status='ACTIVE'),
+        )
         active_count = active_initiatives.count()
 
         # Count initiatives that had transitions in last 24h
@@ -1182,14 +1216,16 @@ def pipeline_health(request):
                 initiative_last_activity[init_id] = last_log.timestamp
             else:
                 # No transitions logged - use initiative updated_at
-                init = Initiative.objects.get(id=init_id)
+                # I-0302 Phase 3 Sub-phase A2: query-time owner scoping.
+                init = Initiative.objects.filter(owner=request.user).get(id=init_id)
                 initiative_last_activity[init_id] = init.updated_at
 
         # Find stale ones
         stale_initiatives = []
         for init_id, last_activity in initiative_last_activity.items():
             if last_activity < stale_threshold:
-                init = Initiative.objects.get(id=init_id)
+                # I-0302 Phase 3 Sub-phase A2: query-time owner scoping.
+                init = Initiative.objects.filter(owner=request.user).get(id=init_id)
                 days_stale = (now - last_activity).total_seconds() / 86400
                 stale_initiatives.append({
                     'id': str(init_id),
@@ -1212,9 +1248,10 @@ def pipeline_health(request):
         stage_dist = {}
         for stage_num in range(1, 6):
             # Count initiatives WHERE current_stage == stage_num
-            initiatives_at_stage = Initiative.objects.filter(
-                status='ACTIVE',
-                current_stage=stage_num
+            # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
+            initiatives_at_stage = scope_queryset_initiative(
+                request.user,
+                Initiative.objects.filter(status='ACTIVE', current_stage=stage_num),
             )
             count_at_stage = initiatives_at_stage.count()
 
@@ -1528,9 +1565,11 @@ def start_initiative_conversation(request, initiative_id):
 
     try:
         # Get the initiative
+        # I-0302 Phase 3 Sub-phase A2: query-time owner scoping — surfaces as
+        # `Initiative not found` (existing 404) if the caller doesn't own it.
         try:
             initiative_uuid = uuid_module.UUID(str(initiative_id))
-            initiative = Initiative.objects.get(id=initiative_uuid)
+            initiative = Initiative.objects.filter(owner=request.user).get(id=initiative_uuid)
         except (ValueError, Initiative.DoesNotExist):
             return Response({
                 'success': False,

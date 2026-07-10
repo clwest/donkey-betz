@@ -45,6 +45,33 @@ from django.db.models import Q
 
 
 # --------------------------------------------------------------------------
+# Internal helper — authenticated-user guard
+# --------------------------------------------------------------------------
+
+
+def _authed(user) -> bool:
+    """Return True iff user is present AND authenticated.
+
+    Guards every predicate below against both `None` and Django's
+    `AnonymousUser`. Duck-typed via ``getattr`` so this leaf module stays
+    free of ``django.contrib.auth`` imports (import contract per scoping §6.1).
+
+    Behavior:
+    - ``None`` → False (unauthenticated request)
+    - ``AnonymousUser`` (``is_authenticated == False``) → False
+    - Any user object with ``is_authenticated == True`` → True
+
+    Added 2026-07-10 via I-0302 Phase 3 Sub-phase A2 predicate hardening
+    (Rigby SIGN Q4 fold). Prior contract only rejected ``None`` — passing
+    ``AnonymousUser`` would raise ``ValueError`` inside ``.filter(owner=user)``
+    because ``AnonymousUser`` has no primary key. This helper turns that
+    500 into an empty result / False, preserving predicate-only-boundary
+    semantics for the ``views_research_demo.py`` endpoints that A2 wires.
+    """
+    return getattr(user, "is_authenticated", False)
+
+
+# --------------------------------------------------------------------------
 # Canonical workspace-access primitive
 # --------------------------------------------------------------------------
 
@@ -66,7 +93,7 @@ def user_can_access_workspace(user, workspace_id) -> bool:
     - Workspace that does not exist
     - Workspace owned by a different user (unless requester is superuser)
     """
-    if user is None or workspace_id is None:
+    if not _authed(user) or workspace_id is None:
         return False
     if getattr(user, "is_superuser", False):
         return True  # Superuser bypass — see docstring rationale
@@ -87,7 +114,7 @@ def can_read_deliverable(user, deliverable) -> bool:
     - Non-staff: deny (leakage protection)
     - Staff: allow (visibility for admin cleanup + migration audit trail)
     """
-    if user is None or deliverable is None:
+    if not _authed(user) or deliverable is None:
         return False
     if deliverable.workspace_id is None:
         # Staff-only visibility for workspace-orphaned rows
@@ -101,7 +128,7 @@ def scope_queryset_deliverable(user, qs):
     - Non-staff: only deliverables in workspaces user owns
     - Staff: non-staff set + workspace-null rows (cleanup visibility)
     """
-    if user is None:
+    if not _authed(user):
         return qs.none()
     from core.models_skin_layer import ProjectWorkspace  # local import: avoid settings cycle
 
@@ -129,7 +156,7 @@ def can_read_chat_conversation(user, conv) -> bool:
     workspace membership decides. The user fallback is only consulted when
     workspace_id is null.
     """
-    if user is None or conv is None:
+    if not _authed(user) or conv is None:
         return False
     if conv.workspace_id is not None:
         return user_can_access_workspace(user, conv.workspace_id)
@@ -142,7 +169,7 @@ def scope_queryset_chat_conversation(user, qs):
 
     Transitional fallback caveat: see docstring on can_read_chat_conversation.
     """
-    if user is None:
+    if not _authed(user):
         return qs.none()
     from core.models_skin_layer import ProjectWorkspace  # local import: avoid settings cycle
 
@@ -159,17 +186,19 @@ def can_read_initiative(user, initiative) -> bool:
     """Initiative is per-user: access iff initiative.owner == user.
 
     Nullable-owner defense-in-depth: null-owner rows are DENIED (deny-by-default).
-    Phase 3 pre-flight migration backfills all null-owner rows to canonical
-    primary user + migrates owner to NOT NULL, eliminating this class of row.
+    Phase 3 Sub-phase A1 migration (2026-07-10) backfilled all null-owner
+    rows to canonical primary user + flipped owner to NOT NULL, eliminating
+    this class of row at the DB layer. Predicate keeps the null-owner
+    check as input-hardening against stale/adversarial instances.
     """
-    if user is None or initiative is None:
+    if not _authed(user) or initiative is None:
         return False
     return initiative.owner_id == user.id if initiative.owner_id else False
 
 
 def scope_queryset_initiative(user, qs):
     """Filter queryset to initiatives owned by user."""
-    if user is None:
+    if not _authed(user):
         return qs.none()
     return qs.filter(owner=user)
 
@@ -192,7 +221,7 @@ def can_read_agent_execution(user, execution) -> bool:
     staff role expands to non-admin operators in the future. If we later
     define a canonical "platform-ops" role, revisit here.
     """
-    if user is None or execution is None:
+    if not _authed(user) or execution is None:
         return False
     if execution.user_id is not None:
         return execution.user_id == user.id
@@ -208,7 +237,7 @@ def scope_queryset_agent_execution(user, qs):
     everything regardless of user not null" — that would leak cross-user
     executions to the superuser.
     """
-    if user is None:
+    if not _authed(user):
         return qs.none()
     if getattr(user, "is_superuser", False):
         return qs.filter(Q(user=user) | Q(user__isnull=True))
@@ -226,14 +255,14 @@ def can_read_document(user, doc) -> bool:
     Document.owner is NOT NULL (verified in I-0302 Phase 1 ledger §3). No
     nullable-owner fallback needed. Simplest predicate of the 5.
     """
-    if user is None or doc is None:
+    if not _authed(user) or doc is None:
         return False
     return doc.owner_id == user.id
 
 
 def scope_queryset_document(user, qs):
     """Filter queryset to documents owned by user."""
-    if user is None:
+    if not _authed(user):
         return qs.none()
     return qs.filter(owner=user)
 
