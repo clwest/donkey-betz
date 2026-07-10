@@ -39,6 +39,13 @@ B  /api/v1/intelligence/revenue/submit/                              intelligenc
 B  /api/v1/intelligence/revenue/metrics/                             intelligence.views:RevenueMetricsView          remediated
 B  /api/v1/intelligence/agent-execute/                               intelligence.views:ExecuteAgentPlanView        remediated
 
-# Bucket B — agents ViewSet action (deferred to Stage 2b — coupled with the
-# Bucket D dynamic get_permissions() finding on the same ViewSet):
-B  /api/agents/executions/with_results/  core.views.agents:AgentExecutionViewSet.with_results  pending
+# Bucket C — agents ViewSet action (Stage 2b PR B evidence check per Rigby
+# S2742 Stage 2b SIGN §5 material amendment requirement flipped the
+# classification from B to C: the AgentExecutionViewSet is imported at
+# core/views/__init__.py but is NOT registered on any active router in
+# core/urls.py (the agents.urls include was removed at Session 1009 per
+# core/urls.py:3199 orphan cleanup). Requests to /api/agents/executions/
+# return HTTP 404 in the current URL config. The @action's
+# `permission_classes=[permissions.AllowAny]` decorator was still removed
+# as defense-in-depth in case the ViewSet is later re-routed.
+C  /api/agents/executions/with_results/  core.views.agents:AgentExecutionViewSet.with_results  dead-gated

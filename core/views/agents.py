@@ -195,7 +195,16 @@ class AgentExecutionViewSet(viewsets.ModelViewSet):
         
         return queryset.order_by('-created_at')
     
-    @action(detail=False, methods=['get'], permission_classes=[permissions.AllowAny])
+    # I-0301 Phase 3 Stage 2b PR B — Bucket B remediation.
+    # Prior action-level permission_classes=[permissions.AllowAny] override
+    # was removed. The action now re-inherits from get_permissions() above.
+    #
+    # NOTE: get_permissions() at line 173 still returns AllowAny when a
+    # ``input_data__game_id`` query param is present. That is the Bucket D
+    # dynamic finding from the Phase 1 audit ledger and is deferred to
+    # Stage 3 (evidence bundle + reclassification). Stage 2b is strictly
+    # Bucket B (Rigby S2742 Stage 2b SIGN Q9).
+    @action(detail=False, methods=['get'])
     def with_results(self, request):
         """Get executions with full results included"""
         # Apply same filtering as get_queryset
