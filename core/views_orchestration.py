@@ -984,7 +984,12 @@ class ActiveWorkView(View):
             cutoff = now() - timedelta(hours=24)
 
             # Active initiatives summary
-            active_initiatives = Initiative.objects.filter(status='ACTIVE')
+            # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
+            from core.security.object_authz import scope_queryset_initiative
+            active_initiatives = scope_queryset_initiative(
+                request.user,
+                Initiative.objects.filter(status='ACTIVE'),
+            )
             initiative_count = active_initiatives.count()
             by_stage = dict(
                 active_initiatives.values_list('current_stage')

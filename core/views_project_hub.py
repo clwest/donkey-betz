@@ -43,8 +43,11 @@ def list_projects(request):
             ).exclude(status='archived').count()
 
             # Count initiatives matching this workspace name
-            initiative_count = Initiative.objects.filter(
-                name__icontains=ws_name_first_word,
+            # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
+            from core.security.object_authz import scope_queryset_initiative
+            initiative_count = scope_queryset_initiative(
+                request.user,
+                Initiative.objects.filter(name__icontains=ws_name_first_word),
             ).count() if ws_name_first_word and len(ws_name_first_word) > 3 else 0
 
             # Get latest activity
@@ -114,8 +117,13 @@ def project_hub(request, workspace_id):
         } for d in deliverables]
 
         # Initiatives
+        # I-0302 Phase 3 Sub-phase A2: scoped to user via scope_queryset_initiative.
+        from core.security.object_authz import scope_queryset_initiative
         init_q = Q(name__icontains=ws_name_first_word) if ws_name_first_word and len(ws_name_first_word) > 3 else Q(pk=None)
-        initiatives = Initiative.objects.filter(init_q).order_by('-updated_at')[:20]
+        initiatives = scope_queryset_initiative(
+            request.user,
+            Initiative.objects.filter(init_q),
+        ).order_by('-updated_at')[:20]
 
         initiative_list = [{
             'id': str(i.id),
