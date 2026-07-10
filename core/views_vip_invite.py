@@ -53,7 +53,12 @@ def vip_invite_create(request):
 
     if prospect_profile_id:
         from core.models_deliverables import Deliverable
-        profile = Deliverable.objects.filter(id=prospect_profile_id).first()
+        from core.security import scope_queryset_deliverable
+        # I-0302 Phase 3 Sub-phase D1: caller can only attach prospect
+        # profiles they can read (predicate = workspace-scoped).
+        profile = scope_queryset_deliverable(
+            request.user, Deliverable.objects.all()
+        ).filter(id=prospect_profile_id).first()
         if profile:
             kwargs['prospect_profile'] = profile
 

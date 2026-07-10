@@ -33,13 +33,20 @@ def list_projects(request):
 
         projects = []
         for ws in workspaces:
-            # Count deliverables linked to this workspace OR matching by name
+            # Count deliverables linked to this workspace OR matching by name.
+            # I-0302 Phase 3 Sub-phase D1: scope via predicate. Staff still
+            # sees workspace-null rows via F3 carve-out; non-staff sees only
+            # their own workspace-scoped rows.
+            from core.security import scope_queryset_deliverable
             ws_name_first_word = ws.name.split(' ')[0].split('-')[0] if ws.name else ''
-            deliverable_count = Deliverable.objects.filter(
-                Q(workspace=ws) | (
-                    Q(title__icontains=ws_name_first_word) &
-                    Q(workspace__isnull=True)
-                ) if ws_name_first_word and len(ws_name_first_word) > 3 else Q(workspace=ws)
+            deliverable_count = scope_queryset_deliverable(
+                request.user,
+                Deliverable.objects.filter(
+                    Q(workspace=ws) | (
+                        Q(title__icontains=ws_name_first_word) &
+                        Q(workspace__isnull=True)
+                    ) if ws_name_first_word and len(ws_name_first_word) > 3 else Q(workspace=ws)
+                ),
             ).exclude(status='archived').count()
 
             # Count initiatives matching this workspace name
@@ -50,12 +57,16 @@ def list_projects(request):
                 Initiative.objects.filter(name__icontains=ws_name_first_word),
             ).count() if ws_name_first_word and len(ws_name_first_word) > 3 else 0
 
-            # Get latest activity
-            latest_deliverable = Deliverable.objects.filter(
-                Q(workspace=ws) | (
-                    Q(title__icontains=ws_name_first_word) &
-                    Q(workspace__isnull=True)
-                ) if ws_name_first_word and len(ws_name_first_word) > 3 else Q(workspace=ws)
+            # Get latest activity.
+            # I-0302 Phase 3 Sub-phase D1: scope via predicate.
+            latest_deliverable = scope_queryset_deliverable(
+                request.user,
+                Deliverable.objects.filter(
+                    Q(workspace=ws) | (
+                        Q(title__icontains=ws_name_first_word) &
+                        Q(workspace__isnull=True)
+                    ) if ws_name_first_word and len(ws_name_first_word) > 3 else Q(workspace=ws)
+                ),
             ).exclude(status='archived').aggregate(
                 latest=Max('created_at'),
             )['latest']
@@ -98,9 +109,12 @@ def project_hub(request, workspace_id):
             Q(title__icontains=ws_name_first_word) & Q(workspace__isnull=True)
         ) if ws_name_first_word and len(ws_name_first_word) > 3 else Q(pk=None)
 
-        # Deliverables
-        deliverables = Deliverable.objects.filter(
-            Q(workspace=ws) | name_q
+        # Deliverables.
+        # I-0302 Phase 3 Sub-phase D1: scope via predicate.
+        from core.security import scope_queryset_deliverable
+        deliverables = scope_queryset_deliverable(
+            request.user,
+            Deliverable.objects.filter(Q(workspace=ws) | name_q),
         ).exclude(status='archived').order_by('-created_at')[:50]
 
         deliverable_list = [{

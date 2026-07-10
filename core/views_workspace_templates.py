@@ -615,7 +615,12 @@ def pipeline_stage_detail(request, workspace_id, run_id, stage_index):
     if deliverable_id:
         try:
             from core.models_deliverables import Deliverable
-            d = Deliverable.objects.get(id=deliverable_id)
+            from core.security import scope_queryset_deliverable
+            # I-0302 Phase 3 Sub-phase D1: query-time scoping — caller can
+            # only preview deliverables they can read (workspace-scoped).
+            d = scope_queryset_deliverable(
+                request.user, Deliverable.objects.all()
+            ).get(id=deliverable_id)
             deliverable_preview = {
                 'id': str(d.id),
                 'title': d.title,
