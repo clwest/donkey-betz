@@ -1079,3 +1079,172 @@ the declared-contract enforcement principle.
   with folded refinements: idempotency-tied shadow log, standardized
   `would_freeze` naming, docstring touchpoint, test extension
   contract
+
+---
+
+## §29. Full-graph freshness sweep — 4-of-4 verify-before-build pattern → systematic audit (append-only, 2026-07-10)
+
+**Reason for refresh.** PLAYBOOK-6.10.6 (v0.4.0, 2026-07-10) codified
+verify-before-build as a constitutional rule after two triggers at
+S2739 §17 (LLMCallEvent→CostTracking substrate mismatch) and S2740 §18
+(F-D-SIDEBAR-1 already-shipped). S2741 opened a §16 Notification
+Delivery arc; the first two verify-before-build attempts caught two
+more drifts: (a) §16's `NotificationFanoutService` "missing link" had
+been refuted by CDR-001 (ratified 2026-07-09), and (b) all three
+CDR-001 §7 residual gaps (Inbox receiver, `HAIDispatchLog`,
+`channels_fired` helpers) shipped at S2737 per S2737 handoff title
+"§16 wrap-up + CDR-003 §C5". Four verify-before-build attempts across
+three sessions, four hits. The pattern is not per-chain; it is
+systematic across the graph. This section is the full-sweep response.
+
+### §29.0 Method
+
+- **HEAD verified:** `47ae7eda1fb07b8f5efa57d63437c9d3a93d73a1` (post-S2740 cascade PR #3063 merge, 2026-07-10)
+- **Discipline:** PLAYBOOK-6.10.6 verify-before-build applied to every chain §1-§19 in this graph body
+- **Sweep executed by:** Claude Explore sub-agent, ~10min bounded grep pass, file:line evidence per finding, drift-class classification per chain
+- **Preservation:** §1-§19 bodies NOT edited in place (matches §23/§25/§27 append-only discipline); readers cross-reference §29 for current verdict on any chain
+
+### §29.1 Per-chain classification table
+
+Drift classes: **ACCURATE** (substrate + missing links match HEAD) · **PARTIAL** (some substrate matches, some drifted) · **SUBSTRATE-DRIFTED** (graph names substrate X but reality uses Y) · **MISSING-LINKS-SHIPPED** (one or more claimed missing links actually shipped) · **FULLY-SHIPPED** (all missing links closed) · **CHRIS-BLOCKED** (explicit Chris-D-verdict blocker per §20 Tier D — no refresh possible until D-verdict lands).
+
+| § | Chain | Classification | Graph score | Actual at HEAD | Delta |
+|---|---|---|---|---|---|
+| §1 | Mission Completion | **FULLY-SHIPPED** | 11/15 | ~13/15 | WS `group_send` on `home_active_work` was authored as missing; now wired at `core/signals/mission_verdict_signals.py:56-90` (broadcast_mission_verdict + emit_system_event_sync). Frontend NowHub receives on `mission_verdict` event. |
+| §2 | Deliverable Ready | **ACCURATE** | — | — | `NotificationFanoutService` remains unshipped; DeliverableEvent substrate exists but no receiver. Chain-level fanout still ad-hoc per producer. |
+| §3 | Research Complete | **ACCURATE** | 15/15 | 15/15 | Cascade discipline operational; no delta. |
+| §4 | Content Published | **PARTIAL** | 7/15 | 8/15 | Missing link (a) "restore auto-publish beat" is **STALE**: beat IS in settings.py already at `core/settings.py:1454`; task at `core/tasks.py:8081`. Newsletter + correction path remain dark. Rest of chain Chris-D-verdict blocked (D65a-D65e). |
+| §5 | Spider Discovery | **ACCURATE** | 11/15 | 11/15 | Aggregate pattern operational; SpiderDroughtEvent + SpiderDedupCollisionEvent remain unshipped. |
+| §6 | Signal Detection | **MISSING-LINKS-SHIPPED** | 12/15 | ~13/15 | Pattern criticality escalation + HAI bridge method both wired: `core/services/human_attention_bridge.py:229` (create_signal_pattern_attention) + `core/signals/signal_pattern_criticality_signals.py:76` (receiver). |
+| §7 | Revenue Opportunity | **CHRIS-BLOCKED + SUBSTRATE-DRIFTED** | 6/15 | 6/15 | Chris ADRs T1-T8 remain blocking. Independent finding: graph names LLM-related cost substrates that inherited §17 drift; not action-relevant while ADR-gated. |
+| §8 | Human Attention Escalation | **MISSING-LINKS-SHIPPED** | 9/15 | ~13/15 | All 4 claimed missing bridge methods are SHIPPED + wired: `create_signal_pattern_attention` (S2735), `create_failure_cluster_attention` (S2737), `create_body_system_degradation_attention` (S2737), `create_cost_breach_attention` (S2739). `HumanAttentionBridge` at `core/services/human_attention_bridge.py` has 12+ producer methods total. **This is the largest single delta in the sweep.** |
+| §9 | Governance Enforcement | **ACCURATE** | 7/15 | 7/15 | GovernanceState + KillSwitch exist; `enforce_authority_mode` + KillSwitch dispatch reader remain unshipped. Chris ADR R.AUTHORITY.ENFORCE-MODE-TOGGLE-FIELDS blocking. |
+| §10 | Authority Violation | **CHRIS-BLOCKED** | 5/15 | 5/15 | STAGE 3 Symbol Mapping (2-3 cycles) blocking; no refresh possible. |
+| §11 | Memory Creation | **CHRIS-BLOCKED** | 10/15 | 10/15 | Chris D-verdict D80 blocking write-authority framework. |
+| §12 | Knowledge Retrieval | **ACCURATE** | 11/15 | 11/15 | Runtime lane selector + PA turn-context auto-enrichment symmetry both remain unshipped. Related to Group 2100 T-slot execution PRs. |
+| §13 | Document Cascade | **ACCURATE** | 15/15 | 15/15 | Cascade discipline operational; no delta. |
+| §14 | Platform Health | **MISSING-LINKS-SHIPPED** | 12/15 | ~13/15 | Body system degradation HAI producer wired at `core/services/human_attention_bridge.py:396` + `core/signals/body_system_degradation_signals.py:76` (receiver). Autonomic Governance reaction remains unshipped. |
+| §15 | Worker Failure | **MISSING-LINKS-SHIPPED** | 12/15 | ~13/15 | Failure cluster aggregator + bridge method both wired: `core/services/failure_cluster_aggregator.py:86` + `core/services/human_attention_bridge.py:494` + `core/signals/failure_cluster_signals.py:113` (receiver). |
+| §16 | Notification Delivery | **MISSING-LINKS-SHIPPED** | 8/15 (was 6/15 per §23 F2) | ~14/15 | **CDR-001 refuted the campaign** (2026-07-09). All 3 CDR-001 §7 residual gaps SHIPPED at S2737: (Gap 1) `signals_inbox_notifications.py` + `notify_hai_inbox` task + `HAI_INBOX_DISPATCH_ENABLED` kill switch; (Gap 2) `HAIDispatchLog` model at `core/models_hai_dispatch_log.py` + migration `0380_session_2737_hai_dispatch_log.py`; (Gap 3) `channels_fired` helpers at `core/services/hai_dispatch_state.py` + `payload_mark_channel_fired` / `payload_has_channel_fired`. Test coverage at `core/tests/test_hai_wrap_up_bundle.py`. Unified `NotificationFanoutService` class remains rejected per CDR-001 §2.5 (receiver-driven fanout IS the pattern). |
+| §17 | Cost Protection | **PARTIAL — refreshed in §27** | 6/15 (was) | ~11/15 (per §27) | Already refreshed at S2739 in §27. CostTracking substrate ratified; `would_freeze` P2+ observation-period foothold shipped. Enforcement flip remains Chris-gated per S2735 P1 discipline. |
+| §18 | Authentication | **MISSING-LINKS-SHIPPED (partial) + CHRIS-BLOCKED (full scope)** | 7/15 | ~8/15 | F-D-SIDEBAR-1 SHIPPED at S2735 in commit `86152f9f` — `frontend/src/components/layout/Sidebar.tsx:370` invokes `await authApi.logout()`. Body of §18 line 498 still lists it as most-immediate P0. 13 remaining P0 items (silent-401 remediation, token lifecycle, endpoint-specific) remain Chris-D-verdict blocked on 4-axis §14.14. |
+| §19 | Conversation Lifecycle | **ACCURATE** | 12/15 | 12/15 | Envelope-shape telemetry ABSENT at HEAD; Cat D `authHandling: 'suppress_redirect'` telemetry gap; REST↔WS reconciliation-layer UNOWNED at HEAD. All confirmed. Cat C2 α/β/γ Auth cascade Chris-D-verdict deferred per §14.14. |
+
+### §29.2 Drift-class summary
+
+- **4 chains FULLY-SHIPPED or ACCURATE with no delta** (§2, §3, §5, §12, §13, §9, §10, §11, §19): 9 total counting Chris-blocked no-refresh-possible entries — these are the graph's stable baseline
+- **5 chains MISSING-LINKS-SHIPPED** (§1, §6, §8, §14, §15, §16): 5 chains where claimed missing links closed since graph authored — the source of graph score understatement
+- **1 chain PARTIAL** (§4): specific missing link ("restore beat") is stale, rest of chain Chris-blocked
+- **1 chain SUBSTRATE-DRIFTED** (§7): inherits §17 drift; not action-relevant while ADR-gated
+- **1 chain refreshed at S2739** (§17): captured in §27
+
+**Total drift-touched:** 8/19 chains (42%). **Baseline stable:** 11/19 chains (58%). Drift skewed heavily toward Tier A/B leverage chains (§1, §6, §8, §14, §15, §16 all shipped-since-authored) — these had the highest attention → shipped fastest → drifted the graph fastest.
+
+### §29.3 Completeness recomputation
+
+Graph body vs HEAD completeness delta per chain (Δ column shows understatement):
+
+| § | Body score | HEAD score | Δ |
+|---|---|---|---|
+| §1 | 11/15 | ~13/15 | +2 |
+| §6 | 12/15 | ~13/15 | +1 |
+| §8 | 9/15 | ~13/15 | **+4** |
+| §14 | 12/15 | ~13/15 | +1 |
+| §15 | 12/15 | ~13/15 | +1 |
+| §16 | 8/15 | ~14/15 | **+6** |
+| §17 | 6/15 (was) → 11/15 (§27) | ~11/15 | 0 (already refreshed) |
+| §18 | 7/15 | ~8/15 | +1 |
+
+Aggregate score delta on drift-touched chains: **+16 completeness units understated by graph body**. §8 and §16 alone account for +10 (5 shipped bridge methods + CDR-001 wrap-up bundle).
+
+### §29.4 Meta-observations
+
+**Drift skew.** All drift is in one direction: graph body **understates** HEAD completeness. Not a single chain overstates. This is expected — the graph is a point-in-time hypothesis; shipping outpaces graph maintenance. But it means "verify-before-build" catches false-negatives ("missing link X" where X actually ships) far more than false-positives.
+
+**Rigby §23 F2 refinement was itself directionally wrong.** The F2 pass DOWNGRADED §16 from 8/15 → 6/15 based on "UNEVIDENCED" markers for adapters that had ALREADY SHIPPED (Expo push PR #1458 five months prior). Narrow grep patterns produced a stale-in-both-directions score. This exact failure mode is what CDR-001 §8.3 named as the reason for the "sub-refinement is not a discharge" rule. It's now also what PLAYBOOK-6.10.6 codifies.
+
+**CDR-001 §11.2 was prophetic.** Its meta-lesson "CDR-numbered records form a permanent ledger" AND "future campaign selection should consume prior CDRs before proposing engineering work" both applied to THIS session. The S2741 §16 candidate selection was itself the "not reading CDR-001 first" failure mode CDR-001 warned against. This sweep's discovery IS the compensating control that CDR-001 anticipated.
+
+**Fanout pattern is canonical.** CDR-001 §8.2 recommended naming the receiver-driven fanout pattern as first-class. The 5 chains that shipped MISSING-LINKS all did so via the same shape: `HumanAttentionBridge.create_X_attention` producer + `signals_Y_notifications.py` receiver + `notify_hai_Y` Celery task + `HAI_Y_DISPATCH_ENABLED` settings kill switch. This is the pattern the graph should reference from every producer chain (§6, §8, §14, §15, §16, §17). Not shipping it here as a graph-level pattern section; noted as future PATCH candidate.
+
+### §29.5 Recommendations for graph maintenance
+
+- **Full-body rewrite is NOT recommended.** Append-only §29 (this) matches the discipline. Bodies of §1-§19 remain authored-record; readers cross-reference §29 for verdict.
+- **Per-chain refresh cadence:** every capability chain SHOULD receive a §29-style verdict every 5 sessions OR when a chain-relevant PR merges to main, whichever is more frequent. This is currently a suggestion, not a rule; two-trigger threshold has been met (S2739 §27 + S2741 §29), so consider PATCH-scope codification in Chapter 6 §6.12 extension points.
+- **§20 Tier tables are structurally stale.** §20 lists §16 in Tier A and §17 in Tier C; both scores are now revised. Not touching §20 in this refresh (matches append-only discipline), but readers should treat §20 as guidance-of-authorship rather than guidance-at-HEAD.
+- **§21 "recommended first chain" is stale.** §21 recommends §16 Notification Delivery as first chain; §16 is now MISSING-LINKS-SHIPPED. Any future session drawing candidates from §21 MUST apply PLAYBOOK-6.10.6 first.
+- **CDR-002 candidate.** The receiver-driven fanout pattern deserves formal CDR treatment naming it as canonical. Prerequisite: second-trigger for the "canonical pattern naming" arc class. Awaits organic recurrence.
+
+### §29.6 Governance references
+
+- **PLAYBOOK-6.10.6** (v0.4.0, 2026-07-10) — verify-before-build discipline this sweep applies
+- **CDR-001** (`docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md`, ratified 2026-07-09) — original §16 refutation this sweep confirms + extends
+- **§27** (S2739 §17 Cost Protection refresh) — prior append-only refresh precedent for single-chain refresh format
+- **SESSION_2739 handoff §4 + §10.4** — first-trigger record for CD-50
+- **SESSION_2740 handoff §9.2** — CX-P11 CANDIDATE ("Same-session discovery + codification arc class"); this sweep is the second organic occurrence, elevating the pattern candidate toward two-trigger threshold
+- **Chris ratification directive:** 2026-07-10 "run the graph freshness sweep" (Option 2 selection after 4-of-4 verify-before-build hits in S2741 opening)
+
+---
+
+## §30. §20 Tier tables — post-sweep refresh (append-only, 2026-07-10)
+
+Per §29.5 recommendation + Rigby SIGN follow-on: §20's Tier A/B/C/D tables reference completeness scores authored at S2734 baseline. §29 recomputed 8 chains against HEAD. §20 tier assignments were derived from those scores, so five rows are now structurally stale.
+
+### §30.1 Tier reassignments (informative — §20 body NOT edited)
+
+| Chain | §20 tier as authored | Post-§29 revised tier | Reason |
+|---|---|---|---|
+| §1 Mission Completion | Tier A (11/15 → S effort) | **Tier E — OPERATIONAL** | WS group_send shipped at S2734; chain no longer needs an initiator |
+| §6 Signal Detection | Tier B (12/15 → S effort) | **Tier E — OPERATIONAL** | Pattern criticality shipped at S2735; wired end-to-end |
+| §8 HAI Escalation | Tier A (9/15 → M effort) | **Tier B (~13/15)** | All 4 named bridge methods shipped; remaining scope is smaller than "Tier A M-effort" |
+| §14 Platform Health | Tier C (12/15 → S+M effort) | **Tier B (~13/15)** | Body system HAI producer shipped; only autonomic Governance reaction + trend computation remain |
+| §15 Worker Failure | Tier B (12/15 → S effort) | **Tier E — OPERATIONAL** | Failure cluster + HAI escalation shipped end-to-end at S2737 |
+| §16 Notification Delivery | Tier A (8/15 → M effort) | **Tier E — OPERATIONAL** | CDR-001 §7 all 3 gaps shipped at S2737 |
+| §17 Cost Protection | Tier C (6/15 → M effort) | **Tier C (11/15) — enforcement-flip Chris-gated** | S2739 refresh handled |
+| §18 Auth F-D-SIDEBAR-1 | Tier B (one-file → S effort) | **Tier E — OPERATIONAL** | Shipped at S2735 commit `86152f9f` |
+
+### §30.2 Consequence for future campaign selection
+
+Tier A is currently empty after post-sweep reclassification. The three chains most in need of engineering attention (by leverage × unblocked-effort) are now:
+
+1. **§8 HAI Escalation Tier B residuals** — small remaining scope; unlocks nothing new but polishes existing fanout
+2. **§14 Platform Health autonomic Governance reaction** — Tier B; requires Chris ADR on trigger-to-freeze mapping (partially overlaps §17 enforcement gate)
+3. **§17 Cat 3 startup config log** — Tier C leftover from S2739 §17 P2+ arc
+
+Beyond these, Tier D Chris-blocked chains dominate the queue (§4, §7, §9, §10, §11, §18 full scope, §19 Cat C2).
+
+**Interpretation:** the graph's "highest leverage" tier is now genuinely empty of unblocked work. Post-sweep, the platform enters a **capability-saturation regime** where residual work is either small-scope polish or gated on constitutional ADRs.
+
+---
+
+## §31. §21 recommended first chain — post-sweep refresh (append-only, 2026-07-10)
+
+§21 recommends **§16 Notification Delivery** as the first chain to complete, with 5-step implementation sequence starting from "Author `core/services/notification_fanout_service.py`."
+
+Both premises are stale:
+
+1. **§16 is now MISSING-LINKS-SHIPPED** (§29 verdict; CDR-001 refuted the campaign 2026-07-09; residual gaps shipped S2737).
+2. **`NotificationFanoutService` as a class was explicitly rejected** per CDR-001 §2.5 (`signals_discord_notifications.py:12-24` docstring: "No new fanout service is introduced — this module wires the existing HAI substrate to the existing Discord adapter via the pre-existing Celery worker infrastructure.")
+
+### §31.1 Revised recommendation
+
+Given post-sweep Tier A is empty and Tier B (§30) is small-scope polish, there is no single "first chain to complete" that reproduces the original §21 leverage claim. The correct question shifts from "which chain to complete?" to "what class of work is next?"
+
+Three candidate classes emerge:
+
+| Class | Example candidates | Character |
+|---|---|---|
+| **Polish** — Tier B residuals from §30 | §14 autonomic Governance reaction, §17 Cat 3 startup log, §19 envelope telemetry | Small S-M PRs; no leverage unlock; incremental quality |
+| **Constitutional-ADR unblocking** — Tier D | §4 D65a-D65e, §7 T1-T8, §9 KillSwitch, §10 Symbol Mapping, §11 D80 write-authority, §18 4-axis §14.14 | Requires Chris D-verdicts; unlocks large surface once ratified |
+| **Meta-methodology** — codify what the sweep learned | CDR-002 receiver-driven fanout canonical; PATCH §6.12 for per-chain refresh cadence; CX-P11 second-trigger codification | Not per-chain work; improves EOS itself |
+
+### §31.2 First-chain rec superseded
+
+§21's "§16 Notification Delivery is FIRST" recommendation is superseded. The platform-capability graph does not currently have a single dominant unblocked leverage candidate. Future sessions selecting from the queue MUST apply PLAYBOOK-6.10.6 verify-before-build to whichever candidate is drawn, per §29.5.
+
+### §31.3 Governance references
+
+- **§29** (this document) — full-graph freshness sweep + drift analysis
+- **§30** — post-sweep Tier reassignments
+- **CDR-001 §7** — original CDR that refuted §21's §16 recommendation
+- **PLAYBOOK-6.10.6** — verify-before-build now applies to every §21-adjacent candidate selection
