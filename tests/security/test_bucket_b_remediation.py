@@ -98,14 +98,22 @@ def _parse_endpoints_pin() -> list[dict]:
 
 
 def _remediated_get_endpoints() -> list[dict]:
-    """The subset of pinned endpoints that are marked ``remediated`` AND
-    whose URL is a fixed path (no ``<param>`` placeholder) that can be
-    exercised via GET.
+    """The subset of pinned endpoints that are marked ``remediated`` in
+    a bucket that REJECTS anonymous access (B or C dead-gated).
+
+    Bucket A endpoints are intentionally public and have their own
+    conformance suite (``test_bucket_a_public_endpoints.py``); they are
+    NOT expected to reject anonymous.
+
+    Also excludes URLs with ``<param>`` placeholders — those require
+    per-endpoint fixtures and get integration tests in follow-on PRs.
     """
     return [
         e
         for e in _parse_endpoints_pin()
-        if e["status"] == "remediated" and "<" not in e["url"]
+        if e["status"] == "remediated"
+        and e["bucket"] in ("B", "C")
+        and "<" not in e["url"]
     ]
 
 
