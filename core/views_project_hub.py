@@ -136,11 +136,18 @@ def project_hub(request, workspace_id):
             'updated_at': i.updated_at.isoformat() if i.updated_at else None,
         } for i in initiatives]
 
-        # Conversations mentioning this project
+        # Conversations mentioning this project.
+        # I-0302 Phase 3 Sub-phase C1 (2026-07-10): predicate applied
+        # BEFORE the icontains filter (Rigby SIGN Q7) so cross-tenant
+        # search results can't leak. Predicate is the source of truth
+        # for boundary; icontains is applied on the scoped queryset.
+        from core.security import scope_queryset_chat_conversation
         conv_q = Q(user_message__icontains=ws_name_first_word) if ws_name_first_word and len(ws_name_first_word) > 3 else Q(pk=None)
-        conversations = ChatConversation.objects.filter(
+        conversations = scope_queryset_chat_conversation(
+            request.user,
+            ChatConversation.objects.all(),
+        ).filter(
             conv_q,
-            user=request.user,
         ).values('conversation_id').annotate(
             message_count=Count('id'),
             last_at=Max('created_at'),
@@ -148,8 +155,10 @@ def project_hub(request, workspace_id):
 
         conversation_list = []
         for conv in conversations:
-            first = ChatConversation.objects.filter(
-                conversation_id=conv['conversation_id'],
+            # I-0302 Phase 3 Sub-phase C1: scope at point-of-use.
+            first = scope_queryset_chat_conversation(
+                request.user,
+                ChatConversation.objects.filter(conversation_id=conv['conversation_id']),
             ).order_by('created_at').first()
             conversation_list.append({
                 'conversation_id': conv['conversation_id'],
