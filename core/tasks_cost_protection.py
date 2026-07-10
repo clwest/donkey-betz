@@ -83,6 +83,26 @@ def check_cost_thresholds():
         if result.breached:
             breached.append(result)
 
+    # S2739 Cost Protection P2+ observation-period foothold (Cat 2
+    # o1). would_freeze is a shadow counterfactual: True iff mode is
+    # 'freeze' AND at least one window breached this tick — the exact
+    # condition under which enforcement (if wired) would flip
+    # governance. Emitted ONLY on breach so operators intentionally
+    # testing with mode='freeze' but sub-threshold spend do not see
+    # spurious shadow logs each tick. Fires on the same tick / same
+    # breach set as the HAI dispatch below — the two share a
+    # per-tick semantic even though the idempotency_key itself is
+    # owned by the bridge (per Rigby Cat B SIGN pa-f2bc0abba82849a9).
+    would_freeze = (mode == 'freeze' and bool(breached))
+    if would_freeze:
+        breached_windows = ','.join(b.window for b in breached)
+        logger.warning(
+            '[COST_MONITOR] would_freeze=True mode=freeze '
+            'breach_count=%d windows=%s — enforcement not wired '
+            'this release; HAI dispatched instead',
+            len(breached), breached_windows,
+        )
+
     # Rigby SIGN pa-188ec20f274c42e4 Q3 refinement: consolidate all
     # simultaneously-breached windows into ONE HAI so a spike (which
     # trips hour + day + month at the same time) does not spam the
@@ -90,7 +110,9 @@ def check_cost_thresholds():
     hai_dispatched = 0
     if breached:
         try:
-            attention_bridge.create_cost_breach_attention(breached)
+            attention_bridge.create_cost_breach_attention(
+                breached, would_freeze=would_freeze,
+            )
             hai_dispatched = 1
         except Exception as e:  # pragma: no cover — defensive
             logger.warning(
@@ -101,6 +123,7 @@ def check_cost_thresholds():
 
     return {
         'mode': mode,
+        'would_freeze': would_freeze,
         'windows_checked': len(results),
         'windows_breached': len(breached),
         'hai_dispatched': hai_dispatched,
