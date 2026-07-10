@@ -815,3 +815,104 @@ Campaign SIGN pin `pa-5c76b58f70654409` (title
 acceptance tests + independent substrate verification. P1-P4 per
 CDR-002 §10.4. Any subsequent update to §12 in this graph MUST
 cite CDR-002 (and any CDR-003+ that emerges) as authority.
+
+---
+
+## §26. §C5 Celery Eager-Mode Integration Verification (candidate chain — CDR-003 ratified 2026-07-09)
+
+Candidate chain proposed by CDR-003 §8 Option A and ratified by Chris
+2026-07-09. Frames a narrow, non-overclaimed capability for
+integration testing that catches the class-of-bug §10.8.2-3
+(SESSION_2737 handoff §10.8) at merge time — a class the receiver-side
+`captureOnCommitCallbacks + patch(_ENQUEUE_PATH)` pattern cannot
+catch.
+
+### §26.1 Capability
+
+"Selected Django integration tests can exercise: **receiver →
+`transaction.on_commit` → Celery enqueue → task-body execution → ORM
+side effect** against the test database before merge."
+
+Chain::
+
+    Test author writes `@pytest.mark.integration_celery`
+      + `TestCase` subclass
+      + `override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)`
+      + `self.captureOnCommitCallbacks(execute=True)` context
+      + producer save (e.g., `HumanAttentionItem.objects.create(...)`)
+        → signal receiver fires
+          → `on_commit` callback enqueues Celery task
+            → task body runs INLINE (EAGER)
+              → task body's ORM writes land in the test DB
+                → test assertion on the real ORM row
+
+### §26.2 Attributes (per graph 15-attribute template)
+
+1  Human outcome — class-of-bug §10.8.2/10.8.3 caught at merge before shipping.
+2  Trigger — test author authors an `integration_celery`-marked test.
+3  Producer — `tests/conftest.py` + `pytest.ini` marker registration; `core/services/hai_dispatch_state.py`-style helpers where applicable.
+4  Intermediate events — `on_commit` callback → EAGER `.delay(...)` inline → task body executes.
+5  Consumers — test-author's assertion + CI runner + PR reviewer.
+6  Persistence — test DB with savepoint rollback (`TestCase`, not `TransactionTestCase`).
+7  Notifications — pytest report + CI status + PR check.
+8  Frontend updates — N/A (test-time only).
+9  Human attention — test failure blocks PR merge.
+10 Failure modes — see §26.3 explicit boundary below.
+11 Recovery — `pytest --create-db` for full test-DB reset; `--keepdb` for iterative dev.
+12 Verification — 3 exemplars at `test_hai_runtime_integration.py`, `test_deliverable_intake_subscriber.py::EagerModeEndToEndTests`, `delegation_lifecycle_smoke_test`.
+13 Existing tests — 3 exemplars (see #12) + full doc at `docs/testing/RUNTIME_INTEGRATION_TESTS.md`.
+14 Missing links — none for the ratified narrow scope; broader Chapter 8 Runtime Discipline codification deferred to a future Playbook MINOR.
+15 Effort — S-M **bundle already shipped** (CDR-003 authoring session).
+
+Completeness: **14 of 15** at HEAD post-CDR-003 bundle merge. Item 14
+is "none required for ratified scope."
+
+### §26.3 Explicit boundary (Chris directive folded verbatim)
+
+Per Chris's ratification directive: *"Do not overclaim this as
+production-equivalent Celery verification. Explicitly document the
+boundary."*
+
+The `integration_celery` pattern **detects**:
+
+- Task-body import errors (§10.8.2 class)
+- Invalid model-field values (§10.8.3 class)
+- Transaction-ordering defects
+- ORM-side failures in the task's happy path
+
+The pattern **does NOT replace**:
+
+- Worker task-registry verification (§10.8.1 class — reachable only
+  via a live worker)
+- `make celery-recycle` after task-module changes
+- `celery inspect registered`
+- Queue-routing verification
+- Serialization / concurrency verification
+- End-to-end runtime smoke tests on live workers
+
+Those remain runtime-close requirements and are candidate input for
+the future PLAYBOOK Chapter 8 Runtime Discipline MINOR amendment
+(currently STUB in `docs/ENGINEERING_PLAYBOOK.md`).
+
+### §26.4 Discharge of CDR-002 §17.4 deferred future arc
+
+CDR-002 §17.4 deferred a "PA `_build_context` integration-test
+harness — proper Django TestCase fixture set covering profile +
+memory + learned prefs + stats + workspace boundaries" as a future
+arc. CDR-003 § C5 discharges that deferred arc by ratifying the
+generalized pattern. Any future campaign proposing a
+`_build_context` integration test reaches for the pattern documented
+at `docs/testing/RUNTIME_INTEGRATION_TESTS.md` and adds a new
+exemplar to that doc's `canonical_exemplars` frontmatter list.
+
+### §26.5 Governance references
+
+- CDR-003 authoritative record:
+  `docs/research/platform/CDR_003_runtime_celery_integration_test_harness.md`
+- Doc pattern guide: `docs/testing/RUNTIME_INTEGRATION_TESTS.md`
+- Marker registration: `pytest.ini` markers section +
+  `tests/conftest.py` `pytest_configure`
+- Ratified rules exercised: PLAYBOOK-2.2.2 (CDR discipline),
+  PLAYBOOK-3.2.2 (acceptance-tests-first)
+- Chris ratification directive: 2026-07-09
+  ("Ratify all three decisions. ... Ratify §8 Option A. Add §C5 ...")
