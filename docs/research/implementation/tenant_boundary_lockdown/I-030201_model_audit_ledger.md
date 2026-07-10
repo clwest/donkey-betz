@@ -231,6 +231,20 @@ Excluded from grep: `docs/`, `.git/`, `node_modules/`, `.venv/`. Phase 2 exhaust
 
 **Reg-risk hotspot summary (Initiative):** EVERY user-facing DRF endpoint under `views_initiative_kickstart.py` + `views_home.py` + `views_orchestration.py` + `views_workspace_templates.py` is unscoped. This is the arc's largest enforcement surface — 20+ callers across 4 view files.
 
+#### §5.2.a Amendment — Phase 3 A1 pre-flight caller re-audit (2026-07-10)
+
+Phase 3 Sub-phase A1 pre-flight (design SIGN cycle on migration plan) re-ran the `Initiative.objects.` grep with no `--head_limit` cap on HEAD `0f233567`. Actual surface: **31 hits across 7 view files** — 55% larger than the Phase 1 §5.2 sample of "20+ hits across 4 files." Three view files were missed by the Phase 1 sample:
+
+| File added by re-audit | Hits | Auth posture | Regression class |
+|---|---|---|---|
+| `core/views_project_hub.py` | 2 (`list_projects` :46, `project_hub` :118) | `@token_auth_required` on both entrypoints | Fuzzy `name__icontains=` filter — global scope over Initiative table |
+| `core/views_research_demo.py` | **10** hits, incl. `initiatives_api` :1335 (primary `/api/initiatives/` list per `urls.py:3242`, Session 871 migration), plus 9 detail/action-item/rhythm endpoints | No visible auth decorator on the sampled functions | `.objects.all()` + `.filter(status=…)` / `.get(id=…)` — the primary user-facing initiative surface |
+| `core/views_preview_api.py` | 1 (:389) | Preview surface | `.get(id=initiative_id)` trust of caller-supplied ID |
+
+Sample-vs-actual gap likely explained by grep `--head_limit=40` in Phase 1 §5.0.1 (documented reproducibility footnote); Phase 3 A2 predicate wiring uses the un-capped enumeration above as the ratified surface. Under the single-user pre-prod operating context, the functional impact today is nil (Chris is the sole user), but the wiring PR (Sub-phase A2) must cover all 31 hits, not just the 20 documented in the Phase 1 sample.
+
+**Effect on Sub-phase A regression rank:** unchanged — Initiative remains #1 by risk; the enforcement surface is just larger than Phase 1 estimated.
+
 ### §5.3 ChatConversation (Q7 workspace-scoped) — dominant category: SCOPED via `user=` or `conversation_id=` boundary
 
 | Category | Sample callers | Classification | Notes / Reg Risk |
