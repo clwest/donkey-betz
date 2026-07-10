@@ -283,6 +283,37 @@ Ratified via Rigby SIGN Q1-Q7 on Sub-phase C1. Two amendments captured here:
 
 **Deferred to Sub-phase C2** (per Rigby SIGN Q6) — ~126 non-view sites across ~43 files (services, tasks, tests, consumers, mgmt commands). Different auth models (system tokens, Discord user mapping, internal calls); classification pass required before wiring.
 
+#### §5.3.b Amendment — Sub-phase C2 DEFERRED (2026-07-10)
+
+**Decision:** Sub-phase C2 is **DEFERRED** pending Phase 0 multi-tenant flip or equivalent access-model change. Sub-phase C is CLOSED with C1 shipped and C2 as a documented parking lot.
+
+**Why deferred** (ratified via Rigby SIGN Q4-Q5 2026-07-10 + Chris D-verdict):
+
+1. **Single-user pre-prod operating context** (per `project_single_user_pre_prod_operating_context.md`): Chris is the sole user + superuser. C2 wiring today would be "effort with low incremental risk reduction" — the boundary the predicate would enforce doesn't have a second user to protect from.
+
+2. **Blast radius vs. security gain trade-off:** the ~43 files in scope include high-churn infra surfaces — WebSocket consumers, tool dispatchers, Discord bot, PA entrypoint. Wiring predicate calls across them under pre-prod carries meaningful regression risk (subtle behavior changes in system-context flows) with no offsetting present-day security gain.
+
+3. **Identity primitives are still crystallizing:** these files span three distinct identity models — `request.user` (DRF views), service tokens (system-context callers), and `discord_user_id` mapping (Discord bot). Which primitive is authoritative for each caller becomes clear only when Phase 0 multi-tenant is actually being flipped. Locking in a scoping pattern now bakes in choices that may need to be redone.
+
+**Entry criteria to reopen Sub-phase C2** (any one triggers reopen):
+- Phase 0 multi-tenant enablement is scheduled or in-flight
+- A new staff or support role is introduced that needs granular ChatConversation access
+- WebSocket or Discord bot features are exposed to external (non-Chris) users
+- A regression or CVE-class finding traces to a C2-scope file
+
+**Inventory pointer** — grep on HEAD `0f6cefe4`: `ChatConversation.objects.` returns **144 total occurrences across 46 files**; view files (Sub-phase C1) account for 18 sites / 3 files, leaving **~126 non-view sites across ~43 files** for C2. Non-view file inventory captured in the Sub-phase C1 SIGN cycle at Rigby workspace deliverable `7e3596c8-0f39-4600-a38a-31733fa55b18`.
+
+**Auth-mapping-preserved exemptions** — the following are documented as intentional non-predicate scoping even under C2 reopen, because they use identity primitives orthogonal to `request.user`:
+
+| File | Scoping primitive | Why exempt from predicate |
+|---|---|---|
+| `core/services/discord_bot.py` | `discord_user_id` mapping | Bot runs as system actor; no `request.user`; each command resolves to a single Discord platform user's rows |
+| `core/tasks_conversations.py` + `core/tasks_misc.py` (celery task impls) | System context | Auto-generated task impls from `tools/do_extract.py`; run as system, not per-user |
+| `core/jobs/docs_cascade.py` | System runner | One-shot cascade job; no per-user boundary |
+| `core/tasks.py:12100` cleanup task | System context | Phase 1 §5.3 OPS-ONLY classification retained |
+
+**Sub-phase C close state:** C1 shipped (18 sites wired, Option A staff-tightening applied). C2 deferred with entry criteria + inventory pointer. Sub-phase C is CLOSED for the purposes of Phase 3 arc progression.
+
 ### §5.4 AgentExecution (Q7 per-user, canonical `core.models_unified_system.AgentExecution:882`) — dominant category: **UNSCOPED (REG RISK) for dashboards**
 
 | Category | Sample callers | Classification | Notes / Reg Risk |
