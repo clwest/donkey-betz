@@ -2,25 +2,25 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2746 CLOSED — I-0302 PHASE 3 HANDOFF FOR S2747
+## READ THIS FIRST — SESSION 2747 CLOSED — PHASE 4 AUTHORIZED FOR S2748
 
-**Refreshed 2026-07-10 (SESSION 2746 CLOSED. Engineering-pivot session per S2745 directive. Chris opened Wave 1 of the Real User Readiness Campaign — I-0302 (Object-Level Authorization on 5 User-Owned Models). SHIPPED: arc scoping + Phase 1 Model Audit Ledger + Phase 2 Predicate Module — all 3 constitutional artifacts ratified + on main. 60/60 predicate tests pass. Merged PRs: #3096 (scoping + Phase 1), #3097 (Phase 2 module + tests), #3098 (Phase 2 ratification). NEW DURABLE OPERATING CONTEXT CAPTURED: single-user pre-prod default assumption for all future data-to-user connection decisions until Chris signals Phase 0 multi-tenant opening. S2747 opens with I-0302 Phase 3 authorized — the biggest phase of the arc.).**
+**Refreshed 2026-07-10 (SESSION 2747 CLOSED. 10 PRs merged across all 5 canonical models. Phase 3 wiring COMPLETE: 144 enforcement sites wired across 34+ view files with Option A staff-tightening applied on ChatConversation + Deliverable, Session 642 null-user superuser carve-out preserved on AgentExecution, and F-2 anonymous-user hardening across all 11 predicate functions. 8 F-block ledger amendments preserve chain of custody. 162/162 security suite passes. Full session substance in `docs/handoffs/SESSION_2747_I0302_PHASE_3_WIRING_COMPLETE.md`. S2748 opens with Phase 4 (regression harness — RUR-C1 parent invariant substrate) authorized as primary work.**
 
 Session anchors (read in order):
 
-1. [`docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase2_predicate_module.md`](docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase2_predicate_module.md) — **Phase 2 ratification (frozen)** — §8 has concrete Phase 3 opening moves
-2. [`docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md`](docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md) — Phase 1 ledger with §5 caller hotspot rank + §7 nullable-owner policies (Chris Option C on Initiative)
-3. [`docs/research/implementation/tenant_boundary_lockdown/I-030202_predicate_module_design.md`](docs/research/implementation/tenant_boundary_lockdown/I-030202_predicate_module_design.md) — Phase 2 design brief with SIGN state + predicate signatures
+1. [`docs/handoffs/SESSION_2747_I0302_PHASE_3_WIRING_COMPLETE.md`](docs/handoffs/SESSION_2747_I0302_PHASE_3_WIRING_COMPLETE.md) — S2747 delivery ledger + Phase 3 wiring close statement (§3 governance + §4 memory candidates)
+2. [`docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md`](docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md) — 8 new F-block amendments (§5.1.a, §5.2.a, §5.3.a, §5.3.b, §5.4.a, §5.4.b, §5.4.c, §5.5.a) capture every sub-phase close decision
+3. [`docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase2_predicate_module.md`](docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase2_predicate_module.md) — Phase 2 predicate module ratification (§8 has Phase 3 opening moves; Phase 3 wiring now complete)
 4. [`docs/research/implementation/real_user_readiness/CAMPAIGN.md`](docs/research/implementation/real_user_readiness/CAMPAIGN.md) — RUR parent program (RUR-C1 parent invariant: needs I-0301 + I-0302 + I-0303 all pass shared cross-tenant regression)
 5. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.4.1 body (196 rules)
 
-**Prior sessions (background context):** S2745 (engineering-pivot directive + cost threshold observation opened); S2744 (`cost_thresholds` CLI); S2742 (Playbook v0.4.1 + Real User Readiness CAMPAIGN parent doc + I-0301 arc CLOSED).
+**Prior sessions (background context):** S2746 (Phase 2 predicate module RATIFIED + Phase 3 authorized); S2745 (engineering-pivot directive + cost threshold observation opened); S2744 (`cost_thresholds` CLI); S2742 (Playbook v0.4.1 + Real User Readiness CAMPAIGN parent doc + I-0301 arc CLOSED).
 
 ---
 
 ## P0 — COST THRESHOLD OBSERVATION CHECK-IN (opened 2026-07-10 07:35 America/Denver)
 
-**Do this FIRST before candidate selection.** Chris opened the §17 threshold observation period at S2744 close by exercising the newly-shipped CLI. Requested tomorrow-morning check-in.
+**Do this FIRST before candidate selection.** Deferred at S2746 + S2747 per memory rule `project_p0_cost_threshold_check_deferred_to_20260711.md` — actionable on 2026-07-11+ sessions.
 
 **State at open:**
 - `month: $500.00` (~2× the $246/mo baseline from S2743)
@@ -30,9 +30,9 @@ Session anchors (read in order):
 **Report to Chris at session open:**
 
 1. **Current threshold config** — run `python manage.py cost_thresholds`; confirm `month: $500.00` still set and mode still `monitor`. Flag any drift.
-2. **Accumulation** — query `LLMCallLog` (or the equivalent cost-accumulation surface used by the beat task) for the ~24h since 2026-07-10 07:35 MDT. Report: total accumulated $, % of $500 ceiling, top 3 cost drivers by model/service.
+2. **Accumulation** — query `LLMCallLog` (or the equivalent cost-accumulation surface used by the beat task) for the period since 2026-07-10 07:35 MDT. Report: total accumulated $, % of $500 ceiling, top 3 cost drivers by model/service.
 3. **Anomalies** — any single-hour spike >$20, any new provider showing up, any `[COST_MONITOR]` log lines showing near-threshold behavior. If clean, say so explicitly.
-4. **Advance recommendation** — based on 24h data, is one day of clean observation enough to advance to `--set-mode freeze` (shadow mode), or does Chris want to observe longer? Rigby SIGN on the recommendation before proposing to Chris.
+4. **Advance recommendation** — based on observation-period data, is 24+ hours of clean observation enough to advance to `--set-mode freeze` (shadow mode), or does Chris want to observe longer? Rigby SIGN on the recommendation before proposing to Chris.
 
 **Do NOT flip to freeze mode without explicit Chris D-verdict.** Per S2735 P1 gate discipline.
 
@@ -40,35 +40,35 @@ Cross-visibility: Rigby workspace deliverable `06f04b41-91e1-4a00-8b8e-0905502e7
 
 ---
 
-## PRIMARY WORK — I-0302 Phase 3 (per-model enforcement application)
+## PRIMARY WORK — I-0302 Phase 4 (regression harness for RUR-C1 parent invariant)
 
-**Phase 3 authorized 2026-07-10 by Chris ratification of Phase 2.** Ratification record §8 has the concrete opening moves. This is the biggest phase of I-0302 — expect multiple surgical PRs with per-cluster Rigby SIGN cadence.
+**Phase 4 authorized by Phase 3 wiring close ratification 2026-07-10.** The RUR-C1 parent invariant requires all three tenant-boundary arcs (I-0301 + I-0302 + I-0303) to pass a shared cross-tenant regression. Phase 4 is the substrate that makes that shared regression possible for I-0302.
 
-### Phase 3 opening moves (from Phase 2 ratification §6 + §8)
+### Phase 4 opening moves
 
-1. **Initiative Option C pre-flight migration** — backfill all 62 null-owner rows to canonical primary user (first superuser via `User.objects.filter(is_superuser=True).order_by('pk').first()`, NOT hardcoded string per Chris D-verdict guardrail at Phase 1 close) + migrate `owner` to NOT NULL. Ships as one-shot data migration + schema migration. Rigby SIGN on migration plan BEFORE code lands.
-2. **Deliverable null-user backfill** (45 rows, Option C analog under single-user pre-prod) + null-workspace staff-only visibility already covered by predicate.
-3. **Apply predicates to caller hotspots** per Phase 1 §5 regression-risk rank (highest first):
-   - **Initiative** — ~20 unscoped DRF callers across `core/views_initiative_kickstart.py`, `core/views_home.py`, `core/views_orchestration.py`, `core/views_workspace_templates.py`. Largest surface.
-   - **AgentExecution** — 3 dashboard view files unscoped as aggregate reads: `core/views_platform_command.py`, `core/views_analytics_real.py`, `core/views_agent_analytics.py`. Superuser carve-out predicate ships as `scope_queryset_agent_execution`.
-   - **ChatConversation** — `.filter(conversation_id=)` pattern in `core/views_personal_assistant.py` + `core/views_session_handoff.py`; predicate hardens to `(conversation_id, user)` tuple lookup.
-   - **Deliverable** — 4 detail-lookup hotspots (`core/views_workspace_templates.py:613`, `core/agents/distribution_agent.py:189`, `core/tasks.py` mixed paths, `core/employees/mission_runner.py:1305/1434`).
-   - **Document** — smallest surface; only staff gate at `content/views.py:122` + `content/consumers.py:288/320` need Phase 2 review.
-4. **Regenerate endpoint drift snapshot** (per I-0301 Phase 4 mechanism) if any new routes / permissions changed.
-5. **Rigby SIGN on Phase 3 implementation** before Chris ratification.
+1. **Verify-before-build (PLAYBOOK-6.10.6):** read the existing 162 security tests. Identify which of them already assert cross-tenant boundary (D1 has `test_user_cannot_clone_another_users_deliverable`; C1 has `test_non_owner_gets_404`; B tests exercise null-user carve-out; A2 tests do LIST cross-user isolation). This is the base of the harness — inventory + coverage matrix.
+2. **Draft harness architecture:** Rigby design SIGN target. Key questions to route:
+   - Matrix runner (per-model × per-primitive: read, write, delete, aggregate, EXISTS) or per-endpoint sweep (test every URL by hitting it as user_a + user_b + anonymous + superuser)?
+   - Golden fixtures: single shared "5-model tenant boundary" fixture set (user_a + user_b + workspace_a + workspace_b + rows-per-model-per-user), or per-test fixtures?
+   - Assertion contract: what does "predicate boundary enforced" mean concretely? (a) LIST returns only own rows; (b) GET on other user's row returns 404; (c) DELETE on other user's row fails; (d) EXISTS returns False for other-user id; (e) aggregate does not include other-user rows.
+   - How does the harness interact with C2 / D-followup / Phase 0 deferred surfaces? Explicit skip list vs assertion of expected 401/403 on non-user-facing paths.
+3. **Rigby SIGN on harness architecture** BEFORE any code lands. This is the biggest design SIGN of Phase 4.
+4. **Implementation:** the harness itself + backfill of missing coverage per matrix outcome.
+5. **Phase 4 close:** Rigby SIGN-PASS on shipped harness + Chris ratification.
 
-### Phase 3 substrate already on main
+### Phase 4 substrate already on main (from Phase 3 wiring)
 
-- `core/security/object_authz.py` — 11 predicates ready to be wired
-- `core/security/__init__.py` — public exports
-- `tests/security/test_object_authz_predicates.py` — 60 tests, all pass
-- `.github/workflows/security-conformance.yml` — CI-triggering on 6 model files + tests
+- **All 5 predicates** wired into 34+ view files with 8 F-block amendments preserving the sub-phase decision trail
+- **Test discipline** — 82 new integration tests across `test_i0302_a2_*`, `test_i0302_b_*`, `test_i0302_c1_*`, `test_i0302_d1_*`, `test_i0302_d2_*`; test file naming convention established (rename precedent: `test_i0302_b1_*` → `test_i0302_b_*` when B2a appended)
+- **`superuser_required` decorator** in `core/security/decorators.py` — reusable substrate for ops-surface gating patterns
+- **F-2 `_authed()` helper** across all 11 predicate functions — anonymous-user safety already enforced upstream of any harness test
+- **`security-conformance.yml` CI workflow** — I-0301 substrate; extend to include the harness once it lands
 
-### Constraints
+### Deferred surfaces the harness must explicitly skip or gate
 
-- **Single-user pre-prod operating context applies** (per memory rule `project_single_user_pre_prod_operating_context.md`). When reasoning about data-to-user connections, default single-tenant assumptions until Chris signals Phase 0.
-- **RUR-C1 parent close still blocked** on I-0303. Phase 3 close does NOT close I-0302; Phase 4 (regression harness) + Phase 5 (arc close) remain.
-- **Rigby SIGN gates every Phase 3 sub-PR.** Split by model cluster if scope warrants.
+Per §5.3.b (C2), §5.1.a (D non-view), §5.5.a (Document WebSocket) — the harness must NOT fail on these but should:
+- Skip them explicitly with a rationale comment pointing to the ledger amendment
+- OR assert their current auth posture (e.g., 401/403 on unauthenticated) as a "boundary held by upstream layer" contract
 
 ---
 
@@ -77,74 +77,49 @@ Cross-visibility: Rigby workspace deliverable `06f04b41-91e1-4a00-8b8e-0905502e7
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | `557bb2bc` (PR #3098 merged; I-0302 Phase 2 ratification frozen on main) |
-| Playbook version | **v0.4.1** (unchanged since S2742) |
-| Playbook rule count | **196** |
-| Constitutional Debt | **Zero outstanding CDs from v0.1.0 forward** |
-| Session pin | `pa-73f0e2e210574d6d` (still active; extensively used across S2746 for I-0302 SIGN cycles — consider retirement + fresh mint at S2747 open) |
-| Wrapper default pin | `tools/pa_local.sh` — matches session pin |
-| Live infra state | `SystemConfiguration` row: `cost_threshold_month = 500`, mode = `monitor` (accumulating since 2026-07-10 07:35 MDT) |
-| RUR arc state | I-0301 CLOSED · I-0302 scoping + Phase 1 + Phase 2 CLOSED · I-0302 Phase 3 authorized · I-0303 not yet opened · RUR-C1 parent OPEN |
+| HEAD | `498e9277` (PR #3109 merged; Phase 3 wiring COMPLETE) |
+| Playbook version | v0.4.1 (unchanged since S2742) |
+| Playbook rule count | 196 |
+| Constitutional Debt | Zero outstanding |
+| Session pin | TBD at S2748 open (retire `pa-cd35bde16f974843` if still active + mint fresh) |
+| Wrapper default pin | `tools/pa_local.sh` — rotated at S2747 close |
+| Live infra state | `SystemConfiguration cost_threshold_month = 500`, mode = `monitor` (observation period accumulating since 2026-07-10 07:35 MDT) |
+| RUR arc state | I-0301 CLOSED · I-0302 scoping + Phase 1 + Phase 2 + Phase 3 wiring CLOSED · Phase 4 (harness) AUTHORIZED · Phase 5 (arc close) not yet opened · I-0303 not yet opened · RUR-C1 parent OPEN |
 
 ---
 
-## What S2746 shipped
+## What S2747 shipped (10 PRs)
 
-**3 PRs merged to main. 5 frozen constitutional artifacts. 60/60 predicate tests pass.**
+Full delivery ledger in `docs/handoffs/SESSION_2747_I0302_PHASE_3_WIRING_COMPLETE.md` §1. Compressed:
 
-- **PR #3096** — I-0302 arc opened: scoping doc + scoping ratification + Phase 1 Model Audit Ledger + Phase 1 ratification (4 frozen docs, +1129 lines)
-- **PR #3097** — I-0302 Phase 2 predicate module: `core/security/object_authz.py` (11 functions), `core/security/__init__.py` extended, `tests/security/test_object_authz_predicates.py` (60 tests), CI workflow extended (5 code files + 1 design doc, +1236 lines)
-- **PR #3098** — Phase 2 ratification record (1 doc, +227 lines)
+| PR | Sub-phase | Model | HEAD |
+|---|---|---|---|
+| #3100 | A1 | Initiative | `eb4fc19a` (migration + NOT NULL) |
+| #3101 | A2 | Initiative | `a08bd4df` (34 sites + F-2 hardening) |
+| #3102 | B1 | AgentExecution | `dd8eb9db` (25 dashboard sites) |
+| #3103 | B2a | AgentExecution | `4903ec3f` (19 analytics + CRUD) |
+| #3104 | B2b | AgentExecution | `103ba94f` (26 ops sites superuser-gated + new decorator module) |
+| #3105 | B2c | AgentExecution | `0a86c1a7` (7 tail; Sub-phase B CLOSED) |
+| #3106 | C1 | ChatConversation | `0f6cefe4` (18 + Option A staff-tightening) |
+| #3107 | C2 defer docs | ChatConversation | `fd5d9583` (~126 sites parked with entry criteria) |
+| #3108 | D1 | Deliverable | `df3e2370` (12 + Option A staff-tightening + clone source-fetch scoping) |
+| #3109 | D2 | Document | `498e9277` (3 surgical fixes; Phase 3 wiring COMPLETE) |
 
-**Chris D-verdicts captured:**
-- Q7 hybrid boundary (workspace-scoped: Deliverable + ChatConversation; per-user: Initiative + AgentExecution + Document)
-- Q2 AgentExecution triple-class in-scope (canonical class picked; duplicates → follow-on)
-- Q3 nullable-owner policy deferred to Phase 1 audit
-- Q6 reuse `not_found` reason_code (existence-oracle avoidance)
-- Option C on Initiative null-owner: backfill + NOT NULL migration (skip transitional predicate)
-
-**New durable memory:** `project_single_user_pre_prod_operating_context.md` — Chris directive to default single-tenant assumptions until Phase 0 multi-tenant opening.
-
-**Rigby SIGN cycles:** scoping SIGN + Phase 1 ledger SIGN + Phase 2 design SIGN + Phase 2 implementation SIGN — all resolved SIGN-PASS after amendments applied.
-
-**Full arc detail:** `docs/research/implementation/tenant_boundary_lockdown/I-0302_scoping.md` + Phase 1 ledger + Phase 2 design brief + 4 ratification records under `docs/research/implementation/`.
+**Sub-phase B CLOSED at S2747** (Rigby SIGN + Chris D-verdict on #3105 close). **Sub-phase D CLOSED + Phase 3 wiring COMPLETE at S2747** (Rigby SIGN + Chris D-verdict on #3109 close).
 
 ---
 
-## Candidate queue for S2747 — I-0302 Phase 3 leads
+## Candidate queue for S2748 — Phase 4 is primary
 
-**Phase 3 is the biggest phase of I-0302 and the current authorized work.** It's engineering-bias-compatible (per the S2745 pivot rule) because it's net-new predicate enforcement wired into ~10 view files, plus a data migration + schema flip. Not "audit what's built" — it's building the tenant-boundary enforcement Chris ratified the substrate for.
+Per Chris close directive S2747: session-close wrap was ratified; Phase 4 NOT opened at S2747 close. S2748 opens with Phase 4 authorized as primary work.
 
-### PRIMARY — I-0302 Phase 3 (already authorized by Phase 2 ratification)
+### PRIMARY — I-0302 Phase 4 (regression harness)
 
-Split by model cluster or ship sub-phases per Rigby SIGN recommendation. Suggested order (matches Phase 1 §5 regression-risk rank, highest impact first):
+See "Phase 4 opening moves" above. Design SIGN first, then implement.
 
-**Phase 3 Sub-phase A — Initiative migration + enforcement (largest surface)**
-- Data migration: backfill 62 null-owner rows to canonical primary user
-- Schema migration: `owner` → NOT NULL
-- Wire `can_read_initiative` + `scope_queryset_initiative` into ~20 unscoped DRF callers (`core/views_initiative_kickstart.py` etc.)
-- Rigby SIGN on migration plan pre-code, then Rigby SIGN on shipped enforcement
+### CLASS 1 — NET-NEW ENGINEERING (secondary options)
 
-**Phase 3 Sub-phase B — AgentExecution dashboard scoping**
-- Wire `scope_queryset_agent_execution` (superuser carve-out) into `core/views_platform_command.py`, `core/views_analytics_real.py`, `core/views_agent_analytics.py`
-- Update `.get(id=step_exec.execution_id)` paths in `core/views_orchestration.py` to use `can_read_agent_execution`
-- Rigby SIGN
-
-**Phase 3 Sub-phase C — ChatConversation predicate wiring**
-- Wire `scope_queryset_chat_conversation` into PA views (`core/views_personal_assistant.py`) + session-handoff views
-- Preserve existing `.filter(user=self.user).exists()` patterns (correct); replace bare `.filter(conversation_id=)` with predicate-gated variants
-- Rigby SIGN
-
-**Phase 3 Sub-phase D — Deliverable + Document surgical fixes**
-- Deliverable: 4 detail-lookup hotspots gated; workspace-null migration decision (if applicable)
-- Document: audit `content/consumers.py:288, :320` for owner filter; staff-gate `dashboard/views.py:230` aggregate view
-- Rigby SIGN
-
-**Phase 3 close** — endpoint-drift snapshot regen if needed; Chris ratification; Phase 4 (regression harness) opens.
-
-### CLASS 1 — NET-NEW ENGINEERING (secondary options if Chris pauses Phase 3)
-
-Held over from S2746 in case Chris wants to interleave a smaller build:
+If Chris wants to interleave a smaller build (per S2745 engineering-bias rule, always propose 1-3 net-new candidates every session):
 
 1. **New Employee OS employee (4th)** — vertical slice: new `AIEmployee` + `JobContract` + MissionRunner steps + admin visibility.
 2. **Betting dashboard new feature** — 9-tab dashboard needs Chris to name the gap.
@@ -152,54 +127,30 @@ Held over from S2746 in case Chris wants to interleave a smaller build:
 4. **New UI page on Command Center** — 61 routes; requires Chris naming the workflow.
 5. **Discord bot new command** — bounded Cog + slash-command slice.
 
-### CLASS 3 (DEMOTED) — Connect-what-exists / Constitutional-ADR unblocking
+### CLASS 4 — Meta-methodology / Codification candidates
 
-**Per pivot: gate these behind Class 1 unless Chris explicitly picks them.** These are all "connect what's built" work:
+**Per pivot rule: propose only if Chris explicitly asks for methodology work.**
 
-- **§4 Content Published** — 4 Chris ADRs D65a-D65e blocking
-- **§7 Revenue Opportunity** — 5 Chris ADRs T1-T8 blocking
-- **§8 HAI Escalation residuals** — small-scope after all 4 bridge methods shipped
-- **§9 Governance Enforcement** — Chris ADR blocking
-- **§10 Authority Violation** — STAGE 3 Symbol Mapping blocking
-- **§11 Memory Creation** — Chris D-verdict D80 blocking
-- **§17 Cat 1 enforcement flip** — waits for observation-period data + Chris approval per S2735 P1
-- **§18 Auth full scope** — Chris D-verdict on 4-axis §14.14 blocking
-- **§19 Cat C2 session-lifecycle Auth cascade** — Chris D-verdict per §14.14
-- **§19 Conversation Lifecycle envelope-shape telemetry** — envelope ABSENT at HEAD per §29
-
-### CLASS 4 (DEMOTED) — Meta-methodology / Codification candidates
-
-**Per pivot: propose only if Chris explicitly asks for methodology work.**
-
-- CDR-002 receiver-driven fanout canonical pattern
-- CX-P11 CANDIDATE disambiguation (needs third organic instance)
-- §29-style verdict template codification
-- PATCH-scope record template (v0.4.1 first instance; awaits second)
-- Capability graph refresh cadence formalization
-- "Body SIGN pass-on-first-attempt as small-to-mid-scope signal" (3 instances so far)
-- "Visibility hook + ops verb pair" arc pattern (first instance S2743+S2744)
-- "Public-helper-first cross-arc unlocking" (first instance S2743→S2744)
-- "Rigby-authored refinement text folded verbatim" (2 instances; awaits third)
-- **NEW candidate:** "Substrate-saturation → engineering-pivot signal" — S2745 close is first instance (6 consecutive §17 arcs → Chris pivot). Awaits second instance on different substrate.
-- **NEW candidate:** "Config-directive-only session as post-tool-arc pattern" — S2744 shipped CLI, S2745 exercised it. Single-instance.
-- **NEW candidate:** "deliverable_tool.create landing as `ready` vs S1241 `completed` rule" — S2745 create returned `ready` directly. Single data point. Awaits second before updating S1241 memory rule.
+- **"Option A staff-tightening" as a boundary-hardening pattern** — 2 instances (C1 + D1). Third instance would trigger playbook codification. Watch for it in Phase 4 harness edge cases OR I-0303 opening.
+- **"Sub-phase C/D-style defer with §X.b amendment" as repeatable pattern** — 3 instances (C2 §5.3.b + D1 §5.1.a non-view + D2 §5.5.a WebSocket). Playbook codification candidate if fourth instance surfaces.
+- **"Discord ID mapping preserved as OR-union with predicate"** — single instance (C1). Watch for second occurrence.
 
 ### External signal-driven
 
-- **Production observation** — `would_freeze` shadow live from S2739; `[COST_MONITOR] startup:` line live from S2743; CLI live from S2744; observation period live from S2745. The check-in P0 above is the current forward motion here.
+- **Production observation** — `would_freeze` shadow live from S2739; `[COST_MONITOR] startup:` line live from S2743; CLI live from S2744; observation period live from S2745. The P0 check-in above is the current forward motion here.
 
 ---
 
-## Recommended session-open protocol (S2747)
+## Recommended session-open protocol (S2748)
 
 1. `context-kit orient`
-2. Read the Phase 2 ratification record `docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase2_predicate_module.md` §8 in full — has concrete Phase 3 opening moves
+2. Read `docs/handoffs/SESSION_2747_I0302_PHASE_3_WIRING_COMPLETE.md` in full — §1 delivery ledger + §4 Chris directives + §5 what's next
 3. Verify runtime state: `git log --oneline -3`, `celery inspect ping`
 4. **P0 check** (per top-of-file callout, actionable 2026-07-11+ per memory rule): run the observation check-in; report accumulation, anomalies, advance recommendation to Chris
-5. Retire `pa-73f0e2e210574d6d` (S2746 pin, extensively used across I-0302 SIGN cycles — high risk of context accumulation) + mint fresh S2747 pin per `feedback_rigby_sign_worker_instability_recovery.md`
-6. **Confirm Phase 3 as primary work** with Chris; propose Sub-phase A (Initiative migration + enforcement) as opening move given it's the largest surface + hard-blocks the RUR-C1 close
-7. **On sub-phase acceptance:** apply PLAYBOOK-6.10.6 verify-before-build FIRST (30s per file/model), THEN Rigby-first design SIGN → implementation → Rigby SIGN → Chris ratification
-8. **Alternative:** if Chris wants to interleave a Class 1 net-new build (e.g., new Employee, new spider), pause Phase 3 explicitly. Do NOT default to Phase 3 without confirmation.
+5. Retire whatever pin is bound in `tools/pa_local.sh` if S2747 pin is still there + mint fresh S2748 pin
+6. **Confirm Phase 4 as primary work** with Chris; propose harness architecture design SIGN as opening move
+7. **On architecture acceptance:** Rigby design SIGN → implement → Rigby SIGN → Chris ratification
+8. **Alternative:** if Chris wants to interleave a Class 1 net-new build, pause Phase 4 explicitly. Do NOT default to Phase 4 without confirmation.
 
 ---
 
@@ -210,24 +161,28 @@ Ordered by frequency of use:
 1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (L7 anchor v0.4.1)
 2. [`docs/EOS_RULES.md`](docs/EOS_RULES.md) — R1/R2/R3
 3. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.4.1 body (196 rules)
-4. [`docs/research/platform/platform_capability_graph.md`](docs/research/platform/platform_capability_graph.md) — capability chains + append-only refreshes
-5. [`docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md`](docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md)
-6. [`docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md`](docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md)
-7. [`docs/research/platform/CDR_003_runtime_celery_integration_test_harness.md`](docs/research/platform/CDR_003_runtime_celery_integration_test_harness.md)
+4. [`docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md`](docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md) — Phase 1 ledger with 8 new F-block amendments from S2747
+5. [`docs/research/platform/platform_capability_graph.md`](docs/research/platform/platform_capability_graph.md) — capability chains + append-only refreshes
+6. [`docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md`](docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md)
+7. [`docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md`](docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md)
+8. [`docs/research/platform/CDR_003_runtime_celery_integration_test_harness.md`](docs/research/platform/CDR_003_runtime_celery_integration_test_harness.md)
 
 ---
 
-## Session close summary (Session 2745 — for archive)
+## Session close summary (Session 2747 — for archive)
 
-- **Arc shipped:** nothing (no PR, no code); pure config-directive session
-- **Live state change:** `SystemConfiguration cost_threshold_month = 500` on Chris's local DB; observation period opened
-- **Cross-session visibility:** Rigby deliverable `06f04b41-91e1-4a00-8b8e-0905502e7d83` in Donkey Betz workspace
-- **Memory codified:** engineering-pivot rule (`feedback_engineering_bias_over_audit.md`)
-- **Docs edits:** this file (P0 callout + full S2746 refresh) + S2745 handoff (new) + tools/pa_local.sh (pin rotation)
-- **Pin lifecycle:** S2744 arc pin `pa-571748d9b6b940ea` retired (5 rows updated); S2746 pin `pa-73f0e2e210574d6d` minted + wrapper rotated
+- **Arcs shipped:** 10 PRs merged; all Phase 3 sub-phases delivered (A1 + A2 + B1 + B2a + B2b + B2c + C1 + C2 defer docs + D1 + D2)
+- **Enforcement sites wired:** 144 across 34+ view files
+- **Tests added:** 82 new integration tests (60 predicate baseline + 15 B + 4 C1 + 4 D1 + 3 D2); full security suite 162/162
+- **Ledger amendments:** 8 F-block sections added (§5.1.a, §5.2.a, §5.3.a, §5.3.b, §5.4.a, §5.4.b, §5.4.c, §5.5.a)
+- **Constitutional artifacts:** 6 Rigby workspace deliverables (2 progress + 4 shipped) + 4 arc-close deliverables (Sub-phase B, Sub-phase D + Phase 3 close) = 10 total deliverables
+- **Live state change:** none (pure code + docs)
+- **Cross-session visibility:** Rigby workspace deliverables listed in handoff §3
+- **Memory codified:** engineering-bias-over-audit rule (from S2745) reinforced in every SIGN cycle; Rigby-files-deliverables-at-SIGN-cycle rule reinforced mid-session at Chris directive
+- **Docs edits:** 8 ledger amendments + this handoff + 00-START refresh + tools/pa_local.sh pin rotation
 - **Constitutional debt at close:** Zero (unchanged)
-- **Notable event:** first-observed substrate-saturation event (6 consecutive §17 arcs → Chris engineering pivot); first-observed config-directive-only session as post-tool-arc pattern (both single-instance codification candidates)
+- **Notable event:** Session shipped 10 sub-phases in a single arc — largest single-session PR count in the RUR-C1 arc so far. Phase 3 wiring COMPLETE unblocks Phase 4 (regression harness) opening at S2748.
 
 ---
 
-**Session 2746 opens fresh. Bias engineering. Ask Chris what to build.**
+**Session 2748 opens fresh. Phase 4 harness is the primary. Ask Chris to confirm before implementing.**
