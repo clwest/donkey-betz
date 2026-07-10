@@ -25,6 +25,7 @@ Fixtures (per design §5):
 - ws_a, ws_b, ws_c (workspaces per user)
 """
 import uuid
+from types import SimpleNamespace
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -316,9 +317,12 @@ class TestInitiativeCanRead:
 
     @pytest.fixture
     def init_null_owner(self):
-        from core.models_document_registry import Initiative
-
-        return Initiative.objects.create(name=f"init-null-{uuid.uuid4().hex[:6]}", owner=None)
+        # I-0302 Phase 3 Sub-phase A1 (2026-07-10) migrated Initiative.owner
+        # to NOT NULL — the DB now rejects owner=None writes. The predicate's
+        # null-owner deny-by-default branch remains a defense-in-depth guard
+        # for stale in-memory instances / adversarial input, so we exercise it
+        # against a lightweight in-memory object rather than a persisted row.
+        return SimpleNamespace(owner_id=None)
 
     def test_owner_can_read(self, user_a, init_owned_a):
         assert can_read_initiative(user_a, init_owned_a) is True
@@ -327,7 +331,8 @@ class TestInitiativeCanRead:
         assert can_read_initiative(user_b, init_owned_a) is False
 
     def test_null_owner_deny_by_default(self, user_a, init_null_owner):
-        # Phase 3 migration eliminates null-owner rows; predicate deny-by-default
+        # Defense-in-depth: predicate rejects null-owner input even though A1
+        # migration eliminates that class of row at the DB layer.
         assert can_read_initiative(user_a, init_null_owner) is False
 
     def test_none_user_returns_false(self, init_owned_a):
@@ -340,12 +345,16 @@ class TestInitiativeCanRead:
 class TestInitiativeScopeQueryset:
     @pytest.fixture
     def rows(self, user_a, user_b):
+        # I-0302 Phase 3 Sub-phase A1 (2026-07-10) makes Initiative.owner
+        # NOT NULL — the orphan-row leg of the old fixture is now impossible
+        # by DB invariant, so this fixture models mixed ownership across two
+        # real users only. The predicate's null-owner defense-in-depth is
+        # covered separately in TestInitiativeCanRead::test_null_owner_deny_by_default.
         from core.models_document_registry import Initiative
 
         Initiative.objects.create(name=f"a1-{uuid.uuid4().hex[:6]}", owner=user_a)
         Initiative.objects.create(name=f"a2-{uuid.uuid4().hex[:6]}", owner=user_a)
         Initiative.objects.create(name=f"b1-{uuid.uuid4().hex[:6]}", owner=user_b)
-        Initiative.objects.create(name=f"orphan-{uuid.uuid4().hex[:6]}", owner=None)
         return Initiative.objects.all()
 
     def test_none_user_returns_none(self, rows):
@@ -356,9 +365,10 @@ class TestInitiativeScopeQueryset:
         assert result.count() == 2
         assert all(row.owner_id == user_a.id for row in result)
 
-    def test_orphan_excluded(self, user_a, rows):
-        result = scope_queryset_initiative(user_a, rows)
-        assert not any(row.owner is None for row in result)
+    def test_not_null_invariant(self, rows):
+        # Confirms the A1 schema invariant that this fixture depends on:
+        # no null-owner rows can exist in the DB post-migration.
+        assert rows.filter(owner__isnull=True).count() == 0
 
     def test_idempotent(self, user_a, rows):
         once = scope_queryset_initiative(user_a, rows)
