@@ -338,6 +338,25 @@ with the **superuser-gate + predicate (defense-in-depth)** treatment:
 
 **Effect on regression rank:** unchanged — AgentExecution stays #2 by risk; B2b closes the ops surface leg (B1 dashboards + B2a analytics/CRUD + B2b ops), leaving B2c (8 sites / 6 small files) as the last remaining AgentExecution wiring under Sub-phase B.
 
+#### §5.4.c Amendment — Phase 3 Sub-phase B2c tail cleanup (2026-07-10)
+
+Ratified via Rigby SIGN Q1-Q5 on B2c classification. B2c closes AgentExecution wiring under Sub-phase B — 7 sites across 6 view files documented in §5.4.a as the "small remaining" cluster.
+
+| File | Sites | Classification | Notes |
+|---|---|---|---|
+| `views_dashboard_stats.py` | 2 (:85, :134) | **predicate-scope** | Personal dashboard aggregating agent execution counts + token usage over 24h |
+| `views_agent_dashboard.py` | 1 (:148) | **predicate-scope** | Learning dashboard cost aggregate |
+| `views_intelligence_api.py` | 1 (:98) | **predicate-scope** | Intelligence Hub recent-executions list |
+| `views_agent_learning.py` | 1 (:204) | **predicate-scope** | `.count()` learning-events metric |
+| `views_memory_palace.py` | 1 (:123 GET) | **predicate-scope** via `scope_queryset_agent_execution().get()` (Rigby Q5) — captures null-user carve-out |
+| `views_trace_viewer.py` | 1 (:61) | **superuser-gate + predicate** (mirrors B2b) — debug/ops surface per file docstring; `@method_decorator(superuser_required)` on `TraceViewerView.get`; `_gather_artifacts` signature extended to accept `request` |
+
+**Skipped site** — `views_stripe_billing.py:435` was flagged in §5.4.a but is already correctly scoped as `.filter(user=request.user)`. Predicate is not applied here because the billing semantic requires **user-only** counts (Chris pays for Chris's usage), NOT `own + null-user` — a superuser predicate would inflate their own usage with system-context Celery runs that aren't billable to them. §5.4.a inventory retained as an "audit noise" entry; this exemption is intentional.
+
+**Under single-user pre-prod:** Chris is the only user; wiring is a no-op today. Under Phase 0 multi-tenant, per-user dashboards see own + null-user for superuser (Session 642 semantics); `views_trace_viewer` becomes superuser-only debug tooling.
+
+**Effect on regression rank:** unchanged. Sub-phase B (B1 + B2a + B2b + B2c) closes the AgentExecution enforcement leg. Sub-phase C (ChatConversation) opens next per 00-START-NEXT-SESSION.md queue.
+
 ### §5.5 Document (Q7 per-user) — dominant category: SCOPED via `owner=` filter
 
 | Category | Sample callers | Classification | Notes / Reg Risk |

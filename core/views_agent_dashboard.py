@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.db.models import Sum, Avg, Q
 from core.models import Agent, AgentSolution, AgentLearning, Advisor
+from core.security import scope_queryset_agent_execution
 import random
 from datetime import datetime
 
@@ -145,7 +146,12 @@ def agent_costs_data(request):
     total_cost = learning_cost + collaboration_cost
 
     # Get actual execution costs if available
-    actual_costs = AgentExecution.objects.aggregate(
+    # I-0302 Phase 3 Sub-phase B2c: scoped via predicate (own + null-user for superuser).
+    from core.models import AgentExecution
+    actual_costs = scope_queryset_agent_execution(
+        request.user,
+        AgentExecution.objects.all(),
+    ).aggregate(
         total_cost=Sum('cost'),
         total_tokens=Sum('tokens_used')
     )

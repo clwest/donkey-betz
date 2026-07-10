@@ -11,6 +11,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from core.models_unified_system import LegacySpiderData, Opportunity, AgentExecution
+from core.security import scope_queryset_agent_execution
 
 logger = logging.getLogger(__name__)
 
@@ -95,8 +96,10 @@ def intelligence_activity_feed(request):
             })
 
         # Get recent agent executions (last 10 items)
-        recent_executions = AgentExecution.objects.filter(
-            user=request.user
+        # I-0302 Phase 3 Sub-phase B2c: scoped via predicate (own + null-user for superuser).
+        recent_executions = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.all(),
         ).order_by('-created_at')[:10]
 
         for execution in recent_executions:
