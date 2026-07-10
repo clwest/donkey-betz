@@ -2,13 +2,17 @@
 
 ---
 
-## READ THIS FIRST — PLAYBOOK v0.2.0 RATIFIED (SESSION 2737) + §12 KNOWLEDGE RETRIEVAL CAMPAIGN CLOSED (SESSION 2736)
+## READ THIS FIRST — SESSION 2738 CLOSED (2 PRs) + PLAYBOOK v0.3.0 RATIFIED
 
-**Refreshed 2026-07-09 (SESSION 2737: Engineering Playbook v0.2.0 MINOR ratified. R1/R2/R3 EOS rules codified into ratified Playbook body as PLAYBOOK-5.2.2/2.2.2/3.2.2. Rule count 190 → 193. Git tag `playbook-v0.2.0`. Full SIGN discipline discharged 15/15 CONFIRMED across 2 batches. Prior arc close SESSION 2736 §12 Knowledge Retrieval Campaign remains valid — all 3 gaps closed via 3-service extension across 6 phases + Rigby SIGN at each gate).**
+**Refreshed 2026-07-10 (SESSION 2738 CLOSED. Arc discharged Constitutional Debt CD-48 + CD-49 via v0.3.0 MINOR. Playbook now at v0.3.0, 195 rules, no outstanding CDs from v0.1.0 forward. Session 2739 opens fresh — awaiting Chris candidate selection.).**
 
 Session anchors (read in order):
-1. [`docs/handoffs/SESSION_2737_PLAYBOOK_V0_2_0_RATIFIED.md`](docs/handoffs/SESSION_2737_PLAYBOOK_V0_2_0_RATIFIED.md) — Playbook v0.2.0 ratification record
-2. [`docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md`](docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md) — §12 Knowledge Retrieval close
+
+1. [`docs/handoffs/SESSION_2738_PLAYBOOK_V0_3_0_RATIFIED.md`](docs/handoffs/SESSION_2738_PLAYBOOK_V0_3_0_RATIFIED.md) — v0.3.0 ratification full arc: Cat A → 4-stage SIGN cycle → cascade
+2. [`docs/handoffs/SESSION_2737_PLAYBOOK_V0_2_0_RATIFIED.md`](docs/handoffs/SESSION_2737_PLAYBOOK_V0_2_0_RATIFIED.md) — S2737 arc: v0.2.0 MINOR + §16 wrap-up + CDR-003 §C5
+3. [`docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md`](docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md) — S2727 arc: v0.1.0 inaugural ratification
+4. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.3.0 body (195 rules)
+5. [`docs/EOS_RULES.md`](docs/EOS_RULES.md) — R1/R2/R3 live rules (also codified as PLAYBOOK-5.2.2/2.2.2/3.2.2)
 
 ---
 
@@ -17,125 +21,123 @@ Session anchors (read in order):
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | `3dc2c588` — Playbook v0.2.0 MINOR merged (PR #3048); §12 campaign at `fe25cbd1` (PR #3047) |
-| Working tree | 4 modified + 6 new files (see §1 below) |
-| Playbook body commit_sha | `ab3c88fa1ddc689a3fbe4cb59d13a5f5fb71cb9b` (v0.2.0 ratifiable body) — prior v0.1.0 at `b372edfe` preserved in prior_ratification block |
-| Playbook git tag | `playbook-v0.2.0` (annotated, applied to merge commit `3dc2c588`) — `playbook-v0.1.0` remains on `d82b450a` |
-| Playbook rule count | 193 (was 190) — rules added: PLAYBOOK-5.2.2, PLAYBOOK-2.2.2, PLAYBOOK-3.2.2 |
+| HEAD | (updated after cascade PR merge) — v0.3.0 cascade PR pending |
+| Playbook version | **v0.3.0** (git tag `playbook-v0.3.0` on merge commit `16e5d3deb27a71b9c9de45aae6c06d0f661117c8`) |
+| Playbook rule count | **195** — v0.3.0 additions: PLAYBOOK-6.6.14 (CD-48 discharge), PLAYBOOK-6.10.5 (CD-49 discharge) |
+| Constitutional Debt | **Zero outstanding CDs from v0.1.0 forward** — CD-47 RESOLVED (v0.1.0), CD-48 RESOLVED (v0.3.0), CD-49 RESOLVED (v0.3.0) |
 | Pending migrations | 0 |
-| PA worker | Post-S2728 restart with Batches A-D. **NEEDS RESTART** to load S2736 P1-P3.1 code when Rigby dispatches begin. Run `make celery-recycle` (F-CW-1 helper from S2732 Batch D). |
-| Campaign SIGN pin | `pa-5c76b58f70654409` (title `campaign-s2736-knowledge-retrieval`) — RETIRED at P4 close. |
-| Wrapper default pin | `pa-5c76b58f70654409` still in `tools/pa_local.sh:512` at HEAD — next session should rotate to a fresh pin at open, OR retain if directly continuing §12 wrap-up work. |
-| Test suite | 51 passed / 0 failed / 0 skipped / 0 xfailed at HEAD (`test_pa_knowledge_retrieval_capability.py` 23 + `test_context_injection_pipeline_validation_2728.py` 28) |
+| PA worker | Live under S2737 recycle PIDs. All 5 workers (default/pa/long_running/broadcast/code_jobs) up |
+| Session pin | `pa-993910a4a93848df` retired at S2738 close; new pin minted at S2739 open |
+| Wrapper default pin | `tools/pa_local.sh:70` — matches S2739 open pin (to be minted) |
 
 ---
 
-## Current constitutional state (unchanged from S2727)
+## Current constitutional state (post-Playbook v0.3.0 ratification)
 
-**Engineering Playbook v0.1.0: RATIFIED.** No amendments across §12 campaign.
-CD-47 RESOLVED; CD-48 + CD-49 targeted for v0.1.1 PATCH.
+**Engineering Playbook v0.3.0: RATIFIED** (2026-07-10). Constitutional Debt status:
 
-**New for S2736** — three EOS rules ratified live at [`docs/EOS_RULES.md`](docs/EOS_RULES.md):
-- **R1** Tool Autonomy Principle
-- **R2** Capability Discovery Records precede engineering (2 reference CDRs shipped)
-- **R3** Acceptance-tests-first (23-test AT harness shipped as reference)
+- **CD-47 RESOLVED** (v0.1.0)
+- **CD-48 RESOLVED** (v0.3.0 PLAYBOOK-6.6.14)
+- **CD-49 RESOLVED** (v0.3.0 PLAYBOOK-6.10.5)
+- **No new constitutional debt introduced by v0.3.0**
 
-All three queued for Playbook v0.1.1 codification.
+Ratified constitutional codification chain: **v0.1.0 → v0.2.0 → v0.3.0**.
 
----
+**Governance artifacts at HEAD:**
 
-## Campaign summary — §12 Knowledge Retrieval
+- 3 Capability Discovery Records ratified: CDR-001 (§16 notification fanout downgrade), CDR-002 (§12 knowledge retrieval closure), CDR-003 (§C5 Celery Eager-Mode Integration Verification)
+- 3 Playbook versions ratified: v0.1.0 (inaugural), v0.2.0 (R1/R2/R3 EOS codification), v0.3.0 (CD-48/CD-49 discharge)
 
-| Gap | Phase | Substrate shipped | Status |
-|---|---|---|---|
-| Gap 1 — PA turn embedding-lane enrichment | P2 + P2.1 | `_retrieve_embedding_context` + `_build_context` embedding block via `ScopedRetrievalService`; citable-path polish (Rigby O5) | ✅ |
-| Gap 2 — Runtime lane selector LOCAL vs PROD | P1 + P1.1 | `core/services/rag_lane_selector.py` + `[PA_ROUTING_INIT]` extension; narrow-except polish (Rigby O5) | ✅ |
-| Gap 3 — PA/BaseAgent asymmetry closure | P3 + P3.1 | `core/services/relevant_knowledge_service.py` extraction + BaseAgent delegation + PA `_build_context` invocation; empty-keyword guard + docstring correction (Rigby O2/O6) | ✅ |
+**Queued methodology candidates (do NOT codify without explicit ask):**
 
-**All 3 CDR-002 gaps closed.** Capability at HEAD satisfies every requirement of the §10.1 R4 capability statement.
+- *"Rule-count reconciliation methodology"* — S2738 §6 obs 1 has concrete in-wild example (frontmatter 195 vs recount 199 = 4-rule delta from §6.12 reservation-slot counting differences). Not a real drift, but suggests formal codification is warranted.
+- *"Recursive constitutional discipline"* — S2738 §5 self-referential CD-49 validation pattern (rules that codify governance failure modes should be subject to their own governance during SIGN). Not ready for codification.
 
-**Observability at HEAD** — `[PA_TASK_SUMMARY]` emits:
-```
-docs_context_hit=<bool> embedding_context_hit=<bool> agent_knowledge_hit=<bool>
-```
-One grep answers per turn: "did all three enrichment lanes fire?"
+**Queued for future PLAYBOOK Chapter 8 Runtime Discipline MINOR (do NOT draft without explicit ask):**
 
-**Rigby SIGN checkpoints:** 3 dispatches (P1, P2, P3), 9 CONFIRMED + 7 REFINEMENTS across all objectives. Every refinement landed as `.1` polish before the next phase opened.
+- Post-recycle runtime smoke check for Celery-task-shipping campaigns (S2737 §10.8.4)
+- `make celery-recycle` + `celery inspect registered` + end-to-end HAI smoke test as bundle-close discipline
 
 ---
 
-## Files awaiting a single close PR
+## Session 2738 delivery ledger
 
-### Modified
-- `core/agents/base_agent.py` — `_get_relevant_knowledge_for_task` delegation refactor
-- `core/services/unified_pa_entrypoint.py` — P1/P2/P3 enrichment blocks + `[PA_TASK_SUMMARY]` extension
-- `docs/research/platform/platform_capability_graph.md` — §25 append-only fold
-- `tools/pa_local.sh` — wrapper pin rotation
+| # | Commit / PR | Purpose |
+|---|---|---|
+| 1 | `16e5d3de` / PR #3058 | feat(playbook): v0.3.0 MINOR — codify CD-48 + CD-49 as PLAYBOOK-6.6.14 + 6.10.5 |
+| 2 | (cascade PR) | docs(session-2738): Playbook v0.3.0 ratified — frontmatter fill + Canon + CLAUDE.md L7 + 00-START + handoff + cascade |
 
-### New
-- `core/services/rag_lane_selector.py` — P1 runtime lane selector
-- `core/services/relevant_knowledge_service.py` — P3 shared knowledge substrate
-- `core/tests/test_pa_knowledge_retrieval_capability.py` — 23 acceptance tests across 11 classes
-- `docs/EOS_RULES.md` — R1/R2/R3 live rule ledger
-- `docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md`
-- `docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md`
+**Rigby SIGN dispatches this session:** 4 (Cat A independent read + follow-up recount, scope SIGN CORRECTION-PASS+F-BLOCKING, confirmation SIGN PASS 0.92, body-edit SIGN PASS 0.93 + workspace-fetch follow-up).
+
+**Ledger totals for S2738:** 2 PRs · 1 feat + 1 docs · 2 rules added · **CD-48 + CD-49 fully discharged** · zero regressions.
 
 ---
 
-## Current recommended first task (Chris-choice)
+## Candidate queue for S2739
 
-1. **Merge the §12 campaign PR** — single PR consolidating all working-tree
-   changes. This is the natural first task if the goal is landing S2736
-   work on main.
-2. **CDR-001 §16 wrap-up bundle** — 4-item S-M polish (Inbox receiver +
-   cross-channel HAIDispatchLog + `channels_fired` convention + dispatch-
-   contract normalization). Not a campaign; 1-2 sessions.
-3. **Playbook v0.1.1 PATCH** — codify R1 + R2 + R3 from `docs/EOS_RULES.md`
-   into the ratified Playbook body. Also folds S2733 retrospective §6
-   sections that were queued for v0.1.1.
-4. **Next Category A campaign selection** — the Capability Graph has
-   §17 Cost Protection P2+, §18 Auth full scope, §19 Conversation
-   Lifecycle telemetry, and several other candidates. **MUST run
-   Category A per Rule R2 before proposing a campaign scope.**
-5. **Rigby CDR-002 §17.4 integration test harness** — deferred future
-   arc for a proper Django TestCase-based `_build_context` fixture set.
-6. **Something else** — the campaign queue is open.
+Chris-choice from ratified priority order (user value → platform leverage → architectural reuse → engineering effort → operational risk → constitutional risk):
 
-Recommended session-open protocol:
-1. `context-kit orient` (mandatory session-open).
-2. Read `docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md` in full.
-3. Read `docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md` §11 Lessons Learned + §12+ reconciliation folds.
-4. Read `docs/EOS_RULES.md` R1/R2/R3.
-5. If Chris chooses (2) or (4): run Category A investigation FIRST per Rule R2.
-6. If any Rigby dispatch is planned: `make celery-recycle` to load S2736 code into the PA worker.
+### Direct EOS candidates (require Category A per PLAYBOOK-2.2.2)
 
----
+1. **Next Capability Graph chain campaign** — remaining unblocked candidates:
+   - §17 Cost Protection P2+ (extends S2735 P1 financial safety)
+   - §18 Auth full scope (13 remaining P0 items)
+   - §19 Conversation Lifecycle telemetry (envelope-shape observability)
+   - §11 Memory Creation (write-authority framework)
+   - Chris D-gated candidates blocked: §4, §7, §9, §10, §C1
 
-## Reference documents (read order for post-campaign sessions)
+### Discipline / methodology candidates (would be MINOR amendments)
 
-Campaign-closure anchors (S2736):
+2. **PLAYBOOK Chapter 8 Runtime Discipline MINOR** — codify S2737 §10.8.4 lesson (post-recycle runtime smoke check for Celery-task-shipping campaigns). Currently STUB Chapter 8. Chris explicitly deferred at S2737 close and S2738 close.
+3. **Rule-count reconciliation methodology MINOR** — S2738 §6 obs 1 candidate. Would land in Chapter 6 §6.13 (new subsection) or Chapter 10 §10.16. Concrete in-wild example now exists (v0.3.0 delta).
+4. **Recursive constitutional discipline candidate** — S2738 §5 self-referential CD-49 validation pattern. Not ready — needs more evidence from independent methodology-rule ratifications.
 
-1. [`docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md`](docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md) — **Session 2736 close.** All governance + code + tests + Rigby SIGN checkpoints in one place.
-2. [`docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md`](docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md) — 19-section §12 campaign record.
-3. [`docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md`](docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md) — first CDR + §16 wrap-up backlog.
-4. [`docs/EOS_RULES.md`](docs/EOS_RULES.md) — R1/R2/R3 live rules ratified this session.
+### Process / infrastructure candidates
 
-Pre-campaign anchors (unchanged):
+5. **Post-S2738 combined-cleanup sweep** — small carry-forward observations from S2737/S2738 close-outs, if any surface value.
 
-5. [`docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md`](docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md) — Rigby Tool Validation Campaign retrospective.
-6. [`docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md`](docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md) — Playbook v0.1.0 ratification ledger.
-7. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified Playbook v0.1.0 body.
-8. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap.
+### External signal-driven candidates
+
+6. **Something surfaced by production observation** — with all 5 workers green + all HAI channels wired + notify_hai_inbox proven end-to-end, watch for real HAI critical items in the wild + inspect `HAIDispatchLog` + `[PA_TASK_SUMMARY]` for surprises.
 
 ---
 
-## Session close summary (Session 2736)
+## Recommended session-open protocol (for S2739)
 
-- **Chapter closed**: §12 Knowledge Retrieval campaign shipped end-to-end. All 3 gaps closed via extension of shipped substrate — zero parallel abstractions, zero regression.
-- **Governance advances**: two Capability Discovery Records + three EOS rules + one graph fold — the CDR + Rule primitives are now first-class artifacts, not experimental patterns.
-- **Rigby-Claude collaboration**: the R1-governed SIGN cycle produced material improvements at every gate. Rule R1 proved itself in production use across 3 phase gates.
-- **Test discipline**: 23 acceptance tests written pre-implementation per R3; 28 S2728 regressions preserved; 51 tests total pass at HEAD.
-- **PA worker restart** deferred to next session (S2736 P1-P3.1 code shipped but not loaded into the running worker).
-- **Handoff + anchor updates:** this file + `docs/handoffs/SESSION_2736_KNOWLEDGE_RETRIEVAL_CAMPAIGN_CLOSED.md` + `docs/EOS_RULES.md` + CDR-001 + CDR-002 + graph §25.
+1. `context-kit orient`
+2. Read `docs/handoffs/SESSION_2738_PLAYBOOK_V0_3_0_RATIFIED.md` in full
+3. Read `docs/ENGINEERING_PLAYBOOK.md` §6.6.14 + §6.10.5 (the new v0.3.0 rules) — they may govern S2739 SIGN cycles
+4. Verify runtime state: `git log --oneline -3`, `git tag -l 'playbook-*'`, `celery inspect ping`
+5. Mint fresh session-open pin (retire prior arc pins per §16 discipline)
+6. Rotate `tools/pa_local.sh` wrapper to new pin
+7. **Await Chris candidate selection** — do NOT begin Cat A on any candidate until Chris ratifies scope selection
 
 ---
+
+## Reference documents
+
+Ordered by frequency of use:
+
+1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (L7 anchor refreshed to v0.3.0)
+2. [`docs/EOS_RULES.md`](docs/EOS_RULES.md) — R1/R2/R3 (also codified as PLAYBOOK-5.2.2/2.2.2/3.2.2)
+3. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.3.0 body (195 rules)
+4. [`docs/research/platform/platform_capability_graph.md`](docs/research/platform/platform_capability_graph.md) — capability chains + §25 CDR refinements + §26 §C5 candidate
+5. [`docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md`](docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md)
+6. [`docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md`](docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md)
+7. [`docs/research/platform/CDR_003_runtime_celery_integration_test_harness.md`](docs/research/platform/CDR_003_runtime_celery_integration_test_harness.md)
+8. [`docs/testing/RUNTIME_INTEGRATION_TESTS.md`](docs/testing/RUNTIME_INTEGRATION_TESTS.md)
+
+---
+
+## Session close summary (Session 2738 — for archive)
+
+- **Chapter closed**: Playbook v0.3.0 MINOR ratified — CD-48 + CD-49 fully discharged
+- **Governance advances**: Zero outstanding CDs from v0.1.0 forward; ratified codification chain now v0.1.0 → v0.2.0 → v0.3.0; two new [GR] rules in Chapter 6 (§6.6 + §6.10)
+- **Notable event**: Live self-referential CD-49 validation during body-edit SIGN — the codification of CD-49 hit CD-49 in its own SIGN cycle (workspace-scoped access restriction on E2 deliverable). Resolved via workspace-agnostic UUID fetch — became the retroactive first application of PLAYBOOK-6.10.5
+- **Rigby-Claude collaboration**: 4 Rigby SIGN dispatches across the arc (Cat A independent read, scope SIGN, confirmation SIGN, body-edit SIGN). Both Cat A investigations (Claude + Rigby) converged on Option A recommendation with independent reasoning. Rigby's §6.12 reserved-slot catch (from Cat A) informed the move to 6.6.14 instead of 6.6.13.
+- **Constitutional debt at close**: Zero. All CDs from v0.1.0 (CD-47/48/49) resolved.
+- **PA worker state**: alive under S2737 recycle PIDs; all 5 workers up
+
+---
+
+**Awaiting Chris candidate selection for S2739.** No Category A begins until candidate is named.
