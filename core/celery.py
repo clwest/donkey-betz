@@ -962,6 +962,23 @@ app.conf.imports = (
     # task name on beat fires + manual run_now dispatches. Task is
     # monitor-only (no auto-remediation, no restart, no reschedule).
     'core.tasks_beat_health',
+    # Session 2737 — HAI push notifications module. Discovered post-
+    # recycle during §16 wrap-up bundle close: `core.tasks_push_notifications`
+    # was not loaded at worker boot because the four signal modules
+    # (signals_push_notifications, signals_discord_notifications,
+    # signals_webpush_notifications, signals_inbox_notifications) all
+    # import from it *inside function bodies* (lazy `from core.tasks_push_notifications import ...`
+    # at the enqueue helpers). The `@shared_task` decorators therefore
+    # never fired at boot, so `notify_hai_discord.delay(...)` /
+    # `notify_hai_webpush.delay(...)` / `notify_critical_attention_item.delay(...)`
+    # / `notify_needs_classification.delay(...)` / `notify_hai_inbox.delay(...)`
+    # all failed silent-KeyError on the running worker.
+    #
+    # Ships fix for all five task names at once — closes the same-class-
+    # bug in PR #1458 (Expo, 2026-02-24), PR #3038 (Discord, 2026-07-09
+    # S2735), PR #3040 (Web Push, 2026-07-09 S2735), and PR #3050 (Inbox,
+    # 2026-07-09 S2737).
+    'core.tasks_push_notifications',
 )
 
 
