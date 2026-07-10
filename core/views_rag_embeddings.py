@@ -1513,7 +1513,9 @@ def ingest_video_status(request, job_id):
             }
 
             if event.status == 'SUCCESS':
-                result_data['document'] = _video_document_details(event)
+                # I-0302 Phase 3 Sub-phase D2: pass user so helper can scope
+                # its Document lookup via scope_queryset_document.
+                result_data['document'] = _video_document_details(event, request.user)
             elif event.status == 'FAILURE':
                 result_data['error'] = event.error_message or 'Task failed'
 
@@ -1558,8 +1560,17 @@ def _video_progress_from_status(status):
     }.get(status, 'Unknown')
 
 
-def _video_document_details(event):
-    """Extract document details from a completed CeleryTaskEvent."""
+def _video_document_details(event, user):
+    """Extract document details from a completed CeleryTaskEvent.
+
+    I-0302 Phase 3 Sub-phase D2 (2026-07-10): ``user`` parameter added
+    per Rigby SIGN Q3 defense-in-depth. Helper does a Document lookup
+    by id; scope via ``scope_queryset_document`` so a caller can't
+    receive metadata for another user's video document (the outer
+    ``ingest_video_status`` endpoint uses the same job id but the
+    helper needs its own scope for future refactors).
+    """
+    from core.security import scope_queryset_document
     try:
         # The task result is stored in CeleryTaskEvent only if result backend wrote it
         # Try fetching the document directly
@@ -1570,7 +1581,9 @@ def _video_document_details(event):
             if isinstance(result.result, dict):
                 doc_id = result.result.get('document_id')
                 if doc_id:
-                    doc = Document.objects.filter(id=doc_id).first()
+                    doc = scope_queryset_document(
+                        user, Document.objects.all()
+                    ).filter(id=doc_id).first()
                     if doc:
                         meta = doc.extracted_metadata or {}
                         return {

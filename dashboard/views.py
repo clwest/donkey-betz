@@ -201,6 +201,13 @@ def embeddings_stats(request):
     sample data with `status='demo_mode'` whenever the dead table query
     failed (always). Users saw misleading fake numbers presented as if
     real.
+
+    I-0302 Phase 3 Sub-phase D2 (2026-07-10): the `by_type` breakdown is
+    an ops-only aggregate that leaks cross-user document-type distribution
+    if returned to non-superuser callers. Superuser-gated at the type
+    aggregate below (only the aggregate is gated — the DocumentEmbedding
+    total count stays public). Non-superuser callers see `{'unknown': 0}`
+    in `by_type` instead of the raw distribution.
     """
     stats = {
         'total_embeddings': 0,
@@ -226,11 +233,17 @@ def embeddings_stats(request):
         # By type: Document.document_type drives content classification
         # (markdown / text / pdf / etc.). Pre-pivot this read raw-SQL
         # content_type from the dead table.
-        type_breakdown = dict(
-            Document.objects.values_list('document_type').annotate(
-                count=Count('id'),
-            ).values_list('document_type', 'count')
-        )
+        # I-0302 Phase 3 Sub-phase D2 (2026-07-10): global aggregate is
+        # superuser-only to prevent cross-user document-type distribution
+        # leakage. Non-superuser callers get the `{'unknown': 0}` default.
+        if getattr(request.user, 'is_superuser', False):
+            type_breakdown = dict(
+                Document.objects.values_list('document_type').annotate(
+                    count=Count('id'),
+                ).values_list('document_type', 'count')
+            )
+        else:
+            type_breakdown = {}
         stats['by_type'] = type_breakdown or {'unknown': 0}
 
         # Recent (last 7 days)
