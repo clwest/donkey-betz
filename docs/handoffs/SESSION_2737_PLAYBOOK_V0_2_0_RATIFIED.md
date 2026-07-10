@@ -343,8 +343,138 @@ a3b04af7  feat(session-2737): §16 Notification Fanout — wrap-up bundle (#3050
 
 ---
 
+## §11. Post-defect-ledger bundle — §C5 Celery Eager-Mode Integration Verification (CDR-003)
+
+The class-of-bug lesson captured in §10.8 immediately motivated the
+authoring of CDR-003 and a follow-on wrap-up bundle. Both proceeded
+under the ratified Playbook v0.2.0 rules — the first end-to-end
+exercise of the full EOS process on a single arc (Cat A → CDR →
+Rigby SIGN → Chris ratification → acceptance-tests-first →
+implementation → post-implementation SIGN → PR → merge).
+
+### 11.1 CDR-003 authoring + Rigby Cat A SIGN
+
+- CDR-003 authored at `docs/research/platform/CDR_003_runtime_celery_integration_test_harness.md`
+  documenting the discovery that a proposed L-effort greenfield
+  "runtime integration-test harness" campaign was materially
+  over-scoped — ~85% substrate already at HEAD (env flag +
+  `captureOnCommitCallbacks` pattern in 10 files + 574-line conftest
+  + 2 shipping reference implementations).
+- Cat A SIGN pin `pa-16b8ba10b62f418c` minted; Rigby dispatched under
+  Rule R1. SIGN-with-refinements:
+  - O2 count correction: 15 files claim → **actual 10 files**
+    (author mistook a search-tool `head_limit` hint for a real count)
+  - O6 second reference implementation:
+    `test_deliverable_intake_subscriber.py::EagerModeEndToEndTests`
+    (S1250 vintage) surfaced as a second exemplar
+  - Gap 4 discipline candidate: quantitative repository claims used
+    to justify engineering scope MUST be independently recounted or
+    produced by a count-returning mechanism before ratification
+    (queued as future methodology-rule input; not codified this arc)
+- All refinements folded into CDR-003 §12 append-only.
+- Chris ratified all 3 decisions (CDR + §8 Option A + reduced scope
+  with additional acceptance requirement: exemplar test must prove
+  a real ORM side effect from the task body, not merely enqueue args).
+
+### 11.2 Bundle implementation
+
+Fresh implementation SIGN pin `pa-06f2e56fb9444f53` minted.
+Acceptance tests written pre-implementation per PLAYBOOK-3.2.2.
+Shipped as a single PR (`eac0f4da` / PR #3056):
+
+- `core/tests/test_hai_runtime_integration.py` — 3 tests, all PASS.
+  Uses `TestCase` + `self.captureOnCommitCallbacks(execute=True)` +
+  `@override_settings(CELERY_TASK_ALWAYS_EAGER=True, CELERY_TASK_EAGER_PROPAGATES=True)`
+  — no `.delay` patching. Asserts real ORM side effects: `DirectMessage`
+  row created + `HAIDispatchLog(status='succeeded')` row written by
+  the task body.
+- `integration_celery` pytest marker registered in
+  `tests/conftest.py::pytest_configure` + `pytest.ini` markers list
+  + `pytest.ini testpaths` extended to `tests core/tests` (Rigby O5
+  refinement).
+- `docs/testing/RUNTIME_INTEGRATION_TESTS.md` — pattern doc with an
+  explicit **Boundary** section listing all six items Chris directive
+  named as things this pattern does NOT replace: worker task-registry
+  verification, `make celery-recycle`, `celery inspect registered`,
+  queue-routing verification, serialization/concurrency verification,
+  end-to-end runtime smoke tests on live workers.
+- Capability Graph §26 new candidate chain **§C5 Celery Eager-Mode
+  Integration Verification** with 15-attribute template + explicit
+  boundary + explicit discharge of CDR-002 §17.4 deferred arc.
+- CDR-002 §17.4 DISCHARGED note added.
+
+### 11.3 Post-implementation SIGN
+
+- Rigby SIGN on pin `pa-06f2e56fb9444f53` returned 4× SIGN-CONFIRMED
+  (O1-O4) + O5 REFINE flagging that `pytest.ini testpaths` was
+  `tests` only, so `pytest -m integration_celery` would not discover
+  the exemplar in `core/tests/`. Discharged via one-line
+  `testpaths = tests core/tests` fix.
+- Rigby final: *"bundle is ratifiable for PR + merge now."*
+- Chris authorized PR + merge.
+
+### 11.4 Runtime-appropriate verification
+
+For this bundle the "runtime-appropriate" verification was
+`pytest core/tests/test_hai_runtime_integration.py` (the tests
+themselves ARE the runtime proof). 3/3 pass locally. Rigby's Rule R1
+tool autonomy was exercised across two SIGN dispatches — she picked
+her own tools each time and found substrate/refinements Claude's
+grep would have missed with a tool-prescribed dispatch.
+
+### 11.5 Governance stamps
+
+- **PLAYBOOK-2.2.2** (CDR discipline) — third consecutive campaign
+  where Cat A materially changed proposed scope; CDR authored and
+  ratified before code. Three-for-three across CDR-001 / CDR-002 /
+  CDR-003.
+- **PLAYBOOK-3.2.2** (acceptance-tests-first) — the exemplar test IS
+  the acceptance test for the bundle; authored pre-implementation
+  with Chris's additional acceptance requirement folded in ("prove
+  a real ORM side effect from the task body, not merely enqueue
+  args").
+- **PLAYBOOK-5.2.2** (Tool Autonomy) — two Rigby SIGN dispatches
+  under Rule R1; both produced material refinements that a
+  tool-prescribed dispatch would have suppressed.
+
+### 11.6 Queued methodology candidate
+
+Rigby's Gap 4 refinement flagged that quantitative repository claims
+should be Rigby-recount-verified before CDR §5 scoring lands. This
+lesson is **queued for future codification** (a potential
+Chapter 8 Runtime Discipline MINOR OR a new Chapter 2 §2.4 rule).
+Not codified this arc per Chris directive: *"Queue the following
+methodology candidate without expanding this PR."*
+
+### 11.7 SIGN pin retirement + wrapper rotation
+
+Two pins retired at bundle close:
+- `pa-16b8ba10b62f418c` — Cat A pin, retired after §12 fold
+- `pa-06f2e56fb9444f53` — post-implementation SIGN pin, retired after
+  Chris authorized merge
+
+Wrapper `tools/pa_local.sh` rotated at each stage.
+
+### 11.8 Commit graph — full session
+
+```
+eac0f4da  feat(session-2737): §C5 Celery Eager-Mode Integration Verification — CDR-003 bundle (#3056)
+3ac97379  docs(session-2737-defect-ledger-cascade): INDEX + provenance refresh after PR #3054 (#3055)
+fe6a1b3d  docs(session-2737): record 3 latent integration defects in handoff §10.8 (#3054)
+c3b79689  fix(hai_inbox): DirectMessage import + thread_type (#3053)
+6b2841ef  fix(celery): register core.tasks_push_notifications at boot (#3052)
+a3a0c51b  docs(session-2737): §16 bundle close — handoff §10 + cascade (#3051)
+a3b04af7  feat(session-2737): §16 Notification Fanout — wrap-up bundle (#3050)
+5bcb9777  docs(session-2737): Playbook v0.2.0 ratified — handoff + cascade (#3049)
+3dc2c588  feat(playbook): v0.2.0 MINOR — codify R1/R2/R3 (#3048)
+```
+
+---
+
 **End of Session 2737.** Engineering Playbook v0.2.0 ratified + §16
 Notification Fanout wrap-up bundle (CDR-001 §7 Gap 1-4) shipped +
 three latent integration defects discovered by post-recycle runtime
-verification + fixed same-day + reference lesson captured in §10.8
-for future bundle close-outs.
+verification + fixed same-day + reference lesson captured in §10.8 +
+§C5 Celery Eager-Mode Integration Verification (CDR-003 bundle)
+shipped as first end-to-end exercise of the full EOS process on a
+single arc.
