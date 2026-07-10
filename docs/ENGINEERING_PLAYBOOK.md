@@ -1,43 +1,46 @@
 ---
 title: "Donkey Betz Engineering Playbook"
-version: "0.2.0"
+version: "0.3.0"
 version_status: ratified
 scope: platform
-parent_version: "0.1.0"
+parent_version: "0.2.0"
 supersedes: []
-compatible_with: ["0.1.0"]
+compatible_with: ["0.1.0", "0.2.0"]
 ratifier: chris
-ratified_date: 2026-07-09
+ratified_date: 2026-07-10
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
-  deliverable_id: fbcfcfde-9da9-48b1-8bd8-187885382521
+  deliverable_id: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
-branch_authored: playbook/v0.2.0-eos-rules-codification
-commit_sha: ab3c88fa1ddc689a3fbe4cb59d13a5f5fb71cb9b
-content_hash: sha256:ae3228d9b9673dec672300b56b2076790b1548d946852fe08f594c3a37b46938
-git_tag: playbook-v0.2.0
+branch_authored: playbook/v0.3.0-cd48-cd49-codification
+commit_sha: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
+content_hash: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
+git_tag: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
 schema_version: 1
 prior_ratification:
-  version: "0.1.0"
-  ratified_date: 2026-07-08
-  deliverable_id: b083c034-5aba-4dc3-9758-57eba29b4bf2
-  commit_sha: b372edfe127f1af59c4322871092aa7151669463
-  content_hash: sha256:0205af5b74d34d686d064552b28989c472e2b4048c780a873e4e03193de988ab
-  git_tag: playbook-v0.1.0
-authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736]
+  version: "0.2.0"
+  ratified_date: 2026-07-09
+  deliverable_id: fbcfcfde-9da9-48b1-8bd8-187885382521
+  commit_sha: ab3c88fa1ddc689a3fbe4cb59d13a5f5fb71cb9b
+  content_hash: sha256:ae3228d9b9673dec672300b56b2076790b1548d946852fe08f594c3a37b46938
+  git_tag: playbook-v0.2.0
+authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738]
 correction_sessions: [2723, 2725, 2727]
-audit_sessions: [2722, 2724, 2725, 2727]
+audit_sessions: [2722, 2724, 2725, 2727, 2738]
 ratification_package_session: 2726
 ratification_session: 2727
 v0_2_0_authoring_session: 2736
 v0_2_0_ratification_session: 2736
-rule_count: 193
+v0_3_0_authoring_session: 2738
+v0_3_0_ratification_session: 2738
+rule_count: 195
 rules_added_v0_2_0: [PLAYBOOK-5.2.2, PLAYBOOK-2.2.2, PLAYBOOK-3.2.2]
+rules_added_v0_3_0: [PLAYBOOK-6.6.14, PLAYBOOK-6.10.5]
 evidence_manifest: docs/research/platform/engineering_playbook_evidence_manifest.md
 ---
 
-# Donkey Betz Engineering Playbook v0.2.0
+# Donkey Betz Engineering Playbook v0.3.0
 
 # Chapter 0 — Preamble and How to Read This Playbook
 
@@ -811,6 +814,8 @@ Every normative rule in the Playbook body is subject to an evidence admission th
 
 **[GR] PLAYBOOK-6.6.12** The convergent-research exception permitted by PLAYBOOK-6.6.5 applies only to rules of class `[EP]` Engineering Principle. Rules of other classes MUST meet their full evidence bars regardless of the presence of convergent research documents. [E3: 2713 §7.2]
 
+**[GR] PLAYBOOK-6.6.14** A document that catalogs, describes, or enumerates a constitutional evidence chain MUST NOT be cited as a chain-member evidence source for the chain it catalogs. A document catalog MAY be cited for its own independent claims about the chain — freeze semantics, admissibility rules, or version boundaries. [E2: v0.1.0 ratification record body §6 Constitutional debt disposition (deliverable `b083c034-5aba-4dc3-9758-57eba29b4bf2`); E3: `docs/research/platform/playbook_constitutional_correction_session_2725.md` (CD-48 principle extraction); E3: `docs/research/platform/platform_constitutional_transition_review.md` §5.6 (F-C1(a)+(b) required form); E5: `docs/canon/INDEX.md` §Constitutional Canon (F-C1(b) guarantee-in-context linkage); E6: `docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md` (CD-48 disposition anchored in v0.1.0 ratification handoff)]
+
 > **Commentary:** The thresholds reflect the observed constitutional-weight gradient. Higher-weight classes ([AC], [GR], [RP], [DR], [RM]) require at least two evidence sources with at least one high-strength primary source. Lower-weight classes ([RS], [RC]) require fewer sources. The convergent-research exception applies only to [EP] because Engineering Principles express foundational values whose evidence commonly lives in the intersection of multiple research arcs — a form of evidence that no single source records but that convergent research documents synthesize.
 
 ## 6.7 Provenance-honest attribution
@@ -879,6 +884,8 @@ The eight verifications are the following:
 **[GR] PLAYBOOK-6.10.3** The SIGN reviewer MUST be responsible for verifications 7 and 8. SIGN attestation MUST classify findings as F-BLOCKING, non-blocking, or informational per the SIGN methodology inherited from the Research Operating System. [E2: RATIFICATION_20260708_0199_CYCLE_1_CLOSEOUT §Ratification ledger summary (SIGN attestation recorded); E6: `docs/handoffs/SESSION_2707_0199_RATIFICATION_HANDOFF.md` §5 (SIGN findings classified F1 BLOCKING, G1 BLOCKING, and non-blocking classes)]
 
 **[GR] PLAYBOOK-6.10.4** If verification 1 identifies a broken citation — a citation whose target does not resolve — the author MUST either repair the citation with a resolving source or omit the rule that depends on the broken source. Broken citations MUST NOT be dispatched to SIGN unresolved. [E2: RATIFICATION_20260708_0199_CYCLE_1_CLOSEOUT §Ratification ledger summary (correction pass 1 repaired the F1 broken-SHA citation); E6: `docs/handoffs/SESSION_2707_0199_RATIFICATION_HANDOFF.md` §6 (F1 correction: KFI-2 cascade SHA `8acdc6f0` → `5a878768` in three locations)]
+
+**[GR] PLAYBOOK-6.10.5** A SIGN reviewer verifying a rule that cites workspace-canonical E1 or E2 evidence MUST have `deliverable_tool` access provisioned within the SIGN conversation before rendering a verdict on that rule. A verdict rendered without provisioned workspace access MUST be classified as partial pending workspace-provisioned re-verification. [E2: v0.1.0 ratification record body §6 Constitutional debt disposition (deliverable `b083c034-5aba-4dc3-9758-57eba29b4bf2`); E3: `docs/research/platform/platform_constitutional_transition_review.md` (expanded SIGN methodology finding); E6: `docs/handoffs/SESSION_2727_PLAYBOOK_V0_1_0_RATIFIED.md` (CD-49 origin — expanded SIGN pass)]
 
 > **Commentary:** The eight-check protocol is a discipline, not a bureaucracy. Its cost is proportional to the amendment's scope. A PATCH amendment (typo fix, broken-link repair) that touches one rule may complete all six author verifications in minutes. A MAJOR amendment (rule removal, chapter restructuring) that touches many rules requires proportional verification effort. The discipline scales with the amendment; the amendment does not scale with the discipline.
 
@@ -1269,3 +1276,5 @@ The Constitutional Debt Register records items intentionally deferred by prior a
 | Version | Parent version | Supersedes | Ratification date | Git tag | Notes |
 |---|---|---|---|---|---|
 | v0.1.0 | null | [] | PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION | PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION | Inaugural version. |
+| v0.2.0 | v0.1.0 | [] | 2026-07-09 | playbook-v0.2.0 | MINOR — codify R1/R2/R3 EOS rules as PLAYBOOK-5.2.2 (Tool Autonomy), PLAYBOOK-2.2.2 (CDR discipline), PLAYBOOK-3.2.2 (Acceptance-tests-first). |
+| v0.3.0 | v0.2.0 | [] | PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION | PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION | MINOR — codify CD-48 (catalog admission) as PLAYBOOK-6.6.14 and CD-49 (SIGN workspace tool provisioning) as PLAYBOOK-6.10.5. Discharges Constitutional Debt CD-48 + CD-49 carried from v0.1.0. |
