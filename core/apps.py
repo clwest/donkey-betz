@@ -136,6 +136,16 @@ class CoreConfig(AppConfig):
         except ImportError:
             pass  # HAI→Web Push signals not available
 
+        # Session 2737 — CDR-001 §7 Gap 1 (§16 wrap-up bundle) — Connect
+        # HAI → Inbox DirectMessage fanout receiver so urgency='critical'
+        # HumanAttentionItem creations fire an Inbox notification for the
+        # target user via the on_commit + Celery task pattern.
+        # Kill switch: settings.HAI_INBOX_DISPATCH_ENABLED (default True).
+        try:
+            import core.signals_inbox_notifications  # noqa: F401
+        except ImportError:
+            pass  # HAI→Inbox signals not available
+
         # Session 1115 batch-7: Connect Document + NarrativeShift signals so
         # process_document_async and trigger_content_from_shift fire when
         # their source rows are saved.
