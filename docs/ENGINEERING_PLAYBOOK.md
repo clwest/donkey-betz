@@ -10,12 +10,12 @@ ratifier: chris
 ratified_date: 2026-07-10
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
-  deliverable_id: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
+  deliverable_id: 77420585-2bd9-43bb-aa1c-74cae3354754
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
 branch_authored: playbook/v0.4.0-verify-substrate-cd50-codification
-commit_sha: PLACEHOLDER_TO_BE_FILLED_POST_MERGE
-content_hash: PLACEHOLDER_TO_BE_FILLED_POST_MERGE
+commit_sha: 65441c87
+content_hash: sha256:009d6c03c492ba6afae5404cfc2848aa0df0343d949c8b01de4be409bb915cf3
 git_tag: playbook-v0.4.0
 schema_version: 1
 prior_ratification:
