@@ -10,13 +10,13 @@ ratifier: chris
 ratified_date: 2026-07-10
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
-  deliverable_id: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
+  deliverable_id: 548d4aab-88bf-470f-9dea-b3b7400ce36e
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
 branch_authored: playbook/v0.3.0-cd48-cd49-codification
-commit_sha: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
-content_hash: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
-git_tag: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
+commit_sha: 16e5d3deb27a71b9c9de45aae6c06d0f661117c8
+content_hash: sha256:4a42ca9f2b96160c637de30cdc7050e76c0420ca7280036930241b4903fcd36f
+git_tag: playbook-v0.3.0
 schema_version: 1
 prior_ratification:
   version: "0.2.0"
@@ -1277,4 +1277,4 @@ The Constitutional Debt Register records items intentionally deferred by prior a
 |---|---|---|---|---|---|
 | v0.1.0 | null | [] | PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION | PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION | Inaugural version. |
 | v0.2.0 | v0.1.0 | [] | 2026-07-09 | playbook-v0.2.0 | MINOR — codify R1/R2/R3 EOS rules as PLAYBOOK-5.2.2 (Tool Autonomy), PLAYBOOK-2.2.2 (CDR discipline), PLAYBOOK-3.2.2 (Acceptance-tests-first). |
-| v0.3.0 | v0.2.0 | [] | PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION | PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION | MINOR — codify CD-48 (catalog admission) as PLAYBOOK-6.6.14 and CD-49 (SIGN workspace tool provisioning) as PLAYBOOK-6.10.5. Discharges Constitutional Debt CD-48 + CD-49 carried from v0.1.0. |
+| v0.3.0 | v0.2.0 | [] | 2026-07-10 | playbook-v0.3.0 | MINOR — codify CD-48 (catalog admission) as PLAYBOOK-6.6.14 and CD-49 (SIGN workspace tool provisioning) as PLAYBOOK-6.10.5. Discharges Constitutional Debt CD-48 + CD-49 carried from v0.1.0. |
