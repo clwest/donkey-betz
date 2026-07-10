@@ -759,7 +759,9 @@ class HumanAttentionBridge:
     # COST BREACH  (Session 2735 — Cost Protection Campaign P1)
     # =========================================================================
 
-    def create_cost_breach_attention(self, breaches, user=None):
+    def create_cost_breach_attention(
+        self, breaches, user=None, *, would_freeze=False,
+    ):
         """
         Create ONE attention item summarizing every rolling-window spend
         threshold currently breached — even when multiple windows breach
@@ -790,6 +792,15 @@ class HumanAttentionBridge:
                 the calling task. Order determines display order in the
                 payload.
             user: Optional target user; defaults to admins.
+            would_freeze: S2739 Cost Protection P2+ observation-period
+                foothold (Cat 2 o2). Shadow counterfactual — True iff
+                ``cost_protection_enforce_mode='freeze'`` AND at least
+                one window breached this tick. Surfaces in payload as
+                a boolean so operators reviewing HAIs see which
+                breaches would have flipped governance had enforcement
+                been wired. Zero side effect — payload only. The
+                enforcement path itself remains deferred per the
+                S2735 P1 enforcement-gate discipline.
         """
         try:
             users = [user] if user else self.get_admin_users()
@@ -873,6 +884,11 @@ class HumanAttentionBridge:
                 'worst_ratio': worst_ratio,
                 'breaches': per_window,
                 'idempotency_key': idempotency_key,
+                # S2739 Cost Protection P2+ Cat 2 o2 — shadow
+                # counterfactual: True iff mode='freeze' AND breach
+                # this tick. Observation-period foothold; zero
+                # governance side effect.
+                'would_freeze': bool(would_freeze),
                 # Cost breach ships through the HAI Delivery Fanout
                 # receivers; no imperative Discord side-channel exists,
                 # so discord_sent=False (dispatch expected).

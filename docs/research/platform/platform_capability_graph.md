@@ -916,3 +916,166 @@ exemplar to that doc's `canonical_exemplars` frontmatter list.
   PLAYBOOK-3.2.2 (acceptance-tests-first)
 - Chris ratification directive: 2026-07-09
   ("Ratify all three decisions. ... Ratify §8 Option A. Add §C5 ...")
+
+---
+
+## §27. §17 Cost Protection refresh — P1-shipped substrate + P2+ observation-period foothold (append-only, 2026-07-10)
+
+**Reason for refresh.** §17 as authored at S2734 baseline described a
+speculative chain (`llm_call_wrapper.py:195` → `LLMCallEvent` +
+`cost_usd` field → aggregator → auto-freeze → HAI) that Cost
+Protection Campaign P1 (Session 2735) DID NOT ship. P1 instead chose
+`CostTracking` as the substrate (54.5× more coverage than
+`LLMCallEvent`: 3,215 vs 59 rows over 7d per S2735 topology audit),
+shipping a monitor-only aggregator + HAI dispatch. S2739 P2+ then
+added the observation-period foothold (Cat 2 slice) without touching
+the enforcement gate. §17 body text remains as authored at S2734
+baseline for provenance; readers cross-reference this section for
+the current runtime picture. Same append-only discipline as §23 / §25.
+
+### §27.1 Actual P1 (S2735) shipment — corrections to §17.3, §17.4, §17.6, §17.10, §17.11, §17.13, §17.14
+
+- **§17.3 Producer — actually shipped:** `CostTracking.objects.create` writers at
+  `core/llm_enforcer.py:731` and `core/views_analytics.py:1894` (via
+  `AdvancedAnalyticsService.track_cost` called from
+  `core/agents/base_agent.py:2926` and other paths).
+  `LLMCallEvent` remains the per-call telemetry surface but covers
+  only ~1.8% of calls (wrapper-instrumented paths only) — not the
+  substrate.
+- **§17.4 Intermediate events — actually shipped:** `CostTracking`
+  rows with `estimated_cost_usd`, provider, service, timestamp.
+- **§17.6 Persistence — actually shipped:** `CostTracking`
+  (`core/models_unified_system.py:6665`) — already had
+  `estimated_cost_usd = DecimalField(max_digits=15, decimal_places=6)`
+  at HEAD before P1. No migration required; no wrapper rewrite.
+- **§17.10 Failure modes — refined:** the "9 files + ~15+ sites
+  bypass `openai_client_factory`" failure mode is a real
+  `LLMCallEvent` coverage gap but does NOT apply to the shipped P1
+  substrate. `CostTracking` writers are called at `AdvancedAnalytics
+  Service.track_cost` and `llm_enforcer:731`, not through the OpenAI
+  factory; the direct-openai import sweep is orthogonal to §17
+  correctness.
+- **§17.11 Recovery — actually shipped:** manual
+  `governance_tool.set_mode('freeze')` remains the recovery path (no
+  auto-recovery). P2+ observation-period foothold does not change
+  this.
+- **§17.13 Existing tests — actually shipped:**
+  `core/tests/test_cost_protection_p1.py` (15 tests, S2735) +
+  `core/tests/test_cost_protection_p2.py` (6 tests, S2739 P2+).
+- **§17.14 Missing links — REVISED (see §27.2 below).**
+
+### §27.2 Missing links list — REVISED at S2739
+
+Struck as substrate-mismatched (P1 correctly bypassed):
+
+- ~~(a) add `cost_usd` field on `LLMCallEvent`~~ — REJECTED as
+  wrong substrate; `CostTracking.estimated_cost_usd` already covers
+  54.5× more rows.
+- ~~(b) `_estimate_cost()` at wrapper~~ — REJECTED as wrong
+  substrate; cost estimation already happens upstream of
+  `CostTracking.objects.create` callers.
+- ~~(f) direct `openai` import sweep (§4.2)~~ — orthogonal to §17
+  chain correctness; belongs to §17-adjacent LLMCallEvent-coverage
+  arc, not to Cost Protection remediation.
+
+Shipped at P1 (S2735):
+
+- ✅ (c) aggregator + threshold — `core/services/cost_threshold_
+  monitor.py::check_all_windows` (hour / day / month rolling
+  windows; config keys `cost_threshold_hour_usd|day|month` in
+  `SystemConfiguration`).
+- ✅ (e) HAI on threshold breach —
+  `core/services/human_attention_bridge.py:762
+  create_cost_breach_attention` (consolidated single-HAI-per-tick
+  per Rigby SIGN pa-188ec20f274c42e4 Q3 refinement).
+
+Deferred (Chris enforcement-gate discipline — S2735 P1 comment
+block at `core/tasks_cost_protection.py:6-10` +
+`core/celery.py:845-848`):
+
+- ⏸ (d) auto-freeze trigger — DELIBERATELY DEFERRED. Requires
+  monitor observation period + explicit Chris approval before
+  enforcement-side dispatch is wired. S2735 comment: "monitor-only
+  at ship; will never call `governance.set_mode('freeze')`
+  regardless of `cost_protection_enforce_mode` config value.
+  Enforcement flip is deferred to a later phase per Chris's
+  enforcement-gate discipline (runtime validation + monitor
+  observation period + explicit approval)."
+
+Shipped at P2+ (S2739) — observation-period foothold:
+
+- ✅ (o1) shadow "would-have-frozen" warning log at
+  `core/tasks_cost_protection.py::check_cost_thresholds`, emitted
+  ONLY when `mode='freeze'` AND at least one window breached
+  (avoids per-tick noise when operator is exercising `mode='freeze'`
+  with sub-threshold spend).
+- ✅ (o2) `would_freeze` boolean field in `check_cost_thresholds`
+  return dict AND in the HAI payload (`create_cost_breach_attention`
+  now takes `would_freeze` kwarg, default `False` for backward
+  compat).
+
+New missing links surfaced at S2739 (candidate — NOT yet
+committed):
+
+- ⏳ auto-thaw path decision — when enforcement eventually flips
+  from monitor to freeze, the `set_mode('freeze')` call needs a
+  matching thaw. Options: (i) TTL-bound freeze that auto-reverts;
+  (ii) manual-only thaw; (iii) hybrid (auto-thaw at spend-below-
+  threshold-for-N-ticks). Not scoped at S2739; Chris D-verdict
+  needed before enforcement wiring.
+
+### §27.3 Refreshed §17 chain (canonical at S2739 close)
+
+**Chain:** LLM call → `CostTracking.estimated_cost_usd` writer
+(`llm_enforcer.py:731`, `views_analytics.py:1894`,
+`base_agent.py:2926`) → `cost_threshold_monitor.check_all_windows`
+(hour/day/month rolling sums) → per-window breach detection vs
+`SystemConfiguration` thresholds → **[gate: `cost_protection_
+enforce_mode`]** → mode='monitor' → HAI dispatch only + shadow
+`would_freeze` log if mode=freeze → operator sees consolidated
+HAI critical item (Discord + Web Push fanout automatic) →
+operator manually inspects + optionally flips
+`governance_tool.set_mode('freeze')`.
+
+**Completeness at S2739:** **11 of 15** (was 6 of 15 at S2734
+baseline). Load-bearing pieces present: substrate ✅, aggregator
+✅, breach detection ✅, HAI dispatch ✅, consolidation ✅,
+enforcement-gate visibility ✅ (P2+ shadow flag). Remaining
+un-shipped: enforcement flip (d) blocked on Chris D-verdict;
+auto-thaw path decision blocked on same.
+
+### §27.4 Cross-arc pattern posture (avoiding CX-P7)
+
+The S2739 P2+ slice was scoped explicitly to AVOID
+declared-but-unenforced contract (CX-P7 cross-arc pattern from
+`docs/research/platform/cross_domain_integration_audit.md` v4
+§14.6). Shipping enforcement (d) without the observation-period
+data + explicit Chris approval would have created the exact
+pattern the audit warns against: `cost_protection_enforce_mode='freeze'`
+would be a declared contract with no runtime enforcement, matching
+the F-B-CRIT-2 silent-401 shape (declared inheritance, unenforced
+in practice). Observation-period foothold surfaces
+counterfactual data for future Chris D-verdict without violating
+the declared-contract enforcement principle.
+
+### §27.5 Governance references
+
+- P1 canonical record: `core/tasks_cost_protection.py:6-10` +
+  `core/services/cost_threshold_monitor.py:1-47`
+- P2+ implementation: `core/tasks_cost_protection.py::check_cost_thresholds`
+  + `core/services/human_attention_bridge.py:762
+  create_cost_breach_attention`
+- P2+ tests: `core/tests/test_cost_protection_p2.py` (6 tests,
+  all pass at S2739 close)
+- Ratified rules exercised: PLAYBOOK-2.2.2 (Cat A + Rigby SIGN
+  before implementation), PLAYBOOK-6.10.5 (verify-before-build
+  discipline — reused P1 substrate rather than duplicating)
+- Chris ratification directive: 2026-07-10 ("route both to Rigby
+  for scope SIGN" → "take Rigby's rec — §17 Cost Protection P2+"
+  → "Lets go with 1" [ratifying Cat 2 + Cat 4 scope with
+  `would_freeze` naming, Cat 3 deferred])
+- Rigby Cat A SIGN pin: `pa-f2bc0abba82849a9` (session-2739-cost-
+  protection-p2plus-arc); scope soundness 0.86, PICK verdict
+  with folded refinements: idempotency-tied shadow log, standardized
+  `would_freeze` naming, docstring touchpoint, test extension
+  contract
