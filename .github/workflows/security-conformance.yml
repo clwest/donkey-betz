@@ -25,6 +25,15 @@ on:
       - 'core/settings.py'
       - 'core/models_ops_runs.py'
       - '.github/workflows/security-conformance.yml'
+      # I-0301 Phase 4 Coverage Denominator Machinery — any URL/view
+      # change triggers the endpoint-drift test so new AllowAny cannot
+      # silently enter the codebase.
+      - '**/urls.py'
+      - '**/views.py'
+      - '**/views/**'
+      - '**/views_*.py'
+      - 'core/management/commands/enumerate_public_http_endpoints.py'
+      - 'core/management/commands/regenerate_endpoint_snapshot.py'
   push:
     branches: [main]
     paths:
@@ -32,6 +41,12 @@ on:
       - 'tests/security/**'
       - 'core/settings.py'
       - 'core/models_ops_runs.py'
+      - '**/urls.py'
+      - '**/views.py'
+      - '**/views/**'
+      - '**/views_*.py'
+      - 'core/management/commands/enumerate_public_http_endpoints.py'
+      - 'core/management/commands/regenerate_endpoint_snapshot.py'
 
 jobs:
   security-conformance:
