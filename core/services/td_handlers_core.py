@@ -4137,8 +4137,11 @@ RESEARCH DATA:
                         f"you're talking to me through right now — retiring "
                         f"it would silence dispatches mid-conversation. "
                         f"Pass force=true to override, then rotate the "
-                        f"wrapper pin (`tools/pa_local.sh` line 70) before "
-                        f"continuing."
+                        f"wrapper pin (search `tools/pa_local.sh` for "
+                        f"`--conversation pa-`) before continuing. Prefer "
+                        f"`python manage.py session_lifecycle close --label "
+                        f"<next-label>` — it retires, mints, and rewrites "
+                        f"the wrapper atomically."
                     ),
                 }
 
