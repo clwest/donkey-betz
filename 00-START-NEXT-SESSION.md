@@ -2,16 +2,19 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2745 CLOSED — ENGINEERING PIVOT DIRECTIVE FOR S2746
+## READ THIS FIRST — SESSION 2746 CLOSED — I-0302 PHASE 3 HANDOFF FOR S2747
 
-**Refreshed 2026-07-10 (SESSION 2745 CLOSED. No PR — pure config-directive session: Chris exercised the S2744-shipped `cost_thresholds` CLI to open the §17 observation period at `month: $500.00 / mode: monitor`. Rigby workspace deliverable dropped for cross-session visibility. Session-close directive from Chris: "for the next session I want to focus on engineering. Over the last few days the questions being answered have not been what needs to be built instead it's been what's built and not connected." Memory rule `feedback_engineering_bias_over_audit.md` codifies the pivot. S2746 opens with engineering bias.).**
+**Refreshed 2026-07-10 (SESSION 2746 CLOSED. Engineering-pivot session per S2745 directive. Chris opened Wave 1 of the Real User Readiness Campaign — I-0302 (Object-Level Authorization on 5 User-Owned Models). SHIPPED: arc scoping + Phase 1 Model Audit Ledger + Phase 2 Predicate Module — all 3 constitutional artifacts ratified + on main. 60/60 predicate tests pass. Merged PRs: #3096 (scoping + Phase 1), #3097 (Phase 2 module + tests), #3098 (Phase 2 ratification). NEW DURABLE OPERATING CONTEXT CAPTURED: single-user pre-prod default assumption for all future data-to-user connection decisions until Chris signals Phase 0 multi-tenant opening. S2747 opens with I-0302 Phase 3 authorized — the biggest phase of the arc.).**
 
 Session anchors (read in order):
 
-1. [`docs/handoffs/SESSION_2745_OBSERVATION_OPENED_ENGINEERING_PIVOT.md`](docs/handoffs/SESSION_2745_OBSERVATION_OPENED_ENGINEERING_PIVOT.md) — S2745 arc: threshold opened + engineering-pivot directive + memory rule + P0 wired
-2. [`docs/handoffs/SESSION_2744_COST_THRESHOLDS_COMMAND.md`](docs/handoffs/SESSION_2744_COST_THRESHOLDS_COMMAND.md) — S2744: cost_thresholds CLI shipped (the substrate S2745 exercised)
-3. [`docs/handoffs/SESSION_2743_COST_PROTECTION_CAT3.md`](docs/handoffs/SESSION_2743_COST_PROTECTION_CAT3.md) — S2743: Cat 3 startup log ($246/mo baseline visibility hook)
-4. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.4.1 body (196 rules)
+1. [`docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase2_predicate_module.md`](docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase2_predicate_module.md) — **Phase 2 ratification (frozen)** — §8 has concrete Phase 3 opening moves
+2. [`docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md`](docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md) — Phase 1 ledger with §5 caller hotspot rank + §7 nullable-owner policies (Chris Option C on Initiative)
+3. [`docs/research/implementation/tenant_boundary_lockdown/I-030202_predicate_module_design.md`](docs/research/implementation/tenant_boundary_lockdown/I-030202_predicate_module_design.md) — Phase 2 design brief with SIGN state + predicate signatures
+4. [`docs/research/implementation/real_user_readiness/CAMPAIGN.md`](docs/research/implementation/real_user_readiness/CAMPAIGN.md) — RUR parent program (RUR-C1 parent invariant: needs I-0301 + I-0302 + I-0303 all pass shared cross-tenant regression)
+5. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.4.1 body (196 rules)
+
+**Prior sessions (background context):** S2745 (engineering-pivot directive + cost threshold observation opened); S2744 (`cost_thresholds` CLI); S2742 (Playbook v0.4.1 + Real User Readiness CAMPAIGN parent doc + I-0301 arc CLOSED).
 
 ---
 
@@ -37,16 +40,35 @@ Cross-visibility: Rigby workspace deliverable `06f04b41-91e1-4a00-8b8e-0905502e7
 
 ---
 
-## ENGINEERING PIVOT — Chris's directive at S2745 close
+## PRIMARY WORK — I-0302 Phase 3 (per-model enforcement application)
 
-**Verbatim:** "for the next session I want to focus on engineering. Over the last few days the questions being answered have not been what needs to be built instead it's been what's built and not connected."
+**Phase 3 authorized 2026-07-10 by Chris ratification of Phase 2.** Ratification record §8 has the concrete opening moves. This is the biggest phase of I-0302 — expect multiple surgical PRs with per-cluster Rigby SIGN cadence.
 
-**Signal decomposition:**
-- The S2739→S2744 arc streak (6 sessions) was all cost-protection substrate iteration. Real work, but repetitive.
-- The S2745 candidate queue was dominated by Class 2 (constitutional-ADR unblocking = "connect what's built") + Class 3 (meta-methodology = "codify what we observed"). Almost nothing was net-new engineering.
-- Chris wants the pendulum swung back toward building.
+### Phase 3 opening moves (from Phase 2 ratification §6 + §8)
 
-**Codified rule:** [`feedback_engineering_bias_over_audit.md`](../.claude/projects/-Users-donkeyking-development-unified-donkey-betz/memory/feedback_engineering_bias_over_audit.md). At S2746+ session open, list net-new engineering candidates FIRST. Gate connect-what-exists / meta-methodology behind engineering options. Actively propose 1-3 net-new candidates every session rather than picking from the connect-queue by default.
+1. **Initiative Option C pre-flight migration** — backfill all 62 null-owner rows to canonical primary user (first superuser via `User.objects.filter(is_superuser=True).order_by('pk').first()`, NOT hardcoded string per Chris D-verdict guardrail at Phase 1 close) + migrate `owner` to NOT NULL. Ships as one-shot data migration + schema migration. Rigby SIGN on migration plan BEFORE code lands.
+2. **Deliverable null-user backfill** (45 rows, Option C analog under single-user pre-prod) + null-workspace staff-only visibility already covered by predicate.
+3. **Apply predicates to caller hotspots** per Phase 1 §5 regression-risk rank (highest first):
+   - **Initiative** — ~20 unscoped DRF callers across `core/views_initiative_kickstart.py`, `core/views_home.py`, `core/views_orchestration.py`, `core/views_workspace_templates.py`. Largest surface.
+   - **AgentExecution** — 3 dashboard view files unscoped as aggregate reads: `core/views_platform_command.py`, `core/views_analytics_real.py`, `core/views_agent_analytics.py`. Superuser carve-out predicate ships as `scope_queryset_agent_execution`.
+   - **ChatConversation** — `.filter(conversation_id=)` pattern in `core/views_personal_assistant.py` + `core/views_session_handoff.py`; predicate hardens to `(conversation_id, user)` tuple lookup.
+   - **Deliverable** — 4 detail-lookup hotspots (`core/views_workspace_templates.py:613`, `core/agents/distribution_agent.py:189`, `core/tasks.py` mixed paths, `core/employees/mission_runner.py:1305/1434`).
+   - **Document** — smallest surface; only staff gate at `content/views.py:122` + `content/consumers.py:288/320` need Phase 2 review.
+4. **Regenerate endpoint drift snapshot** (per I-0301 Phase 4 mechanism) if any new routes / permissions changed.
+5. **Rigby SIGN on Phase 3 implementation** before Chris ratification.
+
+### Phase 3 substrate already on main
+
+- `core/security/object_authz.py` — 11 predicates ready to be wired
+- `core/security/__init__.py` — public exports
+- `tests/security/test_object_authz_predicates.py` — 60 tests, all pass
+- `.github/workflows/security-conformance.yml` — CI-triggering on 6 model files + tests
+
+### Constraints
+
+- **Single-user pre-prod operating context applies** (per memory rule `project_single_user_pre_prod_operating_context.md`). When reasoning about data-to-user connections, default single-tenant assumptions until Chris signals Phase 0.
+- **RUR-C1 parent close still blocked** on I-0303. Phase 3 close does NOT close I-0302; Phase 4 (regression harness) + Phase 5 (arc close) remain.
+- **Rigby SIGN gates every Phase 3 sub-PR.** Split by model cluster if scope warrants.
 
 ---
 
@@ -55,54 +77,80 @@ Cross-visibility: Rigby workspace deliverable `06f04b41-91e1-4a00-8b8e-0905502e7
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | `20747b6e` (PR #3070 merged; cost_thresholds command shipped — unchanged from S2744) |
+| HEAD | `557bb2bc` (PR #3098 merged; I-0302 Phase 2 ratification frozen on main) |
 | Playbook version | **v0.4.1** (unchanged since S2742) |
 | Playbook rule count | **196** |
 | Constitutional Debt | **Zero outstanding CDs from v0.1.0 forward** |
-| Session pin | `pa-73f0e2e210574d6d` (minted S2745 close, active in wrapper) |
-| Prior pin | `pa-571748d9b6b940ea` — retired 2026-07-10 (5 rows updated) |
-| Wrapper default pin | `tools/pa_local.sh:532` — matches new S2746 pin |
+| Session pin | `pa-73f0e2e210574d6d` (still active; extensively used across S2746 for I-0302 SIGN cycles — consider retirement + fresh mint at S2747 open) |
+| Wrapper default pin | `tools/pa_local.sh` — matches session pin |
 | Live infra state | `SystemConfiguration` row: `cost_threshold_month = 500`, mode = `monitor` (accumulating since 2026-07-10 07:35 MDT) |
+| RUR arc state | I-0301 CLOSED · I-0302 scoping + Phase 1 + Phase 2 CLOSED · I-0302 Phase 3 authorized · I-0303 not yet opened · RUR-C1 parent OPEN |
 
 ---
 
-## What S2745 was (not shipped)
+## What S2746 shipped
 
-**No PR. No code changes.** S2745 was pure config-directive + session-close bookkeeping:
+**3 PRs merged to main. 5 frozen constitutional artifacts. 60/60 predicate tests pass.**
 
-- **Live config change** — `python manage.py cost_thresholds --set month 500` executed on Chris's local DB; verified at both CLI and ORM layers
-- **P0 wired** — top-of-file callout in this file + step 4 upgrade
-- **Rigby deliverable** — `06f04b41-91e1-4a00-8b8e-0905502e7d83` in Donkey Betz workspace
-- **Memory codified** — `feedback_engineering_bias_over_audit.md` captures the engineering-pivot directive
-- **Docs cascade** — will run at session-close commit per S1802 cascade-PR rule
-- **Pin rotated** — S2744 pin retired, S2746 pin `pa-73f0e2e210574d6d` minted + wrapper updated
+- **PR #3096** — I-0302 arc opened: scoping doc + scoping ratification + Phase 1 Model Audit Ledger + Phase 1 ratification (4 frozen docs, +1129 lines)
+- **PR #3097** — I-0302 Phase 2 predicate module: `core/security/object_authz.py` (11 functions), `core/security/__init__.py` extended, `tests/security/test_object_authz_predicates.py` (60 tests), CI workflow extended (5 code files + 1 design doc, +1236 lines)
+- **PR #3098** — Phase 2 ratification record (1 doc, +227 lines)
 
-Full arc detail: `docs/handoffs/SESSION_2745_OBSERVATION_OPENED_ENGINEERING_PIVOT.md`.
+**Chris D-verdicts captured:**
+- Q7 hybrid boundary (workspace-scoped: Deliverable + ChatConversation; per-user: Initiative + AgentExecution + Document)
+- Q2 AgentExecution triple-class in-scope (canonical class picked; duplicates → follow-on)
+- Q3 nullable-owner policy deferred to Phase 1 audit
+- Q6 reuse `not_found` reason_code (existence-oracle avoidance)
+- Option C on Initiative null-owner: backfill + NOT NULL migration (skip transitional predicate)
+
+**New durable memory:** `project_single_user_pre_prod_operating_context.md` — Chris directive to default single-tenant assumptions until Phase 0 multi-tenant opening.
+
+**Rigby SIGN cycles:** scoping SIGN + Phase 1 ledger SIGN + Phase 2 design SIGN + Phase 2 implementation SIGN — all resolved SIGN-PASS after amendments applied.
+
+**Full arc detail:** `docs/research/implementation/tenant_boundary_lockdown/I-0302_scoping.md` + Phase 1 ledger + Phase 2 design brief + 4 ratification records under `docs/research/implementation/`.
 
 ---
 
-## Candidate queue for S2746 — engineering-bias framing
+## Candidate queue for S2747 — I-0302 Phase 3 leads
 
-**Per new memory rule, net-new engineering leads. Connect-what-exists is demoted. Ask Chris for direction rather than pattern-matching the connect-queue.**
+**Phase 3 is the biggest phase of I-0302 and the current authorized work.** It's engineering-bias-compatible (per the S2745 pivot rule) because it's net-new predicate enforcement wired into ~10 view files, plus a data migration + schema flip. Not "audit what's built" — it's building the tenant-boundary enforcement Chris ratified the substrate for.
 
-### CLASS 1 — NET-NEW ENGINEERING (propose 1-3 every session per new memory rule)
+### PRIMARY — I-0302 Phase 3 (already authorized by Phase 2 ratification)
 
-These are seed suggestions — Chris knows better than me what he wants to build next. Present these as directional prompts, then let him name the actual candidate.
+Split by model cluster or ship sub-phases per Rigby SIGN recommendation. Suggested order (matches Phase 1 §5 regression-risk rank, highest impact first):
 
-1. **New Employee OS employee (4th)** — there are 3 (Documentation Manager, Platform Auditor, Chief of Staff). Meaningful expansion candidates: Revenue Ops, Content Strategist, Cost/Ops Sentinel (natural extension of the §17 cost-protection work), Betting Ops. Would ship: new `AIEmployee` + `JobContract` entries, new MissionRunner steps, admin visibility, first mission verdict. Vertical-slice friendly.
-2. **Betting dashboard new feature** — 9-tab dashboard is user-visible engineering surface. Could be a new tab, new visualization, new prediction pipeline. Needs Chris to name the gap.
-3. **New spider on Chris-named data gap** — 80 spiders live. What data does Chris need that isn't covered? Ships: spider class + fixture + test + registry entry + downstream signal wiring. Small vertical slice.
-4. **Cost Ops CLI expansion** — the S2744 `cost_thresholds` pattern was clean; could extend to other config surfaces (rate limits, timeouts, per-provider budgets). Genuinely new capability but same substrate — flag as substrate-adjacent, may not fully satisfy the pivot.
-5. **New UI page on Command Center** — 61 routes live; if there's a workflow Chris wants that requires a new page (not a new tab in an existing page), that's real engineering.
-6. **Discord bot new command** — 96 commands live. A single Cog + slash-command is a bounded engineering slice.
+**Phase 3 Sub-phase A — Initiative migration + enforcement (largest surface)**
+- Data migration: backfill 62 null-owner rows to canonical primary user
+- Schema migration: `owner` → NOT NULL
+- Wire `can_read_initiative` + `scope_queryset_initiative` into ~20 unscoped DRF callers (`core/views_initiative_kickstart.py` etc.)
+- Rigby SIGN on migration plan pre-code, then Rigby SIGN on shipped enforcement
 
-**Recommended session-open pattern:** propose 2-3 from the above (plus any live signal you catch from Chris's recent work) as directional prompts. Chris picks or names his own.
+**Phase 3 Sub-phase B — AgentExecution dashboard scoping**
+- Wire `scope_queryset_agent_execution` (superuser carve-out) into `core/views_platform_command.py`, `core/views_analytics_real.py`, `core/views_agent_analytics.py`
+- Update `.get(id=step_exec.execution_id)` paths in `core/views_orchestration.py` to use `can_read_agent_execution`
+- Rigby SIGN
 
-### CLASS 2 — POLISH with user-visible outcome (small S-M engineering)
+**Phase 3 Sub-phase C — ChatConversation predicate wiring**
+- Wire `scope_queryset_chat_conversation` into PA views (`core/views_personal_assistant.py`) + session-handoff views
+- Preserve existing `.filter(user=self.user).exists()` patterns (correct); replace bare `.filter(conversation_id=)` with predicate-gated variants
+- Rigby SIGN
 
-Small but real new capability. Different from "connect-what-exists" residuals.
+**Phase 3 Sub-phase D — Deliverable + Document surgical fixes**
+- Deliverable: 4 detail-lookup hotspots gated; workspace-null migration decision (if applicable)
+- Document: audit `content/consumers.py:288, :320` for owner filter; staff-gate `dashboard/views.py:230` aggregate view
+- Rigby SIGN
 
-7. **§14 Platform Health autonomic Governance reaction** — new signal-to-freeze mapping; needs Chris ADR on trigger-to-freeze semantics (this one straddles engineering + ADR — may still count as "connect" and be deferred)
+**Phase 3 close** — endpoint-drift snapshot regen if needed; Chris ratification; Phase 4 (regression harness) opens.
+
+### CLASS 1 — NET-NEW ENGINEERING (secondary options if Chris pauses Phase 3)
+
+Held over from S2746 in case Chris wants to interleave a smaller build:
+
+1. **New Employee OS employee (4th)** — vertical slice: new `AIEmployee` + `JobContract` + MissionRunner steps + admin visibility.
+2. **Betting dashboard new feature** — 9-tab dashboard needs Chris to name the gap.
+3. **New spider on Chris-named data gap** — spider class + fixture + test + registry entry + signal wiring.
+4. **New UI page on Command Center** — 61 routes; requires Chris naming the workflow.
+5. **Discord bot new command** — bounded Cog + slash-command slice.
 
 ### CLASS 3 (DEMOTED) — Connect-what-exists / Constitutional-ADR unblocking
 
@@ -142,15 +190,16 @@ Small but real new capability. Different from "connect-what-exists" residuals.
 
 ---
 
-## Recommended session-open protocol (S2746)
+## Recommended session-open protocol (S2747)
 
 1. `context-kit orient`
-2. Read `docs/handoffs/SESSION_2745_OBSERVATION_OPENED_ENGINEERING_PIVOT.md` in full
+2. Read the Phase 2 ratification record `docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase2_predicate_module.md` §8 in full — has concrete Phase 3 opening moves
 3. Verify runtime state: `git log --oneline -3`, `celery inspect ping`
-4. **P0 check:** run the observation check-in per top-of-file callout; report accumulation, anomalies, advance recommendation to Chris
-5. Retire `pa-73f0e2e210574d6d` (S2746 open pin) + mint fresh S2746-in-flight pin when candidate is selected (default: reuse the open pin as the arc pin unless SIGN isolation is needed)
-6. **Propose 2-3 Class 1 net-new engineering candidates** per new memory rule; ask Chris to pick or name his own. Do NOT default to Class 3 audit/connect items.
-7. **On candidate acceptance:** apply PLAYBOOK-6.10.6 verify-before-build FIRST (30s), THEN Cat A
+4. **P0 check** (per top-of-file callout, actionable 2026-07-11+ per memory rule): run the observation check-in; report accumulation, anomalies, advance recommendation to Chris
+5. Retire `pa-73f0e2e210574d6d` (S2746 pin, extensively used across I-0302 SIGN cycles — high risk of context accumulation) + mint fresh S2747 pin per `feedback_rigby_sign_worker_instability_recovery.md`
+6. **Confirm Phase 3 as primary work** with Chris; propose Sub-phase A (Initiative migration + enforcement) as opening move given it's the largest surface + hard-blocks the RUR-C1 close
+7. **On sub-phase acceptance:** apply PLAYBOOK-6.10.6 verify-before-build FIRST (30s per file/model), THEN Rigby-first design SIGN → implementation → Rigby SIGN → Chris ratification
+8. **Alternative:** if Chris wants to interleave a Class 1 net-new build (e.g., new Employee, new spider), pause Phase 3 explicitly. Do NOT default to Phase 3 without confirmation.
 
 ---
 
