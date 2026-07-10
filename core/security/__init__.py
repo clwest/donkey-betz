@@ -45,6 +45,7 @@ from core.security.object_authz import (
     can_read_document,
     scope_queryset_document,
 )
+from core.security.decorators import superuser_required
 
 __all__ = [
     "REASON_CODES",
@@ -64,4 +65,5 @@ __all__ = [
     "scope_queryset_agent_execution",
     "can_read_document",
     "scope_queryset_document",
+    "superuser_required",
 ]
