@@ -374,3 +374,138 @@ def notify_studio_job_completed(job_id, user_id=None, job_type='content'):
             )
     except Exception as e:
         logger.error('[PushTrigger] Studio job notification failed: %s', e)
+
+
+# ── Trigger 5: CDR-001 §7 Gap 1 (§16 wrap-up bundle) — Inbox HAI fanout ────
+#
+# Inbox DirectMessage fanout for HumanAttentionItem creations. Same
+# async/on_commit structure as notify_hai_discord + notify_hai_webpush.
+# Creates one DirectMessage per HAI on the recipient's inbox thread with
+# the message body drawn from HAI title + summary. Writes an HAIDispatchLog
+# audit row on every attempt (success / failure / suppressed / gated).
+
+@shared_task(
+    name='notify_hai_inbox',
+    queue='default',
+    ignore_result=True,
+    soft_time_limit=30,
+)
+def notify_hai_inbox(item_id):
+    """Fire an Inbox DirectMessage for a critical HAI item.
+
+    Re-applies all guard logic against the just-committed row so a stale
+    receiver payload cannot fire a message that the current DB state
+    would have suppressed. Writes an ``HAIDispatchLog`` row on every
+    outcome (success / failure / suppressed / gated / kill_switch) so
+    the audit table stays coherent.
+    """
+    from django.conf import settings
+    from django.apps import apps
+    from core.models_human_interface import HumanAttentionItem
+    from core.signals_discord_notifications import _pref_gates_pass
+    from core.services.hai_dispatch_state import (
+        ChannelDispatchState,
+        payload_has_channel_fired,
+        payload_mark_channel_fired,
+    )
+
+    HAIDispatchLog = apps.get_model('core', 'HAIDispatchLog')
+    CHANNEL = 'inbox'
+
+    def _log(user_id, source_type, source_id, status, error_message=''):
+        """Best-effort HAIDispatchLog write; never raises out of the task."""
+        if not user_id:
+            return
+        try:
+            HAIDispatchLog.objects.update_or_create(
+                user_id=user_id,
+                source_type=source_type or '',
+                source_id=source_id or '',
+                channel=CHANNEL,
+                defaults={
+                    'status': status.value if hasattr(status, 'value') else status,
+                    'error_message': (error_message or '')[:500],
+                },
+            )
+        except Exception as e:  # pragma: no cover — defensive
+            logger.warning(
+                '[HAI_INBOX] HAIDispatchLog write failed for user=%s source=%s/%s '
+                '(%s: %s); dispatch outcome unaffected',
+                user_id, source_type, source_id, type(e).__name__, e,
+            )
+
+    if not getattr(settings, 'HAI_INBOX_DISPATCH_ENABLED', True):
+        return {'skipped': 'kill_switch'}
+
+    try:
+        item = HumanAttentionItem.objects.get(id=item_id)
+    except HumanAttentionItem.DoesNotExist:
+        logger.warning('[HAI_INBOX] HAI %s missing at task time', item_id)
+        return {'skipped': 'missing'}
+
+    if item.urgency != 'critical':
+        return {'skipped': 'urgency_not_critical'}
+
+    payload = item.payload or {}
+    if payload_has_channel_fired(payload, CHANNEL):
+        logger.info(
+            '[HAI_INBOX] task skip source_type=%s source_id=%s — '
+            "payload channels_fired includes 'inbox'",
+            item.source_type, item.source_id,
+        )
+        _log(
+            item.user_id, item.source_type, str(item.source_id or ''),
+            ChannelDispatchState.SUPPRESSED_BY_PRODUCER,
+        )
+        return {'skipped': 'channels_fired_flag'}
+
+    if not _pref_gates_pass(item.user_id, item.source_type, item.urgency):
+        _log(
+            item.user_id, item.source_type, str(item.source_id or ''),
+            ChannelDispatchState.GATED_OUT,
+        )
+        return {'skipped': 'preference_gate'}
+
+    try:
+        from core.models_unified_system import DirectMessage
+        subject = f'[{item.urgency.upper()}] {(item.title or "")[:120]}'
+        body = (item.summary or '')[:2000]
+        DirectMessage.objects.create(
+            recipient_id=item.user_id,
+            subject=subject,
+            body=body,
+            message_type='system_notification',
+            source_type=item.source_type,
+            source_id=str(item.source_id or ''),
+        )
+        # Mark channel fired on the HAI payload so downstream inspections
+        # (audit, cross-channel dedup) can see the outcome without querying
+        # HAIDispatchLog.
+        payload_mark_channel_fired(payload, CHANNEL)
+        item.payload = payload
+        try:
+            item.save(update_fields=['payload'])
+        except Exception:  # pragma: no cover — payload persistence is best-effort
+            pass
+        _log(
+            item.user_id, item.source_type, str(item.source_id or ''),
+            ChannelDispatchState.SUCCEEDED,
+        )
+        logger.info(
+            '[HAI_INBOX] task dispatched source_type=%s source_id=%s '
+            'user_id=%s urgency=%s',
+            item.source_type, item.source_id, item.user_id, item.urgency,
+        )
+        return {'dispatched': True, 'item_id': str(item.id)}
+    except Exception as e:  # pragma: no cover — defensive
+        logger.warning(
+            '[HAI_INBOX] task dispatch failed source_type=%s (%s: %s); '
+            'HAI write unaffected',
+            item.source_type, type(e).__name__, e,
+        )
+        _log(
+            item.user_id, item.source_type, str(item.source_id or ''),
+            ChannelDispatchState.FAILED,
+            error_message=f'{type(e).__name__}: {e}',
+        )
+        return {'skipped': f'adapter_error:{type(e).__name__}'}
