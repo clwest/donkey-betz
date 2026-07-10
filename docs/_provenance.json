@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-10T04:54:14+00:00",
+    "generated": "2026-07-10T05:10:04+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "26e8a21eb2af",
-    "doc_count": 2501,
-    "commit_count": 7951,
+    "git_head": "0805a3329b31",
+    "doc_count": 2502,
+    "commit_count": 7955,
     "confidence_breakdown": {
-      "HIGH": 1607,
+      "HIGH": 1608,
       "MEDIUM": 394,
       "LOW": 5,
       "UNKNOWN": 495
@@ -2002,13 +2002,14 @@
         2738,
         2740
       ],
-      "commit_count": 14,
+      "commit_count": 16,
       "prs": [
         3048,
         3058,
         3059,
         3062,
-        3063
+        3063,
+        3066
       ]
     },
     "docs/EOS_RULES.md": {
@@ -2573,9 +2574,10 @@
         2737,
         2738,
         2739,
-        2740
+        2740,
+        2741
       ],
-      "commit_count": 1319,
+      "commit_count": 1321,
       "prs": [
         10,
         11,
@@ -3122,7 +3124,8 @@
         3057,
         3059,
         3061,
-        3063
+        3063,
+        3065
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7456,9 +7459,10 @@
         2736,
         2737,
         2739,
-        2740
+        2740,
+        2741
       ],
-      "commit_count": 273,
+      "commit_count": 275,
       "prs": [
         2213,
         2219,
@@ -7612,7 +7616,8 @@
         3055,
         3057,
         3061,
-        3063
+        3063,
+        3065
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19311,6 +19316,21 @@
       "commit_count": 2,
       "prs": [
         3063
+      ]
+    },
+    "docs/handoffs/SESSION_2741_GRAPH_FRESHNESS_SWEEP.md": {
+      "originating_session": 2741,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "86610c5d",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "docs(session-2741): graph freshness sweep handoff + 00-START refresh + cascade (#3065)",
+      "sessions_touched": [
+        2741
+      ],
+      "commit_count": 2,
+      "prs": [
+        3065
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
