@@ -34,6 +34,15 @@ on:
       - '**/views_*.py'
       - 'core/management/commands/enumerate_public_http_endpoints.py'
       - 'core/management/commands/regenerate_endpoint_snapshot.py'
+      # I-0302 Phase 2 Object-Level Authorization Predicates — any change
+      # to the 5 canonical user-owned models triggers predicate + queryset
+      # regression tests, so ownership semantics can't drift silently.
+      - 'core/models_deliverables.py'
+      - 'core/models_document_registry.py'
+      - 'core/models/conversations/**'
+      - 'core/models_unified_system.py'
+      - 'core/models_skin_layer.py'
+      - 'content/models.py'
   push:
     branches: [main]
     paths:
@@ -47,6 +56,14 @@ on:
       - '**/views_*.py'
       - 'core/management/commands/enumerate_public_http_endpoints.py'
       - 'core/management/commands/regenerate_endpoint_snapshot.py'
+      # I-0302 Phase 2 object-authz model triggers
+      - 'core/models_deliverables.py'
+      - 'core/models_document_registry.py'
+      - 'core/models/conversations/**'
+      - 'core/models_unified_system.py'
+      - 'core/models_skin_layer.py'
+      - 'content/models.py'
+  workflow_dispatch: {}  # Manual trigger for refactors / rerun on demand (per Rigby SIGN F6)
 
 jobs:
   security-conformance:
