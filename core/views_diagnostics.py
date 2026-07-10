@@ -1,6 +1,15 @@
 """
 Diagnostic Views to Expose ALL Backend Data
-This file creates comprehensive diagnostic endpoints to see everything happening in the backend
+This file creates comprehensive diagnostic endpoints to see everything happening in the backend.
+
+I-0302 Phase 3 Sub-phase B2b (2026-07-10) — every endpoint in this file
+is a cockpit / ops surface and is now uniformly gated with
+``@superuser_required`` (401 anonymous / 403 non-superuser). Predicate
+``scope_queryset_agent_execution`` is applied inside the gate for
+defense-in-depth so ops visibility still matches the ratified predicate
+boundary (superuser sees own + null-user Celery runs per Session 642).
+Do not remove the ``@superuser_required`` decorators without ratified
+policy change.
 """
 
 import json
@@ -15,6 +24,8 @@ from django.conf import settings
 from django.shortcuts import render
 import redis
 import traceback
+
+from core.security import scope_queryset_agent_execution, superuser_required
 
 logger = logging.getLogger(__name__)
 
@@ -858,6 +869,7 @@ def cockpit_error_summary(request):
 
 
 @require_http_methods(["GET"])
+@superuser_required
 def cockpit_inbox(request):
     """
     Focus Cockpit inbox — read-only aggregation of items needing attention.
@@ -973,14 +985,20 @@ def cockpit_inbox(request):
         from core.models_unified_system import AgentExecution
         from django.db.models import Exists, OuterRef
 
-        has_newer_success = AgentExecution.objects.filter(
-            status='completed',
-            agent=OuterRef('agent'),
-            created_at__gt=OuterRef('created_at'),
+        # I-0302 Phase 3 Sub-phase B2b: superuser-gated at function entry;
+        # scope predicate for defense-in-depth (superuser sees own + null-user).
+        has_newer_success = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(
+                status='completed',
+                agent=OuterRef('agent'),
+                created_at__gt=OuterRef('created_at'),
+            ),
         )
 
-        failed = AgentExecution.objects.filter(
-            status='failed', created_at__gte=cutoff,
+        failed = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(status='failed', created_at__gte=cutoff),
         ).filter(
             ~Exists(has_newer_success)
         ).select_related('agent').order_by('-created_at')[:15]
@@ -1030,6 +1048,7 @@ def cockpit_inbox(request):
 
 
 @require_http_methods(["GET"])
+@superuser_required
 def cockpit_runs_list(request):
     """
     Recent agent execution runs for Focus Cockpit.
@@ -1050,7 +1069,11 @@ def cockpit_runs_list(request):
 
     try:
         from core.models_unified_system import AgentExecution
-        qs = AgentExecution.objects.filter(created_at__gte=cutoff).select_related('agent')
+        # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
+        qs = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=cutoff),
+        ).select_related('agent')
 
         # VIP workspace scoping — only show runs linked to their workspace
         vip_ws = _get_cockpit_workspace_id(request)
@@ -1139,15 +1162,20 @@ def cockpit_runs_list(request):
             from django.db.models import Exists as _Exists, OuterRef as _OuterRef
             failed_ids = [r['id'] for r in result if r['status'] == 'failed']
             if failed_ids:
+                # I-0302 Phase 3 Sub-phase B2b: scope both queries (outer + Exists subquery).
                 superseded_ids = set(
-                    str(eid) for eid in AgentExecution.objects.filter(
-                        id__in=failed_ids,
+                    str(eid) for eid in scope_queryset_agent_execution(
+                        request.user,
+                        AgentExecution.objects.filter(id__in=failed_ids),
                     ).filter(
                         _Exists(
-                            AgentExecution.objects.filter(
-                                status='completed',
-                                agent=_OuterRef('agent'),
-                                created_at__gt=_OuterRef('created_at'),
+                            scope_queryset_agent_execution(
+                                request.user,
+                                AgentExecution.objects.filter(
+                                    status='completed',
+                                    agent=_OuterRef('agent'),
+                                    created_at__gt=_OuterRef('created_at'),
+                                ),
                             )
                         )
                     ).values_list('id', flat=True)
@@ -1341,17 +1369,30 @@ def cockpit_create_talking_video(request):
     })
 
 
-def _attach_media_urls(result: dict, task_id: str) -> None:
-    """Session 1075: Attach media URLs from AgentExecution output_data to job status."""
+def _attach_media_urls(result: dict, task_id: str, user) -> None:
+    """Session 1075: Attach media URLs from AgentExecution output_data to job status.
+
+    I-0302 Phase 3 Sub-phase B2b (2026-07-10): ``user`` parameter added per
+    Rigby SIGN Q2 — helper performs AgentExecution lookups and must scope
+    them via ``scope_queryset_agent_execution`` to preserve the predicate
+    boundary. Callers already guarded by ``@superuser_required`` still get
+    the null-user carve-out through the scoped queryset.
+    """
     try:
         from core.models import AgentExecution
-        exec_qs = AgentExecution.objects.filter(
-            input_data__contains={'celery_task_id': task_id}
+        exec_qs = scope_queryset_agent_execution(
+            user,
+            AgentExecution.objects.filter(
+                input_data__contains={'celery_task_id': task_id}
+            ),
         ).order_by('-created_at')[:1]
         if not exec_qs.exists():
             # Also try matching by task_id stored in context
-            exec_qs = AgentExecution.objects.filter(
-                input_data__contains={'task_id': task_id}
+            exec_qs = scope_queryset_agent_execution(
+                user,
+                AgentExecution.objects.filter(
+                    input_data__contains={'task_id': task_id}
+                ),
             ).order_by('-created_at')[:1]
         if exec_qs.exists():
             output = exec_qs[0].output_data or {}
@@ -1374,6 +1415,7 @@ def _attach_media_urls(result: dict, task_id: str) -> None:
 
 
 @require_http_methods(["GET"])
+@superuser_required
 def cockpit_job_status(request, job_id):
     """
     Poll status of a cockpit-created job (Celery task).
@@ -1400,7 +1442,7 @@ def cockpit_job_status(request, job_id):
                 result['error'] = event.error_message[:500]
             # Session 1075: Surface media URLs from completed agent executions
             if event.status == 'SUCCESS':
-                _attach_media_urls(result, job_id)
+                _attach_media_urls(result, job_id, request.user)
             return JsonResponse(result)
     except Exception as _e:
         logger.warning(
@@ -1422,7 +1464,7 @@ def cockpit_job_status(request, job_id):
             result['status'] = 'completed'
             result['progress'] = 1.0
             # Session 1075: Surface media URLs from completed agent executions
-            _attach_media_urls(result, job_id)
+            _attach_media_urls(result, job_id, request.user)
         elif async_result.state == 'FAILURE':
             result['status'] = 'failed'
             result['progress'] = 0.0
@@ -1508,6 +1550,7 @@ def demo_mode_status(request):
 # ── Focus Cockpit Ops endpoint ───────────────────────────────────────────────
 
 @require_http_methods(["GET"])
+@superuser_required
 def cockpit_ops_overview(request):
     """
     Ops overview for Focus Cockpit — composes health checks, top failing agents,
@@ -1633,8 +1676,12 @@ def cockpit_ops_overview(request):
     # input_data__source='pa' form unsafe for pre-flag-flip rows).
     try:
         from core.models_unified_system import AgentExecution
+        # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
         agg = list(
-            AgentExecution.objects.filter(created_at__gte=cutoff)
+            scope_queryset_agent_execution(
+                request.user,
+                AgentExecution.objects.filter(created_at__gte=cutoff),
+            )
             .exclude(agent__name='PersonalAssistant')
             .values('agent__name')
             .annotate(
@@ -1680,8 +1727,12 @@ def cockpit_ops_overview(request):
     # 4. Recent failed runs
     try:
         from core.models_unified_system import AgentExecution
+        # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
         failed = list(
-            AgentExecution.objects.filter(status='failed', created_at__gte=cutoff)
+            scope_queryset_agent_execution(
+                request.user,
+                AgentExecution.objects.filter(status='failed', created_at__gte=cutoff),
+            )
             .select_related('agent')
             .order_by('-created_at')[:limit]
             .values('id', 'agent__name', 'task', 'status', 'created_at', 'completed_at', 'execution_time_ms', 'tokens_used')
@@ -2151,6 +2202,7 @@ def cockpit_approve_gate(request, gate_id):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@superuser_required
 def cockpit_alerts(request):
     """Compose in-app alerts from multiple system sources."""
     from django.utils.timezone import now
@@ -2199,8 +2251,12 @@ def cockpit_alerts(request):
     # for pre-flag-flip rows).
     try:
         from core.models_unified_system import AgentExecution
+        # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
         agg = list(
-            AgentExecution.objects.filter(created_at__gte=cutoff)
+            scope_queryset_agent_execution(
+                request.user,
+                AgentExecution.objects.filter(created_at__gte=cutoff),
+            )
             .exclude(agent__name='PersonalAssistant')
             .values('agent__name')
             .annotate(
@@ -2333,12 +2389,19 @@ def cockpit_runbook(request, alert_kind):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@superuser_required
 def cockpit_retry_run(request, run_id):
     """Retry a failed run by creating a new AgentExecution with the same agent + task."""
     from core.models_unified_system import AgentExecution
 
     try:
-        original = AgentExecution.objects.select_related('agent').get(id=run_id)
+        # I-0302 Phase 3 Sub-phase B2b (Rigby SIGN Q3): source-run fetch
+        # via the scoped queryset — superuser can retry own runs + null-user
+        # Celery runs, but not other users' runs (predicate boundary).
+        original = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.select_related('agent'),
+        ).get(id=run_id)
     except AgentExecution.DoesNotExist:
         return JsonResponse({'ok': False, 'error': 'Run not found'}, status=404)
 
@@ -2534,6 +2597,7 @@ def cockpit_agent_fleet(request):
 
 @csrf_exempt
 @require_http_methods(['GET'])
+@superuser_required
 def cockpit_agent_detail(request, agent_name):
     """Get detailed info for a single agent."""
     from core.models_unified_system import Agent, AgentExecution
@@ -2547,8 +2611,12 @@ def cockpit_agent_detail(request, agent_name):
         return JsonResponse({'ok': False, 'error': 'Agent not found'}, status=404)
 
     cutoff = now() - timedelta(hours=168)  # 7d of runs
+    # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
     recent_runs = list(
-        AgentExecution.objects.filter(agent=agent, created_at__gte=cutoff)
+        scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(agent=agent, created_at__gte=cutoff),
+        )
         .order_by('-created_at')[:20]
         .values('id', 'task', 'status', 'execution_time_ms', 'tokens_used', 'error_message', 'created_at', 'completed_at')
     )
@@ -3081,6 +3149,7 @@ def cockpit_autopilot_toggle(request, policy_id):
 
 @csrf_exempt
 @require_http_methods(['POST'])
+@superuser_required
 def cockpit_autopilot_evaluate(request):
     """Evaluate all enabled policies. mode=dry_run (default) or execute."""
     from core.models_cockpit_autopilot import CockpitAutopilotPolicy, CockpitAutopilotEvent
@@ -3146,7 +3215,9 @@ def _evaluate_policy(policy, mode, request):
     if not handler:
         return []
 
-    proposed = handler(policy)
+    # I-0302 Phase 3 Sub-phase B2b: pass request so evaluator helpers can
+    # scope AgentExecution reads via scope_queryset_agent_execution.
+    proposed = handler(policy, request)
     actions = []
 
     for p in proposed[:policy.max_actions_per_run]:
@@ -3181,8 +3252,12 @@ def _evaluate_policy(policy, mode, request):
     return actions
 
 
-def _eval_failure_spike_pause(policy):
-    """Find agents with high failure rates."""
+def _eval_failure_spike_pause(policy, request):
+    """Find agents with high failure rates.
+
+    I-0302 Phase 3 Sub-phase B2b (2026-07-10): ``request`` added so the
+    AgentExecution reads can be scoped via ``scope_queryset_agent_execution``.
+    """
     from core.models_unified_system import AgentExecution
     from django.utils.timezone import now
     from datetime import timedelta
@@ -3203,8 +3278,12 @@ def _eval_failure_spike_pause(policy):
     # F1 fold equivalent (Postgres JSONField NULL-semantics make
     # the input_data__source='pa' form unsafe for pre-flag-flip
     # rows).
+    # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
     agents = (
-        AgentExecution.objects.filter(created_at__gte=cutoff)
+        scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=cutoff),
+        )
         .exclude(agent__name='PersonalAssistant')
         .values('agent__name')
         .annotate(
@@ -3232,7 +3311,7 @@ def _eval_failure_spike_pause(policy):
     return proposals
 
 
-def _eval_cost_spike_alert(policy):
+def _eval_cost_spike_alert(policy, request):
     """Check if cost delta exceeds threshold."""
     from core.models_llm_routing import LLMCallLog
     from django.utils.timezone import now
@@ -3260,7 +3339,7 @@ def _eval_cost_spike_alert(policy):
     return []
 
 
-def _eval_queue_backlog_alert(policy):
+def _eval_queue_backlog_alert(policy, request):
     """Check if queue failure rate is alarming."""
     from core.models_celery_telemetry import CeleryTaskEvent
     from django.utils.timezone import now
@@ -3288,8 +3367,12 @@ def _eval_queue_backlog_alert(policy):
     return []
 
 
-def _eval_stale_agent_alert(policy):
-    """Find agents with no recent runs."""
+def _eval_stale_agent_alert(policy, request):
+    """Find agents with no recent runs.
+
+    I-0302 Phase 3 Sub-phase B2b (2026-07-10): ``request`` added so the
+    AgentExecution reads can be scoped via ``scope_queryset_agent_execution``.
+    """
     from core.models_unified_system import Agent, AgentExecution
     from django.utils.timezone import now
     from datetime import timedelta
@@ -3299,8 +3382,12 @@ def _eval_stale_agent_alert(policy):
     stale_hours = t.get('stale_hours', 48)
     cutoff = now() - timedelta(hours=stale_hours)
 
+    # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
     agents_with_runs = set(
-        AgentExecution.objects.filter(created_at__gte=cutoff)
+        scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=cutoff),
+        )
         .values_list('agent__name', flat=True).distinct()
     )
     # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent from the
@@ -3317,7 +3404,11 @@ def _eval_stale_agent_alert(policy):
 
     proposals = []
     for name in sorted(stale):
-        last = AgentExecution.objects.filter(agent__name=name).aggregate(last=Max('created_at'))['last']
+        # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
+        last = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(agent__name=name),
+        ).aggregate(last=Max('created_at'))['last']
         last_str = last.isoformat() if last else 'never'
         proposals.append({
             'action': 'create_incident_note',
@@ -3416,6 +3507,7 @@ def cockpit_autopilot_history(request):
 
 @csrf_exempt
 @require_http_methods(['GET'])
+@superuser_required
 def cockpit_run_trace(request, run_id):
     """Stitch AgentExecution + CeleryTaskEvent + LLMCallLog + AuditLog into one trace."""
     from core.models_unified_system import AgentExecution
@@ -3425,7 +3517,11 @@ def cockpit_run_trace(request, run_id):
     from datetime import timedelta
 
     try:
-        run = AgentExecution.objects.select_related('agent').get(id=run_id)
+        # I-0302 Phase 3 Sub-phase B2b: scoped GET via scope_queryset_agent_execution.
+        run = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.select_related('agent'),
+        ).get(id=run_id)
     except AgentExecution.DoesNotExist:
         return JsonResponse({'error': 'Run not found'}, status=404)
 
@@ -4201,6 +4297,7 @@ def cockpit_vip_context(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@superuser_required
 def cockpit_learning_loop(request):
     """Learning Loop Control Panel — recent learnings, patterns, rejections, agent improvement.
 
@@ -4312,10 +4409,11 @@ def cockpit_learning_loop(request):
         from core.models_unified_system import AgentExecution, AgentMemory
 
         # Failed executions (last 7 days)
+        # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
         failed_executions = list(
-            AgentExecution.objects.filter(
-                status='failed',
-                created_at__gte=cutoff_7d,
+            scope_queryset_agent_execution(
+                request.user,
+                AgentExecution.objects.filter(status='failed', created_at__gte=cutoff_7d),
             )
             .select_related('agent')
             .order_by('-created_at')[:15]
@@ -4374,8 +4472,12 @@ def cockpit_learning_loop(request):
         # form per ADR-0002 F1 fold equivalent (Postgres JSONField
         # NULL-semantics make the input_data__source='pa' form
         # unsafe for pre-flag-flip rows).
+        # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
         agent_stats = list(
-            AgentExecution.objects.filter(created_at__gte=cutoff_30d)
+            scope_queryset_agent_execution(
+                request.user,
+                AgentExecution.objects.filter(created_at__gte=cutoff_30d),
+            )
             .exclude(agent__name='PersonalAssistant')
             .values('agent__name')
             .annotate(

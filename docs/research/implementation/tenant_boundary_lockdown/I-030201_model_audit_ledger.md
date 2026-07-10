@@ -312,6 +312,32 @@ Phase 3 Sub-phase B pre-flight (design SIGN cycle) re-ran the `AgentExecution.ob
 
 **Effect on Sub-phase B regression rank:** unchanged — AgentExecution remains #2 by risk; the enforcement surface is just 3× larger than Phase 1 estimated, split B1 (25) + B2 (55).
 
+#### §5.4.b Amendment — Phase 3 Sub-phase B2b ops classification (2026-07-10)
+
+Ratified via Rigby SIGN Q3 gate on Sub-phase B2b (before wiring): three
+ops/diagnostics view files (`views_diagnostics.py`, `views_integration_health.py`,
+`views_celery_api.py`) uniformly classified as **ops-only** and wired
+with the **superuser-gate + predicate (defense-in-depth)** treatment:
+
+| File | Sites wired | Function count | Gate | Predicate |
+|---|---|---|---|---|
+| `views_diagnostics.py` | 18 | 10 unique view functions + `_attach_media_urls` helper (signature refactored to accept `user`) + 4 policy-evaluator helpers (`_eval_*` signatures refactored to accept `request`) | `@superuser_required` | `scope_queryset_agent_execution(request.user, qs)` inside gate |
+| `views_integration_health.py` | 7 | 3 unique view functions | `@superuser_required` | same |
+| `views_celery_api.py` | 1 | 1 method (`TaskBreakdownView.get` via `@method_decorator(superuser_required)`) | `@superuser_required` | same |
+
+**Gate semantics** (per `core/security/decorators.py:superuser_required`):
+- Anonymous / unauthenticated → **401** (JSON envelope)
+- Authenticated but non-superuser → **403** (JSON envelope)
+- Superuser → proceed to view body; predicate applied inside
+
+**Why superuser-gate not staff-gate** (per Rigby SIGN Q1 fold): the Phase 2 design brief §6 F4 amendment tied null-user AgentExecution visibility to `is_superuser` (not `is_staff`) so ops-visibility semantics stayed aligned with the ratified predicate boundary. Aligning the endpoint gate with the predicate keeps a single semantic; a future "platform-ops" role can revisit both.
+
+**Special site: `cockpit_retry_run`** — per Rigby SIGN Q3 the source-run fetch must go through the scoped queryset before the retry is enqueued so a superuser cannot substitute another user's execution id and trigger a cross-user retry. Applied at `views_diagnostics.py:cockpit_retry_run` `.get(id=run_id)` → `scope_queryset_agent_execution(request.user, ...).get(id=run_id)`. The new retry execution row is owned by the requesting superuser; `context['retried_from']` preserves the audit trail to the original.
+
+**Under single-user pre-prod:** Chris is the only superuser + only user, so gate is a no-op today; scope is functionally identical to today. Under Phase 0 multi-tenant, non-superusers get 401/403 and superuser sees own + null-user Celery runs per predicate contract.
+
+**Effect on regression rank:** unchanged — AgentExecution stays #2 by risk; B2b closes the ops surface leg (B1 dashboards + B2a analytics/CRUD + B2b ops), leaving B2c (8 sites / 6 small files) as the last remaining AgentExecution wiring under Sub-phase B.
+
 ### §5.5 Document (Q7 per-user) — dominant category: SCOPED via `owner=` filter
 
 | Category | Sample callers | Classification | Notes / Reg Risk |
