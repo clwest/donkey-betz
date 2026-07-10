@@ -27,6 +27,7 @@ from django.db.models import Avg, Count, Sum, Q, F
 from django.db.models.functions import TruncDate, TruncHour
 
 from core.models_unified_system import Agent, AgentExecution
+from core.security.object_authz import scope_queryset_agent_execution
 
 logger = logging.getLogger(__name__)
 
@@ -53,7 +54,11 @@ def agent_analytics_stats(request):
             success_rate = round((successful_executions / total_executions) * 100, 1)
 
         # Get execution time stats from AgentExecution model
-        executions = AgentExecution.objects.filter(status='completed')
+        # I-0302 Phase 3 Sub-phase B: scoped to user via scope_queryset_agent_execution.
+        executions = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(status='completed'),
+        )
         avg_time = executions.aggregate(avg=Avg('execution_time_ms'))['avg'] or 0
 
         # Count agents active today
@@ -61,9 +66,9 @@ def agent_analytics_stats(request):
         active_today = agents.filter(last_active__date=today).count()
 
         # Count failed executions today
-        failures_today = AgentExecution.objects.filter(
-            status='failed',
-            created_at__date=today
+        failures_today = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(status='failed', created_at__date=today),
         ).count()
 
         return JsonResponse({
@@ -151,9 +156,10 @@ def agent_analytics_needs_attention(request):
         # per ADR-0002 F1 fold equivalent (Postgres JSONField
         # NULL-semantics make the input_data__source='pa' form unsafe
         # for pre-flag-flip rows).
-        recent_failures = AgentExecution.objects.filter(
-            status='failed',
-            created_at__gte=week_ago
+        # I-0302 Phase 3 Sub-phase B: scoped to user via scope_queryset_agent_execution.
+        recent_failures = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(status='failed', created_at__gte=week_ago),
         ).exclude(agent__name='PersonalAssistant').values(
             'agent__id', 'agent__name', 'agent__agent_type'
         ).annotate(
@@ -209,8 +215,10 @@ def agent_analytics_activity(request):
         start_date = timezone.now() - timedelta(days=days)
 
         # Get daily execution counts
-        daily_data = AgentExecution.objects.filter(
-            created_at__gte=start_date
+        # I-0302 Phase 3 Sub-phase B: scoped to user via scope_queryset_agent_execution.
+        daily_data = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=start_date),
         ).annotate(
             date=TruncDate('created_at')
         ).values('date').annotate(
@@ -266,7 +274,11 @@ def agent_analytics_executions(request):
         status_filter = request.GET.get('status', None)
         agent_filter = request.GET.get('agent', None)
 
-        executions = AgentExecution.objects.select_related('agent').order_by('-created_at')
+        # I-0302 Phase 3 Sub-phase B: scoped to user via scope_queryset_agent_execution.
+        executions = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.select_related('agent'),
+        ).order_by('-created_at')
 
         if status_filter:
             executions = executions.filter(status=status_filter)

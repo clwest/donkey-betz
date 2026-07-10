@@ -493,7 +493,7 @@ def _list_playbooks() -> List[Dict[str, Any]]:
     return playbooks
 
 
-def _get_recent_activity() -> List[Dict[str, Any]]:
+def _get_recent_activity(user) -> List[Dict[str, Any]]:
     """
     Get recent agent activity for the command center feed.
 
@@ -502,13 +502,23 @@ def _get_recent_activity() -> List[Dict[str, Any]]:
     - created_at timestamp (when task started)
     - input_data summary (what parameters were passed)
     - user who triggered the execution
+
+    I-0302 Phase 3 Sub-phase B (2026-07-10): user parameter added to plumb
+    ``request.user`` from the caller (metrics_view) through to the queryset
+    scope. Predicate handles superuser carve-out for null-user Celery runs
+    (per Session 642 semantics — see predicate module docstring).
     """
     from django.db.models import Case, When, Value, IntegerField
     from core.models_unified_system import AgentExecution
+    from core.security.object_authz import scope_queryset_agent_execution
 
     # Session 832: Include all statuses, prioritize in_progress, then recent
-    recent = AgentExecution.objects.filter(
-        status__in=['pending', 'in_progress', 'completed', 'failed']
+    # I-0302 Phase 3 Sub-phase B: scoped to user via scope_queryset_agent_execution.
+    recent = scope_queryset_agent_execution(
+        user,
+        AgentExecution.objects.filter(
+            status__in=['pending', 'in_progress', 'completed', 'failed']
+        ),
     ).select_related('agent', 'user').annotate(
         # Prioritize in_progress tasks first
         status_priority=Case(
@@ -642,7 +652,7 @@ def metrics_view(request):
     costs = _get_llm_cost_metrics()
     canon = _count_canon_docs()
     playbooks = _count_playbooks()
-    activity = _get_recent_activity()
+    activity = _get_recent_activity(request.user)
 
     # Session 832: Get broader system activity (dreams, convos, decisions, pilots)
     try:
@@ -2511,26 +2521,42 @@ def celery_debug_view(request):
         one_hour_ago = now - timedelta(hours=1)
         two_hours_ago = now - timedelta(hours=2)
 
-        total_in_progress = AgentExecution.objects.filter(status='in_progress').count()
-        stale_2h = AgentExecution.objects.filter(
-            status='in_progress',
-            created_at__lt=two_hours_ago
+        # I-0302 Phase 3 Sub-phase B: scoped to user via scope_queryset_agent_execution.
+        # Predicate handles superuser carve-out for null-user Celery runs.
+        from core.security.object_authz import scope_queryset_agent_execution
+        total_in_progress = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(status='in_progress'),
+        ).count()
+        stale_2h = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(
+                status='in_progress',
+                created_at__lt=two_hours_ago,
+            ),
         ).count()
 
         # Recent completions (evidence worker is working)
-        recent_completions = AgentExecution.objects.filter(
-            status='completed',
-            completed_at__gte=one_hour_ago
+        recent_completions = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(
+                status='completed',
+                completed_at__gte=one_hour_ago,
+            ),
         ).count()
 
-        recent_failures = AgentExecution.objects.filter(
-            status='failed',
-            completed_at__gte=one_hour_ago
+        recent_failures = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(
+                status='failed',
+                completed_at__gte=one_hour_ago,
+            ),
         ).count()
 
         # Get oldest in_progress task
-        oldest_in_progress = AgentExecution.objects.filter(
-            status='in_progress'
+        oldest_in_progress = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(status='in_progress'),
         ).order_by('created_at').first()
 
         oldest_age_hours = None
@@ -2638,9 +2664,14 @@ def cleanup_stale_executions_view(request):
         hours_threshold = int(request.GET.get('hours_threshold', 2))
         cutoff_time = timezone.now() - timedelta(hours=hours_threshold)
 
-        stale_tasks = AgentExecution.objects.filter(
-            status='in_progress',
-            created_at__lt=cutoff_time
+        # I-0302 Phase 3 Sub-phase B: scoped to user via scope_queryset_agent_execution.
+        from core.security.object_authz import scope_queryset_agent_execution
+        stale_tasks = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(
+                status='in_progress',
+                created_at__lt=cutoff_time,
+            ),
         )
 
         count = stale_tasks.count()
@@ -2700,9 +2731,17 @@ def delete_failed_executions_view(request):
         limit = int(request.GET.get('limit', 100))
         cutoff_time = timezone.now() - timedelta(hours=hours_old)
 
-        failed_tasks = AgentExecution.objects.filter(
-            status='failed',
-            created_at__lt=cutoff_time
+        # I-0302 Phase 3 Sub-phase B: scoped to user via scope_queryset_agent_execution.
+        # Applies to both the read (list failed tasks) AND the write (delete) —
+        # a caller cannot delete another user's AgentExecution rows even if
+        # they somehow supply matching ids.
+        from core.security.object_authz import scope_queryset_agent_execution
+        failed_tasks = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(
+                status='failed',
+                created_at__lt=cutoff_time,
+            ),
         ).order_by('created_at')[:limit]
 
         count = failed_tasks.count()
@@ -2711,9 +2750,12 @@ def delete_failed_executions_view(request):
             # Get details before deleting
             sample_details = list(failed_tasks.values('id', 'agent__name', 'task', 'created_at')[:10])
 
-            # Delete the failed executions
+            # Delete the failed executions — scoped again to prevent id-substitution.
             deleted_ids = list(failed_tasks.values_list('id', flat=True))
-            AgentExecution.objects.filter(id__in=deleted_ids).delete()
+            scope_queryset_agent_execution(
+                request.user,
+                AgentExecution.objects.filter(id__in=deleted_ids),
+            ).delete()
 
             logger.info(f"🗑️ [SESSION 895] Deleted {count} failed agent executions older than {hours_old}h")
 
