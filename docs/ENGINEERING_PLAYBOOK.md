@@ -1,33 +1,33 @@
 ---
 title: "Donkey Betz Engineering Playbook"
-version: "0.4.0"
+version: "0.4.1"
 version_status: ratified
 scope: platform
-parent_version: "0.3.0"
+parent_version: "0.4.0"
 supersedes: []
-compatible_with: ["0.1.0", "0.2.0", "0.3.0"]
+compatible_with: ["0.1.0", "0.2.0", "0.3.0", "0.4.0"]
 ratifier: chris
 ratified_date: 2026-07-10
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
-  deliverable_id: 77420585-2bd9-43bb-aa1c-74cae3354754
+  deliverable_id: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
-branch_authored: playbook/v0.4.0-verify-substrate-cd50-codification
-commit_sha: 65441c87
-content_hash: sha256:009d6c03c492ba6afae5404cfc2848aa0df0343d949c8b01de4be409bb915cf3
-git_tag: playbook-v0.4.0
+branch_authored: playbook/v0.4.1-per-chain-refresh-cadence-patch
+commit_sha: PLACEHOLDER_TO_BE_FILLED_POST_MERGE
+content_hash: PLACEHOLDER_TO_BE_FILLED_POST_MERGE
+git_tag: playbook-v0.4.1
 schema_version: 1
 prior_ratification:
-  version: "0.3.0"
+  version: "0.4.0"
   ratified_date: 2026-07-10
-  deliverable_id: 548d4aab-88bf-470f-9dea-b3b7400ce36e
-  commit_sha: 16e5d3deb27a71b9c9de45aae6c06d0f661117c8
-  content_hash: sha256:4a42ca9f2b96160c637de30cdc7050e76c0420ca7280036930241b4903fcd36f
-  git_tag: playbook-v0.3.0
-authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740]
+  deliverable_id: 77420585-2bd9-43bb-aa1c-74cae3354754
+  commit_sha: 65441c87
+  content_hash: sha256:009d6c03c492ba6afae5404cfc2848aa0df0343d949c8b01de4be409bb915cf3
+  git_tag: playbook-v0.4.0
+authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740, 2742]
 correction_sessions: [2723, 2725, 2727]
-audit_sessions: [2722, 2724, 2725, 2727, 2738, 2740]
+audit_sessions: [2722, 2724, 2725, 2727, 2738, 2740, 2742]
 ratification_package_session: 2726
 ratification_session: 2727
 v0_2_0_authoring_session: 2736
@@ -36,6 +36,8 @@ v0_3_0_authoring_session: 2738
 v0_3_0_ratification_session: 2738
 v0_4_0_authoring_session: 2740
 v0_4_0_ratification_session: 2740
+v0_4_1_authoring_session: 2742
+v0_4_1_ratification_session: 2742
 rule_count: 196
 rules_added_v0_2_0: [PLAYBOOK-5.2.2, PLAYBOOK-2.2.2, PLAYBOOK-3.2.2]
 rules_added_v0_3_0: [PLAYBOOK-6.6.14, PLAYBOOK-6.10.5]
@@ -43,7 +45,7 @@ rules_added_v0_4_0: [PLAYBOOK-6.10.6]
 evidence_manifest: docs/research/platform/engineering_playbook_evidence_manifest.md
 ---
 
-# Donkey Betz Engineering Playbook v0.4.0
+# Donkey Betz Engineering Playbook v0.4.1
 
 # Chapter 0 — Preamble and How to Read This Playbook
 
@@ -921,6 +923,7 @@ The following extension points are informative. They identify where a future MIN
 - Alternative recovery substrates — as the platform gains new queryable substrates (for example, structured session-attribution logs), §6.8.2's minimum-substrate list MAY be expanded via a MINOR amendment.
 - Tenant-scope reconciliation — should the platform activate multi-tenant governance in a future cycle, §6.9 MAY be extended with tenant-scope provenance classification per a MAJOR amendment.
 - Automation of verification — verifications 1 through 6 (§6.10) are candidates for continuous-integration automation. Automation is not codified by Chapter 6; the checks remain author responsibility until the Playbook explicitly ratifies automated substitution.
+- Capability graph refresh cadence — Per-chain freshness verdicts (append-only refreshes like `platform_capability_graph.md` §27 single-chain or §29 full sweep) MAY be formalized as a cadence discipline in a future MINOR amendment; two-trigger threshold met at S2739 (§27) + S2741 (§29). PLAYBOOK-6.10.6 already forbids acting on stale artifacts; a cadence rule would additionally require periodic refresh even absent imminent Cat A use.
 
 ---
 
@@ -1267,6 +1270,7 @@ The Constitutional Debt Register records items intentionally deferred by prior a
 - Automated version bump validation MAY be codified as a future extension. This chapter presupposes manual version bump justification per §10.3.2.
 - Emergency amendment procedures MAY be codified in a future MAJOR amendment. This chapter presupposes that no fast-path exists for MAJOR amendments and that operational directives requiring rapid change live in `CLAUDE.md` and `MEMORY.md` rather than in the Playbook.
 - Automated Retired Rules Registry generation MAY be codified as a future extension. This chapter presupposes the Registry is a manually-maintained appendix or file.
+- Cadence-based amendment classes — see Chapter Provenance Classification §6.12 extension point on capability-graph refresh cadence. A future MINOR amendment may formalize periodic refresh as a rule; this chapter provides the amendment-lifecycle hooks such a rule would use.
 
 ---
 
@@ -1284,3 +1288,4 @@ The Constitutional Debt Register records items intentionally deferred by prior a
 | v0.2.0 | v0.1.0 | [] | 2026-07-09 | playbook-v0.2.0 | MINOR — codify R1/R2/R3 EOS rules as PLAYBOOK-5.2.2 (Tool Autonomy), PLAYBOOK-2.2.2 (CDR discipline), PLAYBOOK-3.2.2 (Acceptance-tests-first). |
 | v0.3.0 | v0.2.0 | [] | 2026-07-10 | playbook-v0.3.0 | MINOR — codify CD-48 (catalog admission) as PLAYBOOK-6.6.14 and CD-49 (SIGN workspace tool provisioning) as PLAYBOOK-6.10.5. Discharges Constitutional Debt CD-48 + CD-49 carried from v0.1.0. |
 | v0.4.0 | v0.3.0 | [] | 2026-07-10 | playbook-v0.4.0 | MINOR — codify CD-50 (verify-substrate-before-implement) as PLAYBOOK-6.10.6. Two-trigger threshold met at S2739 §17 Cost Protection substrate mismatch + S2740 §18 F-D-SIDEBAR-1 already-shipped discovery. Extends §6.10 preamble scope from amendment-dispatch to Cat A research-artifact-derived candidates. |
+| v0.4.1 | v0.4.0 | [] | 2026-07-10 | playbook-v0.4.1 | PATCH — add informative extension-point note in §6.12 recording capability graph refresh cadence as a candidate for future MINOR codification (two-trigger threshold met at S2739 §27 + S2741 §29). Cross-link added at §10.15. No new rules; rule count unchanged at 196. |
