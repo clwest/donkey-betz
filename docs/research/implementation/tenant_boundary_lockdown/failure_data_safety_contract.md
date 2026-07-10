@@ -1,16 +1,21 @@
 ---
 title: "Failure-Data Safety Contract — I-0301 Phase 2 durable specification"
-status: draft
-authority: contract-draft  # becomes 'contract-frozen' post Rigby SIGN + Chris ratification
+status: active
+authority: contract-frozen
+frozen: true
 session_added: 2742
 session_drafted: 2742
+session_ratified: 2742
+ratification_date: 2026-07-10
+ratifier: chris
+ratification_record: docs/research/implementation/RATIFICATION_2026-07-10_i0301_safety_contract.md
 last_updated: 2026-07-10
 sign_history:
   - session: 2742
     reviewer: rigby
     verdict: SIGN-WITH-EDITS (11/12 PASS, 1 material amendment + 4 non-material tightenings applied post-SIGN)
 arc_id: I-0301
-phase: Phase 2
+phase: Phase 2 (CLOSED at ratification 2026-07-10)
 parent_arc_doc: docs/research/implementation/tenant_boundary_lockdown/I-0301_scoping.md
 parent_arc_workspace: fcd7e683-3bfe-4d35-9704-0e54dd587ea1
 parent_campaign: RUR-C1 (Tenant Boundary Lockdown)
@@ -18,22 +23,25 @@ parent_program: RUR (Real User Readiness)
 parent_program_doc: docs/research/implementation/real_user_readiness/CAMPAIGN.md
 parent_program_ratification: docs/research/implementation/RATIFICATION_2026-07-10_real_user_readiness.md
 phase_1_audit_ledger: 1ca36f84-ae40-415c-b482-768415d13fd9  # workspace fcd7e683
-frozen_on: (pending Chris ratification post-Rigby-SIGN-PASS)
-freeze_criterion: Rigby SIGN-PASS + Chris D-verdict on the frozen text
+frozen_on: 2026-07-10
+freeze_criterion: Rigby SIGN-WITH-EDITS (11/12 PASS + 1 material tightening amendment applied) + Chris D-verdict on the frozen text
 downstream_unlocks_on_freeze:
-  - RUR-C2 (Async State + Fail-Loud + Traceability) may open — I-0400 arc slot
-  - I-0302 (Object-Level Authorization) may open
-  - I-0303 (Async Tenant-Boundary Enforcement) may open
+  - RUR-C2 (Async State + Fail-Loud + Traceability) — I-0400 arc slot NOW UNBLOCKED
+  - I-0302 (Object-Level Authorization) NOW UNBLOCKED
+  - I-0303 (Async Tenant-Boundary Enforcement) NOW UNBLOCKED
+  - Phase 3 (HTTP Remediation) NOW UNBLOCKED — first code-touching phase
 constraint: contract governs USER-FACING error surfaces + defines OPERATOR-side envelope + tenant-scoped trace access. Does NOT govern success-path leakage (that lives in the regression suite, §5.2 of scoping).
 ---
 
 # Failure-Data Safety Contract
 
-> **DRAFT — I-0301 Phase 2.** The load-bearing deliverable of the RUR-C1 mini-program. Once Rigby SIGN-confirms this contract and Chris ratifies the frozen text, RUR-C2 / I-0302 / I-0303 unblock and Phase 3 (HTTP Remediation) opens.
+> **FROZEN — RATIFIED 2026-07-10 (S2742).** The load-bearing deliverable of the RUR-C1 mini-program. Rigby SIGN-WITH-EDITS landed with 1 material amendment + 4 non-material tightenings; Chris ratified the amended frozen text. Ratification record: [`RATIFICATION_2026-07-10_i0301_safety_contract.md`](../RATIFICATION_2026-07-10_i0301_safety_contract.md).
+>
+> **Downstream unlocks — effective now:** RUR-C2 (I-0400 slot), I-0302, I-0303, and I-0301 Phase 3 (HTTP Remediation — first code-touching phase) are all UNBLOCKED. Each requires Chris authorization to open; ratification of this contract is the precondition, not the trigger.
 >
 > **This contract is enforceable.** Every user-facing HTTP error surface at HEAD and going forward MUST conform. The regression suite validates conformance; PRs that break conformance are CI-blocked.
 >
-> **This contract is stable.** Post-ratification, this doc is `frozen: true`. Changes require a new ratification record. Amendments discovered during Phase 3 remediation route through the parent CAMPAIGN §10 amendment discipline.
+> **This contract is stable.** `frozen: true`. Changes require a new ratification record referencing this one as `supersedes`. Amendments discovered during Phase 3 remediation route through §10 amendment discipline.
 
 ---
 
@@ -403,21 +411,22 @@ This amendment does not change a D-verdict, program scope, dependency graph, har
 
 ---
 
-## §12. Phase 2 Close Criteria
+## §12. Phase 2 Close Criteria — ALL MET 2026-07-10
 
 - [x] Contract drafted as standalone durable doc (this document)
 - [x] Rigby SIGN on the contract — SIGN-WITH-EDITS, edits applied post-SIGN
-- [ ] Chris ratification of the frozen text — pending
-- [ ] Frontmatter transition to `authority: contract-frozen`, `frozen: true` — pending Chris ratification
-- [ ] Ratification record `RATIFICATION_2026-07-10_i0301_safety_contract.md` written — pending Chris ratification
+- [x] Chris ratification of the frozen text — RATIFIED 2026-07-10 (S2742)
+- [x] Frontmatter transition to `authority: contract-frozen`, `frozen: true` — applied
+- [x] Ratification record `RATIFICATION_2026-07-10_i0301_safety_contract.md` — written
 
-Once all criteria pass:
-- Phase 2 CLOSED
-- Phase 3 (HTTP Remediation) UNBLOCKED
-- RUR-C2 UNBLOCKED (I-0400 opens)
-- I-0302 UNBLOCKED
-- I-0303 UNBLOCKED
+**Phase 2 CLOSED.**
+
+Downstream unlocks now in effect (each requires Chris authorization to open):
+- **Phase 3 (HTTP Remediation) UNBLOCKED** — first code-touching phase of I-0301
+- **RUR-C2 UNBLOCKED** — I-0400 arc slot
+- **I-0302 UNBLOCKED** — sibling arc, RUR-C1 second child
+- **I-0303 UNBLOCKED** — sibling arc, RUR-C1 third child
 
 ---
 
-**End of Failure-Data Safety Contract draft (post-Rigby-SIGN, pre-Chris-ratification).**
+**End of Failure-Data Safety Contract (frozen).**
