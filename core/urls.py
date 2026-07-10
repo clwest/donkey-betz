@@ -990,13 +990,11 @@ from ai_core.ai_opportunity_api import (
     build_ai_project,
     get_generated_projects
 )
-# Import Autonomous Revenue System APIs
-from ai_core.api.autonomous_system_api import (
-    AutonomousSystemStartView,
-    AutonomousSystemStatusView,
-    AutonomousSystemPauseView,
-    AutonomousSystemResumeView
-)
+# I-0301 Phase 3 Stage 3 PR A — autonomous_system_api removed.
+# Prior public stub endpoints (Start/Status/Pause/Resume) returned hardcoded
+# mock data with no callers (backend or frontend). Rigby Stage 3 SIGN Q1
+# confirmed DELETE over DEBUG-gate. Source module + urls + frontend export
+# all removed.
 from core.views import (
     platform_info, record_metric, health_check,
     blog_list, styles_list, prompting_settings, execute_agent,
@@ -2372,11 +2370,11 @@ urlpatterns = [
     path('api/v1/ai-opportunities/build/', build_ai_project, name='ai-build-project'),
     path('api/v1/ai-opportunities/projects/', get_generated_projects, name='ai-generated-projects'),
 
-    # Autonomous Revenue System - 30-day self-running platform
-    path('api/autonomous-system/start/', AutonomousSystemStartView.as_view(), name='autonomous-start'),
-    path('api/autonomous-system/status/', AutonomousSystemStatusView.as_view(), name='autonomous-status'),
-    path('api/autonomous-system/pause/', AutonomousSystemPauseView.as_view(), name='autonomous-pause'),
-    path('api/autonomous-system/resume/', AutonomousSystemResumeView.as_view(), name='autonomous-resume'),
+    # I-0301 Phase 3 Stage 3 PR A — /api/autonomous-system/* endpoints
+    # DELETED. Prior public stubs returned mock data with zero callers.
+    # Rigby Stage 3 SIGN Q1: DELETE over DEBUG-gate. Source module +
+    # imports + urls + frontend export all removed. See ai_core/api/
+    # autonomous_system_api.py deletion in the same commit.
 
     # Opportunity Aggregator endpoints
     # api/opportunities/ — REMOVED: duplicate of line 1858 (opportunity_list wins)

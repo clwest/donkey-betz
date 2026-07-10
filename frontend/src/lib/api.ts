@@ -2459,11 +2459,11 @@ export const experimentRecommendationsApi = {
 }
 
 // Session 745: Autonomous Systems API
+// I-0301 Phase 3 Stage 3 PR A — /autonomous-system/{status,start,pause}
+// endpoints removed from backend (public stubs with zero callers).
+// Situations sub-API retained; only the system-control triplet is gone.
 export const autonomousApi = {
-  // System Control
-  status: () => api.get('/autonomous-system/status'),
-  start: () => api.post('/autonomous-system/start'),
-  pause: () => api.post('/autonomous-system/pause'),
+  // System Control — REMOVED at I-0301 Phase 3 Stage 3 PR A.
 
   // Situations (autonomous behaviors)
   situations: () => api.get('/autonomous/situations/'),
