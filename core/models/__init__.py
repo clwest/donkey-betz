@@ -23,6 +23,9 @@ from .conversations import *
 from .ai_learning import *
 from .projects import *
 
+# CDR-001 §7 Gap 2 (§16 wrap-up bundle) — HAI cross-channel dispatch audit table.
+from ..models_hai_dispatch_log import HAIDispatchLog  # noqa: F401
+
 # Import models from the unified system as well
 from ..models_unified_system import *
 
