@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-10T17:01:26+00:00",
+    "generated": "2026-07-10T17:37:13+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "9909e1a3afc8",
-    "doc_count": 2509,
-    "commit_count": 7737,
+    "git_head": "8dbc68adda8c",
+    "doc_count": 2511,
+    "commit_count": 7745,
     "confidence_breakdown": {
       "HIGH": 1612,
       "MEDIUM": 394,
       "LOW": 5,
-      "UNKNOWN": 498
+      "UNKNOWN": 500
     },
     "excludes": [
       "docs/archive/",
@@ -2583,7 +2583,7 @@
         2744,
         2745
       ],
-      "commit_count": 1218,
+      "commit_count": 1220,
       "prs": [
         10,
         11,
@@ -3137,7 +3137,8 @@
         3071,
         3072,
         3075,
-        3077
+        3077,
+        3080
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7478,7 +7479,7 @@
         2744,
         2745
       ],
-      "commit_count": 174,
+      "commit_count": 176,
       "prs": [
         2213,
         2219,
@@ -7639,7 +7640,8 @@
         3071,
         3072,
         3075,
-        3077
+        3077,
+        3080
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -36113,6 +36115,19 @@
         2980
       ]
     },
+    "docs/research/implementation/RATIFICATION_2026-07-10_i0301_safety_contract.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "8dbc68ad",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2742): I-0301 Failure-Data Safety Contract RATIFIED; Phase 2 CLOSED; Phase 3 + RUR-C2 + I-0302 + I-0303 UNBLOCKED (#3083)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3083
+      ]
+    },
     "docs/research/implementation/RATIFICATION_2026-07-10_real_user_readiness.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -36295,14 +36310,30 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "9909e1a3",
+      "first_commit_sha": "8dbc68ad",
       "first_commit_date": "2026-07-10",
-      "first_commit_subject": "docs(s2742): I-0301 scoping ratification \u2014 Chris approved 3 material amendments; Phase 1 unblocked (#3079)",
+      "first_commit_subject": "docs(s2742): I-0301 Failure-Data Safety Contract RATIFIED; Phase 2 CLOSED; Phase 3 + RUR-C2 + I-0302 + I-0303 UNBLOCKED (#3083)",
+      "sessions_touched": [],
+      "commit_count": 8,
+      "prs": [
+        3078,
+        3079,
+        3081,
+        3083
+      ]
+    },
+    "docs/research/implementation/tenant_boundary_lockdown/failure_data_safety_contract.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "8dbc68ad",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2742): I-0301 Failure-Data Safety Contract RATIFIED; Phase 2 CLOSED; Phase 3 + RUR-C2 + I-0302 + I-0303 UNBLOCKED (#3083)",
       "sessions_touched": [],
       "commit_count": 4,
       "prs": [
-        3078,
-        3079
+        3082,
+        3083
       ]
     },
     "docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md": {
