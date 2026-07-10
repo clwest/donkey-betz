@@ -277,6 +277,41 @@ Sample-vs-actual gap likely explained by grep `--head_limit=40` in Phase 1 §5.0
 
 **Reg-risk hotspot summary (AgentExecution):** All 3 dashboards (`views_platform_command`, `views_analytics_real`, `views_agent_analytics`) are unscoped aggregate reads. If these endpoints are user-accessible (not staff-gated), all users see all executions. Phase 2 predicate design must decide: (a) staff-only gate → user endpoint returns only user=request.user; (b) staff-only endpoint separation.
 
+#### §5.4.a Amendment — Phase 3 Sub-phase B pre-flight caller re-audit (2026-07-10)
+
+Phase 3 Sub-phase B pre-flight (design SIGN cycle) re-ran the `AgentExecution.objects.` grep with no `--head_limit` cap on HEAD `a08bd4df` (post-A2). Actual surface: **80 hits across 15 view files** — **3× larger** than the Phase 1 §5.4 sample of "25+ hits across 4 files."
+
+**Why this matters:** unscoped AgentExecution reads across ~11 additional view files are a privacy boundary violation under Phase 0 multi-tenant. Every unscoped LIST/aggregate leaks per-user execution volume; every unscoped GET (`views_orchestration.py:869`, `views_diagnostics.py:2341/3428`, `views_memory_palace.py:123`, `views_agent_execution.py:476`) is an existence oracle over another user's runs. The Sub-phase B split localizes the ratified Phase 1 documented dashboards in B1 and defers the undocumented surface to B2 after per-file classification.
+
+**Per-file site classification (LIST vs GET vs EXISTS vs DELETE):**
+
+| File | Total | LIST/aggregate | GET | EXISTS | DELETE | Category (B1 / B2a / B2b / B2c) | Notes |
+|---|---|---|---|---|---|---|---|
+| views_platform_command.py | 9 | 8 | 0 | 0 | 1 (:2716) | B1 (Phase 1 documented) | Dashboard + cleanup + delete-failed. DELETE requires predicate scoping too. |
+| views_analytics_real.py | 9 | 9 | 0 | 0 | 0 | B1 | Aggregate reads only. AllowAny auth posture. |
+| views_agent_analytics.py | 5 | 5 | 0 | 0 | 0 | B1 | Aggregate reads only. |
+| views_orchestration.py | 2 | 1 | 1 (:869) | 0 | 0 | B1 | GET uses `scope_queryset_agent_execution().get(id=)` per Rigby SIGN Q5. |
+| views_diagnostics.py | 19 | 17 | 2 (:2341, :3428) | 0 | 0 | B2b (ops classification pending) | Largest undocumented cluster — Rigby SIGN Q3: per-file classification required before wiring. |
+| views_analytics.py | 12 | 12 | 0 | 0 | 0 | B2a (user-facing analytics) | Second largest cluster. |
+| views_agent_execution.py | 7 | 5 | 1 (:476) | 1 (:1009) | 0 | B2a | Canonical AgentExecution CRUD surface. |
+| views_integration_health.py | 7 | 7 | 0 | 0 | 0 | B2b | Health/ops classification. |
+| views_dashboard_stats.py | 2 | 2 | 0 | 0 | 0 | B2c | Small dashboard aggregate. |
+| views_agent_dashboard.py | 1 | 1 | 0 | 0 | 0 | B2c | Cost aggregate. |
+| views_workspace_templates.py (site 2) | 1 | 1 | 0 | 0 | 0 | B2c | Note: distinct from A2 Initiative site. Phase 1 §5.4 flagged the AgentExecution site as `AMBIGUOUS — transitively scoped via workspace`. B2c re-verifies. |
+| views_celery_api.py | 1 | 1 | 0 | 0 | 0 | B2b | Celery status ops. |
+| views_stripe_billing.py | 1 | 1 | 0 | 0 | 0 | B2c | Per-user billing aggregate. |
+| views_memory_palace.py | 1 | 0 | 1 (:123) | 0 | 0 | B2c | Memory backing-store GET. |
+| views_intelligence_api.py | 1 | 1 | 0 | 0 | 0 | B2c | Intelligence rollup. |
+| views_trace_viewer.py | 1 | 1 | 0 | 0 | 0 | B2c | Trace grouping — likely OPS-ONLY, classification pending. |
+| views_agent_learning.py | 1 | 1 | 0 | 0 | 0 | B2c | Simple `.count()` as learning-events metric. |
+| **Total** | **80** | **73** | **5** | **1** | **1** | — | 15 view files. |
+
+**Sample-vs-actual gap likely explained by grep `--head_limit=40` in Phase 1 §5.0.1** (documented reproducibility footnote). Sub-phase B enforcement uses the un-capped enumeration above.
+
+**Superuser semantic note (per Rigby SIGN Q4):** any dashboard label reading "Total executions" or similar under B1/B2 wiring now means "your executions + null-user Celery system-context runs (for superusers only)". This is the correct Session-642 semantics — Phase 2 predicate module design brief §6 SIGN F4 amendment. Documentation/UX label updates are cosmetic and out of scope for this arc; a follow-on ticket may standardize labels.
+
+**Effect on Sub-phase B regression rank:** unchanged — AgentExecution remains #2 by risk; the enforcement surface is just 3× larger than Phase 1 estimated, split B1 (25) + B2 (55).
+
 ### §5.5 Document (Q7 per-user) — dominant category: SCOPED via `owner=` filter
 
 | Category | Sample callers | Classification | Notes / Reg Risk |
