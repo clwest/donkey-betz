@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-10T01:58:54+00:00",
+    "generated": "2026-07-10T04:00:56+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "eac0f4daad1c",
-    "doc_count": 2498,
-    "commit_count": 7933,
+    "git_head": "be9b9b1c3c11",
+    "doc_count": 2499,
+    "commit_count": 7941,
     "confidence_breakdown": {
-      "HIGH": 1604,
+      "HIGH": 1605,
       "MEDIUM": 394,
       "LOW": 5,
       "UNKNOWN": 495
@@ -1998,11 +1998,14 @@
         2725,
         2726,
         2727,
-        2736
+        2736,
+        2738
       ],
-      "commit_count": 6,
+      "commit_count": 10,
       "prs": [
-        3048
+        3048,
+        3058,
+        3059
       ]
     },
     "docs/EOS_RULES.md": {
@@ -2564,9 +2567,10 @@
         2734,
         2735,
         2736,
-        2737
+        2737,
+        2738
       ],
-      "commit_count": 1311,
+      "commit_count": 1315,
       "prs": [
         10,
         11,
@@ -3109,7 +3113,9 @@
         3049,
         3051,
         3054,
-        3055
+        3055,
+        3057,
+        3059
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7443,7 +7449,7 @@
         2736,
         2737
       ],
-      "commit_count": 267,
+      "commit_count": 269,
       "prs": [
         2213,
         2219,
@@ -7594,7 +7600,8 @@
         3049,
         3051,
         3054,
-        3055
+        3055,
+        3057
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -10256,14 +10263,16 @@
         1144,
         1145,
         1146,
-        2727
+        2727,
+        2738
       ],
-      "commit_count": 7,
+      "commit_count": 9,
       "prs": [
         127,
         2186,
         2208,
-        2216
+        2216,
+        3059
       ]
     },
     "docs/canon/creative/DAVINCI_RESOLVE_WORKFLOW.md": {
@@ -19211,17 +19220,33 @@
       "originating_session": 2737,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "fe6a1b3d",
+      "first_commit_sha": "5ce4b4ff",
       "first_commit_date": "2026-07-09",
-      "first_commit_subject": "docs(session-2737): record 3 latent integration defects in handoff \u00a710.8 (#3054)",
+      "first_commit_subject": "docs(session-2737): CDR-003 bundle close \u2014 handoff \u00a711 + cascade (#3057)",
       "sessions_touched": [
         2737
       ],
-      "commit_count": 6,
+      "commit_count": 8,
       "prs": [
         3049,
         3051,
-        3054
+        3054,
+        3057
+      ]
+    },
+    "docs/handoffs/SESSION_2738_PLAYBOOK_V0_3_0_RATIFIED.md": {
+      "originating_session": 2738,
+      "confidence": "HIGH",
+      "match_source": "subject",
+      "first_commit_sha": "0277f42c",
+      "first_commit_date": "2026-07-09",
+      "first_commit_subject": "docs(session-2738): Playbook v0.3.0 ratified \u2014 cascade + handoff + anchors + 00-START (#3059)",
+      "sessions_touched": [
+        2738
+      ],
+      "commit_count": 2,
+      "prs": [
+        3059
       ]
     },
     "docs/handoffs/SESSION_273_DOCUMENTATION_OVERHAUL.md": {
@@ -36260,19 +36285,20 @@
       "originating_session": 2734,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "eac0f4da",
+      "first_commit_sha": "be9b9b1c",
       "first_commit_date": "2026-07-09",
-      "first_commit_subject": "feat(session-2737): \u00a7C5 Celery Eager-Mode Integration Verification \u2014 CDR-003 bundle (#3056)",
+      "first_commit_subject": "feat(cost-protection-p2): observation-period foothold \u2014 would_freeze shadow + graph \u00a717 refresh (S2739) (#3060)",
       "sessions_touched": [
         2734,
         2736,
         2737
       ],
-      "commit_count": 6,
+      "commit_count": 8,
       "prs": [
         3023,
         3047,
-        3056
+        3056,
+        3060
       ]
     },
     "docs/research/platform/platform_constitutional_architecture.md": {
