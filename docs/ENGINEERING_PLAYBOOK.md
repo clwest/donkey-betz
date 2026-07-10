@@ -10,12 +10,12 @@ ratifier: chris
 ratified_date: 2026-07-10
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
-  deliverable_id: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
+  deliverable_id: bb01b377-5953-4cb3-adc5-67135367121c
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
 branch_authored: playbook/v0.4.1-per-chain-refresh-cadence-patch
-commit_sha: PLACEHOLDER_TO_BE_FILLED_POST_MERGE
-content_hash: PLACEHOLDER_TO_BE_FILLED_POST_MERGE
+commit_sha: 0805a332
+content_hash: sha256:d0f452e7c4e0549ea070fd87402887d0175f102ce078a3447d2f38e845f6598d
 git_tag: playbook-v0.4.1
 schema_version: 1
 prior_ratification:
