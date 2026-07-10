@@ -1794,8 +1794,13 @@ def initiative_origin_trace_api(request, initiative_id):
                 'approved_by': stage.approved_by,
             })
 
-        # Get deliverable
-        deliverables = Deliverable.objects.filter(initiative=initiative).order_by('-created_at')
+        # Get deliverable.
+        # I-0302 Phase 3 Sub-phase D1: scope via predicate.
+        from core.security import scope_queryset_deliverable
+        deliverables = scope_queryset_deliverable(
+            request.user,
+            Deliverable.objects.filter(initiative=initiative),
+        ).order_by('-created_at')
         if deliverables.exists():
             deliv = deliverables.first()
             trace['deliverable'] = {
@@ -1959,11 +1964,18 @@ def populate_initiatives_api(request):
             # which is correct for "this row was just created."
             initiative.update_activity(reason='auto_populate_create')
 
-            # Link the deliverables
-            updated = Deliverable.objects.filter(
-                initiative__isnull=True,
-                workspace_id=ws_id,
-                category=category,
+            # Link the deliverables.
+            # I-0302 Phase 3 Sub-phase D1: scope via predicate so a caller
+            # cannot re-link deliverables they don't own to their own
+            # initiative (workspace boundary hardening).
+            from core.security import scope_queryset_deliverable
+            updated = scope_queryset_deliverable(
+                request.user,
+                Deliverable.objects.filter(
+                    initiative__isnull=True,
+                    workspace_id=ws_id,
+                    category=category,
+                ),
             ).update(initiative=initiative)
 
             linked_count += updated

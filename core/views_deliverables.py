@@ -14,7 +14,7 @@ API endpoints for the Deliverables Marketplace feature:
 import json
 import logging
 from datetime import timedelta
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from django.views.decorators.http import require_http_methods, require_GET, require_POST
 from core.auth_middleware import token_auth_required
 from django.core.paginator import Paginator
@@ -22,6 +22,7 @@ from django.db.models import Q, Count, Min
 from django.utils import timezone
 from django.shortcuts import get_object_or_404
 
+from core.security import scope_queryset_deliverable, can_read_deliverable
 from core.models_deliverables import (
     Deliverable,
     DeliverableEvent,
@@ -65,33 +66,25 @@ def list_deliverables(request):
         - per_page: Items per page (default: 20, max: 100)
     """
     try:
-        # Base queryset — exclude archived by default (Session 1077)
+        # Base queryset — exclude archived by default (Session 1077).
+        # I-0302 Phase 3 Sub-phase D1 (2026-07-10): Option A staff-tightening —
+        # replace the legacy `is_staff sees ALL deliverables` bypass with the
+        # ratified predicate. Non-staff still sees only their own workspaces;
+        # staff sees their own workspaces + workspace-null rows (Phase 2 §6.1
+        # F3 amendment — staff carve-out is workspace-null only, NOT
+        # cross-user). Anonymous callers receive `.none()` via `_authed()`.
         show_archived = request.GET.get('include_archived', '').lower() == 'true'
-        queryset = Deliverable.objects.all()
+        queryset = scope_queryset_deliverable(
+            request.user,
+            Deliverable.objects.all(),
+        )
         if not show_archived:
             queryset = queryset.exclude(status='archived')
 
-        # Security: scope deliverables by user/workspace
+        # Additional optional filter — restrict to a specific workspace.
         workspace_id = request.GET.get('workspace')
-        is_authed = hasattr(request, 'user') and request.user.is_authenticated
-
         if workspace_id:
-            # Workspace-scoped query — requires auth
-            if not is_authed:
-                return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
-            # Verify user owns the workspace before showing its deliverables
-            from core.models_skin_layer import ProjectWorkspace
-            if not request.user.is_staff:
-                if not ProjectWorkspace.objects.filter(id=workspace_id, user=request.user).exists():
-                    return JsonResponse({'success': False, 'error': 'Workspace not found'}, status=404)
             queryset = queryset.filter(workspace_id=workspace_id)
-        elif is_authed:
-            if request.user.is_staff:
-                # Staff sees ALL deliverables (their own + system + other users')
-                pass  # no filter — staff has full visibility
-            else:
-                # Non-staff only sees their own deliverables
-                queryset = queryset.filter(user=request.user)
 
         # Apply filters
         deliverable_type = request.GET.get('type')
@@ -295,7 +288,14 @@ def unsave_deliverable(request, deliverable_id):
 def clone_deliverable(request, deliverable_id):
     """Create a copy of a deliverable."""
     try:
-        original = get_object_or_404(Deliverable, id=deliverable_id)
+        # I-0302 Phase 3 Sub-phase D1 (2026-07-10): scope the source
+        # fetch — a caller must be authorized to read the deliverable
+        # before they can clone it. Prior code fetched by id alone,
+        # which let a caller clone any deliverable whose id they knew.
+        original = get_object_or_404(
+            scope_queryset_deliverable(request.user, Deliverable.objects.all()),
+            id=deliverable_id,
+        )
 
         # Create clone
         # Session 1091 — explicitly inherit workspace + initiative from the
@@ -337,6 +337,11 @@ def clone_deliverable(request, deliverable_id):
             'deliverable': _serialize_deliverable(clone, include_content=True)
         })
 
+    except Http404:
+        # Let 404 propagate — bare `except Exception` would convert the
+        # scoped-source-fetch's 404 into a 500 (regression discovered by
+        # I-0302 Phase 3 Sub-phase D1 test suite).
+        raise
     except Exception as e:
         logger.error(f"Error cloning deliverable {deliverable_id}: {e}", exc_info=True)
         return JsonResponse({
@@ -546,11 +551,11 @@ def link_deliverable_workspace(request, deliverable_id):
 def get_deliverable_stats(request):
     """Get statistics about deliverables."""
     try:
-        # Base queryset — exclude archived by default (Session 1077)
-        queryset = Deliverable.objects.exclude(status='archived')
-
-        if request.user.is_authenticated and not request.user.is_staff:
-            queryset = queryset.filter(user=request.user)
+        # Base queryset — exclude archived by default (Session 1077).
+        # I-0302 Phase 3 Sub-phase D1 (2026-07-10): Option A staff-tightening.
+        queryset = scope_queryset_deliverable(
+            request.user, Deliverable.objects.exclude(status='archived'),
+        )
 
         # Session 1077: Scope stats to workspace when specified
         workspace_id = request.GET.get('workspace')
@@ -801,9 +806,14 @@ def stage3_dashboard(request):
         VIEW_TYPES = ['synthesis_viewed']
 
         # ── Syntheses queryset ──────────────────────────────────────
-        syntheses = Deliverable.objects.filter(
-            category='Initiatives',
-            tags__contains=['initiative:capitalize-opportunity'],
+        # I-0302 Phase 3 Sub-phase D1 (2026-07-10): scope via predicate
+        # so this dashboard aggregate doesn't leak cross-workspace counts.
+        syntheses = scope_queryset_deliverable(
+            request.user,
+            Deliverable.objects.filter(
+                category='Initiatives',
+                tags__contains=['initiative:capitalize-opportunity'],
+            ),
         ).filter(
             Q(title__istartswith='Synthesis') | Q(deliverable_type__icontains='synthesis')
         )

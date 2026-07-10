@@ -97,7 +97,12 @@ def record_agent_feedback(request):
         deliverable = None
         if data.get('deliverable_id'):
             try:
-                deliverable = Deliverable.objects.get(id=data['deliverable_id'])
+                # I-0302 Phase 3 Sub-phase D1: scope via predicate — caller
+                # can only reference deliverables they can read.
+                from core.security import scope_queryset_deliverable
+                deliverable = scope_queryset_deliverable(
+                    request.user, Deliverable.objects.all()
+                ).get(id=data['deliverable_id'])
             except Deliverable.DoesNotExist:
                 pass  # Not critical
 
@@ -584,7 +589,12 @@ def record_skill_demonstration(request):
         if data.get('deliverable_id'):
             from core.models import Deliverable
             try:
-                deliverable = Deliverable.objects.get(id=data['deliverable_id'])
+                # I-0302 Phase 3 Sub-phase D1: scope via predicate — caller
+                # can only reference deliverables they can read.
+                from core.security import scope_queryset_deliverable
+                deliverable = scope_queryset_deliverable(
+                    request.user, Deliverable.objects.all()
+                ).get(id=data['deliverable_id'])
             except Deliverable.DoesNotExist:
                 pass
 
