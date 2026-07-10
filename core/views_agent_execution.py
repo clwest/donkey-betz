@@ -18,6 +18,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from ai_core.agents.concrete_executor import get_concrete_executor, execute_agent_directly
 
+from core.security.object_authz import scope_queryset_agent_execution
+
 logger = logging.getLogger(__name__)
 
 
@@ -419,7 +421,11 @@ def unified_execution_history(request):
         agent_name = request.GET.get('agent_name')
         status = request.GET.get('status')
 
-        queryset = AgentExecution.objects.select_related('agent').order_by('-created_at')
+        # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+        queryset = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.select_related('agent'),
+        ).order_by('-created_at')
 
         if agent_name:
             queryset = queryset.filter(agent__name__icontains=agent_name)
@@ -473,7 +479,14 @@ def execution_detail(request, execution_id):
         from core.models_unified_system import AgentExecution, AgentMemory
 
         try:
-            execution = AgentExecution.objects.select_related('agent').get(id=execution_id)
+            # I-0302 Phase 3 Sub-phase B2a: query-time scoping via
+            # scope_queryset_agent_execution captures the null-user
+            # superuser carve-out (a plain `.filter(user=…)` would exclude
+            # null-user Celery runs for superusers).
+            execution = scope_queryset_agent_execution(
+                request.user,
+                AgentExecution.objects.select_related('agent'),
+            ).get(id=execution_id)
         except AgentExecution.DoesNotExist:
             return Response({
                 'success': False,
@@ -588,8 +601,10 @@ def monitoring_dashboard(request):
         # ADR-0002 F1 fold equivalent (Postgres JSONField
         # NULL-semantics make the input_data__source='pa' form
         # unsafe for pre-flag-flip rows).
-        executions = AgentExecution.objects.filter(
-            created_at__gte=cutoff
+        # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+        executions = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=cutoff),
         ).exclude(agent__name='PersonalAssistant')
 
         # Overall metrics
@@ -781,8 +796,10 @@ def monitoring_alerts(request):
         # router-agent job target; PA failures come from a different
         # execution model. agent__name form is safer than
         # input_data__source='pa' for pre-flag-flip rows (JSON NULL).
-        agent_stats = AgentExecution.objects.filter(
-            created_at__gte=cutoff
+        # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+        agent_stats = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=cutoff),
         ).exclude(agent__name='PersonalAssistant').values('agent__name').annotate(
             total=Count('id'),
             failed=Count('id', filter=Q(status='failed')),
@@ -811,9 +828,10 @@ def monitoring_alerts(request):
         # Arc I-0100 P4 §4.2 F1 fold: exclude PA meta-agent rows —
         # slow-agent alerts are for router-agent latency, not PA
         # agentic loop latency (different execution model).
-        slow_agents = AgentExecution.objects.filter(
-            created_at__gte=cutoff,
-            status='completed'
+        # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+        slow_agents = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(created_at__gte=cutoff, status='completed'),
         ).exclude(agent__name='PersonalAssistant').values('agent__name').annotate(
             avg_time=Avg('execution_time_ms'),
             count=Count('id')
@@ -881,9 +899,10 @@ def monitoring_agent_detail(request, agent_name):
                 'error': f'Agent {agent_name} not found'
             }, status=404)
 
-        executions = AgentExecution.objects.filter(
-            agent=agent,
-            created_at__gte=cutoff
+        # I-0302 Phase 3 Sub-phase B2a: scoped to user via scope_queryset_agent_execution.
+        executions = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.filter(agent=agent, created_at__gte=cutoff),
         )
 
         total = executions.count()
@@ -1006,7 +1025,13 @@ def cancel_agent_execution(request, execution_id: str):
     # execution_id is a caller bug, not a silent no-op.
     try:
         from core.models_unified_system import AgentExecution
-        exists = AgentExecution.objects.filter(id=execution_id).exists()
+        # I-0302 Phase 3 Sub-phase B2a: EXISTS via scope_queryset_agent_execution
+        # per Rigby SIGN — captures superuser carve-out (a plain
+        # `.filter(user=request.user)` would incorrectly exclude null-user
+        # rows for superusers).
+        exists = scope_queryset_agent_execution(
+            request.user, AgentExecution.objects.all()
+        ).filter(id=execution_id).exists()
     except Exception as exc:
         logger.exception(
             "cancel_agent_execution: AgentExecution lookup failed: %s", exc
