@@ -2,16 +2,51 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2744 CLOSED (1 PR) — COST THRESHOLDS COMMAND SHIPPED
+## READ THIS FIRST — SESSION 2745 CLOSED — ENGINEERING PIVOT DIRECTIVE FOR S2746
 
-**Refreshed 2026-07-10 (SESSION 2744 CLOSED. Arc shipped `python manage.py cost_thresholds` — the ops surface that makes the S2735→S2743 observation-period gate loop CLI-executable. 25/25 tests pass; live cycle verified. Zero-F-BLOCKING body SIGN streak now at 3 arcs (S2742+S2743+S2744). Session 2745 opens fresh — awaiting Chris candidate selection.).**
+**Refreshed 2026-07-10 (SESSION 2745 CLOSED. No PR — pure config-directive session: Chris exercised the S2744-shipped `cost_thresholds` CLI to open the §17 observation period at `month: $500.00 / mode: monitor`. Rigby workspace deliverable dropped for cross-session visibility. Session-close directive from Chris: "for the next session I want to focus on engineering. Over the last few days the questions being answered have not been what needs to be built instead it's been what's built and not connected." Memory rule `feedback_engineering_bias_over_audit.md` codifies the pivot. S2746 opens with engineering bias.).**
 
 Session anchors (read in order):
 
-1. [`docs/handoffs/SESSION_2744_COST_THRESHOLDS_COMMAND.md`](docs/handoffs/SESSION_2744_COST_THRESHOLDS_COMMAND.md) — S2744 arc: command shipment + §4 observation-gate loop as CLI + §6 cross-arc pattern + §7 meta-methodology
-2. [`docs/handoffs/SESSION_2743_COST_PROTECTION_CAT3.md`](docs/handoffs/SESSION_2743_COST_PROTECTION_CAT3.md) — S2743: Cat 3 startup log (visibility hook that revealed $246/mo baseline)
-3. [`docs/handoffs/SESSION_2742_PLAYBOOK_V0_4_1_RATIFIED.md`](docs/handoffs/SESSION_2742_PLAYBOOK_V0_4_1_RATIFIED.md) — S2742: v0.4.1 PATCH (per-chain refresh cadence extension point)
+1. [`docs/handoffs/SESSION_2745_OBSERVATION_OPENED_ENGINEERING_PIVOT.md`](docs/handoffs/SESSION_2745_OBSERVATION_OPENED_ENGINEERING_PIVOT.md) — S2745 arc: threshold opened + engineering-pivot directive + memory rule + P0 wired
+2. [`docs/handoffs/SESSION_2744_COST_THRESHOLDS_COMMAND.md`](docs/handoffs/SESSION_2744_COST_THRESHOLDS_COMMAND.md) — S2744: cost_thresholds CLI shipped (the substrate S2745 exercised)
+3. [`docs/handoffs/SESSION_2743_COST_PROTECTION_CAT3.md`](docs/handoffs/SESSION_2743_COST_PROTECTION_CAT3.md) — S2743: Cat 3 startup log ($246/mo baseline visibility hook)
 4. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.4.1 body (196 rules)
+
+---
+
+## P0 — COST THRESHOLD OBSERVATION CHECK-IN (opened 2026-07-10 07:35 America/Denver)
+
+**Do this FIRST before candidate selection.** Chris opened the §17 threshold observation period at S2744 close by exercising the newly-shipped CLI. Requested tomorrow-morning check-in.
+
+**State at open:**
+- `month: $500.00` (~2× the $246/mo baseline from S2743)
+- `enforce_mode: monitor` (no enforcement — passive accumulation only)
+- Set locally on Chris's dev DB via `python manage.py cost_thresholds --set month 500`
+
+**Report to Chris at session open:**
+
+1. **Current threshold config** — run `python manage.py cost_thresholds`; confirm `month: $500.00` still set and mode still `monitor`. Flag any drift.
+2. **Accumulation** — query `LLMCallLog` (or the equivalent cost-accumulation surface used by the beat task) for the ~24h since 2026-07-10 07:35 MDT. Report: total accumulated $, % of $500 ceiling, top 3 cost drivers by model/service.
+3. **Anomalies** — any single-hour spike >$20, any new provider showing up, any `[COST_MONITOR]` log lines showing near-threshold behavior. If clean, say so explicitly.
+4. **Advance recommendation** — based on 24h data, is one day of clean observation enough to advance to `--set-mode freeze` (shadow mode), or does Chris want to observe longer? Rigby SIGN on the recommendation before proposing to Chris.
+
+**Do NOT flip to freeze mode without explicit Chris D-verdict.** Per S2735 P1 gate discipline.
+
+Cross-visibility: Rigby workspace deliverable `06f04b41-91e1-4a00-8b8e-0905502e7d83` ("Rigby: Cost threshold observation period — opened 2026-07-10 (S2744)"). Ask Rigby about the observation and she has full context.
+
+---
+
+## ENGINEERING PIVOT — Chris's directive at S2745 close
+
+**Verbatim:** "for the next session I want to focus on engineering. Over the last few days the questions being answered have not been what needs to be built instead it's been what's built and not connected."
+
+**Signal decomposition:**
+- The S2739→S2744 arc streak (6 sessions) was all cost-protection substrate iteration. Real work, but repetitive.
+- The S2745 candidate queue was dominated by Class 2 (constitutional-ADR unblocking = "connect what's built") + Class 3 (meta-methodology = "codify what we observed"). Almost nothing was net-new engineering.
+- Chris wants the pendulum swung back toward building.
+
+**Codified rule:** [`feedback_engineering_bias_over_audit.md`](../.claude/projects/-Users-donkeyking-development-unified-donkey-betz/memory/feedback_engineering_bias_over_audit.md). At S2746+ session open, list net-new engineering candidates FIRST. Gate connect-what-exists / meta-methodology behind engineering options. Actively propose 1-3 net-new candidates every session rather than picking from the connect-queue by default.
 
 ---
 
@@ -20,117 +55,102 @@ Session anchors (read in order):
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | `20747b6e` (PR #3070 merged; cost_thresholds command shipped) |
+| HEAD | `20747b6e` (PR #3070 merged; cost_thresholds command shipped — unchanged from S2744) |
 | Playbook version | **v0.4.1** (unchanged since S2742) |
 | Playbook rule count | **196** |
 | Constitutional Debt | **Zero outstanding CDs from v0.1.0 forward** |
-| Session pin | `pa-571748d9b6b940ea` — retire at S2745 open, mint fresh |
-| Wrapper default pin | `tools/pa_local.sh:532` — matches S2744 arc pin (to be rotated at S2745 open) |
+| Session pin | `pa-73f0e2e210574d6d` (minted S2745 close, active in wrapper) |
+| Prior pin | `pa-571748d9b6b940ea` — retired 2026-07-10 (5 rows updated) |
+| Wrapper default pin | `tools/pa_local.sh:532` — matches new S2746 pin |
+| Live infra state | `SystemConfiguration` row: `cost_threshold_month = 500`, mode = `monitor` (accumulating since 2026-07-10 07:35 MDT) |
 
 ---
 
-## What S2744 shipped
+## What S2745 was (not shipped)
 
-**PR #3070** (squash-merged as `20747b6e`): `python manage.py cost_thresholds` management command.
+**No PR. No code changes.** S2745 was pure config-directive + session-close bookkeeping:
 
-**Files:** 3 files, +396/-1 LOC
-- `core/management/commands/cost_thresholds.py` (+189 NEW) — Django BaseCommand with 5 mutually-exclusive handlers
-- `core/tests/test_cost_thresholds_command.py` (+207 NEW) — 25 tests across 7 classes
-- `tools/pa_local.sh` — arc pin rotation
+- **Live config change** — `python manage.py cost_thresholds --set month 500` executed on Chris's local DB; verified at both CLI and ORM layers
+- **P0 wired** — top-of-file callout in this file + step 4 upgrade
+- **Rigby deliverable** — `06f04b41-91e1-4a00-8b8e-0905502e7d83` in Donkey Betz workspace
+- **Memory codified** — `feedback_engineering_bias_over_audit.md` captures the engineering-pivot directive
+- **Docs cascade** — will run at session-close commit per S1802 cascade-PR rule
+- **Pin rotated** — S2744 pin retired, S2746 pin `pa-73f0e2e210574d6d` minted + wrapper updated
 
-**Usage:**
-```bash
-python manage.py cost_thresholds                       # show current state
-python manage.py cost_thresholds --set month 500       # set threshold
-python manage.py cost_thresholds --unset month         # remove threshold
-python manage.py cost_thresholds --set-mode freeze     # set enforce mode
-python manage.py cost_thresholds --unset-mode          # revert to default
-```
-
-**Rigby SIGN provenance (arc pin `pa-571748d9b6b940ea`):**
-- Cat A: 0.88 confidence → PICK (8 refinements folded)
-- Cat B: **0.93 confidence** → APPROVE zero F-BLOCKING (**highest Cat B confidence in the arc streak**)
-
-**Live cycle verified:** show → set month 500 → show ($500.00) → unset month (deleted 1 row).
+Full arc detail: `docs/handoffs/SESSION_2745_OBSERVATION_OPENED_ENGINEERING_PIVOT.md`.
 
 ---
 
-## What this unlocks — S2735→S2744 observation gate loop as CLI
+## Candidate queue for S2746 — engineering-bias framing
 
-Chris now has full CLI control over the S2735 P1 enforcement-gate discipline. Every step has a durable CLI verb:
+**Per new memory rule, net-new engineering leads. Connect-what-exists is demoted. Ask Chris for direction rather than pattern-matching the connect-queue.**
 
-| Step | CLI verb |
-|---|---|
-| Start observation | `python manage.py cost_thresholds --set month 500` |
-| Wait for data | (passive — 15-min beat cadence + real cost accumulation; baseline ~$246/mo per S2743) |
-| Arm shadow mode | `python manage.py cost_thresholds --set-mode freeze` |
-| Observe counterfactuals | `grep would_freeze=True celery.log` + inspect HAI payloads |
-| D-verdict on Cat 1 flip | (session dispatch) |
+### CLASS 1 — NET-NEW ENGINEERING (propose 1-3 every session per new memory rule)
 
-`[COST_MONITOR]` prefix in command output grep-matches the S2743 startup log line — ops can filter both surfaces with a single pattern.
+These are seed suggestions — Chris knows better than me what he wants to build next. Present these as directional prompts, then let him name the actual candidate.
 
----
+1. **New Employee OS employee (4th)** — there are 3 (Documentation Manager, Platform Auditor, Chief of Staff). Meaningful expansion candidates: Revenue Ops, Content Strategist, Cost/Ops Sentinel (natural extension of the §17 cost-protection work), Betting Ops. Would ship: new `AIEmployee` + `JobContract` entries, new MissionRunner steps, admin visibility, first mission verdict. Vertical-slice friendly.
+2. **Betting dashboard new feature** — 9-tab dashboard is user-visible engineering surface. Could be a new tab, new visualization, new prediction pipeline. Needs Chris to name the gap.
+3. **New spider on Chris-named data gap** — 80 spiders live. What data does Chris need that isn't covered? Ships: spider class + fixture + test + registry entry + downstream signal wiring. Small vertical slice.
+4. **Cost Ops CLI expansion** — the S2744 `cost_thresholds` pattern was clean; could extend to other config surfaces (rate limits, timeouts, per-provider budgets). Genuinely new capability but same substrate — flag as substrate-adjacent, may not fully satisfy the pivot.
+5. **New UI page on Command Center** — 61 routes live; if there's a workflow Chris wants that requires a new page (not a new tab in an existing page), that's real engineering.
+6. **Discord bot new command** — 96 commands live. A single Cog + slash-command is a bounded engineering slice.
 
-## Notable arc characteristics
+**Recommended session-open pattern:** propose 2-3 from the above (plus any live signal you catch from Chris's recent work) as directional prompts. Chris picks or names his own.
 
-**Zero-F-BLOCKING body SIGN streak now at 3 arcs** (S2742 + S2743 + S2744). All small-to-mid scope. New Cat B high-water mark at 0.93 (S2744). Two-trigger candidate for "body SIGN pass-on-first-attempt as small-to-mid-scope signal" — awaits large-scope arc to establish full scope-independence.
+### CLASS 2 — POLISH with user-visible outcome (small S-M engineering)
 
-**Cross-arc compounding demonstrated.** S2743 shipped `read_thresholds_snapshot()` public helper because Rigby recommended avoiding leading-underscore imports (Nit 1). S2744 immediately reused it. Small prior-arc architectural choices unlocking clean implementations in later sessions is a codification candidate ("public-helper-first cross-arc unlocking").
+Small but real new capability. Different from "connect-what-exists" residuals.
 
-**Visibility hook + ops verb pair emerged organically.** S2743 (Cat 3 startup log) + S2744 (cost_thresholds command) is the first instance where a visibility hook and an ops verb ship in consecutive sessions on the same substrate. Single-instance codification candidate; awaits second organic pair.
+7. **§14 Platform Health autonomic Governance reaction** — new signal-to-freeze mapping; needs Chris ADR on trigger-to-freeze semantics (this one straddles engineering + ADR — may still count as "connect" and be deferred)
 
----
+### CLASS 3 (DEMOTED) — Connect-what-exists / Constitutional-ADR unblocking
 
-## Candidate queue for S2745
+**Per pivot: gate these behind Class 1 unless Chris explicitly picks them.** These are all "connect what's built" work:
 
-Continuing the three-class framework from S2741. PLAYBOOK-6.10.6 verify-before-build applies to every candidate.
+- **§4 Content Published** — 4 Chris ADRs D65a-D65e blocking
+- **§7 Revenue Opportunity** — 5 Chris ADRs T1-T8 blocking
+- **§8 HAI Escalation residuals** — small-scope after all 4 bridge methods shipped
+- **§9 Governance Enforcement** — Chris ADR blocking
+- **§10 Authority Violation** — STAGE 3 Symbol Mapping blocking
+- **§11 Memory Creation** — Chris D-verdict D80 blocking
+- **§17 Cat 1 enforcement flip** — waits for observation-period data + Chris approval per S2735 P1
+- **§18 Auth full scope** — Chris D-verdict on 4-axis §14.14 blocking
+- **§19 Cat C2 session-lifecycle Auth cascade** — Chris D-verdict per §14.14
+- **§19 Conversation Lifecycle envelope-shape telemetry** — envelope ABSENT at HEAD per §29
 
-### Class 1 — POLISH (Tier B residuals; small S-M PRs)
+### CLASS 4 (DEMOTED) — Meta-methodology / Codification candidates
 
-1. **§17 threshold configuration exercise** — with the S2744 CLI now shipped, Chris can `python manage.py cost_thresholds --set month <N>` to begin the observation period. Not code — a config directive Chris runs.
-2. **§8 HAI Escalation residuals** — small-scope after all 4 named bridge methods shipped.
-3. **§14 Platform Health autonomic Governance reaction** — Tier B; requires Chris ADR on trigger-to-freeze mapping.
-4. **§19 Conversation Lifecycle envelope-shape telemetry** — envelope ABSENT at HEAD per §29.
+**Per pivot: propose only if Chris explicitly asks for methodology work.**
 
-### Class 2 — CONSTITUTIONAL-ADR UNBLOCKING (Tier D)
-
-5. **§4 Content Published** — 4 Chris ADRs D65a-D65e blocking
-6. **§7 Revenue Opportunity** — 5 Chris ADRs T1-T8 blocking
-7. **§9 Governance Enforcement** — Chris ADR blocking
-8. **§10 Authority Violation** — STAGE 3 Symbol Mapping blocking
-9. **§11 Memory Creation** — Chris D-verdict D80 blocking
-10. **§17 Cat 1 enforcement flip** — now feasible: S2744 CLI enables threshold setup; needs observation-period data accumulation + explicit Chris approval per S2735 P1 gate discipline
-11. **§18 Auth full scope** — Chris D-verdict on 4-axis §14.14 blocking
-12. **§19 Cat C2 session-lifecycle Auth cascade** — Chris D-verdict per §14.14
-
-### Class 3 — META-METHODOLOGY
-
-13. **CDR-002 receiver-driven fanout canonical pattern** — Rigby recommended at S2741 §29.5
-14. **CX-P11 CANDIDATE disambiguation** — needs third organic instance
-15. **§29-style verdict template codification** — post two-trigger threshold
-16. **PATCH-scope record template** — v0.4.1 was first instance; awaits second PATCH
-17. **Capability graph refresh cadence formalization** — v0.4.1 recorded extension point; MINOR MAY formalize
-18. **"Body SIGN pass-on-first-attempt as small-to-mid-scope signal"** — S2742 + S2743 + S2744 all small-to-mid. Awaits large-scope arc.
-19. **"Visibility hook + ops verb pair" arc pattern** — S2743 + S2744 first instance. Awaits second organic pair.
-20. **"Public-helper-first cross-arc unlocking"** — S2743 → S2744 first instance. Awaits second.
-21. **"Rigby-authored refinement text folded verbatim"** — S2742 + S2744 two instances. Awaits third for two-trigger threshold.
+- CDR-002 receiver-driven fanout canonical pattern
+- CX-P11 CANDIDATE disambiguation (needs third organic instance)
+- §29-style verdict template codification
+- PATCH-scope record template (v0.4.1 first instance; awaits second)
+- Capability graph refresh cadence formalization
+- "Body SIGN pass-on-first-attempt as small-to-mid-scope signal" (3 instances so far)
+- "Visibility hook + ops verb pair" arc pattern (first instance S2743+S2744)
+- "Public-helper-first cross-arc unlocking" (first instance S2743→S2744)
+- "Rigby-authored refinement text folded verbatim" (2 instances; awaits third)
+- **NEW candidate:** "Substrate-saturation → engineering-pivot signal" — S2745 close is first instance (6 consecutive §17 arcs → Chris pivot). Awaits second instance on different substrate.
+- **NEW candidate:** "Config-directive-only session as post-tool-arc pattern" — S2744 shipped CLI, S2745 exercised it. Single-instance.
+- **NEW candidate:** "deliverable_tool.create landing as `ready` vs S1241 `completed` rule" — S2745 create returned `ready` directly. Single data point. Awaits second before updating S1241 memory rule.
 
 ### External signal-driven
 
-22. **Production observation** — `would_freeze` shadow live from S2739; `[COST_MONITOR] startup:` line live from S2743; CLI-executable threshold + mode setup live from S2744. Watch for Chris to exercise the observation gate.
+- **Production observation** — `would_freeze` shadow live from S2739; `[COST_MONITOR] startup:` line live from S2743; CLI live from S2744; observation period live from S2745. The check-in P0 above is the current forward motion here.
 
 ---
 
-## Recommended session-open protocol (for S2745)
+## Recommended session-open protocol (S2746)
 
 1. `context-kit orient`
-2. Read `docs/handoffs/SESSION_2744_COST_THRESHOLDS_COMMAND.md` in full
+2. Read `docs/handoffs/SESSION_2745_OBSERVATION_OPENED_ENGINEERING_PIVOT.md` in full
 3. Verify runtime state: `git log --oneline -3`, `celery inspect ping`
-4. **Optional check:** `python manage.py cost_thresholds` — shows current threshold config; Chris may have exercised the CLI since S2744 close
-5. Retire `pa-571748d9b6b940ea` (S2744 arc pin) + mint fresh S2745 open pin
-6. Rotate `tools/pa_local.sh` line 532 to new pin
-7. **Await Chris candidate selection**
-8. **On candidate acceptance:** apply PLAYBOOK-6.10.6 verify-before-build FIRST (30s), THEN Cat A
+4. **P0 check:** run the observation check-in per top-of-file callout; report accumulation, anomalies, advance recommendation to Chris
+5. Retire `pa-73f0e2e210574d6d` (S2746 open pin) + mint fresh S2746-in-flight pin when candidate is selected (default: reuse the open pin as the arc pin unless SIGN isolation is needed)
+6. **Propose 2-3 Class 1 net-new engineering candidates** per new memory rule; ask Chris to pick or name his own. Do NOT default to Class 3 audit/connect items.
+7. **On candidate acceptance:** apply PLAYBOOK-6.10.6 verify-before-build FIRST (30s), THEN Cat A
 
 ---
 
@@ -148,16 +168,17 @@ Ordered by frequency of use:
 
 ---
 
-## Session close summary (Session 2744 — for archive)
+## Session close summary (Session 2745 — for archive)
 
-- **Arc shipped:** `python manage.py cost_thresholds` — ops surface for §17 threshold + mode management; closes the S2735→S2743 observation-period gate loop as CLI-executable
-- **Governance advances:** every step of the S2735 P1 gate discipline now has a durable CLI verb; `[COST_MONITOR]` prefix in command output grep-matches S2743 startup log line
-- **Notable event:** Cat B SIGN 0.93 confidence — new high in the arc streak (S2739→S2744). Third consecutive zero-F-BLOCKING body SIGN. Cross-arc compounding demonstrated: S2743 public helper `read_thresholds_snapshot()` reused directly by S2744 command implementation.
-- **Meta-observation:** first application of PLAYBOOK-6.10.6 verify-before-build to management-command substrate class in the arc streak (S2740: Playbook; S2741: capability graph; S2742: Playbook; S2743: code substrate; S2744: management-command substrate).
-- **Rigby-Claude collaboration:** 2 substantive SIGN dispatches (Cat A + Cat B); Rigby-authored refinements folded verbatim (second instance after S2742).
+- **Arc shipped:** nothing (no PR, no code); pure config-directive session
+- **Live state change:** `SystemConfiguration cost_threshold_month = 500` on Chris's local DB; observation period opened
+- **Cross-session visibility:** Rigby deliverable `06f04b41-91e1-4a00-8b8e-0905502e7d83` in Donkey Betz workspace
+- **Memory codified:** engineering-pivot rule (`feedback_engineering_bias_over_audit.md`)
+- **Docs edits:** this file (P0 callout + full S2746 refresh) + S2745 handoff (new) + tools/pa_local.sh (pin rotation)
+- **Pin lifecycle:** S2744 arc pin `pa-571748d9b6b940ea` retired (5 rows updated); S2746 pin `pa-73f0e2e210574d6d` minted + wrapper rotated
 - **Constitutional debt at close:** Zero (unchanged)
-- **PA worker state:** unchanged from S2743 recycle; no celery-recycle needed this session (management command not in beat scheduler)
+- **Notable event:** first-observed substrate-saturation event (6 consecutive §17 arcs → Chris engineering pivot); first-observed config-directive-only session as post-tool-arc pattern (both single-instance codification candidates)
 
 ---
 
-**Awaiting Chris candidate selection for S2745.** No Category A begins until candidate is named. PLAYBOOK-6.10.6 verify-before-build applies FIRST to every candidate.
+**Session 2746 opens fresh. Bias engineering. Ask Chris what to build.**
