@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-10T17:37:13+00:00",
+    "generated": "2026-07-10T18:51:24+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "8dbc68adda8c",
-    "doc_count": 2511,
-    "commit_count": 7745,
+    "git_head": "c8cfe6d6411d",
+    "doc_count": 2513,
+    "commit_count": 7767,
     "confidence_breakdown": {
       "HIGH": 1612,
       "MEDIUM": 394,
       "LOW": 5,
-      "UNKNOWN": 500
+      "UNKNOWN": 502
     },
     "excludes": [
       "docs/archive/",
@@ -2583,7 +2583,7 @@
         2744,
         2745
       ],
-      "commit_count": 1220,
+      "commit_count": 1222,
       "prs": [
         10,
         11,
@@ -3138,7 +3138,8 @@
         3072,
         3075,
         3077,
-        3080
+        3080,
+        3084
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7479,7 +7480,7 @@
         2744,
         2745
       ],
-      "commit_count": 176,
+      "commit_count": 178,
       "prs": [
         2213,
         2219,
@@ -7641,7 +7642,8 @@
         3072,
         3075,
         3077,
-        3080
+        3080,
+        3084
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -36115,6 +36117,19 @@
         2980
       ]
     },
+    "docs/research/implementation/RATIFICATION_2026-07-10_i0301_arc_close.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "c8cfe6d6",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2742): I-0301 Tenant Boundary Lockdown arc RATIFIED \u2014 arc CLOSED; RUR-C1 parent remains OPEN pending I-0302 + I-0303 (#3094)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3094
+      ]
+    },
     "docs/research/implementation/RATIFICATION_2026-07-10_i0301_safety_contract.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -36296,30 +36311,50 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "3e994c88",
+      "first_commit_sha": "c8cfe6d6",
       "first_commit_date": "2026-07-10",
-      "first_commit_subject": "docs(s2742): Real User Readiness parent campaign ratification + Wave 1 authorization (#3076)",
+      "first_commit_subject": "docs(s2742): I-0301 Tenant Boundary Lockdown arc RATIFIED \u2014 arc CLOSED; RUR-C1 parent remains OPEN pending I-0302 + I-0303 (#3094)",
+      "sessions_touched": [],
+      "commit_count": 6,
+      "prs": [
+        3074,
+        3076,
+        3094
+      ]
+    },
+    "docs/research/implementation/tenant_boundary_lockdown/I-030199_tenant_boundary_lockdown_implementation_close.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "c8cfe6d6",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2742): I-0301 Tenant Boundary Lockdown arc RATIFIED \u2014 arc CLOSED; RUR-C1 parent remains OPEN pending I-0302 + I-0303 (#3094)",
       "sessions_touched": [],
       "commit_count": 4,
       "prs": [
-        3074,
-        3076
+        3093,
+        3094
       ]
     },
     "docs/research/implementation/tenant_boundary_lockdown/I-0301_scoping.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "8dbc68ad",
+      "first_commit_sha": "c8cfe6d6",
       "first_commit_date": "2026-07-10",
-      "first_commit_subject": "docs(s2742): I-0301 Failure-Data Safety Contract RATIFIED; Phase 2 CLOSED; Phase 3 + RUR-C2 + I-0302 + I-0303 UNBLOCKED (#3083)",
+      "first_commit_subject": "docs(s2742): I-0301 Tenant Boundary Lockdown arc RATIFIED \u2014 arc CLOSED; RUR-C1 parent remains OPEN pending I-0302 + I-0303 (#3094)",
       "sessions_touched": [],
-      "commit_count": 8,
+      "commit_count": 18,
       "prs": [
         3078,
         3079,
         3081,
-        3083
+        3083,
+        3085,
+        3086,
+        3091,
+        3092,
+        3094
       ]
     },
     "docs/research/implementation/tenant_boundary_lockdown/failure_data_safety_contract.md": {
