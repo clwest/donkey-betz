@@ -8,11 +8,17 @@ Provides dashboard endpoints for monitoring the risk-aware RAG system:
 - Risk boost impact analysis
 
 Built on Session 949's risk-aware RAG infrastructure.
+
+I-0302 Phase 3 Sub-phase D2 (2026-07-10) — `rag_run_classification` is an
+ops surface (mutating batch classification job); superuser-gated per B2b
+pattern to prevent cross-user document classification runs.
 """
 
 import json
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+
+from core.security import superuser_required
 
 from .api_helpers import api_success, api_error
 
@@ -216,6 +222,7 @@ def rag_retrieval_channels(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@superuser_required
 def rag_run_classification(request):
     """
     POST /api/rag/observability/classify/
