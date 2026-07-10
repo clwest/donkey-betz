@@ -201,7 +201,11 @@ def get_learning_stats(request):
             # Session 346: Add collaboration and learning event counts
             stats['collaborations'] = Collaboration.objects.count()
             stats['collaboration_sessions'] = CollaborationSession.objects.count()
-            stats['learning_events'] = AgentExecution.objects.count()  # Agent executions as learning events
+            # I-0302 Phase 3 Sub-phase B2c: scoped via predicate (own + null-user for superuser).
+            from core.security import scope_queryset_agent_execution as _scope_ae
+            stats['learning_events'] = _scope_ae(
+                request.user, AgentExecution.objects.all()
+            ).count()  # Agent executions as learning events
 
         except Exception as db_err:
             logger.debug(f"Could not fetch Session 309/346 stats: {db_err}")
