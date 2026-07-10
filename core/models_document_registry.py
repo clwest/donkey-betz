@@ -146,13 +146,20 @@ class Initiative(models.Model):
     )
 
     # Session 996: Initiative ownership — who is accountable for this initiative?
+    # I-0302 Phase 3 Sub-phase A1 (2026-07-10): flipped to NOT NULL + PROTECT.
+    # Migration 0381 backfills all pre-flip null-owner rows to the canonical
+    # primary user; 0382 applies the schema change. PROTECT preserves rows on
+    # user-deletion attempts (chose over CASCADE to prevent data loss).
     owner = models.ForeignKey(
         'core.UnifiedUser',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        on_delete=models.PROTECT,
         related_name='owned_initiatives',
-        help_text='Session 996: Human owner responsible for this initiative'
+        help_text=(
+            'Session 996: Human owner responsible for this initiative. '
+            'NOT NULL enforced via I-0302 Phase 3 Sub-phase A1 (2026-07-10). '
+            'PROTECT preserves initiatives on user deletion attempts (chose '
+            'over CASCADE to prevent data loss).'
+        )
     )
     owner_agent = models.CharField(
         max_length=100,
