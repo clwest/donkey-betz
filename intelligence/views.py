@@ -9,7 +9,7 @@ from datetime import datetime
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 from django.conf import settings
 
 from .realtime_engine import intelligence_engine
@@ -19,6 +19,25 @@ from .agent_instruction_parser import AgentInstructionParser
 from .agent_execution_pipeline import execute_plan_async
 
 logger = logging.getLogger(__name__)
+
+
+def _iter_string_values(obj):
+    """Yield every string leaf value under a nested dict/list JSON tree.
+
+    Used by ownership checks (I-0301 Phase 3 Stage 2b) that need to
+    compare a request-supplied filename basename against every stored
+    file path in a plan's plan_data JSON.
+    """
+    if isinstance(obj, str):
+        yield obj
+        return
+    if isinstance(obj, dict):
+        for value in obj.values():
+            yield from _iter_string_values(value)
+        return
+    if isinstance(obj, (list, tuple)):
+        for item in obj:
+            yield from _iter_string_values(item)
 
 
 class SkynetStatusView(APIView):
@@ -175,98 +194,47 @@ class IncomeBuilderAnalysisView(APIView):
 
 
 class ActionPlanPersistenceView(APIView):
-    """📂 Save and retrieve action plans for persistence across sessions"""
-    permission_classes = [AllowAny]
+    """📂 Save and retrieve action plans for persistence across sessions.
+
+    I-0301 Phase 3 Stage 2b — Bucket B remediation (Rigby SIGN Q1: retire
+    filesystem read path within I-0301 scope). The prior filesystem-glob
+    GET was the cross-tenant leak: every anonymous request saw every user's
+    action plans by walking ``income_builder_outputs/``. GET is now backed
+    by the ``ActionPlan`` DB model, filtered by ``user=request.user`` —
+    minimal safe queryset scoping per S2742 scoping SIGN §7.1 allowance.
+    """
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Get all action plans for the current user/session"""
+        """Get action plans owned by the requesting user (DB-scoped)."""
         try:
-            import os
-            import glob
-            from datetime import datetime, timedelta
-            from django.utils import timezone
+            plans = ActionPlan.objects.filter(
+                user=request.user
+            ).order_by('-created_at')[:10]
 
-            # Load plans from filesystem (since database approach was disabled)
-            plans_dir = os.path.join(settings.BASE_DIR, 'income_builder_outputs')
-
-            # Find all Complete_Plan.md files (main plans)
-            complete_plans = glob.glob(os.path.join(plans_dir, '*_Complete_Plan.md'))
-
-            # Filter to recent plans (last 7 days)
-            cutoff = timezone.now() - timedelta(days=7)
-            recent_plans = []
-
-            for plan_file in complete_plans:
-                try:
-                    # Get file modification time
-                    mod_time = datetime.fromtimestamp(os.path.getmtime(plan_file))
-                    mod_time = timezone.make_aware(mod_time)
-
-                    if mod_time >= cutoff:
-                        # Extract opportunity title from filename
-                        filename = os.path.basename(plan_file)
-                        opportunity_title = filename.replace('_Complete_Plan.md', '').replace('_', ' ')
-
-                        # Check for associated QuickStart file
-                        quickstart_file = plan_file.replace('_Complete_Plan.md', '_QuickStart.md')
-                        has_quickstart = os.path.exists(quickstart_file)
-
-                        # Count associated step files
-                        step_pattern = plan_file.replace('_Complete_Plan.md', '_step_*.md')
-                        step_files = glob.glob(step_pattern)
-
-                        recent_plans.append({
-                            'file_path': plan_file,
-                            'opportunity_title': opportunity_title,
-                            'created_at': mod_time,
-                            'has_quickstart': has_quickstart,
-                            'step_count': len(step_files),
-                            'quickstart_path': quickstart_file if has_quickstart else None
-                        })
-                except Exception as e:
-                    continue
-
-            # Sort by creation time (newest first)
-            recent_plans.sort(key=lambda x: x['created_at'], reverse=True)
-
-            # Serialize plans for frontend
             serialized_plans = []
-            for i, plan in enumerate(recent_plans[:10]):  # Limit to 10 most recent
-                # Create a unique ID based on the filename and timestamp
-                plan_id = f"file_{hash(plan['file_path'])}_{int(plan['created_at'].timestamp())}"
-
+            for plan in plans:
                 serialized_plans.append({
-                    'id': plan_id,
-                    'backend_id': plan_id,
-                    'opportunity_id': plan['opportunity_title'].lower().replace(' ', '_'),
-                    'opportunity_title': plan['opportunity_title'],
-                    'opportunity_data': {
-                        'title': plan['opportunity_title'],
-                        'description': f"AI-generated action plan for {plan['opportunity_title']}",
-                        'file_path': plan['file_path'],
-                        'step_count': plan['step_count']
-                    },
-                    'plan_data': {
-                        'file_path': plan['file_path'],
-                        'quickstart_path': plan.get('quickstart_path'),
-                        'has_quickstart': plan['has_quickstart']
-                    },
-                    'steps': [f"Step {i+1}" for i in range(plan['step_count'])],
-                    'resources': [],
-                    'timeline': '4 weeks',
-                    'expected_outcome': f"Complete {plan['opportunity_title']} implementation",
-                    'status': 'completed',
-                    'progress': 100,
-                    'current_step': plan['step_count'],
-                    'completed_steps': list(range(1, plan['step_count'] + 1)),
-                    'execution_logs': [],
-                    'results': {},
-                    'created_at': plan['created_at'].isoformat(),
-                    'started_at': plan['created_at'].isoformat(),
-                    'completed_at': plan['created_at'].isoformat(),
-                    'celery_task_id': None,
-                    'file_path': f"/static/{os.path.basename(plan['file_path'])}",
-                    'quickstart_file_path': f"/static/{os.path.basename(plan['quickstart_path'])}" if plan.get('quickstart_path') else None
+                    'id': str(plan.id),
+                    'backend_id': str(plan.id),
+                    'opportunity_id': plan.opportunity_id,
+                    'opportunity_title': plan.opportunity_title,
+                    'opportunity_data': plan.opportunity_data or {},
+                    'plan_data': plan.plan_data or {},
+                    'steps': plan.steps or [],
+                    'resources': plan.resources or [],
+                    'timeline': plan.timeline,
+                    'expected_outcome': plan.expected_outcome,
+                    'status': plan.status,
+                    'progress': plan.progress,
+                    'current_step': plan.current_step,
+                    'completed_steps': plan.completed_steps or [],
+                    'execution_logs': (plan.execution_logs or [])[-10:],
+                    'results': plan.results or {},
+                    'created_at': plan.created_at.isoformat(),
+                    'started_at': plan.started_at.isoformat() if plan.started_at else None,
+                    'completed_at': plan.completed_at.isoformat() if plan.completed_at else None,
+                    'celery_task_id': plan.celery_task_id or None,
                 })
 
             return Response({
@@ -336,15 +304,17 @@ class ActionPlanPersistenceView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def _create_new_plan(self, request, plan_data):
-        """Helper to create a new action plan"""
-        try:
-            # Handle user
-            user = request.user if request.user.is_authenticated else None
+        """Helper to create a new action plan.
 
-            # For anonymous users, prefix the opportunity_id with session
+        Rigby S2742 Stage 2b SIGN Q2 must-add: no anonymous ActionPlan
+        creation paths remain. IsAuthenticated at the view level guarantees
+        request.user.is_authenticated is True here — the previous
+        "user = ... else None" fallback is dead.
+        """
+        try:
+            # IsAuthenticated at view level guarantees this is a real user.
+            user = request.user
             opportunity_id = plan_data.get('opportunity_id')
-            if not user and request.session.session_key:
-                opportunity_id = f"anon_{request.session.session_key}_{opportunity_id}"
 
             plan = ActionPlan.objects.create(
                 user=user,
@@ -416,11 +386,19 @@ class IncomeActionPlanView(APIView):
 
 
 class ExecuteActionPlanView(APIView):
-    """🚀 Save and execute an action plan"""
-    permission_classes = [AllowAny]  # Allow testing without authentication
+    """🚀 Save and execute an action plan.
+
+    I-0301 Phase 3 Stage 2b — Bucket B remediation. Prior AllowAny + the
+    "user = ... else None" write path allowed anonymous plan creation
+    with no ownership; the GET path had an explicit anonymous branch
+    returning any recent user__isnull=True plan across all sessions
+    (cross-tenant view). Both branches are removed; IsAuthenticated is
+    the sole entry.
+    """
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        """Save action plan to database and start execution"""
+        """Save action plan to database and start execution."""
         try:
             plan_data = request.data.get('plan', {})
             opportunity = request.data.get('opportunity', {})
@@ -459,8 +437,9 @@ class ExecuteActionPlanView(APIView):
                 ]
 
             # Create ActionPlan in database
+            # IsAuthenticated guarantees request.user is a real user.
             action_plan = ActionPlan.objects.create(
-                user=request.user if request.user.is_authenticated else None,
+                user=request.user,
                 opportunity_id=opportunity.get('id', ''),
                 opportunity_title=opportunity.get('title', 'Unknown Opportunity'),
                 opportunity_data=opportunity,
@@ -490,20 +469,16 @@ class ExecuteActionPlanView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def get(self, request):
-        """Get status of action plans"""
+        """Get status of action plans owned by the requesting user.
+
+        Prior anonymous branch returning `user__isnull=True` recent 24h
+        plans (cross-tenant view) removed per Rigby S2742 Stage 2b SIGN.
+        """
         try:
-            # Get user's action plans
-            if request.user.is_authenticated:
-                plans = ActionPlan.objects.filter(user=request.user).order_by('-created_at')
-            else:
-                # For anonymous users, get recent plans (last 24 hours)
-                from django.utils import timezone
-                from datetime import timedelta
-                cutoff = timezone.now() - timedelta(hours=24)
-                plans = ActionPlan.objects.filter(
-                    user__isnull=True,
-                    created_at__gte=cutoff
-                ).order_by('-created_at')
+            # IsAuthenticated at view level; scope to user's plans only.
+            plans = ActionPlan.objects.filter(
+                user=request.user
+            ).order_by('-created_at')
 
             plans_data = []
             for plan in plans[:20]:  # Limit to 20 most recent
@@ -538,11 +513,47 @@ class ExecuteActionPlanView(APIView):
 
 
 class ViewGeneratedFileView(APIView):
-    """View generated Income Builder files"""
-    permission_classes = [AllowAny]
+    """View generated Income Builder files.
+
+    I-0301 Phase 3 Stage 2b — Bucket B remediation with per-file
+    ownership check (Rigby S2742 Stage 2b SIGN Q3 material amendment:
+    exact basename match, not `endswith`). Prior AllowAny + shared
+    filesystem read meant any anonymous caller could enumerate + read
+    any user's generated files. Now:
+
+    1. IsAuthenticated required.
+    2. Filename param must exactly match the basename of a ``file_path``
+       stored in ``plan_data`` on an ``ActionPlan`` owned by the
+       requesting user. Foreign-owned filenames → 404 (per Rigby SIGN
+       Q6 existence-oracle avoidance).
+    3. Path traversal check retained.
+
+    Filesystem migration to per-user subdirectories is out of Stage 2b
+    scope (I-0302 / dedicated arc); ownership check via ActionPlan
+    plan_data is the minimal safe scoping.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def _user_owns_filename(self, user, filename: str) -> bool:
+        """Return True iff the requested filename basename matches the
+        basename of a ``file_path`` in ``plan_data`` on any of the
+        user's ActionPlans. Exact basename equality — no suffix match
+        (Rigby SIGN Q3).
+        """
+        import os
+
+        requested_basename = os.path.basename(filename)
+        # Iterate the user's plans; extract every string-typed
+        # file-path-adjacent value from plan_data and compare basenames.
+        for plan in ActionPlan.objects.filter(user=user).only('plan_data'):
+            plan_data = plan.plan_data or {}
+            for value in _iter_string_values(plan_data):
+                if os.path.basename(value) == requested_basename:
+                    return True
+        return False
 
     def get(self, request, filename):
-        """Get content of a generated file"""
+        """Get content of a generated file, gated by ownership."""
         from pathlib import Path
         import os
         import urllib.parse
@@ -550,6 +561,14 @@ class ViewGeneratedFileView(APIView):
         try:
             # Decode URL-encoded filename (handles spaces and special characters)
             decoded_filename = urllib.parse.unquote(filename)
+
+            # Ownership check BEFORE any filesystem access — foreign-owned
+            # filenames get a 404 (not 403) to avoid existence oracle.
+            if not self._user_owns_filename(request.user, decoded_filename):
+                return Response({
+                    'error': 'File not found',
+                    'success': False
+                }, status=status.HTTP_404_NOT_FOUND)
 
             # Security check - only allow files in income_builder_outputs
             file_path = Path("income_builder_outputs") / decoded_filename
@@ -624,8 +643,19 @@ class ViewGeneratedFileView(APIView):
 
 
 class RevenueOpportunitiesView(APIView):
-    """API endpoint for submitting and listing revenue opportunities"""
-    permission_classes = [AllowAny]
+    """API endpoint for submitting and listing revenue opportunities.
+
+    I-0301 Phase 3 Stage 2b — Bucket B remediation. Prior AllowAny +
+    ActionPlan creates without a user field left orphan rows and let the
+    GET list every opportunity across all users. Now:
+
+    1. IsAuthenticated required.
+    2. POST attaches ``user=request.user`` on the created ActionPlan;
+       OpportunityActionPlan inherits ownership via ``action_plan`` FK.
+    3. GET filters via ``action_plan__user=request.user`` — Rigby S2742
+       Stage 2b SIGN Q5 accepted empty list for users with no plans.
+    """
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         """Submit a new revenue opportunity for processing"""
@@ -646,7 +676,10 @@ class RevenueOpportunitiesView(APIView):
             if result['success']:
                 # Create database record
                 plan_data = result['plan']
+                # IsAuthenticated guarantees request.user is a real user;
+                # attach ownership so OpportunityActionPlan inherits.
                 action_plan = ActionPlan.objects.create(
+                    user=request.user,
                     opportunity_id=opportunity_data.get('id', 'unknown'),
                     opportunity_title=opportunity_data.get('title', 'Unknown'),
                     opportunity_data=opportunity_data,
@@ -687,7 +720,7 @@ class RevenueOpportunitiesView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def get(self, request):
-        """List all revenue opportunities"""
+        """List revenue opportunities owned by the requesting user."""
         try:
             from intelligence.models import OpportunityActionPlan
 
@@ -696,8 +729,11 @@ class RevenueOpportunitiesView(APIView):
             status_filter = request.query_params.get('status')
             limit = int(request.query_params.get('limit', 20))
 
-            # Build query
-            queryset = OpportunityActionPlan.objects.all()
+            # Scope via action_plan__user (OpportunityActionPlan has no
+            # direct user FK; ownership travels through ActionPlan).
+            queryset = OpportunityActionPlan.objects.filter(
+                action_plan__user=request.user
+            )
 
             if platform:
                 queryset = queryset.filter(platform=platform)
@@ -734,11 +770,19 @@ class RevenueOpportunitiesView(APIView):
 
 
 class SubmitProposalView(APIView):
-    """API endpoint for submitting proposals to platforms"""
-    permission_classes = [AllowAny]
+    """API endpoint for submitting proposals to platforms.
+
+    I-0301 Phase 3 Stage 2b — Bucket B remediation with per-object
+    ownership check. Prior AllowAny + unfiltered
+    ``OpportunityActionPlan.objects.get(id=...)`` let any authenticated
+    (after IsAuthenticated) user submit ANY other user's proposal. Now
+    scoped via ``action_plan__user=request.user``; foreign-owned rows
+    return 404 (Rigby S2742 Stage 2b SIGN Q6 existence-oracle avoidance).
+    """
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        """Submit a proposal to a platform"""
+        """Submit a proposal to a platform (only if user owns it)."""
         try:
             from .revenue_integration import RevenueIncomeIntegration
             from intelligence.models import OpportunityActionPlan
@@ -752,8 +796,18 @@ class SubmitProposalView(APIView):
                     'success': False
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            # Get the opportunity plan
-            opp_plan = OpportunityActionPlan.objects.get(id=opportunity_plan_id)
+            # Ownership-scoped lookup; foreign-owned → 404 to avoid
+            # existence oracle.
+            try:
+                opp_plan = OpportunityActionPlan.objects.get(
+                    id=opportunity_plan_id,
+                    action_plan__user=request.user,
+                )
+            except OpportunityActionPlan.DoesNotExist:
+                return Response({
+                    'error': 'Opportunity plan not found',
+                    'success': False
+                }, status=status.HTTP_404_NOT_FOUND)
 
             # Submit the proposal
             integration = RevenueIncomeIntegration()
@@ -798,11 +852,18 @@ class SubmitProposalView(APIView):
 
 
 class RevenueMetricsView(APIView):
-    """API endpoint for revenue metrics and analytics"""
-    permission_classes = [AllowAny]
+    """API endpoint for revenue metrics and analytics.
+
+    I-0301 Phase 3 Stage 2b — Bucket B remediation. Prior AllowAny +
+    unfiltered aggregate query returned platform-wide revenue metrics
+    to any anonymous caller (biggest cross-tenant leak in the intelligence
+    module). Now scoped per-user via ``action_plan__user=request.user``
+    (Rigby S2742 Stage 2b SIGN Q7 accepted per-user over staff-only).
+    """
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        """Get revenue metrics"""
+        """Get revenue metrics scoped to the requesting user."""
         try:
             from intelligence.models import OpportunityActionPlan, RevenueMetrics
             from django.db.models import Sum, Avg
@@ -814,9 +875,10 @@ class RevenueMetricsView(APIView):
             end_date = timezone.now().date()
             start_date = end_date - timedelta(days=days)
 
-            # Calculate metrics
+            # Scope aggregation to the requesting user's opportunities.
             opportunities = OpportunityActionPlan.objects.filter(
-                created_at__date__gte=start_date
+                action_plan__user=request.user,
+                created_at__date__gte=start_date,
             )
 
             metrics = {
@@ -895,11 +957,19 @@ class RevenueMetricsView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class ExecuteAgentPlanView(APIView):
-    """🤖 Execute an action plan through the agent network"""
-    permission_classes = [AllowAny]
+    """🤖 Execute an action plan through the agent network.
+
+    I-0301 Phase 3 Stage 2b — Bucket B remediation. Prior AllowAny +
+    unfiltered ``ActionPlan.objects.get(id=plan_id)`` let any
+    authenticated user trigger execution of ANY other user's plan.
+    Ownership check ``user=request.user`` applied on every lookup;
+    foreign-owned rows return 404 to avoid existence oracle (Rigby
+    S2742 Stage 2b SIGN Q8).
+    """
+    permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        """Trigger agent execution for a plan"""
+        """Trigger agent execution for a plan owned by the requesting user."""
         try:
             plan_id = request.data.get('plan_id')
 
@@ -909,9 +979,9 @@ class ExecuteAgentPlanView(APIView):
                     'success': False
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            # Get the plan
+            # Ownership-scoped lookup.
             try:
-                plan = ActionPlan.objects.get(id=plan_id)
+                plan = ActionPlan.objects.get(id=plan_id, user=request.user)
             except ActionPlan.DoesNotExist:
                 return Response({
                     'error': 'Plan not found',
@@ -950,7 +1020,7 @@ class ExecuteAgentPlanView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def get(self, request):
-        """Get execution status for a plan"""
+        """Get execution status for a plan owned by the requesting user."""
         try:
             plan_id = request.query_params.get('plan_id')
 
@@ -960,9 +1030,10 @@ class ExecuteAgentPlanView(APIView):
                     'success': False
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            # Get the plan
+            # Ownership-scoped lookup per Rigby S2742 Stage 2b SIGN
+            # "ownership checks on every object lookup" must-add.
             try:
-                plan = ActionPlan.objects.get(id=plan_id)
+                plan = ActionPlan.objects.get(id=plan_id, user=request.user)
             except ActionPlan.DoesNotExist:
                 return Response({
                     'error': 'Plan not found',
