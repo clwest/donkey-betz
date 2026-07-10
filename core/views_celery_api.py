@@ -25,6 +25,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 
 from core.services.celery_health import get_celery_health_service
+from core.security import scope_queryset_agent_execution, superuser_required
 
 logger = logging.getLogger(__name__)
 
@@ -254,8 +255,13 @@ def _percentile(sorted_list, p):
 
 @method_decorator(csrf_exempt, name='dispatch')
 class TaskBreakdownView(View):
-    """Task volume aggregation breakdown."""
+    """Task volume aggregation breakdown.
 
+    I-0302 Phase 3 Sub-phase B2b (2026-07-10): superuser-gated + predicate-
+    scoped ops surface. Anonymous → 401, non-superuser → 403.
+    """
+
+    @method_decorator(superuser_required)
     def get(self, request):
         """
         GET /api/celery/breakdown/?window=60m&limit=25
@@ -350,8 +356,12 @@ class TaskBreakdownView(View):
             # equivalent (Postgres JSONField NULL-semantics make the
             # input_data__source='pa' form unsafe for pre-flag-flip
             # rows).
+            # I-0302 Phase 3 Sub-phase B2b: scoped to user via scope_queryset_agent_execution.
             by_agent = list(
-                AgentExecution.objects.filter(created_at__gte=cutoff)
+                scope_queryset_agent_execution(
+                    request.user,
+                    AgentExecution.objects.filter(created_at__gte=cutoff),
+                )
                 .exclude(agent__name='PersonalAssistant')
                 .values('agent__name')
                 .annotate(

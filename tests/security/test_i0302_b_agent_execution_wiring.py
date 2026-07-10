@@ -292,3 +292,43 @@ class TestB2aAgentExecutionGetCarveOut:
             f"Regular user must not fetch null-user execution (carve-out is "
             f"superuser-only); got {resp.status_code}"
         )
+
+
+# ==========================================================================
+# B2b additions — ops/diagnostics cluster (superuser-gated + predicate)
+# ==========================================================================
+
+
+class TestB2bOpsSuperuserGate:
+    """B2b: ops surfaces are superuser-gated (401 anonymous / 403 non-super)."""
+
+    def test_anonymous_gets_401_on_diagnostics_endpoint(self):
+        # cockpit_inbox is representative of the diagnostics cluster.
+        resp = Client().get("/api/cockpit/inbox/")
+        assert resp.status_code == 401, (
+            f"Anonymous caller must be 401 on ops endpoint; got "
+            f"{resp.status_code} (Rigby SIGN Q1 fold)"
+        )
+
+    def test_regular_user_gets_403_on_diagnostics_endpoint(
+        self, client, user_a
+    ):
+        # user_a is authenticated but not superuser → 403.
+        client.force_login(user_a)
+        resp = client.get("/api/cockpit/inbox/")
+        assert resp.status_code == 403, (
+            f"Non-superuser must be 403 on ops endpoint; got "
+            f"{resp.status_code} (Rigby SIGN Q1 fold — superuser-gate, not "
+            f"staff-gate)"
+        )
+
+    def test_superuser_can_access_and_scope_applies(
+        self, client, superuser, executions
+    ):
+        # Superuser passes the gate; predicate scope still applies inside
+        # (defense-in-depth). Cockpit inbox should return 200 for superuser.
+        client.force_login(superuser)
+        resp = client.get("/api/cockpit/inbox/")
+        assert resp.status_code == 200, (
+            f"Superuser must pass ops gate with 200; got {resp.status_code}"
+        )
