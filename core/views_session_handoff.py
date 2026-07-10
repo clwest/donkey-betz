@@ -31,6 +31,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 import json
 
+from core.security import scope_queryset_chat_conversation
+
 logger = logging.getLogger(__name__)
 
 
@@ -55,19 +57,30 @@ def get_active_sessions(request):
         # Session expiry window (24 hours)
         cutoff = timezone.now() - timedelta(hours=24)
 
-        # Get sessions by user OR by linked Discord ID
-        sessions_query = ChatConversation.objects.filter(
-            session_active=True,
-            created_at__gte=cutoff
+        # Get sessions by user OR by linked Discord ID.
+        # I-0302 Phase 3 Sub-phase C1 (2026-07-10): predicate handles the
+        # workspace-scoped + user-owned branch; the Discord fallback is
+        # OR'd on top because the Discord platform doesn't participate in
+        # workspaces (predicate wouldn't include it). Both filters are
+        # keyed on the authenticated user (`request.user`), preserving
+        # Rigby SIGN Q7 "auth mapping, not any row" invariant.
+        base_query = scope_queryset_chat_conversation(
+            user,
+            ChatConversation.objects.filter(
+                session_active=True,
+                created_at__gte=cutoff,
+            ),
         )
-
-        # Filter by user or their Discord ID
         if user.discord_id:
-            sessions_query = sessions_query.filter(
-                models.Q(user=user) | models.Q(discord_user_id=user.discord_id)
+            # Union in Discord-mapped rows for the authenticated user.
+            discord_query = ChatConversation.objects.filter(
+                session_active=True,
+                created_at__gte=cutoff,
+                discord_user_id=user.discord_id,
             )
+            sessions_query = (base_query | discord_query).distinct()
         else:
-            sessions_query = sessions_query.filter(user=user)
+            sessions_query = base_query
 
         # Group by conversation_id to get unique sessions
         from django.db.models import Max, Min, Count
@@ -86,9 +99,12 @@ def get_active_sessions(request):
                 continue
             seen_conversations.add(conv_id)
 
-            # Get the first message for title
-            first_msg = ChatConversation.objects.filter(
-                conversation_id=conv_id
+            # Get the first message for title.
+            # I-0302 Phase 3 Sub-phase C1: scope at point-of-use even though
+            # conv_id was sourced from an already-scoped queryset above.
+            first_msg = scope_queryset_chat_conversation(
+                user,
+                ChatConversation.objects.filter(conversation_id=conv_id),
             ).order_by('created_at').first()
 
             title = first_msg.session_title if first_msg and first_msg.session_title else None
@@ -136,18 +152,22 @@ def get_session_details(request, conversation_id):
     try:
         user = request.user
 
-        # Verify user has access to this session
-        session_msgs = ChatConversation.objects.filter(
-            conversation_id=conversation_id
+        # Verify user has access to this session.
+        # I-0302 Phase 3 Sub-phase C1 (2026-07-10): predicate for
+        # workspace-scoped + user-owned branch; Discord fallback OR'd
+        # on top (Discord platform is orthogonal to workspaces).
+        base_scope = scope_queryset_chat_conversation(
+            user,
+            ChatConversation.objects.filter(conversation_id=conversation_id),
         )
-
-        # Check access - user owns it or it's linked to their Discord
         if user.discord_id:
-            session_msgs = session_msgs.filter(
-                models.Q(user=user) | models.Q(discord_user_id=user.discord_id)
+            discord_scope = ChatConversation.objects.filter(
+                conversation_id=conversation_id,
+                discord_user_id=user.discord_id,
             )
+            session_msgs = (base_scope | discord_scope).distinct()
         else:
-            session_msgs = session_msgs.filter(user=user)
+            session_msgs = base_scope
 
         if not session_msgs.exists():
             return JsonResponse({
@@ -228,17 +248,20 @@ def resume_session(request):
 
         user = request.user
 
-        # Verify user has access to this session
-        session_msgs = ChatConversation.objects.filter(
-            conversation_id=conversation_id
+        # Verify user has access to this session.
+        # I-0302 Phase 3 Sub-phase C1 (2026-07-10): predicate + Discord union.
+        base_scope = scope_queryset_chat_conversation(
+            user,
+            ChatConversation.objects.filter(conversation_id=conversation_id),
         )
-
         if user.discord_id:
-            session_msgs = session_msgs.filter(
-                models.Q(user=user) | models.Q(discord_user_id=user.discord_id)
+            discord_scope = ChatConversation.objects.filter(
+                conversation_id=conversation_id,
+                discord_user_id=user.discord_id,
             )
+            session_msgs = (base_scope | discord_scope).distinct()
         else:
-            session_msgs = session_msgs.filter(user=user)
+            session_msgs = base_scope
 
         if not session_msgs.exists():
             return JsonResponse({
@@ -306,17 +329,20 @@ def end_session(request):
 
         user = request.user
 
-        # Verify user has access to this session
-        session_msgs = ChatConversation.objects.filter(
-            conversation_id=conversation_id
+        # Verify user has access to this session.
+        # I-0302 Phase 3 Sub-phase C1 (2026-07-10): predicate + Discord union.
+        base_scope = scope_queryset_chat_conversation(
+            user,
+            ChatConversation.objects.filter(conversation_id=conversation_id),
         )
-
         if user.discord_id:
-            session_msgs = session_msgs.filter(
-                models.Q(user=user) | models.Q(discord_user_id=user.discord_id)
+            discord_scope = ChatConversation.objects.filter(
+                conversation_id=conversation_id,
+                discord_user_id=user.discord_id,
             )
+            session_msgs = (base_scope | discord_scope).distinct()
         else:
-            session_msgs = session_msgs.filter(user=user)
+            session_msgs = base_scope
 
         if not session_msgs.exists():
             return JsonResponse({
@@ -360,20 +386,23 @@ def get_cross_platform_status(request):
         user = request.user
         cutoff = timezone.now() - timedelta(hours=24)
 
-        # Base query
+        # Base query.
+        # I-0302 Phase 3 Sub-phase C1 (2026-07-10): predicate + Discord union.
+        base_scope = scope_queryset_chat_conversation(
+            user,
+            ChatConversation.objects.filter(
+                session_active=True, created_at__gte=cutoff,
+            ),
+        )
         if user.discord_id:
-            from django.db import models as db_models
-            base_query = ChatConversation.objects.filter(
-                db_models.Q(user=user) | db_models.Q(discord_user_id=user.discord_id),
+            discord_scope = ChatConversation.objects.filter(
                 session_active=True,
-                created_at__gte=cutoff
+                created_at__gte=cutoff,
+                discord_user_id=user.discord_id,
             )
+            base_query = (base_scope | discord_scope).distinct()
         else:
-            base_query = ChatConversation.objects.filter(
-                user=user,
-                session_active=True,
-                created_at__gte=cutoff
-            )
+            base_query = base_scope
 
         # Count by platform
         web_sessions = base_query.filter(platform='web').values('conversation_id').distinct().count()
