@@ -529,4 +529,4 @@ export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
 # next-campaign starting pin until it too hits a retirement trigger,
 # at which point mint a fresh one via session_tool.create_fresh and
 # update this line.
-python tools/pa_chat.py "$@" --tools --conversation pa-6cf25378d80948f2
+python tools/pa_chat.py "$@" --tools --conversation pa-09e870b7b98c48f3
