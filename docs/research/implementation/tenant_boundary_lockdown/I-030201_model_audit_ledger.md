@@ -1,0 +1,416 @@
+---
+title: "I-0302 Phase 1 — 5-Model Audit Ledger"
+status: active
+authority: phase-1-audit-ledger-ratified
+session_added: 2742
+last_updated: 2026-07-10
+arc_id: I-0302
+arc_phase: Phase 1 (Model Audit Ledger) — CLOSED
+parent_scoping_doc: docs/research/implementation/tenant_boundary_lockdown/I-0302_scoping.md
+parent_ratification: docs/research/implementation/RATIFICATION_2026-07-10_i0302_scoping.md
+this_phase_ratification: docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase1_ledger.md
+parent_campaign: RUR-C1 (Tenant Boundary Lockdown)
+parent_program: RUR (Real User Readiness)
+head_at_audit_start: 8150d9cd
+head_at_ratification: 8150d9cd
+ratification_date: 2026-07-10
+ratifier: chris
+rigby_sign_state: SIGN-PASS (initial SIGN-WITH-EDITS + joint Option C SIGN both applied)
+chris_d_verdicts_resolved:
+  - Initiative null-owner transitional policy — Option C approved: backfill to primary user + NOT NULL migration; no transitional predicate. Guardrails: canonical primary-user lookup (not hardcoded string); provenance recorded as pre-prod single-user normalization step.
+constraint: Phase 2 opens under this ratified ledger; amendments during Phase 2+ route through parent CAMPAIGN §10 amendment discipline
+---
+
+# I-0302 Phase 1 — 5-Model Audit Ledger
+
+> **Phase 1 audit deliverable per I-0302 scoping §6 handoff.** Ratified boundary contract (§3.1 Q7 D-verdict at scoping ratification):
+> - **Workspace-scoped:** `Deliverable`, `ChatConversation`
+> - **Per-user:** `Initiative`, `AgentExecution`, `Document`
+>
+> Any deviation from the above list requires re-ratification.
+
+---
+
+## §1. Audit Scope + Method
+
+**Scope:** the 5 user-owned models named in the parent RUR CAMPAIGN §4:
+1. `Deliverable`
+2. `Initiative`
+3. `ChatConversation`
+4. `AgentExecution`
+5. `Document`
+
+**Method (per scoping §6 handoff):**
+1. Resolve each conceptual model to its canonical class (some concepts have multiple concrete classes — §2).
+2. Enumerate ownership FKs + nullability + on_delete behavior — the raw predicate the arc will enforce.
+3. Count `NULL`-owner rows per model — informs §7 nullable-owner policy.
+4. Catalog every code path touching the model: views, services, tasks, management commands, agent code.
+5. Classify each code path as **scoped** (already filters by owner) / **unscoped** (regression risk) / **ambiguous** (needs Phase 2 review).
+6. Apply the §3.1 Q7 hybrid boundary — verify each model maps to workspace-scope or per-user-scope predicate per Chris D-verdict.
+7. Nullable-owner policy decision per model.
+
+---
+
+## §2. Concrete-Model Resolution (§2.1 scope outcome)
+
+Preliminary map from scoping §3.1, verified against HEAD `8150d9cd`.
+
+### §2.1 Deliverable
+- **Canonical class:** `core.models_deliverables.Deliverable` (line 158)
+- **App label:** `core`
+- **No sibling ambiguity** — single class.
+
+### §2.2 Initiative
+- **Canonical class:** `core.models_document_registry.Initiative` (line 37)
+- **App label:** `core`
+- **No sibling ambiguity** — single class.
+
+### §2.3 ChatConversation
+- **Canonical class:** `core.models.conversations.models.ChatConversation` (line 65+)
+- **App label:** `core`
+- **No sibling ambiguity** — single class.
+
+### §2.4 AgentExecution — **CANONICAL DECISION**
+
+Four candidate classes exist. Per Chris §3.2 Q2 D-verdict at scoping ratification: I-0302 picks the canonical + scopes it; duplicate retirement is follow-on.
+
+| Class path | Line | Fields | Row status | I-0302 status |
+|---|---|---|---|---|
+| `core.models_unified_system.AgentExecution` | 882 | `user` (nullable FK), `agent` (FK), `tenant` (nullable FK), `trace_id`, `project` | **987 live rows** per S1244 audit note | **CANONICAL for I-0302 enforcement** — labeled DEPRECATED in the docstring but is the actual live orchestration-tracker |
+| `core.models.agents_registry.AgentTaskExecution` | 434 | `user` (nullable FK), `template` (FK) | 0 rows (72+ read-side importers, never wired) per S1244 | Enforce ownership anyway (defense-in-depth — if it ever gets a writer, ownership is already enforced). Deferred: retire per §7.4 follow-on. |
+| `intelligence.models.AgentExecution` | 587 | `action_plan` FK only, NO `user` FK | Unknown row count — Phase 1 must query | Action-plan-chained; owner derived transitively via `action_plan.owner` chain — separate domain concept (action plans, not user-facing agent runs). **Deferred: retire per §7.4 follow-on** unless Phase 1 query finds live rows tied to user-visible surfaces. |
+| `intelligence.models.agent_execution.AgentExecution` | 11 | `action_plan` FK only, NO `user` FK | Unknown row count — Phase 1 must query | Duplicate of the intelligence/models.py class. **Deferred: retire per §7.4 follow-on.** |
+
+**§2.4 decision:** I-0302 enforcement applies to `core.models_unified_system.AgentExecution` (canonical, 987 rows) + defense-in-depth on `AgentTaskExecution`. The two `intelligence.*` classes are deferred to §7.4 follow-on (retire duplicates) unless Phase 1 row-count query finds live user-visible traffic.
+
+### §2.5 Document
+- **Canonical class:** `content.models.Document` (line 325)
+- **App label:** `content`
+- **No sibling ambiguity** — single class.
+- **Note (per Rigby F1 SIGN):** `Document.owner` is defined directly on `content.models.Document`; NOT inherited from `UnifiedBaseModel`.
+
+---
+
+## §3. Ownership FK Map (§2.2 scope outcome) — VERIFIED
+
+| Model | FK column | Target | Nullable? | on_delete | Related name | Notes |
+|---|---|---|---|---|---|---|
+| **Deliverable** | `user` | `settings.AUTH_USER_MODEL` | **Yes** | CASCADE | `deliverables` | Line 227 |
+| **Deliverable** | `workspace` | `core.ProjectWorkspace` | **Yes** | SET_NULL | `deliverables` | Line 165 (composite predicate candidate) |
+| **Initiative** | `owner` | `core.UnifiedUser` | **Yes** | SET_NULL | `owned_initiatives` | Line 149 (Session 996 field). Non-FK: `created_by` is CharField 'system' default — not a real ownership predicate. |
+| **Initiative** | `target_workspace` | `core.ProjectWorkspace` | **Yes** | SET_NULL | `initiatives` | Line 139 (informational; Q7 boundary is per-user for Initiative) |
+| **ChatConversation** | `user` | `get_user_model()` | **Yes** | CASCADE | (none) | Line 69. Nullable for unlinked Discord users per docstring. |
+| **ChatConversation** | `workspace` | `core.ProjectWorkspace` | **Yes** | SET_NULL | `chat_conversations` | Line 146 (Q7 workspace-scoped predicate) |
+| **AgentExecution** (`core.models_unified_system:882`) | `user` | `settings.AUTH_USER_MODEL` | **Yes** | CASCADE | (none) | Line 894. Session 642 made nullable for Celery-context runs. |
+| **AgentExecution** (`core.models_unified_system:882`) | `agent` | `Agent` | No | CASCADE | `executions` | Line 892 |
+| **AgentExecution** (`core.models_unified_system:882`) | `tenant` | `core.Tenant` | **Yes** | SET_NULL | `agent_executions` | Line 946. Session 1039 multi-tenant cost attribution. |
+| **AgentTaskExecution** (`core.models.agents_registry:434`) | `user` | `User` | **Yes** | CASCADE | `agent_executions` | Line 459 |
+| **AgentTaskExecution** | `template` | `UnifiedAgentTemplate` | No | CASCADE | `executions` | Line 453 |
+| **Document** | `owner` | `User` | **NOT NULL** | CASCADE | `documents` | Line 483. Verified per Rigby F1 SIGN — defined on Document, NOT inherited from UnifiedBaseModel. |
+
+### §3.1 Nullable FK risk summary
+
+**All 5 models have at least one nullable ownership FK EXCEPT `Document`.**
+
+- Deliverable.user, Initiative.owner, ChatConversation.user, AgentExecution.user, AgentTaskExecution.user — all nullable
+- Document.owner — NOT NULL (only model that's safe by default)
+
+Nullable-owner risk requires §7 policy decision per model.
+
+---
+
+## §4. Row Counts — FILLED (LOCAL DB, HEAD 8150d9cd, 2026-07-10)
+
+Executed via `python manage.py shell` against local Postgres.
+
+> **⚠ LOCAL DB SAMPLE (per Rigby SIGN F1 amendment).** Row counts + nullability distributions here reflect Chris's local development DB — 2 distinct users everywhere = single-operator-plus-system pattern. **All §4 numbers MUST be re-checked on prod/staging before Phase 3 enforcement + before any NOT NULL migration lands.** Local counts are sufficient for Phase 2 predicate module design but NOT for Phase 3 migration cutover decisions.
+
+| Model | Total rows | Nullable-owner rows | % null | Distinct owners | Confidence | Policy candidate (see §7) |
+|---|---|---|---|---|---|---|
+| Deliverable | 554 | 45 (`user__isnull=True`) | 8% | 2 | local_verified / prod_pending | Backfill user for 45 rows + migrate to NOT NULL (small volume) |
+| Initiative | 62 | 62 (`owner__isnull=True`) | **100%** | 1 (system) | local_verified / prod_pending | Every row is unowned. Session 996 `owner` field never backfilled. **RESOLVED via Chris D-verdict 2026-07-10 Option C: backfill to primary user + migrate NOT NULL (single-user pre-prod pragmatic path).** See §7. |
+| ChatConversation | 2943 | 0 (`user__isnull=True`) | 0% | 1 | local_verified / prod_pending | Deny-by-default for `user IS NULL` unless staff or explicit allowlist (per Rigby SIGN F3 amendment); NOT NULL migration deferred to prod pre-flight after prod null count confirmed. |
+| AgentExecution (`core.models_unified_system:882` canonical) | 1600 | 1034 (`user__isnull=True`) | **65%** | 2 | local_verified / prod_pending | Session 642 nullability is INTENTIONAL for Celery system-context runs. Policy: preserve-with-explicit-scope + staff carve-out (see §7). |
+| AgentTaskExecution | 0 | 0 | n/a | 0 | local_verified | 0-row model confirmed (S1244 note). Defense-in-depth enforcement in Phase 3; retirement is follow-on. |
+| `intelligence/models.py:587` AgentExecution | **SHADOWED** | n/a | n/a | n/a | local_verified | **NEW FINDING** — file `intelligence/models.py` (23kB) coexists with package `intelligence/models/`; Python package precedence makes the ENTIRE FILE unreachable. Follow-on retirement target (see §9). |
+| `intelligence.models.agent_execution:11` AgentExecution | **ZOMBIE** (no DB table) | n/a | n/a | n/a | local_verified | **NEW FINDING** — class is Python-importable but `intelligence_agentexecution` table does NOT exist. `.objects.count()` raises `ProgrammingError`. No live callers can exercise this class. Follow-on retirement target (see §9). |
+| Document | 3075 | 0 (`owner` NOT NULL) | n/a | 2 | local_verified / prod_pending | Safe by default; no policy needed |
+
+### §4.1 Key findings from the counts
+
+1. **Initiative is 100% NULL-owner** (62 rows) — Session 996 `owner` field added a schema slot but no backfill ran. Enforcement of `owner=request.user` on Initiative would return 404 for EVERY existing initiative to EVERY user until backfilled. This was Phase 1's most surgical decision item. **RESOLVED — Chris D-verdict 2026-07-10: Option C (backfill to primary user + migrate NOT NULL, skip transitional predicate).** Rationale per single-user pre-prod operating context: multi-tenant defensive design unnecessary until Chris opens Phase 0.
+2. **AgentExecution canonical is 65% NULL-user** — but this is intentional (Session 642: Celery system-context executions have no user). Policy must have carve-out.
+3. **All 3 duplicate AgentExecution classes are dead** — AgentTaskExecution (0 rows), intelligence/models.py (SHADOWED by package), intelligence/models/agent_execution.py (ZOMBIE — class importable but no DB table). I-0302 enforcement applies ONLY to the canonical `core.models_unified_system.AgentExecution`. Follow-on retirement expands to include the shadowed `intelligence/models.py` file (23kB of dead models).
+4. **Document is safe by default** — NOT NULL owner + all 3075 rows have valid owner.
+
+### §4.2 Related tables (informational, per Rigby SIGN F1 amendment)
+
+Not in the canonical I-0302 5-model scope, but informational for future arcs. These sibling tables share ownership FKs with the canonical models:
+
+| Related table | Path | Ownership FK | Nullability | Notes |
+|---|---|---|---|---|
+| `DeliverableExport` | core/models_deliverables.py:493 | `user` FK to AUTH_USER_MODEL | Not null | Per-user export tracking; sits alongside Deliverable |
+| `DeliverableCollection` | core/models_deliverables.py:531 | `user` FK to AUTH_USER_MODEL | Not null | Per-user collection grouping |
+| `ContentPacket` | core/models_deliverables.py:590+ | `user` FK + `workspace` FK (CASCADE) | user nullable | Composite-scope table |
+| `AgentExecution` (workspace-scoped) | core/models_deliverables.py context | see AgentExecution canonical row | — | I-0302 primary |
+| `Initiative` sub-tables (InitiativeStage, InitiativeActionItem, etc.) | core/models_document_registry.py | inherit via `initiative` FK | inherit | Transitively scoped via Initiative parent |
+| `InitiativeStage` | core/models_document_registry.py:1372 | inherit | inherit | Same |
+| `InitiativeActionItem` | core/models_document_registry.py:1951 | inherit | inherit | Same |
+
+**Scope decision (per §7.4 scoping carve-out):** these do NOT expand I-0302 scope. Recorded here for Phase-2+ predicate-module cross-reference — related-table access should transitively scope via the canonical model predicates (`Initiative`, `Deliverable`, etc.) rather than adding parallel predicates.
+
+---
+
+## §5. Caller Classification — Phase 1 SAMPLED (Phase 2 does exhaustive per-endpoint)
+
+Per model, caller enumeration via `Grep '<Model>\.objects\.' --glob=*.py`. Volume per model (~50-100+ hits each) exceeds Phase 1 depth — Phase 1 does per-category classification + regression-risk callouts; Phase 2 does exhaustive per-endpoint enumeration when writing the predicate module.
+
+### §5.0 Scope of "unscoped" (per Rigby SIGN F4 amendment)
+
+**"UNSCOPED (REG RISK)" is reserved for user-visible yield paths** — DRF views, serializers, PA endpoints, WebSocket consumers, async tasks that materialize outputs to users. Internal helpers, background jobs, and one-shot maintenance scripts that never return data to a user endpoint are **OPS-ONLY** even if they access rows without an owner filter.
+
+**Aggregate-leakage rule (Rigby F4 amendment for AgentExecution + Document dashboards):** endpoints that return counts, metrics, or aggregates over the model are treated as disclosure surfaces. Even if no per-row detail is returned, cross-tenant counts leak population information. Predicate must scope aggregate reads OR gate them by `is_staff` OR apply noise (Phase 2 predicate decision).
+
+### §5.0.1 Grep strategy (reproducibility footnote per Rigby F4)
+
+Command used for each model:
+
+```
+Grep '<ModelName>\.objects\.' --glob=*.py --output_mode=content -n --head_limit=40
+```
+
+Extended sweep for models with ambiguous imports:
+
+```
+Grep 'from <package>\.models import.*<ModelName>' --glob=*.py
+Grep '\b<ModelName>\b' --glob=*.py  # broadest (validates naked-name usage)
+```
+
+Excluded from grep: `docs/`, `.git/`, `node_modules/`, `.venv/`. Phase 2 exhaustive audit uses `rg` with same filters + no `--head_limit`.
+
+**Legend:**
+- **SCOPED** — caller already filters by Q7 boundary (workspace or owner per model)
+- **UNSCOPED (REG RISK)** — caller bypasses ownership check; Phase 3 enforcement target
+- **AMBIGUOUS** — needs Phase 2 predicate design review to determine
+- **OPS-ONLY** — management command, migration, or archive script; no user-facing endpoint; scoping N/A
+- **AGGREGATE-ONLY** — global-scope aggregate/dashboard read; if returned to unscoped user endpoint, regression risk
+
+### §5.1 Deliverable (Q7 workspace-scoped) — dominant category: SCOPED via `workspace=` filter
+
+| Category | Sample callers | Classification | Notes / Reg Risk |
+|---|---|---|---|
+| DRF views + orchestration | `core/views_workspace_templates.py` :180 :227, `core/views_home.py`, `core/views_orchestration.py` | SCOPED (workspace=workspace filter) | Multiple pathways filter workspace; verify per-endpoint at Phase 2 |
+| DRF views detail lookup | `core/views_workspace_templates.py` :613, `core/agents/distribution_agent.py` :189 | **UNSCOPED (REG RISK)** — `.get(id=deliverable_id)` no workspace filter | Trust of caller-supplied deliverable_id without checking workspace membership. Predicate must gate. |
+| Service layer | `core/services/deliverable_factory.py` :907 :934 :961, `core/services/conversation_initiative_pipeline.py` :808 :842 :958, `core/services/user_onboarding_service.py` :152 | SCOPED (workspace= filter or initiative= transitively scoped) | Factory writes always attach workspace; verify at Phase 2 |
+| Employee OS + mission runner | `core/employees/status.py` :401, `core/employees/mission_runner.py` :1305 :1434 | **UNSCOPED (REG RISK)** — `.get(id=prior_deliverable_id)` / `.only()` no workspace filter | Employee/mission code runs as `system_autonomous` — may be intentional cross-workspace. Phase 2 clarify. |
+| Celery tasks | `core/tasks.py` :8237 :11416 :12537 :13557 :13568 :13581 | AMBIGUOUS (mixed) | Some filter by `initiative=` (transitively scoped); others .get(id=...) trusting caller-supplied id. Phase 2 per-task. |
+| Signal handlers | `core/signals/deliverable_status_signals.py` | SCOPED (post-save trigger; no user surface) | No user endpoint |
+| Management commands | `core/management/commands/consolidate_workspaces.py`, `fix_workspace_visibility.py`, `draft_repo_verifier_claims.py`, `register_external_repo.py`, `survey_external_repo.py` | OPS-ONLY | Admin/ops only; no user endpoint |
+| Migrations | `core/migrations/0323_*`, `0333_*`, `0365_*` | OPS-ONLY | One-shot data ops; no runtime risk |
+| Tests | `content/tests/test_deliverable_mirror.py`, various test_deliverable_*.py | OPS-ONLY | Test setup |
+
+**Reg-risk hotspots for Phase 3 enforcement (Deliverable):**
+1. `core/views_workspace_templates.py:613` — `.get(id=deliverable_id)` trusts caller ID
+2. `core/agents/distribution_agent.py:189` — `.get(id=context['deliverable_id'])` trusts context-supplied ID
+3. `core/tasks.py` — mixed `.get(id=...)` paths; some trust caller-supplied id
+4. `core/employees/mission_runner.py:1305, 1434` — employee code path; may intentionally bypass, Phase 2 clarify
+
+### §5.2 Initiative (Q7 per-user) — dominant category: **UNSCOPED (REG RISK)**
+
+**Critical §4 finding: 100% of Initiative rows have `owner=NULL`.** No caller uses `owner=` filter (grep confirmed). Every read currently returns ALL initiatives to ALL users. Backfill is a hard Phase 3 blocker.
+
+| Category | Sample callers | Classification | Notes / Reg Risk |
+|---|---|---|---|
+| DRF views (kickstart) | `core/views_initiative_kickstart.py` :87 :90 :264 :266 :433 :691 :802 :904 :1012 :1115 :1185 :1192 :1215 :1533 (~15 hits) | **UNSCOPED (REG RISK)** — `.filter(status=..., current_stage=...)` / `.all()` / `.get(id=...)`; NO owner filter anywhere | Global scope: every user sees every initiative. Post-backfill this becomes the primary Phase 3 target. |
+| DRF views | `core/views_home.py` :104 :132, `core/views_orchestration.py` :987, `core/views_workspace_templates.py` :227 | **UNSCOPED (REG RISK)** — filter by status/target_workspace but not owner | Same issue |
+| Services + circuit breaker | `core/services/initiative_circuit_breaker.py` :92 :111 :151 :246 :249 :265 | OPS-ONLY (circuit-breaker system logic) | System-level; no user endpoint |
+| Tasks | `core/tasks.py` :684 | OPS-ONLY (`Initiative.objects.filter(pk=init.pk).update()`) | Per-pk update; no user surface |
+| Signal handlers | `core/signals/initiative_diagnostic_signals.py` | OPS-ONLY | System diagnostic |
+| Management commands | `backfill_stage_documents.py`, `cleanup_stale_initiatives.py`, `backfill_initiative_activity.py`, `boardroom_approval.py`, `seed_agent_initiative_affinities.py`, `trigger_stage2_generation.py`, and 4 more | OPS-ONLY | Admin/backfill only |
+| Model layer | `core/models_document_registry.py` :769 :790 :1904, `core/models_unified_system.py` :9666 | SCOPED (self-referential save() / get_or_create by pk) | No user endpoint |
+
+**Reg-risk hotspot summary (Initiative):** EVERY user-facing DRF endpoint under `views_initiative_kickstart.py` + `views_home.py` + `views_orchestration.py` + `views_workspace_templates.py` is unscoped. This is the arc's largest enforcement surface — 20+ callers across 4 view files.
+
+### §5.3 ChatConversation (Q7 workspace-scoped) — dominant category: SCOPED via `user=` or `conversation_id=` boundary
+
+| Category | Sample callers | Classification | Notes / Reg Risk |
+|---|---|---|---|
+| PA views (canonical route) | `core/views_personal_assistant.py` :542 :551 :639 :648 :652 :1553 :1604 :1610 :1623 (~9 hits) | **AMBIGUOUS** — most `.filter(conversation_id=conversation_id)` without user filter | conversation_id is UUID-opaque so guessing risk is low, BUT if a user learns another user's conversation_id (e.g., logs, screen share), they can read that conversation. Phase 2 predicate: gate by (conversation_id, request.user) tuple. |
+| PA views (has_access check) | `views_personal_assistant.py` :639 :1604 `.filter(user=self.user).exists()` | SCOPED (explicit user check) | Correct pattern; predicate should reuse |
+| Session handoff | `core/views_session_handoff.py` :59 :90 :140 :232 :310 :366 :372 (~7 hits) | AMBIGUOUS — filter by conversation_id / user_id per line, need per-line check | Phase 2 per-line audit |
+| Conversation memory | `core/conversation_memory_fixed.py` :112 :148 :187 :189 :195 :201 :239 (~7 hits) | SCOPED (all filter by user= ) | Correct pattern |
+| Session lifecycle command | `core/management/commands/session_lifecycle.py` :336 :365 | SCOPED (user_id= filter) | Correct (S2746 work) |
+| Services | `core/services/user_onboarding_service.py` :75, `deliverable_workspace_resolver.py` :94, `claude_code_agent.py` :168 :177, `conversation_action_dispatcher.py` :293, `epa_handlers_utility.py` :2463 | AMBIGUOUS (mixed — some user=, some conversation_id=) | Phase 2 per-caller |
+| Employee OS | `core/employees/status.py` :321 :444 | OPS-ONLY | Employee system code path |
+| Model layer | `core/models/conversations/models.py` :245 | SCOPED (self-referential .filter(conversation_id=self.conversation_id)) | Correct |
+| Tests | `core/tests/test_agent_completed_persistence.py` and 6+ session_tool tests | OPS-ONLY | Test setup |
+| Celery task | `core/tasks.py` :12100 | OPS-ONLY (cleanup task by conversation_id) | System-scoped |
+
+**Reg-risk hotspot summary (ChatConversation):** The `.filter(conversation_id=...)` pattern in views_personal_assistant.py + views_session_handoff.py is the primary Phase 2 predicate target. UUID guess-difficulty helps, but predicate should enforce `(conversation_id, user)` tuple lookup as defense-in-depth.
+
+### §5.4 AgentExecution (Q7 per-user, canonical `core.models_unified_system.AgentExecution:882`) — dominant category: **UNSCOPED (REG RISK) for dashboards**
+
+| Category | Sample callers | Classification | Notes / Reg Risk |
+|---|---|---|---|
+| Platform command dashboard | `core/views_platform_command.py` :510 :2514 :2515 :2521 :2526 :2532 :2641 :2703 :2716 (~9 hits) | **UNSCOPED / AGGREGATE-ONLY** — all filter by `status=` or `created_at` NOT `user=` | This is the ops "who's stuck?" surface. If exposed to non-staff users, all users see all executions across the platform. Phase 2 SIGN target on staff-vs-user gate. |
+| Analytics dashboard | `core/views_analytics_real.py` :38 :39 :40 :41 :44 :87 :97 :157 :176 (~9 hits) | **UNSCOPED / AGGREGATE-ONLY** — global counts | Same concern; predicate should either gate by staff OR filter by user for non-staff |
+| Agent analytics | `core/views_agent_analytics.py` :56 :64 :154 :212 :269 (~5 hits) | **UNSCOPED / AGGREGATE-ONLY** | Same concern |
+| Workspace templates | `core/views_workspace_templates.py` :576 | AMBIGUOUS — filters by workspace (transitively scopes via workspace membership) | Phase 2 verify workspace membership check |
+| Orchestration | `core/views_orchestration.py` :869 :1007 | **UNSCOPED (REG RISK)** — `.get(id=step_exec.execution_id)` no user filter | Trust of caller-supplied execution_id |
+| Executor + sync | `ai_core/agents/sync_executor.py` :73 | OPS-ONLY (creates AgentExecution rows from Celery) | Writer path |
+| Archived views | `archive/session_22_v2/views_unified_v2.py` :51 :77 :105 :188 (~4 hits) | SCOPED (all filter by user=user) | Archive; not runtime |
+| Archived scripts | `archive/scripts/run_agents_async.py`, `activate_all_agents_backup.py` | OPS-ONLY (archive scripts) | Not runtime |
+
+**Reg-risk hotspot summary (AgentExecution):** All 3 dashboards (`views_platform_command`, `views_analytics_real`, `views_agent_analytics`) are unscoped aggregate reads. If these endpoints are user-accessible (not staff-gated), all users see all executions. Phase 2 predicate design must decide: (a) staff-only gate → user endpoint returns only user=request.user; (b) staff-only endpoint separation.
+
+### §5.5 Document (Q7 per-user) — dominant category: SCOPED via `owner=` filter
+
+| Category | Sample callers | Classification | Notes / Reg Risk |
+|---|---|---|---|
+| DRF views (canonical) | `content/views.py` :125 :128 :176 :379 :641 :646 | **PARTIALLY SCOPED** — :125 `.all()` (BUT is inside `is_staff` gate at line 122), :128 `.filter(owner=user)`, :379 `.get(id=..., owner=request.user)`, :641 `.filter(owner=user)`, :646 filters by owner via time | :125 `.all()` is scoped by `is_staff` gate above it (verify at Phase 2). Rest SCOPED. |
+| Consumers (WebSocket) | `content/consumers.py` :288 :320 :508 | :508 SCOPED (`filter(owner=self.user)`); :288 :320 AMBIGUOUS — need per-line check | Phase 2 review |
+| Dashboard view | `dashboard/views.py` :230 | **UNSCOPED / AGGREGATE-ONLY** — `.values_list('document_type').annotate(...)` global aggregate | If exposed to non-staff users, cross-user document type counts leak. Phase 2 gate. |
+| Backfill helpers + canonical authority | `content/_backfill_helpers.py`, `content/_canonical_authority_helpers.py` | OPS-ONLY | Backfill / system |
+| Model layer | `content/models.py` :737 :1074 :1355 | SCOPED (self-referential .filter(pk=self.pk) or related_documents traversal) | Correct |
+| Tests | `content/tests/test_deliverable_mirror.py`, `test_canonical_authority.py`, `dashboard/tests/*` | OPS-ONLY | Test setup |
+| Archive scripts | `archive/scripts/generate_missing_embeddings.py`, `batch_tag_documents.py` | OPS-ONLY | Archive |
+
+**Reg-risk hotspot summary (Document):** Small — most user-facing paths already filter by `owner=`. Primary Phase 2 targets: (1) verify the `is_staff` gate at `content/views.py:122` guards the `.all()` branch; (2) audit `content/consumers.py:288, :320` for owner filter; (3) staff-gate `dashboard/views.py:230` aggregate view.
+
+### §5.6 Phase 1 → Phase 2 handoff summary
+
+**Per-model regression-risk rank (highest first):**
+1. **Initiative** — 100% NULL owner + 20+ unscoped DRF callers across 4 view files. Backfill + enforcement is the largest Phase 3 surface.
+2. **AgentExecution** — 3 dashboard view files unscoped as aggregate reads. Staff-vs-user gate is the primary Phase 2 predicate decision.
+3. **ChatConversation** — moderate risk via `conversation_id=` pattern; predicate hardens to `(conversation_id, user)` tuple.
+4. **Deliverable** — most callers scoped; ~4 detail-lookup hotspots need enforcement.
+5. **Document** — smallest surface; already mostly owner-filtered; only staff gate + consumer detail lookup need Phase 2 review.
+
+**Phase 2 predicate module scope from §5:** 5 per-model `<model>_owned_by(user, obj)` predicates + 5 `scope_queryset_<model>(user, qs)` filters + staff carve-outs for aggregate-dashboard cases (AgentExecution primary; Document dashboard/views.py secondary).
+
+---
+
+## §6. Q7 Hybrid Boundary Application (per-model verification)
+
+Chris §3.1 Q7 D-verdict at scoping ratification:
+
+| Model | Q7 boundary | Predicate signature (Phase 2) | Predicate justification |
+|---|---|---|---|
+| Deliverable | **workspace-scoped** | `deliverable_in_scope(user, deliverable) -> bool: deliverable.workspace in user.workspaces` | Workspace FK present + PA `deliverable_tool` already workspace-scopes |
+| ChatConversation | **workspace-scoped** | `chat_conversation_in_scope(user, conv) -> bool: conv.workspace in user.workspaces OR conv.user == user (Discord fallback)` | Workspace FK present + session_tool already user/workspace scopes |
+| Initiative | **per-user** | `initiative_owned_by(user, initiative) -> bool: initiative.owner == user` | `target_workspace` FK exists but is orthogonal (initiative belongs to a person, targets a workspace) |
+| AgentExecution | **per-user** | `agent_execution_owned_by(user, execution) -> bool: execution.user == user` | Multiple viewsets + ORM callers; user FK is the enforcement axis |
+| Document | **per-user** | `document_owned_by(user, doc) -> bool: doc.owner == user` | Document owner is NOT NULL; per-user is the natural predicate |
+
+**Cross-check:** the workspace-scoped models (Deliverable, ChatConversation) both have a `workspace` FK; the per-user models either lack workspace FKs on the ownership axis or have workspace FKs that are orthogonal to ownership. Chris D-verdict aligns with concrete model shapes — no Phase 2 re-ratification needed.
+
+### §6.1 — Workspace-scoped semantics (per Rigby SIGN F5 amendment)
+
+**"Workspace-scoped" means visibility is controlled by workspace membership/role, NOT by `row.user == request.user`.** A user with membership in a workspace can see all rows in that workspace, regardless of who created them. The primary access check is:
+
+```
+predicate(user, row) := user_can_access_workspace(user, row.workspace_id)
+```
+
+For per-user models that happen to carry a `workspace_id` (e.g., Initiative.target_workspace at line 139 of core/models_document_registry.py) — **workspace is orthogonal metadata; it does NOT expand visibility.** The predicate stays `row.owner == request.user`.
+
+### §6.2 — Phase 2 predicate module TODO (per Rigby SIGN F5 amendment)
+
+**Phase 2 must identify the canonical `user_can_access_workspace(user, workspace_id)` source-of-truth** — which table/model defines workspace membership, and which fields/roles matter. Candidate sources:
+- `ProjectWorkspace.members` M2M (if it exists)
+- `WorkspaceRole` / `WorkspaceMembership` intermediary table
+- Some other membership primitive
+
+Phase 2 §5 outcome: single well-tested `user_can_access_workspace(user, workspace_id) -> bool` in `core/security/object_authz.py` that all workspace-scoped predicates delegate to.
+
+---
+
+## §7. Nullable-Owner Interim Policy per Model — DECISIONS
+
+Per scoping §7.5 (Rigby SIGN F5 amendment): NULL-owned rows MUST NOT be treated as silent public. Options per model informed by §4 counts:
+
+| Model | Nullable? | Null count | **Proposed policy** | Justification |
+|---|---|---|---|---|
+| Deliverable | Yes (user) | 45 | **Backfill + migrate to NOT NULL**. Small volume (45); attributable via existing `workspace` FK or `deliverable_provenance` metadata. Fallback: hard-attribute to `system` user for any un-attributable rows. | 45 rows is trivial to backfill; migrating to NOT NULL closes the leakage class entirely for future writes. |
+| Initiative | Yes (owner) | 62 (100%) | **[CHRIS D-VERDICT: OPTION C APPROVED 2026-07-10 — per single-user pre-prod operating context]** Backfill all 62 null-owner rows to primary user via one-time migration; migrate `owner` to NOT NULL immediately; enforce `owner=request.user` from Phase 3 day 1 — NO transitional predicate. Backfill uses canonical primary-user lookup (first superuser or configured primary user), NOT a hardcoded "chris" string, per Rigby SIGN F3 guardrail. **Provenance note (per Rigby amendment):** this is a "pre-prod single-user normalization step" — revisit when Phase 0 multi-tenant lands. | Platform is single-user + pre-prod (per Chris directive 2026-07-10). Options A/B were solving hypothetical multi-tenant risk that doesn't exist yet. 62 rows + 1 user = trivial backfill; migrating to NOT NULL removes an entire class of future ambiguity. I-0302 predicate module still gets built for multi-tenant enforcement (arc's whole point) — just skips the transitional-data-state complexity that assumes multi-tenant data already exists. |
+| ChatConversation | Yes (user) | 0 (local) | **Minimal future-proofing invariant (per Rigby amendment + Chris single-user pre-prod verdict).** No code change today. Documented invariant: `null_user` rows, if ever introduced, are staff-only until an explicit "system conversation" carve-out is specified (e.g., when Discord/system integrations wire up). Not a Phase 2 blocker; not a Phase 3 blocker. | Local DB shows 0 null_user; no Discord/system integration exists to justify a deny-by-default layer today. The invariant survives to when it's actually needed. |
+| AgentExecution (canonical) | Yes (user) | 1034 (65%) | **Preserve nullable + explicit-scope policy with carve-out**. Session 642 nullability is INTENTIONAL for Celery system-context runs. Carve-out predicate: `user=request.user OR (user IS NULL AND request.user.is_staff)`. Non-staff users see only their own executions; staff see all system-context runs too. | System-context runs (agent-triggered agent runs, beat tasks) legitimately have `user=NULL`. Denying users their own executions AND all system runs is a double-loss. Staff gets platform-ops visibility. Rigby SIGN target on the carve-out. |
+| AgentTaskExecution | Yes (user) | 0 | **Migrate to NOT NULL** (defense-in-depth). 0-row model; migration is safe. Any future writer must supply user. | 0 rows means migration is trivial + closes leakage class before any writer emerges. |
+| Document | No | 0 | **n/a — already safe by default**. | NOT NULL FK; all 3075 rows valid. |
+
+### §7.1 — Chris D-verdicts (RESOLVED 2026-07-10)
+
+**Resolved — Option C approved:**
+1. ✅ **Initiative null-owner transitional policy — Chris D-verdict 2026-07-10: Option C (Backfill + NOT NULL, no transitional predicate).** Applied to §7 Initiative row. Options A/B were rejected in favor of the single-user pre-prod pragmatic path (per Rigby joint SIGN). Backfill uses canonical primary-user lookup, NOT hardcoded "chris" (Rigby SIGN F3 guardrail preserved). Provenance recorded: "pre-prod single-user normalization step; revisit when Phase 0 multi-tenant lands."
+2. ✅ **ChatConversation deny-by-default softened to minimal future-proofing invariant** (per Rigby joint SIGN). No code change today; documented invariant only.
+
+**Ratifiable at Phase 2 SIGN (before Phase 3 opens):**
+3. **AgentExecution staff carve-out predicate shape:** approve `user=request.user OR (user IS NULL AND request.user.is_staff)`? Rigby SIGN target if approved; Chris D-verdict if any staff/superuser scope drift. **Note:** under single-user pre-prod context, this is a low-risk Phase 2 SIGN item since the 1034 nullable-user rows are system-context Celery runs and Chris is the only staff+non-staff user; the carve-out shape is functionally equivalent to "Chris sees everything."
+
+### §7.2 — Phase 2 handoff (updated per Rigby SIGN F6 amendment)
+
+Phase 2 (predicate module) implements the policies above per §4. Additional gates per Rigby F6:
+- **Any NOT NULL migration (Deliverable, AgentTaskExecution) requires prod/staging null-count confirmation + backfill plan with rollback.** Cannot proceed on local data alone.
+- **Shadowed/zombie intelligence models do NOT block Phase 2 predicates for canonical models** but must be tracked as retirement follow-ons (§9). Phase 2 skips them entirely.
+- **Initiative backfill sequence (per Chris D-verdict Option C 2026-07-10):** Phase 2 ships the predicate module WITH `owner=request.user` as the enforced predicate (no transitional layer). Phase 3 pre-flight ships a one-shot data migration that backfills all null-owner rows to the canonical primary user (first superuser / configured primary user), then a schema migration that flips `owner` to NOT NULL. Both migrations are surgical + reversible on the current 62-row local dataset.
+
+---
+
+## §8. Phase 2 Entry Criteria (this ledger's SIGN-target contract) — Updated per Rigby SIGN F6 amendment
+
+Phase 2 (Predicate Module) opens ONLY after this ledger meets:
+
+1. **§4 row counts** filled against local DB ✓ (banner note: prod re-verification is a Phase 3 pre-flight gate, not Phase 2)
+2. **§5 caller classification** filled per-model with sampled per-category classification + regression-risk callouts ✓ (Phase 2 does exhaustive enumeration)
+3. **§6 Q7 boundary** verified against concrete model shapes — no deviations from Chris D-verdict ✓ + workspace-scoped membership semantics identified (F5)
+4. **§7 nullable-owner policy** decided per model ✓
+5. **Rigby SIGN** on the ledger ✓ (SIGN-WITH-EDITS applied; final SIGN-PASS pending)
+6. ✅ **Chris D-verdict on Initiative null-owner transitional policy (§7.1 item 1) — RESOLVED 2026-07-10: Option C (Backfill to primary user + migrate NOT NULL; no transitional predicate)** — per single-user pre-prod operating context.
+7. **[Rigby SIGN F6 amendment] Migration guardrail** — any NOT NULL migration requires prod/staging null-count confirmation + rollback-safe backfill plan. **Applies to future Phase 0 multi-tenant landing;** the Phase 3 backfill under single-user pre-prod context ships as a single canonical-primary-user migration.
+8. **[Rigby SIGN F6 amendment] Shadowed/zombie retirement targets** — recorded in §9; do NOT block Phase 2 predicates for canonical models.
+9. **Chris ratification** of this ledger — remaining gate; all D-verdicts resolved.
+
+---
+
+## §9. Follow-On Retirement Targets (per §7.4 scoping carve-out) — UPDATED with Phase 1 findings
+
+Per Chris §3.2 Q2 D-verdict at scoping ratification — duplicate class retirement is FOLLOW-ON scope, NOT I-0302 scope. Phase 1 counts (§4) surfaced 2 additional retirement targets (SHADOWED file + ZOMBIE class); both are dead code with zero enforcement risk.
+
+| Target | Path | Nature | Retirement rationale | Follow-on owner |
+|---|---|---|---|---|
+| `intelligence/models.py` **entire file** (23kB, 12+ classes including AgentExecution:587) | intelligence/models.py | **SHADOWED** by `intelligence/models/` package | Python package precedence rules make the file unreachable via `import intelligence.models`. All 12+ model classes inside are dead code. Confirmed 2026-07-10 via `ls -la` — both file and package exist at same level. **Does NOT affect live runtime behavior** if the file is unreachable; affects audit correctness + developer confusion. | Follow-on: **Intelligence model import hygiene + dead-code retirement** — grep-verify no direct file-path imports, then delete file. |
+| `intelligence.models.agent_execution.AgentExecution` (class) | intelligence/models/agent_execution.py:11 | **ZOMBIE** — importable, no DB table | `intelligence_agentexecution` table does not exist in local DB (ProgrammingError on `.objects.count()`). No migration ever created it. Any `.objects.` call raises ProgrammingError → callers must all be dead paths or guarded by try/except. **Migration integrity issue** (missing migration, not a runtime bug). | Follow-on: confirm no runtime imports; **prefer removal over adding a migration if unused.** |
+| `core.models_unified_system.AgentExecution` DEPRECATED docstring label | line 882-887 | **DOCSTRING WRONG** — class is CANONICAL | Class has 1600 live rows in local DB, is the actual live orchestration-tracker. Docstring says "DEPRECATED, use agents.models.AgentExecution instead" but the referenced replacement is `AgentTaskExecution` (0 rows). Retire the DEPRECATED docstring, keep the class. | I-0302 Phase 5 arc close (surgical docstring correction — 5-line change). |
+| `AgentTaskExecution` | core/models/agents_registry/models.py:434 | 0 rows historically | S1244 note: 0 rows across time. Defense-in-depth ownership enforcement in I-0302 Phase 3 protects against future writers. Retirement is safe once we confirm no writer emerges post-I-0302. | TBD (post-I-0302 arc close). |
+
+### §9.1 Scope-boundary reminder
+
+Per §7.4 scoping carve-out + Chris Q2 D-verdict: retirement of the above is OUT OF SCOPE for I-0302. Recording here so the targets survive to the follow-on program. **I-0302 enforcement applies ONLY to the canonical `core.models_unified_system.AgentExecution`** (1600 rows, 65% nullable-user per §4).
+
+---
+
+## §10. Handoff to Rigby (§4 + §5 + §7 fill)
+
+Rigby, please fill the TBD tables per the tags in §4, §5, and §7. Method:
+
+**§4 row counts** — for each of the 5 models + 4 AgentExecution candidates, run ORM:
+- `Model.objects.count()`
+- `Model.objects.filter(<ownership_fk>__isnull=True).count()`
+- `Model.objects.values('<ownership_fk>').distinct().count()`
+
+**§5 caller classification** — per model:
+- Grep for callers (imports + `.objects.` chains + `.get()` / `.filter()` / `.create()` / `.save()`)
+- Read each caller to determine if it filters by `user=` / `owner=` / `workspace=` before yielding rows to users
+- Classify: scoped / unscoped / ambiguous
+- Note whether callers are DRF views (request-time), Celery tasks (async — I-0303 scope), management commands (audit only), or service-layer helpers
+
+**§7 nullable-owner policy** — propose per model based on §4 counts:
+- Small (<100 rows) → migrate to NOT NULL
+- Medium (100-10k) → deny-by-default + backfill plan
+- Large (10k+) → deny-by-default; backfill is follow-on
+
+Report back inline (or route via workspace deliverable — your call based on payload size). SIGN on completeness is separate from SIGN on ledger design.
+
+---
+
+**End of I-0302 Phase 1 Model Audit Ledger scaffold. TBDs to be filled by Rigby before SIGN.**
