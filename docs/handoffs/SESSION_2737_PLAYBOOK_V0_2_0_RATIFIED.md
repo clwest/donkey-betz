@@ -206,6 +206,136 @@ last sentence.
 ### 10.7 Commit graph
 
 ```
+c3b79689  fix(hai_inbox): DirectMessage import + thread_type (#3053)
+6b2841ef  fix(celery): register core.tasks_push_notifications at boot (#3052)
+a3a0c51b  docs(session-2737): §16 bundle close — handoff §10 + cascade (#3051)
+a3b04af7  feat(session-2737): §16 Notification Fanout — wrap-up bundle (#3050)
+5bcb9777  docs(session-2737): Playbook v0.2.0 ratified — handoff + cascade (#3049)
+3dc2c588  feat(playbook): v0.2.0 MINOR — codify R1/R2/R3 (#3048)
+```
+
+### 10.8 Latent integration defects discovered by post-recycle runtime verification
+
+**This subsection was authored on Chris's directive** ("record this as a
+latent integration defect discovered by the §16 wrap-up bundle — this
+is exactly why the restart/registry verification discipline exists")
+after the initial §16 bundle merge. It preserves the discovery pattern
+so future post-merge close-outs run the same verification cycle.
+
+The §16 wrap-up bundle merge (PR #3050 `a3b04af7`) shipped with three
+latent integration defects that unit tests did NOT catch. All three
+were discovered by executing `make celery-recycle` + `celery -A core
+inspect registered` + a real HAI-critical-item smoke check against the
+running workers. All three were fixed post-merge on the same day.
+
+#### Defect 10.8.1 — `core.tasks_push_notifications` not registered at worker boot
+
+**Latent since:** PR #1458 (2026-02-24, ~5 months) for the two Expo
+tasks; PR #3038 (2026-07-09 S2735, ~24h) for Discord; PR #3040
+(2026-07-09 S2735) for Web Push; PR #3050 (2026-07-09 S2737) for
+Inbox — ALL five HAI push task names were latent-broken.
+
+**Root cause:** four HAI signal modules (`signals_push_notifications`,
+`signals_discord_notifications`, `signals_webpush_notifications`,
+`signals_inbox_notifications`) all import from
+`core.tasks_push_notifications` **inside function bodies** (lazy
+`from core.tasks_push_notifications import ...` in the `_enqueue_*`
+helpers). Django's app-boot only imports the signal modules at the
+top level; the task module never loaded → `@shared_task` decorators
+never fired → task registry never populated → `.delay()` calls would
+have silent-`KeyError` on the running worker.
+
+**Why tests missed it:** `test_hai_discord_fanout.py` (S2735) and
+`test_hai_wrap_up_bundle.py` (S2737 §16 bundle) both patch `.delay`
+directly and invoke the task functions as plain callables. Neither
+exercises the Celery task registry lookup that production dispatches
+depend on. Same class of production-only failure the memory rule
+`feedback_procfile_makefile_queue_parity` captures.
+
+**Fix:** PR #3052 `6b2841ef` — added `'core.tasks_push_notifications'`
+to `core/celery.py::app.conf.imports` alongside the existing
+hotfix-driven entries (S1253 docs-manager, S1257 platform-auditor +
+chief-of-staff, S1267 bug-triage, S2735 cost-protection + beat-health).
+
+**Verification:** `celery -A core inspect registered` post-recycle
+returns all 5 tasks (`notify_critical_attention_item`,
+`notify_hai_discord`, `notify_hai_inbox`, `notify_hai_webpush`,
+`notify_needs_classification`) across all 5 workers (default,
+broadcast, pa, long_running, code_jobs).
+
+#### Defect 10.8.2 — `notify_hai_inbox` wrong `DirectMessage` import path
+
+**Latent since:** PR #3050 (2026-07-09 S2737) merge — ~24 hours.
+
+**Root cause:** `notify_hai_inbox` did
+`from core.models_unified_system import DirectMessage` but
+`DirectMessage` lives at `core/models_messaging.py:99`. The wrong
+import raised `ImportError` on every task run.
+
+**Why tests missed it:** AT-16-1 acceptance tests all inspect module
+structure + patched delays; none of them execute the task's ORM path.
+The class of "which module does X live in?" bugs cannot be caught by
+static-inspection tests. Same category as Defect 10.8.1.
+
+**Fix:** PR #3053 `c3b79689` — import `DirectMessage` +
+`MessageThread` + `ThreadParticipant` from `core/models_messaging`.
+
+**Verification:** smoke test 3 (post-recycle) shows
+`HAIDispatchLog(channel='inbox', status='succeeded')` +
+`DirectMessage` row created.
+
+#### Defect 10.8.3 — `notify_hai_inbox` invalid `thread_type`
+
+**Latent since:** PR #3050 (2026-07-09 S2737) merge — ~24 hours.
+Surfaced only after Defect 10.8.2 was fixed.
+
+**Root cause:** task created `MessageThread(thread_type='hai_system_notification')`
+but `MessageThread.thread_type` is `max_length=20` with fixed choices
+`{dm, group, rigby_routed}`. String was 23 chars AND not in the choice
+list — `DataError: value too long for type character varying(20)`.
+
+**Why tests missed it:** same class as 10.8.2 — static-inspection
+tests do not exercise Django model validation or the actual `.create`
+call path.
+
+**Fix:** PR #3053 `c3b79689` — use `thread_type='rigby_routed'` per
+`td_handlers_core.py:3820` precedent; store HAI-source metadata on
+the `DirectMessage.metadata` JSONField instead of trying to shove it
+into a new `thread_type` value.
+
+**Verification:** smoke test 4 (on main after PR #3053 merge):
+`HAIDispatchLog: 3 → 4` (+1 succeeded row);
+`DirectMessage: 35 → 36` (+1 new inbox message);
+`channel=inbox status=succeeded error=''`.
+
+### 10.9 Post-verification governance stamps
+
+Per Chris's directive: *"Do not open the next queue item until the
+worker registry and enqueue path are confirmed healthy."*
+
+- ✅ Worker registry: 5/5 tasks registered across 5/5 workers
+- ✅ Enqueue path: real HAI-critical → `on_commit` → `.delay()` → task
+  execution → `DirectMessage` + `HAIDispatchLog(status='succeeded')`
+  written, all confirmed on main HEAD `c3b79689`
+- ✅ Three latent defects fixed on the same day discovered
+
+**Class of bug 10.8.1/10.8.2/10.8.3 lesson (candidate for a future
+memory-rule addition):** any wrap-up bundle that ships a Celery task
+MUST run `make celery-recycle` + `celery inspect registered` +
+end-to-end runtime smoke check before the bundle is considered closed.
+Static-inspection acceptance tests are insufficient; production-only
+failure classes surface only against a running worker. The ratified
+PLAYBOOK-2.2.2 (Category A before code) discipline should be extended
+in future MINOR amendments to include a PLAYBOOK-8.x (Runtime
+Discipline chapter, currently STUB) rule requiring post-recycle
+runtime verification for Celery-task-shipping campaigns.
+
+### 10.10 Commit graph — full session
+
+```
+c3b79689  fix(hai_inbox): DirectMessage import + thread_type (#3053)
+6b2841ef  fix(celery): register core.tasks_push_notifications at boot (#3052)
+a3a0c51b  docs(session-2737): §16 bundle close — handoff §10 + cascade (#3051)
 a3b04af7  feat(session-2737): §16 Notification Fanout — wrap-up bundle (#3050)
 5bcb9777  docs(session-2737): Playbook v0.2.0 ratified — handoff + cascade (#3049)
 3dc2c588  feat(playbook): v0.2.0 MINOR — codify R1/R2/R3 (#3048)
@@ -214,5 +344,7 @@ a3b04af7  feat(session-2737): §16 Notification Fanout — wrap-up bundle (#3050
 ---
 
 **End of Session 2737.** Engineering Playbook v0.2.0 ratified + §16
-Notification Fanout wrap-up bundle (CDR-001 §7 Gap 1-4) shipped as
-first engineering work under ratified v0.2.0 rules.
+Notification Fanout wrap-up bundle (CDR-001 §7 Gap 1-4) shipped +
+three latent integration defects discovered by post-recycle runtime
+verification + fixed same-day + reference lesson captured in §10.8
+for future bundle close-outs.
