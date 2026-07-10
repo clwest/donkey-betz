@@ -1,8 +1,11 @@
 ---
 title: "I-0301 Scoping — HTTP + AllowAny Surface Remediation + Failure-Data Safety Contract"
-status: draft
+status: active
 authority: arc-scoping
 session_added: 2742
+session_scoping_ratified: 2742
+scoping_ratification_date: 2026-07-10
+scoping_ratifier: chris
 last_updated: 2026-07-10
 arc_id: I-0301
 parent_campaign: RUR-C1 (Tenant Boundary Lockdown)
@@ -17,7 +20,12 @@ sibling_arcs:
   - I-0302 (Object-Level Authorization) — waits for I-0301 safety contract SIGN
   - I-0303 (Async Tenant-Boundary Enforcement) — waits for I-0301 safety contract SIGN
 head_at_scoping: 0825df46
-constraint: scope-only — implementation begins ONLY after Rigby scope SIGN + Chris ratification of this scoping
+current_phase: Phase 1 (Audit Ledger) — unblocked by scoping ratification; not yet started
+sign_history:
+  - session: 2742
+    reviewer: rigby
+    verdict: SIGN-with-amendments (10 focus areas; ~10 non-material applied directly; 3 material amendments applied post-SIGN and escalated to Chris per §12 escalation rule)
+scoping_ratification_note: Chris approved all 3 material amendments in the S2742 return. I-0301 scoping is ratified as amended. Phase 1 (Audit Ledger) is unblocked. Implementation code (Phase 3) still requires Phase 2 safety-contract SIGN + Chris ratification of the frozen contract.
 ---
 
 # I-0301 Scoping — HTTP + AllowAny Surface Remediation + Failure-Data Safety Contract
@@ -503,6 +511,8 @@ Per Chris S2742 §4 escalation rule, the three items below refine hard gates / W
 
 **Chris scoping-ratification decision required:** approve as amended vs amend further.
 
+**Chris D-verdict (2026-07-10, S2742 return):** **APPROVE ALL 3 MATERIAL AMENDMENTS.** I-0301 scoping is ratified as-amended. Phase 1 (Audit Ledger) is unblocked. Implementation code (Phase 3) still requires Phase 2 safety-contract SIGN + Chris ratification of the frozen contract before it opens.
+
 ### Non-material amendments applied directly
 
 Per Rigby's allowance, applied without Chris escalation:
@@ -516,6 +526,24 @@ Per Rigby's allowance, applied without Chris escalation:
 - Prohibit cross-tenant-inferable trace_id
 - §5.2 additional attack modes
 - Minimal safe queryset scoping allowance in I-0301 scope (§7.1)
+
+---
+
+## §13. Phase State Ledger
+
+Live tracker of I-0301 phase progress. Updated as each phase opens / closes.
+
+| Phase | Status | Opens on | Closes on |
+|---|---|---|---|
+| **Phase 1 — Audit Ledger** | **UNBLOCKED (2026-07-10, S2742 Chris ratification of scoping)** — not yet started | Chris scoping ratification ✅ | Audit ledger deliverable materialized in workspace `fcd7e683`; every AllowAny occurrence + dynamic-permission audit result classified into A/A2/B/C/D bucket; Rigby ledger SIGN |
+| **Phase 2 — Safety Contract Draft + Rigby SIGN** | BLOCKED on Phase 1 close | Phase 1 close | Failure-data safety contract frozen at durable doc location; Rigby SIGN-with-PASS on the contract; Chris ratification of the frozen contract |
+| **Phase 3 — HTTP Remediation** | BLOCKED on Phase 2 close (safety contract Chris-ratified) | Phase 2 close | All 26+ endpoints remediated per bucket; base exception handler + envelope live; regression suite scaffolded + first tests pass; CI-blocking |
+| **Phase 4 — Coverage Denominator Machinery** | BLOCKED on Phase 3 close | Phase 3 close | CI route-list generator live; snapshot drift detection blocks unreviewed new routes |
+| **Phase 5 — I-0301 Close** | BLOCKED on Phase 4 close | Phase 4 close | All buckets remediated; regression suite green + CI-blocking; coverage machinery live; `I-030199_close.md` written + Chris-ratified |
+
+**Downstream unlocks:**
+- Phase 2 close (safety contract Chris-ratified) unblocks: RUR-C2 opening + I-0302 opening + I-0303 opening
+- I-0301 close does NOT close RUR-C1 (parent needs I-0302 + I-0303 close too, per Chris Q2 D-verdict)
 
 ---
 
