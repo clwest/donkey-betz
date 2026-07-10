@@ -470,6 +470,22 @@ celery-logs: ## Tail all Celery logs
 	@echo "==> Tailing all Celery logs (ctrl-c to stop)"
 	@tail -f $(CELERY_LOG) $(CELERY_LONG_RUNNING_LOG) $(CELERY_BROADCAST_LOG) $(CELERY_BEAT_LOG)
 
+# ---------- Session lifecycle (PA wrapper pin rotation) ----------
+# S2746 EOS Phase 3 build. Automates the retire → mint → wrapper-rewrite
+# ceremony that used to be a hand-edit of tools/pa_local.sh at every
+# session close. Backed by core/management/commands/session_lifecycle.py.
+
+session-status: ## Show current PA wrapper pin + owner + retirement triggers
+	@$(DJANGO_MANAGE) session_lifecycle status
+
+session-open: ## Mint fresh pin + rewrite wrapper. LABEL required.  usage: make session-open LABEL=next-arc
+	@if [ -z "$(LABEL)" ]; then echo "ERROR: LABEL required. Usage: make session-open LABEL=next-arc"; exit 1; fi
+	@$(DJANGO_MANAGE) session_lifecycle open --label "$(LABEL)"
+
+session-close: ## Retire current pin + mint fresh + rewrite wrapper. LABEL required. usage: make session-close LABEL=next-arc
+	@if [ -z "$(LABEL)" ]; then echo "ERROR: LABEL required. Usage: make session-close LABEL=next-arc"; exit 1; fi
+	@$(DJANGO_MANAGE) session_lifecycle close --label "$(LABEL)"
+
 # ---------- Selfpatch helpers (LLM-driven patches) ----------
 # These retained as wrappers but do NOT assume ollama is present.
 selfpatch-apply: ## Apply a stored patch file: make selfpatch-apply FILE=patch.json
