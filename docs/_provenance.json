@@ -1,10 +1,10 @@
 {
   "_meta": {
-    "generated": "2026-07-10T00:08:24+00:00",
+    "generated": "2026-07-10T00:28:53+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "a3b04af77f21",
+    "git_head": "fe6a1b3d6895",
     "doc_count": 2496,
-    "commit_count": 7921,
+    "commit_count": 7929,
     "confidence_breakdown": {
       "HIGH": 1602,
       "MEDIUM": 394,
@@ -2566,7 +2566,7 @@
         2736,
         2737
       ],
-      "commit_count": 1307,
+      "commit_count": 1309,
       "prs": [
         10,
         11,
@@ -3106,7 +3106,8 @@
         3043,
         3045,
         3047,
-        3049
+        3049,
+        3051
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7440,7 +7441,7 @@
         2736,
         2737
       ],
-      "commit_count": 263,
+      "commit_count": 265,
       "prs": [
         2213,
         2219,
@@ -7588,7 +7589,8 @@
         3043,
         3045,
         3047,
-        3049
+        3049,
+        3051
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19205,15 +19207,17 @@
       "originating_session": 2737,
       "confidence": "HIGH",
       "match_source": "subject",
-      "first_commit_sha": "5bcb9777",
+      "first_commit_sha": "fe6a1b3d",
       "first_commit_date": "2026-07-09",
-      "first_commit_subject": "docs(session-2737): Playbook v0.2.0 ratified \u2014 handoff + 00-START refresh + cascade (#3049)",
+      "first_commit_subject": "docs(session-2737): record 3 latent integration defects in handoff \u00a710.8 (#3054)",
       "sessions_touched": [
         2737
       ],
-      "commit_count": 2,
+      "commit_count": 6,
       "prs": [
-        3049
+        3049,
+        3051,
+        3054
       ]
     },
     "docs/handoffs/SESSION_273_DOCUMENTATION_OVERHAUL.md": {
