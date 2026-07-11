@@ -151,8 +151,16 @@ class UnifiedAgentTemplateViewSet(viewsets.ModelViewSet):
             logger.info(f"Using enhanced execution with tools for {agent_template.name}")
             execute_agent_with_tools.delay(execution_id=execution.execution_id)
         else:
-            # Use standard execution for other agents
-            execute_agent.delay(execution_id=execution.execution_id)
+            # S2757 B2 — dispatch via apply_async_with_actor so the trusted
+            # x-acting-user-id header lands. execution.user may be None for
+            # unauthenticated dispatches; helper omits header cleanly and
+            # substrate emits missing_acting_identity report-only.
+            from core.security.task_enforcement import apply_async_with_actor
+            apply_async_with_actor(
+                execute_agent,
+                execution.user,
+                kwargs=dict(execution_id=execution.execution_id),
+            )
         
         return Response({
             'execution_id': execution.execution_id,
