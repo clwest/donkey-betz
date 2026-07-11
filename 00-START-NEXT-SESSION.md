@@ -2,72 +2,54 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2758 CLOSED — `ops_tool.tenant_boundary_violations` PA TOOL RATIFIED
+## READ THIS FIRST — SESSION 2759 CLOSED — STALE-DAPHNE WARNING SYSTEM RATIFIED
 
-**Refreshed 2026-07-11 (SESSION 2758 CLOSED — Chris D-verdict "Approved" on new `ops_tool.tenant_boundary_violations` PA tool. First non-boundary-lockdown net-new engineering item since S2754.).**
+**Refreshed 2026-07-11 (SESSION 2759 CLOSED — Chris D-verdict "approved, ship it" on the stale-Daphne / stale-Celery warning system. Fifth phase-close today; codifies a 3-incident class regression that silently affected S2755/S2756/S2757 view-layer merges.).**
 
-**S2758 shipped in 1-PR close-ceremony bundle (per PLAYBOOK-7.4.1):**
+**S2759 shipped in 1-PR close-ceremony bundle (per PLAYBOOK-7.4.1):**
 
-- Schema (`core/services/pa_tool_schemas.py`): `tenant_boundary_violations` added to `ops_tool` action enum (23rd action); new `failure_kind` param with 6-kind Phase 2 enum; extended `task_name` description
-- Handler (`core/services/td_handlers_ops.py`): new elif branch + `_ops_tenant_boundary_violations` method (~130 lines) — window/task_name/failure_kind/limit filters; aggregates by task_name + failure_kind + composite; sample_events with discriminator preserved; empty-state diagnostic note; `MAX_AGG_SCAN=5000` defensive cap
-- Test suite: 10 new tests (10/10 passing, 189s runtime)
-- **E2E verified via live Rigby dispatch** (`make celery-recycle` + real query)
-- **Real finding surfaced during verification:** Rigby's own PA loop dispatches `process_pa_chat_task` without acting-user header — outside the 4 S2757-converted sites. Legitimate second-BATCH-FIX-pass candidate.
-- Ratification envelope: `RATIFICATION_2026-07-11_ops_tool_tenant_boundary_violations.md`
-- Session-open pin rotation on `tools/pa_local.sh:539` (S2758 protocol)
+- **Root cause analysis** — S2758 tool's real finding traced empirically to stale Daphne (started Jun 30, 11 days pre-merge). `make celery-recycle` bounces only Celery workers; Daphne holds ASGI-served view code separately.
+- **`make recycle-all`** Makefile target (aliases `restart`, S2759-explicit docstring)
+- **`ops_tool.version` staleness detection** — new response fields: `staleness_verdict` (FRESH / STALE_DAPHNE / STALE_CELERY / STALE_BOTH / UNKNOWN), `head_commit_sha`, `head_commit_timestamp`, `daphne_pid_age_seconds`, `celery_workers_status[]`, `staleness_fix`. Uses `psutil.process_iter()` cross-platform.
+- **`check_process_staleness`** Beat task — every 30 min via `crontab(minute='*/30')`. Emits `OpsRunEvent(label='staleness_warning')` when verdict != FRESH.
+- **Test suite** — 10 new tests (10/10 passing, 190s runtime)
+- **Memory rule update** — `feedback_local_truth_no_production` extended: `make recycle-all` is canonical deploy step, trigger list broadened to ASGI-served surfaces + Celery-served, freshness check at close
+- **E2E verified live** post `make recycle-all` — `staleness_verdict=FRESH`, all 6 processes reporting `started_before_head_commit=false`
+- Ratification envelope: `RATIFICATION_2026-07-11_stale_daphne_warning_system.md`
+- Session-open pin rotation on `tools/pa_local.sh:539` (S2759 protocol)
 - Handoff + docs cascade + close bookmark
 
 **Workspace deliverables created this session:**
 
 | Deliverable | UUID | Workspace |
 |---|---|---|
-| `RATIFICATION_20260711_ops_tool_tenant_boundary_violations` | (filled at create) | RUR-C1 Tenant Boundary Lockdown |
-| `ops_tool.tenant_boundary_violations PA Tool (mirror)` | (filled at create) | RUR-C1 Tenant Boundary Lockdown |
+| `RATIFICATION_20260711_stale_daphne_warning_system` | (filled at create) | RUR-C1 Tenant Boundary Lockdown |
+| `Stale-Daphne Warning System (mirror)` | (filled at create) | RUR-C1 Tenant Boundary Lockdown |
 
 ---
 
-## CHRIS S2758 DIRECTIVE — LOCAL-TRUTH RULE (memory-update candidate)
+## S2760 CANDIDATES (Chris selects at open)
 
-**"We are working locally so if it passes locally its working — no production right now."** (Chris, S2758 close 2026-07-11)
+### Candidate 1 — S2758 D2 canonical AgentExecution vs AgentTaskExecution decision
 
-Reinforces `project_single_user_pre_prod_operating_context.md`. Applies to all future close-ceremonies:
+Design SIGN required. Three approaches (a/b/c) need Chris directive:
+- (a) Add `execution_id` field to `AgentExecution`, migrate writers, deprecate `AgentTaskExecution`. Multi-PR.
+- (b) Reaffirm `AgentTaskExecution` as domain-distinct canonical (task-execution-tracking distinct from AgentExecution orchestration-tracking). Retire shim by promoting predicate to `object_authz.py`.
+- (c) Defer decision to a dedicated arc; keep Phase 3 REPORT-ONLY shim.
 
-- Local test pass = shipped. No "production observation window" fantasy.
-- No "pending production Railway deploy" language in envelopes.
-- `make celery-recycle` (or equivalent local worker bounce) is the "deploy" step.
-- L1-style "live E2E deferred" limitations are wrong for local-only work; if code passes locally + Rigby can dispatch it locally, it ships.
+### Candidate 2 — S2758 D4 HIGH-RISK task file wiring extension
 
-Envelope §3 + §5 corrected mid-session to remove production framing.
+Follow-up REPORT-ONLY-shape PR for `tasks_initiatives.py` + `tasks_content.py` + `tasks_media.py` + `tasks_misc.py`. Same discipline as S2756 REPORT-ONLY.
 
----
+### Candidate 3 — S2759 L2 follow-up: `ops_tool.staleness_warnings` query action
 
-## S2759 CANDIDATES (Chris selects at open)
-
-### Candidate 1 — Rigby-side dispatch-path conversion (fresh S2758 finding)
-
-**Real finding surfaced by S2758 tool E2E verification:** Rigby's own PA loop dispatched `process_pa_chat_task` at conversation_id `pa-5fe224e5757f42c0` (S2758 pin) and hit `missing_acting_identity` — meaning the acting-user header was NOT attached at that dispatch path. Dispatch site is OUTSIDE the 4 S2757-converted sites.
-
-**Scope for S2759:**
-- Locate the exact Rigby-side dispatch (likely `core/services/unified_pa_entrypoint.py` or `views_assistant_bypass.py`)
-- Convert to `apply_async_with_actor(process_pa_chat_task, request.user, kwargs=...)`
-- Add regression test
-- 1-PR close-ceremony bundle
-
-**Value:** Fast turnaround; concrete finding-driven fix; validates that the S2758 tool actually feeds BATCH-FIX iteration.
-
-### Candidate 2 — D2 canonical AgentExecution vs AgentTaskExecution decision routing
-
-Three approaches (a/b/c) require Chris directive. Design SIGN + Rigby SIGN + Chris ratification.
-
-### Candidate 3 — D4 HIGH-RISK task file wiring extension
-
-Follow-up REPORT-ONLY PR for `tasks_initiatives.py` + `tasks_content.py` + `tasks_media.py` + `tasks_misc.py`. Same discipline as S2756 REPORT-ONLY.
+New ops_tool action parallel to `tenant_boundary_violations` (S2758). Queries `OpsRunEvent(label='staleness_warning')` rows for warning history. Cheap; only worth building if Beat task warnings actually accumulate.
 
 ### Candidate 4 — Net-new engineering item
 
 Per S2745 engineering-bias directive. Examples:
-- New Command Center tile: tenant_boundary_violations dashboard tile
-- Beat task: weekly REPORT-ONLY findings summary Deliverable
+- New Command Center tile: staleness dashboard tile OR tenant_boundary_violations dashboard tile
+- New PA tool for another operational-diagnostic surface
 - New spider / UI page / capability
 
 ### Housekeeping (still owed)
@@ -77,28 +59,38 @@ Per S2745 engineering-bias directive. Examples:
 
 ---
 
-## SESSION PIN — S2758 RETIRED (fresh mint required at S2759 open)
+## SESSION PIN — S2759 RETIRED (fresh mint required at S2760 open)
 
-**Pin history (S2758 arc):**
+**Pin history (S2759 arc):**
 
-- `pa-5fe224e5757f42c0` (label `s2758-recent-tenant-violations-tool`) minted S2758 open; **retired at S2758 close** (`updated_count=<n> previously_active=true retired=true`)
+- `pa-58888db8e1d148ca` (label `s2759-rigby-dispatch-conversion` — stale label after mid-session scope pivot away from dispatch conversion toward the codified stale-Daphne warning system) minted S2759 open; **retired at S2759 close** (`updated_count=<n>`)
 
-**Wrapper `tools/pa_local.sh:539` still points at `pa-5fe224e5757f42c0` (retired)** — intended failure mode forces S2759 first-action fresh mint before any other PA dispatch.
+**Wrapper `tools/pa_local.sh:539` still points at `pa-58888db8e1d148ca` (retired)** — intended failure mode forces S2760 first-action fresh mint.
 
-**S2759 open sequence (fresh terminal or continued session):**
+**S2760 open sequence:**
 
 ```
 context-kit orient
 
 # Read this file end-to-end
 
-# Try the S2758 tool first — verify it still surfaces expected findings
+# Freshness check at open (per S2759 codified rule)
+bash tools/pa_local.sh "invoke ops_tool version, report staleness_verdict"
+# Expect FRESH. If STALE_*, run `make recycle-all` before continuing.
+
+# Try the S2758 tool — check for new tenant_boundary_violation findings
 bash tools/pa_local.sh "Show me tenant_boundary_violations in the last 24h"
 
-# Mint fresh pin scoped to selected candidate
+# Check for accumulated staleness_warning events (new S2759 output)
+python manage.py shell -c "
+from core.models_ops_runs import OpsRunEvent
+n = OpsRunEvent.objects.filter(label='staleness_warning').count()
+print(f'staleness_warning events accumulated: {n}')
+"
+
+# Mint fresh pin scoped to selected S2760 candidate
 python manage.py session_lifecycle open --label <candidate-scoped-label>
 
-# Confirm wrapper repoint
 grep '^python tools/pa_chat.py' tools/pa_local.sh
 ```
 
@@ -106,52 +98,48 @@ Rigby will not dispatch until the wrapper is repointed to the new pin.
 
 ---
 
-## OPEN RUNTIME ITEMS (from S2758 close)
+## OPEN RUNTIME ITEMS (from S2759 close)
 
-1. **Rigby-side dispatch-path conversion** — Candidate 1 above (fresh finding from S2758 tool)
-2. **D2 AgentExecution vs AgentTaskExecution canonical decision** — Candidate 2
-3. **D4 HIGH-RISK task file wiring extension** — Candidate 3
-4. **P0.5 cost-threshold advance-to-freeze** — Claude+Rigby joint recommendation → Chris yes/no
+1. **S2758 D2 canonical decision** — Candidate 1 above
+2. **S2758 D4 HIGH-RISK wiring extension** — Candidate 2 above
+3. **S2759 L2 staleness_warnings query action** — Candidate 3 (opt-in)
+4. **P0.5 cost-threshold advance-to-freeze** — Claude+Rigby joint recommendation → Chris yes/no (still owed since S2753)
 5. **P0.75 CI billing** — status check
 6. **PA celery worker bounce** — Rigby stall fix #3119 still not activated
 7. **RUR-C2 open eligible** — Wave 1 staged-overlap per Chris Q1 (I-0301 safety contract signed)
-8. **D1 process_pa_chat_task payload strip** — deferred; requires HTTP-side bootstrap refactor
-9. **D3 report-driven fix batch** — findings now accumulating via S2758 tool; second BATCH-FIX pass opens when signal is strong
-10. **D5 local shim retirement** — depends on D2 canonical decision
-11. **HMAC signing of `x-acting-user-id` header** — Phase 2 §6 limitation; RUR-C2 / follow-on backlog
+8. **S2758 D1 process_pa_chat_task payload strip** — deferred (HTTP-side bootstrap refactor)
+9. **S2758 D3 report-driven fix batch** — findings accumulating via S2758 tool
+10. **S2758 D5 local shim retirement** — depends on D2 canonical decision
+11. **HMAC signing of `x-acting-user-id` header** — Phase 2 §6 limitation
 
 ---
 
-## Twin-pointer card (per memory rule feedback_twin_pointer_docs_at_boundaries)
+## Twin-pointer card
 
-📁 **Repo `/docs/` + `/core/` — S2758 tool artifacts:**
+📁 **Repo `/docs/` + `/core/` — S2759 artifacts:**
 
-- **Schema:** `core/services/pa_tool_schemas.py` (ops_tool action enum + failure_kind param)
-- **Handler:** `core/services/td_handlers_ops.py` (`_ops_tenant_boundary_violations` method after `_ops_celery_task_history`)
-- **Test suite (10/10 passing):** `tests/security/test_ops_tool_tenant_boundary_violations.py`
-- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_tenant_boundary_violations.md`
-- **Prior handoff:** `docs/handoffs/SESSION_2758_OPS_TOOL_TENANT_BOUNDARY_VIOLATIONS_RATIFIED.md`
-- **Predecessor I-0303 ratifications:**
-  - `docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase3_report_only.md`
-  - `docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase3_batch_fix.md`
-- **Substrate that emits events this tool surfaces:** `core/security/task_enforcement.py`
-- **Sibling ops_tool actions for adjacency reference:** `_ops_failure_signatures` + `_ops_celery_task_history` + `_ops_execution_search`
-- **Playbook v0.5.0:** `docs/ENGINEERING_PLAYBOOK.md` (§7.4.x close-ceremony + §7.6.1 SIGN watchpoint)
+- **`make recycle-all`:** `Makefile:80-91`
+- **Staleness detection:** `core/services/td_handlers_ops.py` (`_ops_version` + `_compute_process_staleness`)
+- **Beat task:** `core/tasks_beat_health.py` (`check_process_staleness`) + `core/celery.py:868` (schedule)
+- **Schema description:** `core/services/pa_tool_schemas.py` (ops_tool.version)
+- **Test suite (10/10 passing):** `tests/security/test_process_staleness_detection.py`
+- **Memory rule updated:** `~/.claude/projects/-Users-donkeyking-development-unified-donkey-betz/memory/feedback_local_truth_no_production.md`
+- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-11_stale_daphne_warning_system.md`
+- **Prior handoffs (5-in-a-day chain):**
+  - `docs/handoffs/SESSION_2759_STALE_DAPHNE_WARNING_SYSTEM_RATIFIED.md` (this session)
+  - `docs/handoffs/SESSION_2758_OPS_TOOL_TENANT_BOUNDARY_VIOLATIONS_RATIFIED.md`
+  - `docs/handoffs/SESSION_2757_I0303_PHASE3_BATCH_FIX_RATIFIED.md`
+  - `docs/handoffs/SESSION_2756_I0303_PHASE3_REPORT_ONLY_RATIFIED.md`
+  - `docs/handoffs/SESSION_2755_I0303_PHASE2_TASK_ENFORCEMENT_RATIFIED.md`
+- **Playbook v0.5.0:** `docs/ENGINEERING_PLAYBOOK.md`
 
 🖥️ **Workspace UI — `/workspaces` surface:**
 
-- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — **PRIMARY**. **17 deliverables total** after S2758 close (15 pre-existing + 2 new).
-  - Governance-truth (ratification envelopes):
-    - `RATIFICATION_20260711_i0303_scoping`, `..._phase1_ledger`, `..._phase2_task_enforcement`, `..._phase3_report_only`, `..._phase3_batch_fix`
-    - `RATIFICATION_20260711_ops_tool_tenant_boundary_violations` (filled at create)
-  - Engineering-truth (content mirrors):
-    - `I-0303 — Scoping / Audit Ledger / Phase 2 / Phase 3 REPORT-ONLY / Phase 3 BATCH-FIX First Pass` (5 mirrors)
-    - `ops_tool.tenant_boundary_violations PA Tool (mirror)` (filled at create)
-    - `I-0302 — Scoping / Audit Ledger / Design / Arc Close`
-    - `I-0301 Phase 1 Audit Ledger`
+- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — **19 deliverables** after S2759 close (17 pre-existing + 2 new)
+  - Governance-truth ratifications (Phase 2 + Phase 3 REPORT-ONLY + Phase 3 BATCH-FIX + S2758 tool + S2759 warning system)
+  - Engineering-truth mirrors
 - **Architecture & Research** (`a9a16593-e0a4-44dc-8256-efc65d524b3c`) — governance / Playbook ratifications
 - **Real User Readiness Campaign** (`638e9e90-47b4-4bd4-a872-bf16181cf3b5`) — parent program workspace
-- URL template: `/workspace?workspace_id=<uuid>&tab=work&sub=deliverables`
 
 ---
 
@@ -160,40 +148,39 @@ Rigby will not dispatch until the wrapper is repointed to the new pin.
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | (filled at merge — post-S2758 tool merge) |
+| HEAD | (filled at merge — post-S2759 stale-Daphne warning system merge) |
 | Playbook version | v0.5.0 (RATIFIED S2753) |
-| RUR-C1 state | I-0301 CLOSED · I-0302 CLOSED · I-0303 through Phase 3 stage 2 first pass CLOSED · **S2758 tool surfaces findings for second BATCH-FIX pass planning** · RUR-C1 parent OPEN |
-| Session pin | `pa-5fe224e5757f42c0` (label s2758-recent-tenant-violations-tool; retired at S2758 close) |
-| Wrapper default pin | `tools/pa_local.sh` — `pa-5fe224e5757f42c0` (retired; forces fresh mint at S2759 open) |
-| Live infra state | Local-only per Chris S2758 directive; CI billing-blocked (`--admin` on merges) |
-| RUR-C1 close-gate | Blocked until I-0303 arc closes AND all three arcs pass shared cross-tenant regression |
-| I-0303 next move | **Rigby-side dispatch-path conversion (Candidate 1)** OR **D2 canonical decision** OR **D4 HIGH-RISK wiring** OR **net-new** — Chris selects at S2759 open |
+| RUR-C1 state | I-0301 CLOSED · I-0302 CLOSED · I-0303 through Phase 3 stage 2 first pass CLOSED · S2758 tool + S2759 warning system operational · RUR-C1 parent OPEN |
+| Session pin | `pa-58888db8e1d148ca` (retired at S2759 close) |
+| Wrapper default pin | `tools/pa_local.sh:539` — `pa-58888db8e1d148ca` (retired; forces fresh mint at S2760 open) |
+| Live infra state | Local-only per Chris S2758 directive; S2759 stale-Daphne warning system live |
+| Process freshness at close | FRESH (all 6 processes started_before_head_commit=false at HEAD fd21d4bae) |
+| I-0303 next move | Chris selects at S2760 open — see Candidates above |
 
 ---
 
-## Recommended session-open protocol (S2759)
+## Recommended session-open protocol (S2760)
 
 1. `context-kit orient`
 2. Read this file end-to-end
-3. Read S2758 tool envelope `RATIFICATION_2026-07-11_ops_tool_tenant_boundary_violations.md` §5 (E2E verification + real-finding discovery)
-4. **First move:** exercise the S2758 tool — `bash tools/pa_local.sh "Show me tenant_boundary_violations in the last 24h"` — check for new findings since S2758 close
-5. Verify runtime state: `git log --oneline -5`; confirm `tools/pa_local.sh:539` points at retired `pa-5fe224e5757f42c0`
-6. Present findings-driven priority menu to Chris (Candidates 1–4 above)
-7. Chris directs S2759 P0 selection
-8. Mint fresh pin with candidate-scoped label
-9. Route work through Rigby joint agreement before coding
+3. Read S2759 envelope `RATIFICATION_2026-07-11_stale_daphne_warning_system.md` §2 (root cause) + §5 (E2E verification)
+4. **First move — freshness check per S2759 codified rule:** `bash tools/pa_local.sh "invoke ops_tool version, report staleness_verdict"`. Expect FRESH.
+5. **Second move — accumulated findings check:** S2758 tool + S2759 staleness_warning count (see S2760 open sequence in §SESSION PIN)
+6. Verify runtime state: `git log --oneline -5`; confirm wrapper at retired pin
+7. Present candidate menu to Chris
+8. Chris directs S2760 P0 selection
+9. Mint fresh pin with candidate-scoped label
+10. Route work through Rigby joint agreement before coding
 
 ---
 
 ## Reference documents
 
-Ordered by frequency of use at S2759:
+Ordered by frequency of use at S2760:
 
 1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol
-2. [`docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_tenant_boundary_violations.md`](docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_tenant_boundary_violations.md) — S2758 envelope (§5 real findings)
-3. `core/services/pa_tool_schemas.py` — ops_tool schema
-4. `core/services/td_handlers_ops.py` — ops_tool handler
-5. [`docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase3_batch_fix.md`](docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase3_batch_fix.md) — Phase 3 BATCH-FIX first pass (Candidate 1 predecessor)
-6. [`docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase3_report_only.md`](docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase3_report_only.md) — Phase 3 REPORT-ONLY substrate
-7. `core/security/task_enforcement.py` — substrate emitting events S2758 tool surfaces
-8. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.5.0 §7.4.x + §7.6.1
+2. [`docs/research/implementation/RATIFICATION_2026-07-11_stale_daphne_warning_system.md`](docs/research/implementation/RATIFICATION_2026-07-11_stale_daphne_warning_system.md) — S2759 envelope
+3. [`docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_tenant_boundary_violations.md`](docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_tenant_boundary_violations.md) — S2758 envelope (sibling operational infrastructure)
+4. `core/services/td_handlers_ops.py` — S2758 + S2759 handler code
+5. [`docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase3_batch_fix.md`](docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase3_batch_fix.md) — S2757 (open D2/D4 backlog)
+6. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.5.0
