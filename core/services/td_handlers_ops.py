@@ -1602,13 +1602,25 @@ class OpsHandlersMixin:
                     seconds_ago = int((datetime.now(timezone.utc) - parsed).total_seconds())
                 except (ValueError, TypeError):
                     seconds_ago = None
-            events.append({
+            entry: Dict[str, Any] = {
                 'timestamp': ts,
                 'sha': sha,
                 'sha_short': sha[:12] if sha and sha != 'unknown' else sha,
                 'label': label,
                 'seconds_ago': seconds_ago,
-            })
+            }
+            # S2768 N7: surface enriched PID + partial-recycle fields when
+            # present. Legacy events (pre-N7) lack these keys and pass
+            # through unchanged — backward-compat via .get().
+            for key in (
+                'pids_before',
+                'pids_after',
+                'partial_recycle',
+                'surviving_processes',
+            ):
+                if key in evt:
+                    entry[key] = evt[key]
+            events.append(entry)
 
         result: Dict[str, Any] = {
             'action': 'recent_recycles',

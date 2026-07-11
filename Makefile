@@ -88,10 +88,17 @@ restart: stop celery-stop start celery ## Full restart of Daphne + Celery (use t
 # OR Celery-served code (core/tasks*, Celery config). Stale processes silently
 # serve pre-merge code and were the root cause of the S2755→S2757 latent
 # regression class — see `feedback_local_truth_no_production` memory rule.
-recycle-all: restart ## S2759: full local "deploy" step — bounces Daphne + Celery + beat. Alias for `restart`. Use post-merge.
+recycle-all: ## S2759/S2768: full local "deploy" step — snapshots PIDs, bounces Daphne+Celery+beat, emits enriched JSONL. Use post-merge.
 	@mkdir -p logs
-	@printf '{"ts":"%s","sha":"%s","label":"recycle-all"}\n' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$(git rev-parse HEAD 2>/dev/null || echo unknown)" >> logs/recycle_events.jsonl
-	@echo "✓ Recycle event recorded in logs/recycle_events.jsonl (S2765)."
+	@# S2768 N7: snapshot PIDs BEFORE restart so the emitter can detect
+	@# partial recycles (roles whose PID survived the bounce). Falls back
+	@# to legacy shape if the script is absent.
+	@python scripts/emit_recycle_event.py snapshot > /tmp/recycle_pids_before.json 2>/dev/null || echo '{}' > /tmp/recycle_pids_before.json
+	@$(MAKE) restart
+	@python scripts/emit_recycle_event.py emit --before /tmp/recycle_pids_before.json 2>/dev/null || \
+		printf '{"ts":"%s","sha":"%s","label":"recycle-all"}\n' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$(git rev-parse HEAD 2>/dev/null || echo unknown)" >> logs/recycle_events.jsonl
+	@rm -f /tmp/recycle_pids_before.json
+	@echo "✓ Recycle event recorded in logs/recycle_events.jsonl (S2768 N7 enriched)."
 
 restart-daphne: stop start ## Restart only Daphne (keeps Celery running)
 
