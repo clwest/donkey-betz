@@ -10,8 +10,40 @@ import {
   Clock, Zap, Activity, Ban, TrendingDown,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { api } from '@/lib/api'
+
+interface OpsHealthSummary {
+  window: string
+  verdict: 'FRESH' | 'STALE_DAPHNE' | 'STALE_CELERY' | 'STALE_BOTH' | 'UNKNOWN'
+  head_commit_sha_short: string
+  tenant_boundary_violations: {
+    total: number
+    by_task_name: Record<string, number>
+    by_failure_kind: Record<string, number>
+  }
+  staleness_warnings: {
+    total: number
+    by_verdict: Record<string, number>
+  }
+}
 
 export function OpsConsoleTab() {
+  // S2761: unified health summary — freshness verdict + I-0303 tenant
+  // boundary violation counts + S2759 staleness warning counts. Wraps the
+  // three S2755→S2760 diagnostic surfaces into one always-visible tile.
+  // Uses axios `api` instance so the Authorization token attaches (raw
+  // fetch omits it and 401s — see the sibling SLO/failure/blocked queries).
+  const healthQuery = useQuery<OpsHealthSummary | null>({
+    queryKey: ['ops-health-summary'],
+    queryFn: async () => {
+      try {
+        const r = await api.get<OpsHealthSummary>('/ops/health-summary/')
+        return r.data
+      } catch { return null }
+    },
+    refetchInterval: 30000,
+  })
+
   // Fetch SLO status
   const sloQuery = useQuery({
     queryKey: ['ops-slo'],
@@ -57,8 +89,92 @@ export function OpsConsoleTab() {
   const blocked = blockedQuery.data?.blocked || []
   const isLoading = sloQuery.isLoading
 
+  const opsHealth = healthQuery.data
+
   return (
     <div className="space-y-6">
+      {/* S2761: Ops Health tile — verdict + I-0303 + S2759 counts */}
+      {opsHealth && (
+        <div>
+          <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+            <Activity size={14} />
+            Ops Health (24h)
+            <span
+              className={cn(
+                'ml-2 h-1.5 w-1.5 rounded-full',
+                opsHealth.verdict === 'FRESH' && 'bg-green-400',
+                opsHealth.verdict === 'UNKNOWN' && 'bg-gray-500',
+                opsHealth.verdict !== 'FRESH' && opsHealth.verdict !== 'UNKNOWN' && 'bg-red-400',
+              )}
+            />
+            <span className={cn(
+              'text-xs font-medium',
+              opsHealth.verdict === 'FRESH' ? 'text-green-400' :
+              opsHealth.verdict === 'UNKNOWN' ? 'text-gray-400' : 'text-red-400'
+            )}>{opsHealth.verdict}</span>
+            {opsHealth.head_commit_sha_short && (
+              <code className="text-xs text-gray-500 ml-1">{opsHealth.head_commit_sha_short.slice(0, 7)}</code>
+            )}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className={cn(
+              'p-3 rounded-lg border',
+              opsHealth.tenant_boundary_violations.total > 0
+                ? 'border-amber-500/30 bg-amber-500/5'
+                : 'border-dark-border bg-dark-card'
+            )}>
+              <div className="flex items-center gap-2 mb-1">
+                <Shield size={14} className={opsHealth.tenant_boundary_violations.total > 0 ? 'text-amber-400' : 'text-green-400'} />
+                <span className="text-xs text-gray-400">Tenant Boundary Violations</span>
+              </div>
+              <p className={cn(
+                'text-lg font-bold',
+                opsHealth.tenant_boundary_violations.total > 0 ? 'text-amber-400' : 'text-green-400'
+              )}>
+                {opsHealth.tenant_boundary_violations.total}
+              </p>
+              {opsHealth.tenant_boundary_violations.total > 0 && (
+                <div className="mt-2 space-y-0.5">
+                  {Object.entries(opsHealth.tenant_boundary_violations.by_failure_kind).slice(0, 4).map(([kind, count]) => (
+                    <div key={kind} className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500 truncate">{kind}</span>
+                      <span className="text-gray-400 ml-2">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className={cn(
+              'p-3 rounded-lg border',
+              opsHealth.staleness_warnings.total > 0
+                ? 'border-red-500/30 bg-red-500/5'
+                : 'border-dark-border bg-dark-card'
+            )}>
+              <div className="flex items-center gap-2 mb-1">
+                <Clock size={14} className={opsHealth.staleness_warnings.total > 0 ? 'text-red-400' : 'text-green-400'} />
+                <span className="text-xs text-gray-400">Staleness Warnings</span>
+              </div>
+              <p className={cn(
+                'text-lg font-bold',
+                opsHealth.staleness_warnings.total > 0 ? 'text-red-400' : 'text-green-400'
+              )}>
+                {opsHealth.staleness_warnings.total}
+              </p>
+              {opsHealth.staleness_warnings.total > 0 && (
+                <div className="mt-2 space-y-0.5">
+                  {Object.entries(opsHealth.staleness_warnings.by_verdict).slice(0, 4).map(([v, count]) => (
+                    <div key={v} className="flex items-center justify-between text-xs">
+                      <span className="text-gray-500 truncate">{v}</span>
+                      <span className="text-gray-400 ml-2">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SLO Overview */}
       <div>
         <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
