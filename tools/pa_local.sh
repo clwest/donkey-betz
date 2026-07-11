@@ -345,7 +345,7 @@
 # responses despite tools being wired. See
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
-export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
+export PA_API_TOKEN=8c0f15633e8437621d64388aeb29eb89218882af
 # **ACTIVE at S2400 open 2026-07-05:** pa-6279ead1714c4630 (Group 2400
 # Auth arc pin — minted at S2400 open via session_tool.create_fresh
 # per playbook §16 arc-open fresh-thread discipline). ELEVENTH formal
@@ -536,4 +536,4 @@ export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
 # for the I-0302 Phase 4 (regression harness for RUR-C1 parent
 # invariant) arc. Prior pin `pa-43818ab8ba144a2f` preserved above
 # as comment (rotated from at S2748 open).
-python tools/pa_chat.py "$@" --tools --conversation pa-01bb57dafdb743f0
+python tools/pa_chat.py "$@" --tools --conversation pa-c89d8b2c8dc74985
