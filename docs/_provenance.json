@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-11T15:00:02+00:00",
+    "generated": "2026-07-11T16:05:34+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "ebf69e966523",
-    "doc_count": 2533,
-    "commit_count": 7850,
+    "git_head": "fe1cf38e1d9f",
+    "doc_count": 2539,
+    "commit_count": 7864,
     "confidence_breakdown": {
-      "HIGH": 1616,
+      "HIGH": 1617,
       "MEDIUM": 402,
       "LOW": 5,
-      "UNKNOWN": 510
+      "UNKNOWN": 515
     },
     "excludes": [
       "docs/archive/",
@@ -2003,7 +2003,7 @@
         2740,
         2742
       ],
-      "commit_count": 10,
+      "commit_count": 14,
       "prs": [
         3048,
         3058,
@@ -2011,7 +2011,9 @@
         3062,
         3063,
         3066,
-        3067
+        3067,
+        3134,
+        3135
       ]
     },
     "docs/EOS_RULES.md": {
@@ -2584,7 +2586,7 @@
         2745,
         2749
       ],
-      "commit_count": 1236,
+      "commit_count": 1238,
       "prs": [
         10,
         11,
@@ -3147,7 +3149,8 @@
         3128,
         3130,
         3132,
-        3133
+        3133,
+        3134
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7489,7 +7492,7 @@
         2745,
         2749
       ],
-      "commit_count": 186,
+      "commit_count": 188,
       "prs": [
         2213,
         2219,
@@ -7656,7 +7659,8 @@
         3095,
         3124,
         3128,
-        3133
+        3133,
+        3134
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19537,6 +19541,22 @@
       "commit_count": 2,
       "prs": [
         3133
+      ]
+    },
+    "docs/handoffs/SESSION_2753_PLAYBOOK_V0_5_0_RATIFIED.md": {
+      "originating_session": 2753,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "7b68087a",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "docs(s2753-close): record pin pa-44541f01cbb14b46 retired at S2753 close (updated_count=10) (#3136)",
+      "sessions_touched": [
+        2753
+      ],
+      "commit_count": 4,
+      "prs": [
+        3134,
+        3136
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -36343,6 +36363,48 @@
         3076
       ]
     },
+    "docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_5_0.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "a701788f",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "docs(playbook-v0.5.0): fill post-ratification placeholders (commit_sha + deliverable_id) \u2014 closes S2753 loop (#3135)",
+      "sessions_touched": [],
+      "commit_count": 4,
+      "prs": [
+        3134,
+        3135
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase1_ledger.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "fe1cf38e",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "docs(i0303-phase1): fill placeholders + refresh start-here for S2755 Phase 2 open (#3140)",
+      "sessions_touched": [],
+      "commit_count": 4,
+      "prs": [
+        3139,
+        3140
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_i0303_scoping.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "a957e225",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "docs(i0303-scoping): fill post-ratification placeholders + refresh start-here for S2755 Phase 1 open (#3138)",
+      "sessions_touched": [],
+      "commit_count": 4,
+      "prs": [
+        3137,
+        3138
+      ]
+    },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -36662,6 +36724,32 @@
         3096
       ]
     },
+    "docs/research/implementation/tenant_boundary_lockdown/I-030301_task_boundary_audit_ledger.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "543ab9ad",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "docs(i0303-phase1): I-0303 Phase 1 Task Boundary Audit Ledger RATIFIED \u2014 Phase 2 authorized (S2754) (#3139)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3139
+      ]
+    },
+    "docs/research/implementation/tenant_boundary_lockdown/I-0303_scoping.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "47cc13dd",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "docs(i0303-scoping): I-0303 Async Tenant-Boundary Enforcement scoping RATIFIED \u2014 RUR-C1 third and final child arc opened (S2754) (#3137)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3137
+      ]
+    },
     "docs/research/implementation/tenant_boundary_lockdown/failure_data_safety_contract.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -36808,8 +36896,10 @@
         2726,
         2727
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 3,
+      "prs": [
+        3134
+      ]
     },
     "docs/research/platform/integration_readiness_matrix.md": {
       "originating_session": 2734,
