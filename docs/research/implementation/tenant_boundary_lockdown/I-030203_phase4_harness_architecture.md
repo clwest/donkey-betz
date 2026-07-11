@@ -5,7 +5,7 @@ authority: phase-4-architecture-signed
 session_added: 2748
 last_updated: 2026-07-10
 arc_id: I-0302
-arc_phase: Phase 4 (Regression Harness) — architecture ratified; implementation opening
+arc_phase: Phase 4 (Regression Harness) — CLOSED (ratified S2751; see `I-030205_phase4_close.md`)
 parent_scoping_doc: docs/research/implementation/tenant_boundary_lockdown/I-0302_scoping.md
 parent_scoping_ratification: docs/research/implementation/RATIFICATION_2026-07-10_i0302_scoping.md
 phase_1_ledger: docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md
@@ -26,7 +26,8 @@ chris_d_verdicts_resolved:
   - Ledger amendment timing = codify at Phase 4 open (§11 of I-030201) — agree
   - Bonus tightening = single canonical import path enforced by AST — ship
 session_pin: pa-59d27abadeed4411 (title `ios-arc-open-I0302-P4`, minted 2026-07-10 S2748 open after retiring `pa-cd35bde16f974843`)
-constraint: Phase 4 close awaits shipped harness + Rigby SIGN-PASS + Chris ratification
+constraint: Phase 4 CLOSED — harness shipped, Rigby SIGN-PASS logged in `I-030205_phase4_close.md` §4, Chris D-verdict "agree all" recorded in `RATIFICATION_2026-07-10_i0302_phase4_close.md`. Phase 5 (arc close / retro) authorized to open.
+phase_4_close_doc: docs/research/implementation/tenant_boundary_lockdown/I-030205_phase4_close.md
 ---
 
 # I-0302 Phase 4 — Regression Harness Architecture
@@ -316,8 +317,9 @@ Phase 4 closes when ALL of the following hold:
 | S2749 | Rigby gpt-5.2 stall post-mortem fix (provider fallback + response body capture) | PR #3119 |
 | S2750 | Deferred-surface coverage-gap report | `tests/security/test_i0302_p4_coverage_gap_report.py` + `test_reports/i0302_p4_coverage_gaps.json` |
 | S2750 | VIP-scope carve-out coverage on `get_deliverable` | `tb_vip_user` + `tb_vip_invite_in_ws_a` fixtures; `TestMatrixDeliverableGetItemVIPCarveOut` matrix cell |
-| TBD | Rigby SIGN-PASS on shipped harness | Task 10 |
-| TBD | Chris ratification + Phase 4 close | Task 10; close statement appended here or in `I-030204_phase4_close.md` |
+| S2751 | Rigby SIGN-PASS on shipped harness (W1..W5, pin `pa-e71c011bfa3d4124`) | `I-030205_phase4_close.md` §4 |
+| S2751 | Phase 4 close doc drafted (standalone `I-030205_phase4_close.md`; slot `I-030204` was already taken by AST rule spec) | `I-030205_phase4_close.md` |
+| S2751 | **Chris D-verdict "agree all" — Phase 4 CLOSED (ratified)** | [`RATIFICATION_2026-07-10_i0302_phase4_close.md`](../RATIFICATION_2026-07-10_i0302_phase4_close.md) |
 
 ---
 
