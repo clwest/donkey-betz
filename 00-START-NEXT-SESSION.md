@@ -60,11 +60,18 @@ Not blocking Phase 2. Latest S2753/S2754 check: run #885 all jobs failed with 2-
 
 ---
 
-## SESSION PIN — CARRIES INTO S2755
+## SESSION PIN — RETIRED AT S2754 CLOSE (fresh mint required at S2755 open)
 
-**Pin `pa-2659dfa28e124f02`** (label `i0303-scoping`) minted S2754 open, carries through Phase 2 unless Chris directs a Phase-2-specific rotation. Consider re-labeling at S2755 open if scope shifts: `python manage.py session_lifecycle close --label i0303-phase2-module`.
+**Pin `pa-2659dfa28e124f02`** (label `i0303-scoping`) minted S2754 open; **retired 2026-07-11 at S2754 close** per Chris directive (`session_tool.retire` returned `updated_count=6 previously_active=true retired=true`).
 
-Wrapper `tools/pa_local.sh:539` currently points at `pa-2659dfa28e124f02`.
+**Wrapper `tools/pa_local.sh:539` still points at the retired pin** — intended failure mode forces S2755 first-action fresh mint before any other PA dispatch. Sequence:
+
+```
+python manage.py session_lifecycle open --label i0303-phase2-module
+# Atomic: mints fresh pin + rewrites wrapper line 539
+```
+
+Rigby will not dispatch until the wrapper is repointed to the new pin.
 
 ---
 
