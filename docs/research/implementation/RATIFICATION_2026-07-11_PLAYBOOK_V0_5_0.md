@@ -19,8 +19,8 @@ predecessor_shape_doc: docs/research/platform/playbook_v0_5_proposal_shape.md
 predecessor_shape_ratification_session: 2752
 predecessor_candidacy_ratification: docs/research/implementation/RATIFICATION_2026-07-10_i0302_arc_close.md §5
 head_at_amendment_draft: ebf69e96
-head_at_ratification: TBD (filled at merge)
-close_pr: TBD (filled at merge)
+head_at_ratification: f7e40ddb
+close_pr: "#3134 (merged f7e40ddb)"
 sign_sessions:
   - S2753 turn 1 — Rigby watchpoint-attestation SIGN (W1..W7): W1..W6 PASS clean; W7 BLOCK resolved by this ratification envelope recording author-side 6-check per §3 below. Non-blocking asks W3/W4/W5 applied inline before re-dispatch.
 rules_added:
@@ -40,7 +40,7 @@ superseded_by: (open; not expected — ratification records are frozen historica
 frozen: true
 workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
 workspace_name: "Architecture & Research"
-workspace_ratification_deliverable_id: TBD (filled at commit — workspace deliverable_id will be surfaced by Rigby into this file and the playbook top-frontmatter simultaneously)
+workspace_ratification_deliverable_id: 4c322f48-3d0b-4e32-8a30-15a08400f887
 d_verdicts_from_shape_stage_1:
   - Q1 Chapter fit — Option B (Ch 7 §7.4/§7.5/§7.6 activation) — RATIFIED 2026-07-11 S2752
   - Q2 All 5 candidates in v0.5 — RATIFIED 2026-07-11 S2752

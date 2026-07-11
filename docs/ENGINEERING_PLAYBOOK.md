@@ -10,11 +10,11 @@ ratifier: chris
 ratified_date: 2026-07-11
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
-  deliverable_id: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
+  deliverable_id: 4c322f48-3d0b-4e32-8a30-15a08400f887
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
 branch_authored: playbook/v0.5.0-ch7-partial-activation
-commit_sha: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
+commit_sha: f7e40ddb
 content_hash: sha256:6a3f897aa73c39dc3a14adefc2f7d3811995e71f3d76e8c6348ffdb39a3c46d4
 git_tag: playbook-v0.5.0
 schema_version: 1
@@ -1319,4 +1319,4 @@ The Constitutional Debt Register records items intentionally deferred by prior a
 | v0.3.0 | v0.2.0 | [] | 2026-07-10 | playbook-v0.3.0 | MINOR — codify CD-48 (catalog admission) as PLAYBOOK-6.6.14 and CD-49 (SIGN workspace tool provisioning) as PLAYBOOK-6.10.5. Discharges Constitutional Debt CD-48 + CD-49 carried from v0.1.0. |
 | v0.4.0 | v0.3.0 | [] | 2026-07-10 | playbook-v0.4.0 | MINOR — codify CD-50 (verify-substrate-before-implement) as PLAYBOOK-6.10.6. Two-trigger threshold met at S2739 §17 Cost Protection substrate mismatch + S2740 §18 F-D-SIDEBAR-1 already-shipped discovery. Extends §6.10 preamble scope from amendment-dispatch to Cat A research-artifact-derived candidates. |
 | v0.4.1 | v0.4.0 | [] | 2026-07-10 | playbook-v0.4.1 | PATCH — add informative extension-point note in §6.12 recording capability graph refresh cadence as a candidate for future MINOR codification (two-trigger threshold met at S2739 §27 + S2741 §29). Cross-link added at §10.15. No new rules; rule count unchanged at 196. |
-| v0.5.0 | v0.4.1 | [] | 2026-07-11 | playbook-v0.5.0 | MINOR — activate Chapter 7 STUB scope partially with 5 new [GR] rules: PLAYBOOK-7.4.1/7.4.2/7.4.3 (close-ceremony delivery discipline); PLAYBOOK-7.5.1 (staged codification of anti-pattern substrates — three-PR pattern); PLAYBOOK-7.6.1 (session-close SIGN-cycle discipline — watchpoint-attestation shape, EXTENDS PLAYBOOK-6.10.3 for close-cycle scope). Candidacy ratified at RATIFICATION_2026-07-10_i0302_arc_close.md §5 (Chris D-verdict S2751). Stage 1 shape ratified at S2752 (`playbook_v0_5_proposal_shape.md`); Stage 2 codification at S2753. Rule count 196 → 201. Old §7.4/§7.5 renumbered to §7.7/§7.8. |
+| v0.5.0 | v0.4.1 | [] | 2026-07-11 | playbook-v0.5.0 | MINOR — activate Chapter 7 STUB scope partially with 5 new [GR] rules: PLAYBOOK-7.4.1/7.4.2/7.4.3 (close-ceremony delivery discipline); PLAYBOOK-7.5.1 (staged codification of anti-pattern substrates — three-PR pattern); PLAYBOOK-7.6.1 (session-close SIGN-cycle discipline — watchpoint-attestation shape, EXTENDS PLAYBOOK-6.10.3 for close-cycle scope). Candidacy ratified at RATIFICATION_2026-07-10_i0302_arc_close.md §5 (Chris D-verdict S2751). Stage 1 shape ratified at S2752 (`playbook_v0_5_proposal_shape.md`); Stage 2 codification + ratification at S2753 (merge SHA `f7e40ddb`, PR #3134, workspace deliverable `4c322f48-3d0b-4e32-8a30-15a08400f887`). Rule count 196 → 201. Old §7.4/§7.5 renumbered to §7.7/§7.8. |
