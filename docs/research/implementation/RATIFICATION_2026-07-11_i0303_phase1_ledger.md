@@ -43,8 +43,8 @@ depends_on_ratified_artifacts:
   - I-0302 Phase 1 Model Audit Ledger (ratified S2742): docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase1_ledger.md — SAMPLED discipline inherited
   - I-0302 Phase 2 Predicate Module (ratified 2026-07-10): core/tenant_boundary_lockdown/predicates.py — Phase 2 of I-0303 imports
   - Engineering Playbook v0.5.0 (ratified S2753): PLAYBOOK-7.5.1 (Phase 3 dogfood); PLAYBOOK-7.6.1 (Phase 4 SIGN dogfood); PLAYBOOK-7.4.x (arc-close dogfood at Phase 5)
-workspace_ratification_deliverable_id: TBD (filled at commit — workspace deliverable will be created in RUR-C1 workspace `fcd7e683-3bfe-4d35-9704-0e54dd587ea1`)
-close_pr: TBD (filled at merge)
+workspace_ratification_deliverable_id: 2020bc4f-ef7d-42e8-9ee5-38be928ba483
+close_pr: "#3139 (merged 543ab9ad)"
 ---
 
 # I-0303 Phase 1 Task Boundary Audit Ledger — Ratification Record
