@@ -1248,6 +1248,7 @@ def cockpit_focus_mode_status(request):
 
 
 @require_http_methods(["POST"])
+@superuser_required
 def cockpit_focus_mode_update(request):
     """Update Focus Mode config. POST /api/cockpit/focus-mode/update/"""
     if not (request.user and request.user.is_authenticated):
@@ -1836,6 +1837,7 @@ def _resolve_node_request(method, path, body=None, timeout=30):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@superuser_required
 def cockpit_resolve_node_render_start(request):
     """
     POST /api/cockpit/resolve-node/render/start/
@@ -1955,6 +1957,7 @@ def cockpit_resolve_node_jobs(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@superuser_required
 def cockpit_library_deliverables(request):
     """List deliverables with search, type filter, and pagination."""
     from core.models_deliverables import Deliverable
@@ -2003,6 +2006,7 @@ def cockpit_library_deliverables(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@superuser_required
 def cockpit_library_media(request):
     """List media (images + videos) with type filter and pagination."""
     from django.utils.timezone import now
@@ -2074,6 +2078,7 @@ def cockpit_library_media(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@superuser_required
 def cockpit_approvals_list(request):
     """List actionable items: pending human decisions + gates awaiting approval."""
     from django.utils.timezone import now
@@ -2137,6 +2142,7 @@ def cockpit_approvals_list(request):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@superuser_required
 def cockpit_approve_decision(request, item_id):
     """Approve or reject a HumanAttentionItem."""
     from core.models_human_interface import HumanAttentionItem
@@ -2165,6 +2171,7 @@ def cockpit_approve_decision(request, item_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@superuser_required
 def cockpit_approve_gate(request, gate_id):
     """Approve or block a PilotReadinessGate."""
     from core.models_pilot_readiness import PilotReadinessGate
@@ -2496,6 +2503,7 @@ def cockpit_create_incident_note(request):
 
 @csrf_exempt
 @require_http_methods(['GET'])
+@superuser_required
 def cockpit_audit_list(request):
     """List cockpit audit log entries with optional filters."""
     from core.models_cockpit_audit import CockpitAuditLog
@@ -2649,6 +2657,7 @@ def cockpit_agent_detail(request, agent_name):
 
 @csrf_exempt
 @require_http_methods(['POST'])
+@superuser_required
 def cockpit_agent_run_now(request, agent_name):
     """Queue an immediate run for an agent."""
     from core.models_unified_system import Agent
@@ -2689,6 +2698,7 @@ def cockpit_agent_run_now(request, agent_name):
 
 @csrf_exempt
 @require_http_methods(['POST'])
+@superuser_required
 def cockpit_agent_pause(request, agent_name):
     """Pause an agent (prevents scheduled execution)."""
     from core.models_unified_system import Agent
@@ -2731,6 +2741,7 @@ def cockpit_agent_pause(request, agent_name):
 
 @csrf_exempt
 @require_http_methods(['POST'])
+@superuser_required
 def cockpit_agent_resume(request, agent_name):
     """Resume a paused agent."""
     from core.models_unified_system import Agent
@@ -2768,6 +2779,7 @@ def cockpit_agent_resume(request, agent_name):
 
 @csrf_exempt
 @require_http_methods(['GET'])
+@superuser_required
 def cockpit_queues_overview(request):
     """Compose queue/worker/task overview from CeleryTaskEvent + CeleryHealthService."""
     from core.models_celery_telemetry import CeleryTaskEvent
@@ -2883,6 +2895,7 @@ CELERY_QUEUE_NAMES = [
 
 @csrf_exempt
 @require_http_methods(['GET'])
+@superuser_required
 def cockpit_queue_depths(request):
     """Return live Redis LLEN for every Celery queue."""
     from django.utils.timezone import now as tz_now
@@ -2961,6 +2974,7 @@ def cockpit_queue_depths(request):
 
 @csrf_exempt
 @require_http_methods(['GET'])
+@superuser_required
 def cockpit_cost_overview(request):
     """Compose cost/token overview from LLMCallLog."""
     from core.models_llm_routing import LLMCallLog
@@ -3107,6 +3121,7 @@ def _seed_policies():
 
 @csrf_exempt
 @require_http_methods(['GET'])
+@superuser_required
 def cockpit_autopilot_policies(request):
     """List all autopilot policies."""
     from core.models_cockpit_autopilot import CockpitAutopilotPolicy
@@ -3129,6 +3144,7 @@ def cockpit_autopilot_policies(request):
 
 @csrf_exempt
 @require_http_methods(['POST'])
+@superuser_required
 def cockpit_autopilot_toggle(request, policy_id):
     """Enable or disable an autopilot policy."""
     from core.models_cockpit_autopilot import CockpitAutopilotPolicy
@@ -3783,6 +3799,7 @@ def cockpit_config_overview(request):
 
 @csrf_exempt
 @require_http_methods(['POST'])
+@superuser_required
 def cockpit_config_toggle_provider(request, provider_id):
     """Toggle a provider's is_active flag."""
     from core.models_llm_routing import LLMProvider
@@ -3805,6 +3822,7 @@ def cockpit_config_toggle_provider(request, provider_id):
 
 @csrf_exempt
 @require_http_methods(['GET', 'POST'])
+@superuser_required
 def cockpit_config_flags(request):
     """List or upsert feature flags (SystemConfiguration)."""
     from core.models.system import SystemConfiguration
@@ -3859,6 +3877,7 @@ def cockpit_config_flags(request):
 
 @csrf_exempt
 @require_http_methods(['POST'])
+@superuser_required
 def cockpit_config_delete_flag(request, flag_id):
     """Soft-delete a feature flag."""
     from core.models.system import SystemConfiguration
@@ -3916,6 +3935,7 @@ def cockpit_config_changes(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
+@superuser_required
 def cockpit_incidents_list(request):
     """GET: list incidents, POST: create incident."""
     from core.models_cockpit_incidents import CockpitIncident, CockpitIncidentEvent
@@ -4008,6 +4028,7 @@ def cockpit_incidents_list(request):
 
 @csrf_exempt
 @require_http_methods(["GET"])
+@superuser_required
 def cockpit_incident_detail(request, incident_id):
     """Get incident detail with timeline events."""
     from core.models_cockpit_incidents import CockpitIncident, CockpitIncidentEvent
@@ -4048,6 +4069,7 @@ def cockpit_incident_detail(request, incident_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@superuser_required
 def cockpit_incident_update(request, incident_id):
     """Update incident status, severity, owner, or resolution summary."""
     from core.models_cockpit_incidents import CockpitIncident, CockpitIncidentEvent
@@ -4105,6 +4127,7 @@ def cockpit_incident_update(request, incident_id):
 
 @csrf_exempt
 @require_http_methods(["POST"])
+@superuser_required
 def cockpit_incident_add_event(request, incident_id):
     """Add a note or link event to an incident timeline."""
     from core.models_cockpit_incidents import CockpitIncident, CockpitIncidentEvent
