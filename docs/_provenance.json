@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-11T14:22:20+00:00",
+    "generated": "2026-07-11T15:00:02+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "d5e54777df6f",
-    "doc_count": 2531,
-    "commit_count": 7848,
+    "git_head": "ebf69e966523",
+    "doc_count": 2533,
+    "commit_count": 7850,
     "confidence_breakdown": {
-      "HIGH": 1615,
+      "HIGH": 1616,
       "MEDIUM": 402,
       "LOW": 5,
-      "UNKNOWN": 509
+      "UNKNOWN": 510
     },
     "excludes": [
       "docs/archive/",
@@ -2584,7 +2584,7 @@
         2745,
         2749
       ],
-      "commit_count": 1234,
+      "commit_count": 1236,
       "prs": [
         10,
         11,
@@ -3146,7 +3146,8 @@
         3124,
         3128,
         3130,
-        3132
+        3132,
+        3133
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7488,7 +7489,7 @@
         2745,
         2749
       ],
-      "commit_count": 184,
+      "commit_count": 186,
       "prs": [
         2213,
         2219,
@@ -7654,7 +7655,8 @@
         3084,
         3095,
         3124,
-        3128
+        3128,
+        3133
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19520,6 +19522,21 @@
       "commit_count": 2,
       "prs": [
         3130
+      ]
+    },
+    "docs/handoffs/SESSION_2752_PLAYBOOK_V0_5_STAGE_1_SHAPE_RATIFIED.md": {
+      "originating_session": 2752,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "ebf69e96",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "docs(s2752-v0-5-stage-1): playbook v0.5 Stage 1 shape ratified \u2014 Q1-Q5 D-verdicts + Ch 7 \u00a77.4/\u00a77.5/\u00a77.6 slots + pin rotation + cascade (#3133)",
+      "sessions_touched": [
+        2752
+      ],
+      "commit_count": 2,
+      "prs": [
+        3133
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -37087,6 +37104,19 @@
       ],
       "commit_count": 1,
       "prs": []
+    },
+    "docs/research/platform/playbook_v0_5_proposal_shape.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "ebf69e96",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "docs(s2752-v0-5-stage-1): playbook v0.5 Stage 1 shape ratified \u2014 Q1-Q5 D-verdicts + Ch 7 \u00a77.4/\u00a77.5/\u00a77.6 slots + pin rotation + cascade (#3133)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3133
+      ]
     },
     "docs/research/platform/workspace_architecture_and_constitution_proposal.md": {
       "originating_session": 2726,
