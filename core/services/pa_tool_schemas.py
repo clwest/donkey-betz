@@ -2458,6 +2458,7 @@ PA_TOOL_SCHEMAS = [
                         "memory_pressure", "top_consumers", "zombie_thread_rate",
                         "tenant_boundary_violations",
                         "staleness_warnings",
+                        "recent_recycles",
                     ],
                     "description": (
                         "overview: one-shot ops snapshot — version + slo_status + top failure_signatures "
@@ -2527,7 +2528,16 @@ PA_TOOL_SCHEMAS = [
                         "predicate_rejected), limit (default 20, max 100). Empty state includes "
                         "a diagnostic note. Use when asked about tenant boundary violations, "
                         "cross-tenant reports, I-0303 findings, or which tasks are surfacing "
-                        "report-only warn violations."
+                        "report-only warn violations. "
+                        "recent_recycles: read the tail of logs/recycle_events.jsonl — the "
+                        "first-party timeline of `make recycle-all` invocations. Each event "
+                        "carries timestamp + git SHA + label + seconds_ago. Complements "
+                        "ops_tool.version (live snapshot) and ops_tool.staleness_warnings "
+                        "(post-hoc detection) with an operator-action timeline. Use when asked "
+                        "'when did we last recycle?', 'which SHAs was the stack bounced at?', "
+                        "or to trace a stale-Daphne diagnosis back to a specific merge. "
+                        "Limit param (default 10, max 50). Fail-soft: returns empty list with "
+                        "diagnostic note when the log file is missing."
                     ),
                 },
                 "window": {

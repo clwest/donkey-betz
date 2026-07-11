@@ -89,6 +89,9 @@ restart: stop celery-stop start celery ## Full restart of Daphne + Celery (use t
 # serve pre-merge code and were the root cause of the S2755→S2757 latent
 # regression class — see `feedback_local_truth_no_production` memory rule.
 recycle-all: restart ## S2759: full local "deploy" step — bounces Daphne + Celery + beat. Alias for `restart`. Use post-merge.
+	@mkdir -p logs
+	@printf '{"ts":"%s","sha":"%s","label":"recycle-all"}\n' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$(git rev-parse HEAD 2>/dev/null || echo unknown)" >> logs/recycle_events.jsonl
+	@echo "✓ Recycle event recorded in logs/recycle_events.jsonl (S2765)."
 
 restart-daphne: stop start ## Restart only Daphne (keeps Celery running)
 

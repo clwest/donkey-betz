@@ -303,3 +303,33 @@ def close_ceremony_ledger(request):
         'count': len(items),
         'limit': limit,
     })
+
+
+@require_GET
+@login_required
+def recent_recycles(request):
+    """GET /api/ops/recent-recycles/?limit=<N> — S2765 recycle events timeline.
+
+    Thin REST wrapper over ``ops_tool.recent_recycles`` handler for the
+    Ops Console frontend. Same fail-soft + defensive-parse discipline;
+    same fixed-root safety (handler resolves ``logs/recycle_events.jsonl``
+    against ``BASE_DIR``).
+    """
+    try:
+        from core.services.td_handlers_ops import OpsHandlersMixin
+
+        class _Proxy(OpsHandlersMixin):
+            pass
+
+        proxy = _Proxy()
+        limit = int(request.GET.get('limit', 10))
+        result = proxy._handle_ops(
+            'ops_tool',
+            {'action': 'recent_recycles', 'limit': limit},
+            user_id=request.user.id,
+            trace_id='ops-console',
+        )
+        return JsonResponse(result)
+    except Exception as e:
+        logger.error(f"Recent recycles error: {e}")
+        return JsonResponse({'items': [], 'count': 0, 'log_exists': False, 'error': str(e)})
