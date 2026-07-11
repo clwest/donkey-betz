@@ -346,6 +346,14 @@ class OpsHandlersMixin:
             result = get_zombie_rate(hours=hours, agent_name=agent_name)
             return {'action': 'zombie_thread_rate', **result}
 
+        elif action == 'tenant_boundary_violations':
+            # S2758: surface I-0303 REPORT-ONLY substrate findings from
+            # OpsRunEvent. Diagnostic reads on the tenant_boundary_violation
+            # envelope with the discriminator preserved (row_id +
+            # acting_user_id + support_code + trace_id) — internal operator
+            # surface per Phase 2 §2.1 uniform-envelope design.
+            return self._ops_tenant_boundary_violations(payload, trace_id)
+
         else:
             return {'error': f'Unknown ops_tool action: {action}'}
 
@@ -1045,6 +1053,134 @@ class OpsHandlersMixin:
             'count': len(events),
             'events': events,
         }
+
+    _TENANT_BOUNDARY_FAILURE_KINDS = (
+        'missing_row_id',
+        'row_not_found',
+        'missing_acting_identity',
+        'acting_user_not_found',
+        'unregistered_model',
+        'predicate_rejected',
+    )
+
+    def _ops_tenant_boundary_violations(
+        self, payload: Dict[str, Any], trace_id: str
+    ) -> Dict[str, Any]:
+        """Query I-0303 tenant_boundary_violation OpsRunEvent envelopes.
+
+        Returns aggregate counts (by task_name, failure_kind, and their
+        composite) plus most-recent sample events. Internal operator
+        surface — the discriminator (row_id + acting_user_id + support_code
+        + trace_id + failure_kind) is preserved per Phase 2 §2.1 (uniform
+        user-facing envelope; operator-side keeps the discriminator for
+        diagnostic use). Rigby SIGN F4 confirms this exposure at S2758.
+
+        Payload:
+          window: 1h/6h/24h/7d/30d (default 24h)
+          task_name: substring filter on task_context.task_name (icontains)
+          failure_kind: one of the 6 Phase 2 failure kinds
+          limit: max sample_events (default 20, max 100)
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+
+        try:
+            from core.models_ops_runs import OpsRunEvent
+        except ImportError:
+            return {'error': 'OpsRunEvent model not available'}
+
+        window = payload.get('window', '24h')
+        hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 24)
+        cutoff = timezone.now() - timedelta(hours=hours)
+
+        task_name_filter = payload.get('task_name', '') or ''
+        failure_kind_filter = payload.get('failure_kind') or None
+        if failure_kind_filter and failure_kind_filter not in self._TENANT_BOUNDARY_FAILURE_KINDS:
+            return {
+                'error': f'invalid failure_kind {failure_kind_filter!r}; '
+                         f'allowed: {list(self._TENANT_BOUNDARY_FAILURE_KINDS)}'
+            }
+        limit = min(max(int(payload.get('limit', 20) or 20), 1), 100)
+
+        qs = OpsRunEvent.objects.filter(
+            label='tenant_boundary_violation',
+            created_at__gte=cutoff,
+        ).order_by('-created_at')
+
+        # Materialize once for aggregation + sampling (bounded query).
+        # Bound the aggregation-side scan by hard limit of 5000 rows to
+        # protect the worker from a runaway violation-flood scenario.
+        MAX_AGG_SCAN = 5000
+        rows = list(qs.values('detail', 'created_at')[:MAX_AGG_SCAN])
+
+        # Apply payload filters in Python (detail is JSONField; portable
+        # substring + enum match without dialect-specific JSON operators).
+        def _matches(row):
+            ctx = (row.get('detail') or {}).get('task_context') or {}
+            if task_name_filter:
+                tn = ctx.get('task_name') or ''
+                if task_name_filter.lower() not in tn.lower():
+                    return False
+            if failure_kind_filter:
+                if ctx.get('failure_kind') != failure_kind_filter:
+                    return False
+            return True
+
+        filtered = [r for r in rows if _matches(r)]
+
+        by_task_name: Dict[str, int] = {}
+        by_failure_kind: Dict[str, int] = {}
+        by_task_and_kind: Dict[str, int] = {}
+
+        for r in filtered:
+            ctx = (r.get('detail') or {}).get('task_context') or {}
+            tn = ctx.get('task_name') or '(unknown)'
+            fk = ctx.get('failure_kind') or '(unknown)'
+            by_task_name[tn] = by_task_name.get(tn, 0) + 1
+            by_failure_kind[fk] = by_failure_kind.get(fk, 0) + 1
+            composite = f'{tn}/{fk}'
+            by_task_and_kind[composite] = by_task_and_kind.get(composite, 0) + 1
+
+        sample_events = []
+        for r in filtered[:limit]:
+            d = r.get('detail') or {}
+            ctx = d.get('task_context') or {}
+            sample_events.append({
+                'task_name': ctx.get('task_name'),
+                'failure_kind': ctx.get('failure_kind'),
+                'model_label': ctx.get('model_label'),
+                'row_id': ctx.get('row_id'),
+                'acting_user_id': ctx.get('acting_user_id'),
+                'support_code': d.get('support_code'),
+                'trace_id': d.get('trace_id'),
+                'created_at': r['created_at'].isoformat() if r.get('created_at') else None,
+            })
+
+        result: Dict[str, Any] = {
+            'action': 'tenant_boundary_violations',
+            'window': window,
+            'window_cutoff': cutoff.isoformat(),
+            'task_name_filter': task_name_filter or '(all)',
+            'failure_kind_filter': failure_kind_filter or '(all)',
+            'total_count': len(filtered),
+            'by_task_name': by_task_name,
+            'by_failure_kind': by_failure_kind,
+            'by_task_and_kind': by_task_and_kind,
+            'sample_events': sample_events,
+        }
+
+        if len(rows) >= MAX_AGG_SCAN:
+            result['aggregation_scan_capped'] = True
+            result['aggregation_scan_limit'] = MAX_AGG_SCAN
+
+        if result['total_count'] == 0:
+            result['note'] = (
+                f'No tenant_boundary_violation events in the last {window}. '
+                f"Either traffic isn't hitting decorated tasks, or enforcement "
+                f'is passing cleanly.'
+            )
+
+        return result
 
     def _ops_execution_detail(self, payload: Dict[str, Any], trace_id: str) -> Dict[str, Any]:
         """Look up a single AgentExecution by ID, including heartbeat."""
