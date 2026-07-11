@@ -72,16 +72,18 @@ Cross-visibility: Rigby workspace deliverable `06f04b41-91e1-4a00-8b8e-0905502e7
 
 ---
 
-## SESSION PIN — CARRIES OR ROTATE (S2754 open call)
+## SESSION PIN — RETIRED AT S2753 CLOSE (fresh mint required at S2754 open)
 
-**Pin `pa-44541f01cbb14b46`** minted S2752 open for v0.5 codification scope. Natural retire point = v0.5.0 ratification complete (this session S2753). Retire at S2754 open **unless Chris directs re-use**.
+**Pin `pa-44541f01cbb14b46`** minted S2752 open for v0.5 codification scope; **retired 2026-07-11 at S2753 close** per Chris directive (`session_tool.retire` returned `updated_count=10 previously_active=true retired=true`).
 
-Retirement sequence:
+**Wrapper `tools/pa_local.sh` line 539 still points at the retired pin** — this is the intended failure mode. First S2754 action MUST mint fresh + update wrapper before any other PA dispatch. Sequence:
+
 ```
-session_tool.retire conversation_id=pa-44541f01cbb14b46 force=true
 session_tool.create_fresh label='<S2754 scope label>' → new pa-<xxxx>
+# Edit tools/pa_local.sh line 539 to the new pin
 ```
-Update wrapper `tools/pa_local.sh` line 539 to the new pin.
+
+S2754 scope label depends on primary work selection (P0.5 advance-to-freeze routing → I-0303 open → engineering candidate). Rigby will not dispatch until the wrapper is repointed.
 
 ---
 
