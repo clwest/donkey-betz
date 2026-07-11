@@ -2,30 +2,31 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2747 CLOSED — PHASE 4 AUTHORIZED FOR S2748
+## READ THIS FIRST — SESSION 2748 CLOSED — SUB-PHASE 3 AUTHORIZED FOR S2749
 
-**Refreshed 2026-07-10 (SESSION 2747 CLOSED. 10 PRs merged across all 5 canonical models. Phase 3 wiring COMPLETE: 144 enforcement sites wired across 34+ view files with Option A staff-tightening applied on ChatConversation + Deliverable, Session 642 null-user superuser carve-out preserved on AgentExecution, and F-2 anonymous-user hardening across all 11 predicate functions. 8 F-block ledger amendments preserve chain of custody. 162/162 security suite passes. Full session substance in `docs/handoffs/SESSION_2747_I0302_PHASE_3_WIRING_COMPLETE.md`. S2748 opens with Phase 4 (regression harness — RUR-C1 parent invariant substrate) authorized as primary work.**
+**Refreshed 2026-07-10 (SESSION 2748 CLOSED. 4 PRs merged: Phase 4 Sub-phase 0 substrate (@ops_aggregate_allowed decorator + §11 ledger + architecture doc), Sub-phase 1 (golden fixture + matrix runner 5 cells), §5.1.b hotfix (3 destructive-mutation sites), Sub-phase 2 (hybrid B+C matrix expansion + F1A cross-tenant fixture + §5.1.b extended to 5 sites incl. anonymous content leak on get_deliverable). Harness caught real security bugs during Rigby SIGN Q2 Edit 2 tightening cycles. §14 two-triggers-plus threshold MET decisively (5 instances of Http404-swallow pattern in views_deliverables.py). Sub-phase 3 opens with §14 codification + AST scan module + intentional-immutability contract + endpoint sentinels + coverage-gap report. Full session substance in `docs/handoffs/SESSION_2748_I0302_PHASE_4_SUB_PHASE_0_1_2_COMPLETE.md`.**
 
 Session anchors (read in order):
 
-1. [`docs/handoffs/SESSION_2747_I0302_PHASE_3_WIRING_COMPLETE.md`](docs/handoffs/SESSION_2747_I0302_PHASE_3_WIRING_COMPLETE.md) — S2747 delivery ledger + Phase 3 wiring close statement (§3 governance + §4 memory candidates)
-2. [`docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md`](docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md) — 8 new F-block amendments (§5.1.a, §5.2.a, §5.3.a, §5.3.b, §5.4.a, §5.4.b, §5.4.c, §5.5.a) capture every sub-phase close decision
-3. [`docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase2_predicate_module.md`](docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase2_predicate_module.md) — Phase 2 predicate module ratification (§8 has Phase 3 opening moves; Phase 3 wiring now complete)
-4. [`docs/research/implementation/real_user_readiness/CAMPAIGN.md`](docs/research/implementation/real_user_readiness/CAMPAIGN.md) — RUR parent program (RUR-C1 parent invariant: needs I-0301 + I-0302 + I-0303 all pass shared cross-tenant regression)
+1. [`docs/handoffs/SESSION_2748_I0302_PHASE_4_SUB_PHASE_0_1_2_COMPLETE.md`](docs/handoffs/SESSION_2748_I0302_PHASE_4_SUB_PHASE_0_1_2_COMPLETE.md) — S2748 delivery ledger, §5.1.b 5-site table, §14 threshold codification, Sub-phase 3 opening protocol
+2. [`docs/research/implementation/tenant_boundary_lockdown/I-030203_phase4_harness_architecture.md`](docs/research/implementation/tenant_boundary_lockdown/I-030203_phase4_harness_architecture.md) — Phase 4 architecture doc; §6 implementation order + §6.a Sub-phase 3 research inputs
+3. [`docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md`](docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md) — §5.1.b 5-site amendment (D1 sweep gaps + Http404-swallow pattern) + §11 `@ops_aggregate_allowed` substrate + §14 threshold tally
+4. [`docs/research/implementation/real_user_readiness/CAMPAIGN.md`](docs/research/implementation/real_user_readiness/CAMPAIGN.md) — RUR parent program (RUR-C1 parent invariant: I-0301 CLOSED + I-0302 Phase 4 in progress + I-0303 not yet opened)
 5. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.4.1 body (196 rules)
 
-**Prior sessions (background context):** S2746 (Phase 2 predicate module RATIFIED + Phase 3 authorized); S2745 (engineering-pivot directive + cost threshold observation opened); S2744 (`cost_thresholds` CLI); S2742 (Playbook v0.4.1 + Real User Readiness CAMPAIGN parent doc + I-0301 arc CLOSED).
+**Prior sessions (background context):** S2747 (Phase 3 wiring COMPLETE — 10 PRs, 144 sites); S2746 (Phase 2 predicate module RATIFIED); S2745 (engineering-pivot directive + cost threshold observation opened); S2742 (Playbook v0.4.1 + RUR CAMPAIGN parent doc + I-0301 CLOSED).
 
 ---
 
-## P0 — COST THRESHOLD OBSERVATION CHECK-IN (opened 2026-07-10 07:35 America/Denver)
+## P0 — COST THRESHOLD OBSERVATION CHECK-IN (actionable 2026-07-11+)
 
-**Do this FIRST before candidate selection.** Deferred at S2746 + S2747 per memory rule `project_p0_cost_threshold_check_deferred_to_20260711.md` — actionable on 2026-07-11+ sessions.
+**Do this FIRST before candidate selection.** Deferred at S2746, S2747, S2748 per memory rule `project_p0_cost_threshold_check_deferred_to_20260711.md` — **actionable on 2026-07-11 sessions onward.**
 
 **State at open:**
 - `month: $500.00` (~2× the $246/mo baseline from S2743)
 - `enforce_mode: monitor` (no enforcement — passive accumulation only)
 - Set locally on Chris's dev DB via `python manage.py cost_thresholds --set month 500`
+- Observation period started 2026-07-10 07:35 MDT (accumulating ~24-48+ hours at S2749 open depending on session timing)
 
 **Report to Chris at session open:**
 
@@ -40,35 +41,60 @@ Cross-visibility: Rigby workspace deliverable `06f04b41-91e1-4a00-8b8e-0905502e7
 
 ---
 
-## PRIMARY WORK — I-0302 Phase 4 (regression harness for RUR-C1 parent invariant)
+## PRIMARY WORK — I-0302 Phase 4 Sub-phase 3 (harness completion + §14 codification)
 
-**Phase 4 authorized by Phase 3 wiring close ratification 2026-07-10.** The RUR-C1 parent invariant requires all three tenant-boundary arcs (I-0301 + I-0302 + I-0303) to pass a shared cross-tenant regression. Phase 4 is the substrate that makes that shared regression possible for I-0302.
+**Sub-phase 3 authorized by Sub-phase 2 close ratification 2026-07-10.** Session close-out routed §14 codification design SIGN through Rigby (F1 = 0.80, F2 = 0.74, F3 = 0.76). All folds match Claude's leans. No Chris ratification needed for the design itself.
 
-### Phase 4 opening moves
+### Sub-phase 3 opening moves (per I-030203 §6 steps 10-15 + Rigby §14 SIGN)
 
-1. **Verify-before-build (PLAYBOOK-6.10.6):** read the existing 162 security tests. Identify which of them already assert cross-tenant boundary (D1 has `test_user_cannot_clone_another_users_deliverable`; C1 has `test_non_owner_gets_404`; B tests exercise null-user carve-out; A2 tests do LIST cross-user isolation). This is the base of the harness — inventory + coverage matrix.
-2. **Draft harness architecture:** Rigby design SIGN target. Key questions to route:
-   - Matrix runner (per-model × per-primitive: read, write, delete, aggregate, EXISTS) or per-endpoint sweep (test every URL by hitting it as user_a + user_b + anonymous + superuser)?
-   - Golden fixtures: single shared "5-model tenant boundary" fixture set (user_a + user_b + workspace_a + workspace_b + rows-per-model-per-user), or per-test fixtures?
-   - Assertion contract: what does "predicate boundary enforced" mean concretely? (a) LIST returns only own rows; (b) GET on other user's row returns 404; (c) DELETE on other user's row fails; (d) EXISTS returns False for other-user id; (e) aggregate does not include other-user rows.
-   - How does the harness interact with C2 / D-followup / Phase 0 deferred surfaces? Explicit skip list vs assertion of expected 401/403 on non-user-facing paths.
-3. **Rigby SIGN on harness architecture** BEFORE any code lands. This is the biggest design SIGN of Phase 4.
-4. **Implementation:** the harness itself + backfill of missing coverage per matrix outcome.
-5. **Phase 4 close:** Rigby SIGN-PASS on shipped harness + Chris ratification.
+Recommended sequence (adjust per Chris directive at S2749 open):
 
-### Phase 4 substrate already on main (from Phase 3 wiring)
+1. **§14 codification substrate** — per Rigby F1 SIGN `C` (extend Phase 4 harness AST scan module):
+   - Ship `tests/security/test_i0302_p4_ast_conformance.py` — one canonical "security conformance AST" pytest module
+   - Includes both `@ops_aggregate_allowed` recognition AND Http404-swallow anti-pattern detection
+   - Per Rigby F2 SIGN `B`: scope = all Django view files (`core/views*.py` + `apps/*/views*.py` + DRF viewsets). Define path allowlist heuristics in the ledger.
+   - Per Rigby F3 SIGN `A`: retroactive sweep FIRST (report-only mode) → dedicated batch-fix PR → flip to enforcing mode. Zero-known-violations at enable time.
+   - **Rigby offered to propose the exact AST rule definition** — capture at Sub-phase 3 open by routing "please propose the concrete AST rule for the Http404-swallow anti-pattern"
 
-- **All 5 predicates** wired into 34+ view files with 8 F-block amendments preserving the sub-phase decision trail
-- **Test discipline** — 82 new integration tests across `test_i0302_a2_*`, `test_i0302_b_*`, `test_i0302_c1_*`, `test_i0302_d1_*`, `test_i0302_d2_*`; test file naming convention established (rename precedent: `test_i0302_b1_*` → `test_i0302_b_*` when B2a appended)
-- **`superuser_required` decorator** in `core/security/decorators.py` — reusable substrate for ops-surface gating patterns
-- **F-2 `_authed()` helper** across all 11 predicate functions — anonymous-user safety already enforced upstream of any harness test
-- **`security-conformance.yml` CI workflow** — I-0301 substrate; extend to include the harness once it lands
+2. **Intentional-immutability contract for Initiative + ChatConversation** (Chris D-verdict at S2748 close):
+   - Assert unsafe methods (PUT/PATCH/DELETE) return 405/404 as absence-contract
+   - Add cells to matrix runner
+   - Update I-030203 §7 close criteria
 
-### Deferred surfaces the harness must explicitly skip or gate
+3. **Endpoint sentinels** (I-030203 §1.2 per Rigby SIGN F1 hybrid substrate):
+   - Route to Rigby: "propose 10-30 hand-picked view-layer risk endpoints per app area based on Phase 3 wiring evidence + view files touched in PRs #3100-#3109"
+   - Focus categories: custom actions, nested routes, bulk endpoints, `/me/` endpoints, exports
+   - Ship as `tests/security/test_i0302_p4_endpoint_sentinels.py`
 
-Per §5.3.b (C2), §5.1.a (D non-view), §5.5.a (Document WebSocket) — the harness must NOT fail on these but should:
-- Skip them explicitly with a rationale comment pointing to the ledger amendment
-- OR assert their current auth posture (e.g., 401/403 on unauthenticated) as a "boundary held by upstream layer" contract
+4. **Deferred-surface coverage-gap report** (I-030203 §4.2):
+   - JSON emit at `test_reports/i0302_p4_coverage_gaps.json`
+   - Per §5.3.b (C2, ~126 sites) + §5.1.a (D non-view) + §5.5.a (Document WebSocket)
+   - Cheap posture probes (HEAD/OPTIONS or minimal auth check) where feasible
+
+5. **VIP-scope carve-out coverage on `get_deliverable`** — extend fixture with VIP membership row; test the VIP-workspace read path currently deferred in Sub-phase 2 GET-item cell
+
+### Sub-phase 3 research inputs (bounded docs-only passes; per I-030203 §6.a)
+
+Run BEFORE code lands (they inform the endpoint sentinel choices + matrix expansion decisions):
+
+- **AgentExecution mutation semantics** — confirm no user-facing UPDATE/DELETE (likely per S2748 Initiative + ChatConversation finding); if any exist, add absence-contract cells
+- **Document `user` vs `owner` field question** — investigate `views_rag_embeddings.py:470/836` uses `Document.objects.get(id=..., user=user)` on a model whose FK is named `owner`; dual-field, legacy alias, or runtime bug?
+- **CREATE-parent-binding endpoint map** — inventory which endpoints create rows across the 5 canonical models + identify the parent-binding field per endpoint
+- **AGGREGATE endpoint inventory** — enumerate true aggregates vs stats-with-nested-shape endpoints (extend §3.8 canonical JSON path table)
+- **Non-canonical model follow-on** — scope decision on `LegalDocument` / `LitigationDocument` / `ReviewDocument` unscoped `.objects.get(id=...)` findings from §5.1.b sweep (in I-0302 scope or separate arc?)
+
+### Phase 4 close criteria (unchanged from I-030203 §7)
+
+Phase 4 closes when ALL of:
+
+1. Matrix runner exists and passes for all applicable 5 × 7 cells (minus explicit deferred skips)
+2. Endpoint sentinels exist for 10+ hand-picked risk endpoints, 4 roles each
+3. AST scan module wired; harness fails collection on `@ops_aggregate_allowed` contract violation OR Http404-swallow violation
+4. Deferred-surface coverage-gap report emits structured JSON
+5. `security-conformance.yml` runs the harness on every relevant PR
+6. Rigby SIGN-PASS on shipped harness
+7. Chris D-verdict ratifying Phase 4 close
+8. Phase 4 close doc appended (amend I-030203 §8 close statement OR create `I-030204_phase4_close.md`)
 
 ---
 
@@ -77,63 +103,57 @@ Per §5.3.b (C2), §5.1.a (D non-view), §5.5.a (Document WebSocket) — the har
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | `498e9277` (PR #3109 merged; Phase 3 wiring COMPLETE) |
+| HEAD | `5637dcd6` (PR #3114 merged; Sub-phase 2 complete + §5.1.b extended to 5 sites) |
 | Playbook version | v0.4.1 (unchanged since S2742) |
 | Playbook rule count | 196 |
 | Constitutional Debt | Zero outstanding |
-| Session pin | TBD at S2748 open (retire `pa-cd35bde16f974843` if still active + mint fresh) |
-| Wrapper default pin | `tools/pa_local.sh` — rotated at S2747 close |
+| Session pin | `pa-59d27abadeed4411` (active — carry-forward from S2748) |
+| Wrapper default pin | `tools/pa_local.sh` — `pa-59d27abadeed4411` (rotated at S2748 open) |
 | Live infra state | `SystemConfiguration cost_threshold_month = 500`, mode = `monitor` (observation period accumulating since 2026-07-10 07:35 MDT) |
-| RUR arc state | I-0301 CLOSED · I-0302 scoping + Phase 1 + Phase 2 + Phase 3 wiring CLOSED · Phase 4 (harness) AUTHORIZED · Phase 5 (arc close) not yet opened · I-0303 not yet opened · RUR-C1 parent OPEN |
+| RUR arc state | I-0301 CLOSED · I-0302 Phases 1-3 CLOSED · Phase 4 Sub-phases 0/1/2 CLOSED · Phase 4 Sub-phase 3 AUTHORIZED · Phase 4 close pending · Phase 5 (arc close) not yet opened · I-0303 not yet opened · RUR-C1 parent OPEN |
 
 ---
 
-## What S2747 shipped (10 PRs)
+## What S2748 shipped (4 PRs)
 
-Full delivery ledger in `docs/handoffs/SESSION_2747_I0302_PHASE_3_WIRING_COMPLETE.md` §1. Compressed:
+Full delivery ledger in `docs/handoffs/SESSION_2748_I0302_PHASE_4_SUB_PHASE_0_1_2_COMPLETE.md` §1. Compressed:
 
-| PR | Sub-phase | Model | HEAD |
-|---|---|---|---|
-| #3100 | A1 | Initiative | `eb4fc19a` (migration + NOT NULL) |
-| #3101 | A2 | Initiative | `a08bd4df` (34 sites + F-2 hardening) |
-| #3102 | B1 | AgentExecution | `dd8eb9db` (25 dashboard sites) |
-| #3103 | B2a | AgentExecution | `4903ec3f` (19 analytics + CRUD) |
-| #3104 | B2b | AgentExecution | `103ba94f` (26 ops sites superuser-gated + new decorator module) |
-| #3105 | B2c | AgentExecution | `0a86c1a7` (7 tail; Sub-phase B CLOSED) |
-| #3106 | C1 | ChatConversation | `0f6cefe4` (18 + Option A staff-tightening) |
-| #3107 | C2 defer docs | ChatConversation | `fd5d9583` (~126 sites parked with entry criteria) |
-| #3108 | D1 | Deliverable | `df3e2370` (12 + Option A staff-tightening + clone source-fetch scoping) |
-| #3109 | D2 | Document | `498e9277` (3 surgical fixes; Phase 3 wiring COMPLETE) |
+| PR | Sub-phase / Class | HEAD |
+|---|---|---|
+| #3111 | Sub-phase 0 — decorator substrate + §11 ledger + architecture doc | `0edc85cc` |
+| #3112 | Sub-phase 1 — golden fixture + 5-cell matrix (20 tests) | `df4e94e6` |
+| #3113 | §5.1.b hotfix (3 destructive-mutation sites) | `41c8d458` |
+| #3114 | Sub-phase 2 hybrid B+C (21 tests) + F1A fixture + §5.1.b extended to 5 sites (5th = anonymous content leak on `get_deliverable` caught by Rigby Q2 Edit 2) | `5637dcd6` |
 
-**Sub-phase B CLOSED at S2747** (Rigby SIGN + Chris D-verdict on #3105 close). **Sub-phase D CLOSED + Phase 3 wiring COMPLETE at S2747** (Rigby SIGN + Chris D-verdict on #3109 close).
+**§14 two-triggers-plus threshold MET decisively** — Http404-swallow pattern documented in 5 sites in `views_deliverables.py`; Sub-phase 3 opening MUST codify AST check per Rigby final SIGN.
 
 ---
 
-## Candidate queue for S2748 — Phase 4 is primary
+## Candidate queue for S2749 — Sub-phase 3 is primary
 
-Per Chris close directive S2747: session-close wrap was ratified; Phase 4 NOT opened at S2747 close. S2748 opens with Phase 4 authorized as primary work.
+Per Chris close directive S2748: PR #3114 merged; §14 codification design SIGN routed and complete. S2749 opens with Sub-phase 3 authorized as primary work.
 
-### PRIMARY — I-0302 Phase 4 (regression harness)
+### PRIMARY — I-0302 Phase 4 Sub-phase 3
 
-See "Phase 4 opening moves" above. Design SIGN first, then implement.
+See "Sub-phase 3 opening moves" above. §14 codification substrate is the natural first move (Rigby F1-F3 SIGN pre-ratified); intentional-immutability contract + endpoint sentinels + coverage-gap report follow.
 
 ### CLASS 1 — NET-NEW ENGINEERING (secondary options)
 
-If Chris wants to interleave a smaller build (per S2745 engineering-bias rule, always propose 1-3 net-new candidates every session):
+Per S2745 engineering-bias rule, always propose 1-3 net-new candidates every session:
 
-1. **New Employee OS employee (4th)** — vertical slice: new `AIEmployee` + `JobContract` + MissionRunner steps + admin visibility.
-2. **Betting dashboard new feature** — 9-tab dashboard needs Chris to name the gap.
-3. **New spider on Chris-named data gap** — spider class + fixture + test + registry entry + signal wiring.
-4. **New UI page on Command Center** — 61 routes; requires Chris naming the workflow.
-5. **Discord bot new command** — bounded Cog + slash-command slice.
+1. **New Employee OS employee (4th)** — vertical slice: new `AIEmployee` + `JobContract` + MissionRunner steps + admin visibility
+2. **Betting dashboard new feature** — 9-tab dashboard needs Chris to name the gap
+3. **New spider on Chris-named data gap** — spider class + fixture + test + registry entry + signal wiring
+4. **New UI page on Command Center** — 61 routes; requires Chris naming the workflow
+5. **Discord bot new command** — bounded Cog + slash-command slice
 
 ### CLASS 4 — Meta-methodology / Codification candidates
 
 **Per pivot rule: propose only if Chris explicitly asks for methodology work.**
 
-- **"Option A staff-tightening" as a boundary-hardening pattern** — 2 instances (C1 + D1). Third instance would trigger playbook codification. Watch for it in Phase 4 harness edge cases OR I-0303 opening.
-- **"Sub-phase C/D-style defer with §X.b amendment" as repeatable pattern** — 3 instances (C2 §5.3.b + D1 §5.1.a non-view + D2 §5.5.a WebSocket). Playbook codification candidate if fourth instance surfaces.
-- **"Discord ID mapping preserved as OR-union with predicate"** — single instance (C1). Watch for second occurrence.
+- **§14 codification pattern from S2748** — Http404-swallow tally reached 5 sites; Rigby SIGN'd F1-F3 substrate; NO Chris ratification needed for design but ratification WOULD be needed if scope widens to non-view files. Track for future playbook integration if the pattern (harness surfaces bug → Rigby tightens → codify) repeats.
+- **"Rigby SIGN-WITH-EDITS surfaces production bug" workflow pattern** — S2748 Q2 Edit 2 (content-leak invariant on get_deliverable anonymous) caught real bug. Watch for 2nd instance to trigger playbook memory codification.
+- **"Chris scope-expansion pattern"** — "A — expand this PR" applied twice this session on same-class bugs from same discovery. Watch for 3rd instance to trigger candidate playbook rule.
 
 ### External signal-driven
 
@@ -141,16 +161,16 @@ If Chris wants to interleave a smaller build (per S2745 engineering-bias rule, a
 
 ---
 
-## Recommended session-open protocol (S2748)
+## Recommended session-open protocol (S2749)
 
 1. `context-kit orient`
-2. Read `docs/handoffs/SESSION_2747_I0302_PHASE_3_WIRING_COMPLETE.md` in full — §1 delivery ledger + §4 Chris directives + §5 what's next
-3. Verify runtime state: `git log --oneline -3`, `celery inspect ping`
-4. **P0 check** (per top-of-file callout, actionable 2026-07-11+ per memory rule): run the observation check-in; report accumulation, anomalies, advance recommendation to Chris
-5. Retire whatever pin is bound in `tools/pa_local.sh` if S2747 pin is still there + mint fresh S2748 pin
-6. **Confirm Phase 4 as primary work** with Chris; propose harness architecture design SIGN as opening move
-7. **On architecture acceptance:** Rigby design SIGN → implement → Rigby SIGN → Chris ratification
-8. **Alternative:** if Chris wants to interleave a Class 1 net-new build, pause Phase 4 explicitly. Do NOT default to Phase 4 without confirmation.
+2. Read `docs/handoffs/SESSION_2748_I0302_PHASE_4_SUB_PHASE_0_1_2_COMPLETE.md` in full — §1 delivery ledger + §3 5-site hotfix table + §4 Chris directives + §5 what's next
+3. Verify runtime state: `git log --oneline -5`, `celery inspect ping`
+4. **P0 check** (per top-of-file callout, now actionable): run the observation check-in; report accumulation, anomalies, advance recommendation to Chris
+5. `pa_local.sh` pin already carry-forward at `pa-59d27abadeed4411` — verify with `python tools/pa_chat.py "ping — verify pin active" --tools`
+6. **Confirm Sub-phase 3 as primary work** with Chris; propose §14 codification substrate as opening move (Rigby offered to propose AST rule definition)
+7. **On acceptance:** route to Rigby "propose the concrete AST rule for the Http404-swallow anti-pattern" → implement → sweep → enforce
+8. **Alternative:** if Chris wants to interleave a Class 1 net-new build, pause Sub-phase 3 explicitly. Do NOT default to Sub-phase 3 without confirmation.
 
 ---
 
@@ -161,28 +181,6 @@ Ordered by frequency of use:
 1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (L7 anchor v0.4.1)
 2. [`docs/EOS_RULES.md`](docs/EOS_RULES.md) — R1/R2/R3
 3. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.4.1 body (196 rules)
-4. [`docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md`](docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md) — Phase 1 ledger with 8 new F-block amendments from S2747
-5. [`docs/research/platform/platform_capability_graph.md`](docs/research/platform/platform_capability_graph.md) — capability chains + append-only refreshes
-6. [`docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md`](docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md)
-7. [`docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md`](docs/research/platform/CDR_002_pa_turn_knowledge_retrieval_substrate.md)
-8. [`docs/research/platform/CDR_003_runtime_celery_integration_test_harness.md`](docs/research/platform/CDR_003_runtime_celery_integration_test_harness.md)
-
----
-
-## Session close summary (Session 2747 — for archive)
-
-- **Arcs shipped:** 10 PRs merged; all Phase 3 sub-phases delivered (A1 + A2 + B1 + B2a + B2b + B2c + C1 + C2 defer docs + D1 + D2)
-- **Enforcement sites wired:** 144 across 34+ view files
-- **Tests added:** 82 new integration tests (60 predicate baseline + 15 B + 4 C1 + 4 D1 + 3 D2); full security suite 162/162
-- **Ledger amendments:** 8 F-block sections added (§5.1.a, §5.2.a, §5.3.a, §5.3.b, §5.4.a, §5.4.b, §5.4.c, §5.5.a)
-- **Constitutional artifacts:** 6 Rigby workspace deliverables (2 progress + 4 shipped) + 4 arc-close deliverables (Sub-phase B, Sub-phase D + Phase 3 close) = 10 total deliverables
-- **Live state change:** none (pure code + docs)
-- **Cross-session visibility:** Rigby workspace deliverables listed in handoff §3
-- **Memory codified:** engineering-bias-over-audit rule (from S2745) reinforced in every SIGN cycle; Rigby-files-deliverables-at-SIGN-cycle rule reinforced mid-session at Chris directive
-- **Docs edits:** 8 ledger amendments + this handoff + 00-START refresh + tools/pa_local.sh pin rotation
-- **Constitutional debt at close:** Zero (unchanged)
-- **Notable event:** Session shipped 10 sub-phases in a single arc — largest single-session PR count in the RUR-C1 arc so far. Phase 3 wiring COMPLETE unblocks Phase 4 (regression harness) opening at S2748.
-
----
-
-**Session 2748 opens fresh. Phase 4 harness is the primary. Ask Chris to confirm before implementing.**
+4. [`docs/research/implementation/tenant_boundary_lockdown/I-030203_phase4_harness_architecture.md`](docs/research/implementation/tenant_boundary_lockdown/I-030203_phase4_harness_architecture.md) — Phase 4 architecture (§6 + §6.a)
+5. [`docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md`](docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md) — Phase 1 ledger with §5.1.b 5-site amendment + §11 substrate + §14 tally
+6. [`docs/research/platform/platform_capability_graph.md`](docs/research/platform/platform_capability_graph.md) — capability chains + append-only refreshes
