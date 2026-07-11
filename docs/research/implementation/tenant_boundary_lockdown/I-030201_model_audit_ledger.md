@@ -244,6 +244,43 @@ Ratified via Rigby SIGN Q1-Q7 on D1. Three amendments captured here:
 
 Entry criteria to reopen: Phase 0 multi-tenant flip / new staff-support role / external user exposure / regression finding traces to a D1-scope file. Inventory retained in this ledger and referenced from Rigby workspace deliverables `69b317b3` (B1) + `74846a3b` (B2a) + `778acfc3` (B2b) + `c79f9a3b` (Sub-phase B close) chain of custody.
 
+#### §5.1.b Amendment — Post-D1 hotfix on `delete_deliverable` source-fetch (2026-07-10, S2748)
+
+Surfaced during Phase 4 Sub-phase 2 endpoint discovery. `core/views_deliverables.py:243-255` (`delete_deliverable`) was missed by the D1 12-site sweep:
+
+**Pre-hotfix code (HEAD `0edc85cc`):**
+```python
+@require_POST
+@token_auth_required
+def delete_deliverable(request, deliverable_id):
+    """Permanently delete a deliverable."""
+    try:
+        deliverable = get_object_or_404(Deliverable, id=deliverable_id)
+        title = deliverable.title
+        deliverable.delete()
+        ...
+```
+
+**Impact:** Any authenticated caller could DELETE any deliverable whose id they knew. `@token_auth_required` gated anon → 401, but the source fetch used id-alone with no ownership filter. Same anti-pattern D1 caught and fixed for `clone_deliverable` (`:288`).
+
+**Hotfix:** Mirror the `clone_deliverable` D1 pattern — wrap the fetch with `scope_queryset_deliverable(request.user, Deliverable.objects.all())` so non-owners receive 404 instead of destructive success.
+
+**Why missed by D1 sweep:** D1 caller re-audit tabulated `views_deliverables.py` as "4 hits (:70, :305, :550, :804)". Line 246 (`delete_deliverable` source-fetch) fell outside the specific `scope_queryset_deliverable(...)` grep D1 used — a grep-scope blind spot for endpoints that had no prior scoping call to update.
+
+**Guardrail addition:** Phase 4 harness Sub-phase 2 DELETE cells will regression-test all 5 canonical models against this class of bug. Endpoint discovery for Sub-phase 2 explicitly grep-audits `get_object_or_404(<Model>, id=...)` patterns per model to catch analogous unscoped delete/mutate sites BEFORE the harness tests are written against them.
+
+**Delivered:**
+- Code fix in `core/views_deliverables.py:243-262`
+- Regression test in `tests/security/test_i0302_d1_deliverable_wiring.py` under new `TestDeleteDeliverableScoping` class (2 tests: non-owner cannot delete, owner can delete)
+- No migration required
+- No config change
+- No fleet-caller impact (delete_deliverable is user-facing UI endpoint only)
+
+**Chain of custody:**
+- Surfaced: S2748 Phase 4 Sub-phase 2 endpoint discovery
+- Ratifier: Chris D-verdict "B — hotfix PR first, then Sub-phase 2" 2026-07-10 S2748
+- PR: #TBD (this PR); Rigby SIGN pin `pa-59d27abadeed4411`
+
 ### §5.2 Initiative (Q7 per-user) — dominant category: **UNSCOPED (REG RISK)**
 
 **Critical §4 finding: 100% of Initiative rows have `owner=NULL`.** No caller uses `owner=` filter (grep confirmed). Every read currently returns ALL initiatives to ALL users. Backfill is a hard Phase 3 blocker.

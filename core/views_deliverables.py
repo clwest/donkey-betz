@@ -243,13 +243,30 @@ def save_deliverable(request, deliverable_id):
 def delete_deliverable(request, deliverable_id):
     """Permanently delete a deliverable."""
     try:
-        deliverable = get_object_or_404(Deliverable, id=deliverable_id)
+        # I-0302 Phase 3 Sub-phase D1 hotfix (2026-07-10, S2748): scope
+        # the source fetch — prior code used `get_object_or_404(Deliverable,
+        # id=deliverable_id)` with no ownership filter, which let any
+        # authenticated caller DELETE any deliverable whose id they knew.
+        # Missed by the original D1 12-site sweep; surfaced during Phase 4
+        # harness endpoint discovery. Mirrors the clone_deliverable
+        # source-fetch pattern from D1 (line 306 in this file).
+        # Ledger amendment: I-030201 §5.1.b.
+        deliverable = get_object_or_404(
+            scope_queryset_deliverable(request.user, Deliverable.objects.all()),
+            id=deliverable_id,
+        )
         title = deliverable.title
         deliverable.delete()
         return JsonResponse({
             'success': True,
             'message': f'Deleted: {title}',
         })
+    except Http404:
+        # Let 404 propagate — bare `except Exception` below would convert
+        # the scoped-source-fetch's 404 into a 500 (mirrors clone_deliverable
+        # D1 pattern; regression discovered by S2748 harness endpoint
+        # discovery, see §5.1.b).
+        raise
     except Exception as e:
         logger.error(f"Error deleting deliverable {deliverable_id}: {e}", exc_info=True)
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
