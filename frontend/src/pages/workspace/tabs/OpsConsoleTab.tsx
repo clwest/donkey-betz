@@ -26,6 +26,17 @@ interface OpsHealthSummary {
     total: number
     by_verdict: Record<string, number>
   }
+  slo_status: {
+    total: number
+    breach_count: number
+    healthy_count: number
+    worst_breach: {
+      key: string | null
+      name: string | null
+      current: number
+      target: number
+    } | null
+  }
 }
 
 interface CloseCeremonyItem {
@@ -148,7 +159,7 @@ export function OpsConsoleTab() {
               <code className="text-xs text-gray-500 ml-1">{opsHealth.head_commit_sha_short.slice(0, 7)}</code>
             )}
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className={cn(
               'p-3 rounded-lg border',
               opsHealth.tenant_boundary_violations.total > 0
@@ -200,6 +211,48 @@ export function OpsConsoleTab() {
                       <span className="text-gray-400 ml-2">{count}</span>
                     </div>
                   ))}
+                </div>
+              )}
+            </div>
+            {/* S2764: SLO Status tile card — 3rd tile per N1 */}
+            <div className={cn(
+              'p-3 rounded-lg border',
+              opsHealth.slo_status.breach_count > 0
+                ? 'border-red-500/30 bg-red-500/5'
+                : 'border-dark-border bg-dark-card'
+            )}>
+              <div className="flex items-center gap-2 mb-1">
+                <Zap size={14} className={opsHealth.slo_status.breach_count > 0 ? 'text-red-400' : 'text-green-400'} />
+                <span className="text-xs text-gray-400">SLO Breaches</span>
+              </div>
+              <p className={cn(
+                'text-lg font-bold',
+                opsHealth.slo_status.breach_count > 0 ? 'text-red-400' : 'text-green-400'
+              )}>
+                {opsHealth.slo_status.breach_count}
+                <span className="text-sm font-normal text-gray-500 ml-1">/ {opsHealth.slo_status.total}</span>
+              </p>
+              {opsHealth.slo_status.worst_breach && (
+                <div className="mt-2 space-y-0.5">
+                  <div className="text-xs text-gray-400 truncate" title={opsHealth.slo_status.worst_breach.name ?? ''}>
+                    {opsHealth.slo_status.worst_breach.name}
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500">current</span>
+                    <span className="text-red-400 font-mono">
+                      {opsHealth.slo_status.worst_breach.current < 1
+                        ? `${(opsHealth.slo_status.worst_breach.current * 100).toFixed(2)}%`
+                        : opsHealth.slo_status.worst_breach.current.toFixed(0)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-gray-500">target</span>
+                    <span className="text-gray-400 font-mono">
+                      {opsHealth.slo_status.worst_breach.target < 1
+                        ? `${(opsHealth.slo_status.worst_breach.target * 100).toFixed(2)}%`
+                        : opsHealth.slo_status.worst_breach.target.toFixed(0)}
+                    </span>
+                  </div>
                 </div>
               )}
             </div>
