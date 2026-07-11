@@ -30,6 +30,7 @@ from core.models.agents_registry import (
     AgentOrchestration,
     UnifiedAgentTemplate
 )
+from core.security.task_enforcement import enforce_tenant_boundary
 from content.ai_providers import AIProviderManager
 
 logger = logging.getLogger(__name__)
@@ -491,6 +492,12 @@ def fire_agent_followup_subscriptions(execution_record):
 
 
 @shared_task(bind=True, base=AgentExecutionTask, max_retries=3)
+@enforce_tenant_boundary(
+    model=AgentTaskExecution,
+    id_kwarg="execution_id",
+    lookup_field="execution_id",
+    warn_only=True,
+)
 def execute_agent(self, execution_id: str, **kwargs):
     """
     Main task for executing an agent.
