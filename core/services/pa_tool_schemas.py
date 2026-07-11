@@ -2457,6 +2457,7 @@ PA_TOOL_SCHEMAS = [
                         "celery_task_history", "execution_detail", "execution_search",
                         "memory_pressure", "top_consumers", "zombie_thread_rate",
                         "tenant_boundary_violations",
+                        "staleness_warnings",
                     ],
                     "description": (
                         "overview: one-shot ops snapshot — version + slo_status + top failure_signatures "
@@ -2508,6 +2509,15 @@ PA_TOOL_SCHEMAS = [
                         "asked about agent hangs, timeout rates, upstream-provider degradation. "
                         "Pass hours (default 24, max 168) and optional agent_name to filter. "
                         "Alert at >5/hour for any single agent. "
+                        "staleness_warnings: query OpsRunEvent for S2759 staleness_warning "
+                        "envelopes emitted by the check_process_staleness Beat task (30 min "
+                        "cadence). Returns total_count + by_verdict + by_head_commit_sha "
+                        "aggregates + sample_events (most-recent) with process detail preserved. "
+                        "Optional filters: verdict (STALE_DAPHNE / STALE_CELERY / STALE_BOTH), "
+                        "limit (default 20, max 100). Empty state includes a diagnostic note "
+                        "cross-referencing ops_tool.version. Use to inspect accumulated stale-"
+                        "process warnings — especially post-merge to verify make recycle-all was "
+                        "run, or to audit which HEAD commits historically triggered warnings. "
                         "tenant_boundary_violations: query OpsRunEvent for I-0303 "
                         "tenant_boundary_violation envelopes (Phase 3 REPORT-ONLY substrate). "
                         "Returns total_count + by_task_name + by_failure_kind + by_task_and_kind "
