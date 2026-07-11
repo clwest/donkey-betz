@@ -4,14 +4,39 @@
  * Replaces the generic System tab with actionable ops data.
  */
 
-import { useState } from 'react'
+import { useRef, useState, Suspense, lazy } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   AlertTriangle, CheckCircle, XCircle, Loader2, Shield,
   Clock, Zap, Activity, Ban, TrendingDown, Layers, Copy, Check, RotateCw,
+  FileText,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { api } from '@/lib/api'
+
+// S2767 N4: DocumentViewer lazy-loaded so the drawer chunk is only paid when
+// the operator actually opens a ledger doc — keeps OpsConsole route bundle lean.
+const LazyDocumentViewer = lazy(() =>
+  import('@/components/platform/DocumentViewer').then((m) => ({ default: m.DocumentViewer })),
+)
+
+// S2767 N4: doc-content response shape from /api/platform/doc-content/ (public
+// read-only, guarded to docs/** with traversal check — see auth_middleware.py:436).
+interface DocContentResponse {
+  content: string
+  metadata: {
+    path: string
+    name: string
+    title: string
+    lines: number
+    size_bytes: number
+    modified_at: string
+  }
+}
+
+const PREVIEW_LINE_LIMIT = 10
+const HOVER_DEBOUNCE_MS = 150
+const PREVIEW_STALE_TIME_MS = 5 * 60 * 1000
 
 interface OpsHealthSummary {
   window: string
@@ -75,6 +100,167 @@ function formatAgo(seconds: number): string {
   if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
   return `${Math.floor(seconds / 86400)}d ago`
+}
+
+// S2767 N4: single close-ceremony row with hover-preview + click-to-open.
+// Hover a stable 150ms → fetch first PREVIEW_LINE_LIMIT lines and render as
+// plain text in a tooltip. Click the row header → parent opens DocumentViewer.
+// Focus/blur mirror hover for keyboard users; react-query caches per-path 5min.
+interface LedgerRowProps {
+  item: CloseCeremonyItem
+  onOpen: (path: string, title: string) => void
+  onCopy: (path: string) => void
+  copiedPath: string | null
+}
+
+function LedgerRow({ item, onOpen, onCopy, copiedPath }: LedgerRowProps) {
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const hoverTimer = useRef<number | null>(null)
+
+  const previewQuery = useQuery<DocContentResponse | null>({
+    queryKey: ['doc-preview', item.handoff_path],
+    queryFn: async () => {
+      try {
+        const r = await api.get<DocContentResponse>('/platform/doc-content/', {
+          params: { path: item.handoff_path },
+        })
+        return r.data
+      } catch { return null }
+    },
+    enabled: previewOpen,
+    staleTime: PREVIEW_STALE_TIME_MS,
+  })
+
+  const startHover = () => {
+    if (hoverTimer.current) window.clearTimeout(hoverTimer.current)
+    hoverTimer.current = window.setTimeout(() => setPreviewOpen(true), HOVER_DEBOUNCE_MS)
+  }
+
+  const stopHover = () => {
+    if (hoverTimer.current) {
+      window.clearTimeout(hoverTimer.current)
+      hoverTimer.current = null
+    }
+    setPreviewOpen(false)
+  }
+
+  const previewLines = previewQuery.data?.content?.split('\n').slice(0, PREVIEW_LINE_LIMIT) ?? []
+  const totalLines = previewQuery.data?.metadata.lines ?? 0
+  const remainingLines = Math.max(0, totalLines - previewLines.length)
+
+  return (
+    <div
+      className="relative p-3 rounded-lg bg-dark-card border border-dark-border hover:border-primary-500/40 transition-colors"
+      onMouseEnter={startHover}
+      onMouseLeave={stopHover}
+    >
+      <button
+        type="button"
+        className="w-full text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40 rounded"
+        onClick={() => onOpen(item.handoff_path, item.title)}
+        onFocus={startHover}
+        onBlur={stopHover}
+        aria-label={`Open handoff ${item.handoff_path}`}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-mono font-medium text-primary-400 shrink-0">
+            S{item.session_number}
+          </span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm text-white truncate">{item.title}</p>
+            <div className="flex items-center gap-2 mt-0.5 text-xs">
+              {item.date && <span className="text-gray-500">{item.date}</span>}
+              <span
+                className={cn(
+                  'px-1.5 py-0.5 rounded font-medium',
+                  item.envelope_exists
+                    ? 'bg-green-500/10 text-green-400'
+                    : 'bg-gray-500/10 text-gray-400',
+                )}
+              >
+                {item.envelope_exists ? 'envelope' : 'handoff-only'}
+              </span>
+            </div>
+          </div>
+          <FileText size={13} className="text-gray-500 shrink-0" aria-hidden />
+        </div>
+      </button>
+
+      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+        <button
+          type="button"
+          onClick={() => onCopy(item.handoff_path)}
+          className="flex items-center gap-1 px-2 py-1 rounded bg-dark-bg hover:bg-dark-border text-gray-500 hover:text-gray-300 transition-colors"
+          title="Copy handoff path"
+        >
+          {copiedPath === item.handoff_path ? (
+            <Check size={11} className="text-green-400" />
+          ) : (
+            <Copy size={11} />
+          )}
+          <span>handoff path</span>
+        </button>
+        {item.envelope_path && (
+          <>
+            <button
+              type="button"
+              onClick={() => onOpen(item.envelope_path!, `${item.title} (envelope)`)}
+              className="flex items-center gap-1 px-2 py-1 rounded bg-dark-bg hover:bg-dark-border text-gray-500 hover:text-gray-300 transition-colors"
+              title="Open envelope in viewer"
+            >
+              <FileText size={11} />
+              <span>envelope</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onCopy(item.envelope_path!)}
+              className="flex items-center gap-1 px-2 py-1 rounded bg-dark-bg hover:bg-dark-border text-gray-500 hover:text-gray-300 transition-colors"
+              title="Copy envelope path"
+            >
+              {copiedPath === item.envelope_path ? (
+                <Check size={11} className="text-green-400" />
+              ) : (
+                <Copy size={11} />
+              )}
+              <span>copy envelope</span>
+            </button>
+          </>
+        )}
+      </div>
+
+      {previewOpen && (
+        <div
+          role="tooltip"
+          className="absolute left-0 right-0 top-full mt-1 z-20 p-3 rounded-lg bg-dark-bg border border-primary-500/30 shadow-lg pointer-events-none"
+        >
+          {previewQuery.isLoading && (
+            <div className="text-xs text-gray-500 flex items-center gap-2">
+              <Loader2 size={11} className="animate-spin" />
+              Loading preview…
+            </div>
+          )}
+          {previewQuery.data && (
+            <>
+              <div className="text-xs text-gray-500 mb-1">
+                First {previewLines.length} lines · {item.handoff_path.split('/').pop()}
+              </div>
+              <pre className="text-xs text-gray-300 whitespace-pre-wrap font-mono max-h-40 overflow-hidden">
+                {previewLines.join('\n')}
+              </pre>
+              {remainingLines > 0 && (
+                <div className="text-xs text-gray-500 mt-1">
+                  … {remainingLines} more lines — click to open
+                </div>
+              )}
+            </>
+          )}
+          {previewQuery.isError && (
+            <div className="text-xs text-red-400">Preview unavailable</div>
+          )}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function OpsConsoleTab() {
@@ -162,6 +348,12 @@ export function OpsConsoleTab() {
       setTimeout(() => setCopiedPath(null), 1500)
     } catch { /* clipboard unavailable — no-op */ }
   }
+
+  // S2767 N4: docs viewer drawer state — populated when the operator clicks
+  // a ledger row (handoff or envelope). Cleared on close.
+  const [viewerDoc, setViewerDoc] = useState<{ path: string; title: string } | null>(null)
+  const openViewer = (path: string, title: string) => setViewerDoc({ path, title })
+  const closeViewer = () => setViewerDoc(null)
 
   const slos = sloQuery.data?.slos || []
   const breaches = slos.filter((s: Record<string, boolean>) => s.breach)
@@ -440,61 +632,33 @@ export function OpsConsoleTab() {
           </h3>
           <div className="space-y-2">
             {ledgerQuery.data.items.map((item) => (
-              <div key={item.session_number} className="p-3 rounded-lg bg-dark-card border border-dark-border">
-                <div className="flex items-center gap-3">
-                  <span className="text-xs font-mono font-medium text-primary-400 shrink-0">
-                    S{item.session_number}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white truncate">{item.title}</p>
-                    <div className="flex items-center gap-2 mt-0.5 text-xs">
-                      {item.date && <span className="text-gray-500">{item.date}</span>}
-                      <span
-                        className={cn(
-                          'px-1.5 py-0.5 rounded font-medium',
-                          item.envelope_exists
-                            ? 'bg-green-500/10 text-green-400'
-                            : 'bg-gray-500/10 text-gray-400',
-                        )}
-                      >
-                        {item.envelope_exists ? 'envelope' : 'handoff-only'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-2 space-y-1">
-                  <button
-                    onClick={() => copyPath(item.handoff_path)}
-                    className="w-full flex items-center gap-2 text-xs text-left px-2 py-1 rounded bg-dark-bg hover:bg-dark-border transition-colors group"
-                    title="Copy handoff path"
-                  >
-                    {copiedPath === item.handoff_path ? (
-                      <Check size={11} className="text-green-400 shrink-0" />
-                    ) : (
-                      <Copy size={11} className="text-gray-500 shrink-0 group-hover:text-gray-300" />
-                    )}
-                    <code className="text-gray-400 truncate flex-1">{item.handoff_path}</code>
-                  </button>
-                  {item.envelope_path && (
-                    <button
-                      onClick={() => copyPath(item.envelope_path!)}
-                      className="w-full flex items-center gap-2 text-xs text-left px-2 py-1 rounded bg-dark-bg hover:bg-dark-border transition-colors group"
-                      title="Copy envelope path"
-                    >
-                      {copiedPath === item.envelope_path ? (
-                        <Check size={11} className="text-green-400 shrink-0" />
-                      ) : (
-                        <Copy size={11} className="text-gray-500 shrink-0 group-hover:text-gray-300" />
-                      )}
-                      <code className="text-gray-400 truncate flex-1">{item.envelope_path}</code>
-                    </button>
-                  )}
-                </div>
-              </div>
+              <LedgerRow
+                key={item.session_number}
+                item={item}
+                onOpen={openViewer}
+                onCopy={copyPath}
+                copiedPath={copiedPath}
+              />
             ))}
           </div>
         </div>
       )}
+
+      {/* S2767 N4: DocumentViewer drawer — mounted only when a doc is selected;
+          Suspense catches the lazy chunk load. Fallback is null since drawer
+          renders its own loading state once mounted. */}
+      <Suspense fallback={null}>
+        {viewerDoc && (
+          <LazyDocumentViewer
+            documentPath={viewerDoc.path}
+            title={viewerDoc.title}
+            category="handoff"
+            categoryColor="#22d3ee"
+            isOpen={true}
+            onClose={closeViewer}
+          />
+        )}
+      </Suspense>
     </div>
   )
 }

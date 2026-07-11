@@ -2,38 +2,39 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2766 CLOSED — ENGINEERING PLAYBOOK v0.6.0 MINOR RATIFIED
+## READ THIS FIRST — SESSION 2767 CLOSED — CLOSE-CEREMONY LEDGER v2 RATIFIED
 
-**Refreshed 2026-07-11 (SESSION 2766 CLOSED — Playbook v0.6.0 MINOR ratified same day as v0.5.0; PLAYBOOK-7.4.4 codifies recycle-after-merge under existing §7.4 Close-ceremony delivery discipline. Rule count 201 → 202. First amendment where the version-bump class was corrected via SIGN before draft — Chris pre-labeled PATCH; joint Claude+Rigby SIGN caught the PLAYBOOK-10.4.1 constitutional constraint and reclassified to MINOR.).**
+**Refreshed 2026-07-11 (SESSION 2767 CLOSED — N4 shipped. Frontend-only edit to `OpsConsoleTab.tsx`: `LedgerRow` component with hover-preview tooltip + click-to-open via lazy-loaded `DocumentViewer` drawer. Zero new backend routes — reuses the pre-existing public-by-design `/api/platform/doc-content/` endpoint (`auth_middleware.py:436`). First close-cycle after PLAYBOOK-7.4.4 codification: `make recycle-all` dogfooded successfully.)**
 
-**S2766 shipped in 1-PR close-ceremony bundle (per PLAYBOOK-7.4.1):**
+**S2767 shipped in 1-PR close-ceremony bundle (per PLAYBOOK-7.4.1):**
 
-- **`docs/ENGINEERING_PLAYBOOK.md`** — frontmatter version 0.5.0 → 0.6.0; parent_version 0.4.1 → 0.5.0; compatible_with appends "0.5.0"; rule_count 201 → 202; new `rules_added_v0_6_0: [PLAYBOOK-7.4.4]`; new v0_6_0 authoring/ratification session fields (both 2766); prior_ratification block updated with v0.5.0 metadata; Ch 7 metadata `Last substantive change: v0.6.0`; §7.4 preamble now "codifies four rules" + adds S2758–S2765 corroboration provenance; new PLAYBOOK-7.4.4 rule text inserted after 7.4.3; Appendix D v0.6.0 row appended.
-- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_6_0.md`
-- **Handoff:** `docs/handoffs/SESSION_2766_PLAYBOOK_V0_6_0_RATIFIED.md`
-- **CLAUDE.md L7 anchor:** refreshed to reference v0.6.0 as latest; v0.5.0 preserved in ancestry chain
+- **`frontend/src/pages/workspace/tabs/OpsConsoleTab.tsx`** — new `LedgerRow` component (private, hover-preview + click-to-open behaviors); new `LazyDocumentViewer = lazy(...)` module-level import; new `DocContentResponse` interface + `PREVIEW_LINE_LIMIT/HOVER_DEBOUNCE_MS/PREVIEW_STALE_TIME_MS` constants; new `viewerDoc` state on `OpsConsoleTab`; Suspense-wrapped drawer at return root. Existing copy-path buttons demoted to small secondary chips.
+- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger_v2.md`
+- **Handoff:** `docs/handoffs/SESSION_2767_CLOSE_CEREMONY_LEDGER_V2_RATIFIED.md`
+- **CLAUDE.md L3 anchor:** refreshed to reference S2767; L7 constitutional anchor unchanged (Playbook v0.6.0 still latest ratified version)
 - **Docs cascade:** 4-step complete (index → corpus → sync → embed) + provenance rebuild
-- **Post-merge:** `make recycle-all` invoked (dogfoods PLAYBOOK-7.4.4 — the rule the amendment ratifies)
+- **Post-merge:** `make recycle-all` invoked per PLAYBOOK-7.4.4 (first cycle where recycle-after-merge is constitutional force, not just memory rule)
 
 ---
 
 ## THE PIVOT — WHY THIS SHIP MATTERS
 
-Recycle-after-merge was operator memory (`feedback_recycle_after_merge.md`) as of S2761 close. Between S2762 and S2765, three consecutive close-cycles corroborated the fix. S2766 promotes the rule from volatile MEMORY.md entry to **constitutional force** under PLAYBOOK-7.4.4.
+S2745 established: bias net-new engineering over "audit what's built." The S2755→S2765 streak was diagnostic infra + operator surfaces (still substrate, but user-visible). S2766 was a Playbook amendment (docs-only). **S2767 broke back to net-new UI at the very next open** — hover-preview + click-to-open transforms the Recent Close-Ceremonies section from a copy-path list into a fast context re-load surface.
 
-**Second-order precedent set at v0.6.0:** the SIGN cycle caught a constitutional mismatch (Chris pre-labeled the amendment as PATCH v0.5.1 in START-NEXT; PLAYBOOK-10.4.1 forbids rule introduction as PATCH) before any code landed. Joint Claude+Rigby recommendation reclassified to MINOR v0.6.0. Chris ratified with "yes ship it as MINOR v0.6.0." **The Playbook's own rules override operator pre-labeling of amendment class.**
+**Second-order:** this is the first close-cycle where PLAYBOOK-7.4.4 is CONSTITUTIONAL, not memory. Every close-ceremony PR from now on MUST end with `make recycle-all` unless the merge diff qualifies for the mechanical waiver (docs/frontend-only merges). S2767 is frontend-only and thus WAIVER-ELIGIBLE — but we invoked the recycle anyway to accumulate a corroboration data point on the rule under its post-codification dogfooding scope.
 
-**Live ledger:** three observability layers now govern stale-process triage (Ops Health tile + Staleness Warnings + Recent Recycles from S2765) + one constitutional rule requiring the recycle timing (PLAYBOOK-7.4.4). The rule is machine-observable via `logs/recycle_events.jsonl` even though the rule text is prose.
+**Live ledger:** three observability layers govern stale-process triage (Ops Health tile + Staleness Warnings + Recent Recycles) + one constitutional rule requiring the recycle timing (PLAYBOOK-7.4.4) + one operator surface for post-session context re-load (Recent Close-Ceremonies v2 with hover-preview + drawer nav).
 
 ---
 
-## S2767 CANDIDATES (Chris selects at open)
+## S2768 CANDIDATES (Chris selects at open)
 
 ### Net-new engineering (⭐ recommended first per `feedback_engineering_bias_over_audit`)
 
-- **N4** — Close-Ceremony Ledger v2: hover-preview + docs viewer navigation
 - **N6** — Command Center home tile mirror of Ops Health (3-card grid at Workspace Home)
 - **N7** — extend `recycle-all` emitter with worker PIDs before/after; use this to detect partial recycles
+- **N8 (new)** — Recent Close-Ceremonies row search / filter (by session number range, envelope-only, date range) — surfaces the value of v2 further as the ledger grows past 10 entries
+- **N9 (new)** — Post-S2767 Phase 2 candidate — dedicated `/api/ops/doc-preview/` endpoint returning only first N lines (upgrade from Option A to Option B once measured hover-storm bandwidth justifies it)
 
 ### Housekeeping
 
@@ -51,31 +52,40 @@ Recycle-after-merge was operator memory (`feedback_recycle_after_merge.md`) as o
 - **S2758 D5 local shim retirement** — depends on D2 canonical decision
 - **HMAC signing of `x-acting-user-id` header** — Phase 2 §6 limitation
 
+### Post-S2766 owed
+
+- **Memory rule promotion audit** — sweep MEMORY.md for other operator memories that have hit the two-triggers threshold and could be candidates for future MINOR amendments. Not urgent; future arc-close closeout item.
+
 ---
 
-## SESSION PIN — S2766 RETIRED (fresh mint required at S2767 open)
+## SESSION PIN — S2767 RETIRED (fresh mint required at S2768 open)
 
-**Pin history (S2766):**
+**Pin history (S2767):**
 
-- `pa-3811268cfce14a49` (label `s2766-playbook-v0-5-1-recycle-after-merge` — label predates MINOR reclass, retained; the constitutional force lives in the Playbook doc not the pin label) minted S2766 open; **retired at S2766 close**
+- `pa-d2f1f7bd302f47d2` (label `s2767-close-ceremony-ledger-v2`) minted S2767 open; **retired at S2767 close**
 
-**Wrapper `tools/pa_local.sh:539` still points at `pa-3811268cfce14a49` (retired)** — intended failure mode forces S2767 first-action fresh mint.
+**Wrapper `tools/pa_local.sh:539` still points at `pa-d2f1f7bd302f47d2` (retired)** — intended failure mode forces S2768 first-action fresh mint.
 
-**S2767 open sequence:**
+**S2768 open sequence:**
 
 ```
 context-kit orient
 
 # Read this file end-to-end
-# Read the S2766 envelope §4 (corroboration ladder) + §5 (Rigby SIGN)
-# Skim the new PLAYBOOK-7.4.4 rule text in docs/ENGINEERING_PLAYBOOK.md §7.4
+# Read the S2767 envelope §4 (Rigby SIGN summary) + §5 (empirical smoke tests)
+# Skim the new LedgerRow component in frontend/src/pages/workspace/tabs/OpsConsoleTab.tsx (~150 lines added)
 
-# Freshness check + tile eyeball. Should be FRESH · SHA match at S2766 close SHA — this is the FOURTH close-cycle since the recycle-after-merge convention adopted (first cycle AFTER codification).
-bash tools/pa_local.sh "S2767 open — freshness check: ops_tool.version verdict + head_commit_sha; ops_tool.recent_recycles limit=5 (should show S2766 close + S2765 close as top two entries)"
+# Freshness check + tile eyeball. Should be FRESH · SHA match at S2767 close SHA — this is the FIFTH close-cycle since the recycle-after-merge convention adopted (SECOND cycle AFTER codification).
+bash tools/pa_local.sh "S2768 open — freshness check: ops_tool.version verdict + head_commit_sha; ops_tool.recent_recycles limit=5 (should show S2767 close + S2766 close + S2765 close as top three entries)"
 
-# Browser eyeball: hard-refresh localhost:8000/workspace?tab=system&sub=ops — six sections still there
+# Browser eyeball: hard-refresh localhost:8000/workspace?tab=system&sub=ops
+#   - verify existing sections still render (Ops Health tile, SLO, Signatures, Blocked, Recent Recycles)
+#   - hover a Recent Close-Ceremonies row → tooltip with first 10 lines
+#   - click a row → DocumentViewer drawer opens with handoff
+#   - click envelope chip → drawer opens with envelope
+#   - copy chips still copy paths (regression check)
 
-# Mint fresh pin scoped to selected S2767 candidate
+# Mint fresh pin scoped to selected S2768 candidate
 python manage.py session_lifecycle open --label <candidate-scoped-label>
 
 grep '^python tools/pa_chat.py' tools/pa_local.sh
@@ -85,9 +95,9 @@ Rigby will not dispatch until wrapper is repointed.
 
 ---
 
-## OPEN RUNTIME ITEMS (from S2766 close)
+## OPEN RUNTIME ITEMS (from S2767 close)
 
-Same as S2766 close open items, with N5 removed (shipped) and one addition:
+Same as S2767 close open items, with N4 removed (shipped) and two additions:
 
 1. **S2761 smoke test** — Candidate 1
 2. **S2758 D2 canonical decision** — Candidate 2
@@ -99,28 +109,29 @@ Same as S2766 close open items, with N5 removed (shipped) and one addition:
 8. **S2758 D1 process_pa_chat_task payload strip**
 9. **S2758 D5 local shim retirement**
 10. **HMAC signing of `x-acting-user-id`**
-11. **N4 / N6 / N7 net-new engineering** — see Candidates above
-12. **NEW (post-S2766) — memory rule promotion audit** — now that recycle-after-merge is constitutional (PLAYBOOK-7.4.4), sweep MEMORY.md for other operator memories that have hit the two-triggers threshold and could be candidates for future MINOR amendments. Not urgent; future arc-close closeout item.
+11. **N6 / N7 / N8 / N9 net-new engineering** — see Candidates above
+12. **Memory rule promotion audit** — sweep for MINOR amendment candidates
 
 ---
 
 ## Twin-pointer card
 
-📁 **Repo `/docs/` + `CLAUDE.md` — S2766 artifacts:**
+📁 **Repo `/docs/` + `/frontend/` — S2767 artifacts:**
 
-- **Playbook body:** `docs/ENGINEERING_PLAYBOOK.md` (v0.6.0)
-- **New rule:** PLAYBOOK-7.4.4 in §7.4 Close-ceremony delivery discipline
-- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_6_0.md`
-- **Handoff:** `docs/handoffs/SESSION_2766_PLAYBOOK_V0_6_0_RATIFIED.md`
-- **L7 anchor:** `CLAUDE.md` line 7 (refreshed to v0.6.0)
-- **Prior version anchor:** `docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_5_0.md` (v0.5.0 envelope)
+- **Frontend edit:** `frontend/src/pages/workspace/tabs/OpsConsoleTab.tsx` (LedgerRow + LazyDocumentViewer + Suspense)
+- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger_v2.md`
+- **Handoff:** `docs/handoffs/SESSION_2767_CLOSE_CEREMONY_LEDGER_V2_RATIFIED.md`
+- **Predecessor envelope:** `docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger.md` (S2763 v1)
+- **DocumentViewer component:** `frontend/src/components/platform/DocumentViewer.tsx` (S818, reused unchanged)
+- **doc-content backend:** `core/views_platform_command.py:1226` (S818, reused unchanged)
+- **Auth-exempt registration:** `core/auth_middleware.py:436`
+- **Playbook constitutional context:** `docs/ENGINEERING_PLAYBOOK.md` §7.4.4 (v0.6.0, S2766)
 
 🖥️ **Workspace UI — `/workspaces` surface:**
 
-- **Architecture & Research** (`a9a16593-e0a4-44dc-8256-efc65d524b3c`) — governance mirror of v0.6.0 envelope + v0.6.0 body doc (twin-canonical representation per S2754a rule)
-- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — sibling arc governance
+- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — governance + content mirrors for S2767
 - **Real User Readiness Campaign** (`638e9e90-47b4-4bd4-a872-bf16181cf3b5`) — parent program
-- **Live surface:** `localhost:8000/workspace?tab=system&sub=ops` — Ops Console (6 sections, unchanged from S2765)
+- **Live surface:** `localhost:8000/workspace?tab=system&sub=ops` — Recent Close-Ceremonies section now hover-previewable + click-to-open
 
 ---
 
@@ -129,28 +140,28 @@ Same as S2766 close open items, with N5 removed (shipped) and one addition:
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | (filled at merge — post-S2766 merge) |
-| Playbook version | **v0.6.0 (RATIFIED S2766)** |
-| Playbook rule count | **202** (201 → 202 at v0.6.0; +1 [GR]: PLAYBOOK-7.4.4) |
-| RUR-C1 state | I-0301 CLOSED · I-0302 CLOSED · I-0303 Phase 3 stage 2 first pass CLOSED · S2755→S2765 diagnostic infra + operator surfaces CLOSED · **S2766 Playbook v0.6.0 CLOSED** · RUR-C1 parent OPEN |
-| Session pin | `pa-3811268cfce14a49` (retired at S2766 close) |
-| Wrapper default pin | `tools/pa_local.sh:539` — `pa-3811268cfce14a49` (retired; forces fresh mint at S2767 open) |
-| Live infra state | Playbook v0.6.0 doc + envelope + handoff + L7 anchor + docs cascade complete; `make recycle-all` invoked at close as dogfood test of PLAYBOOK-7.4.4 |
-| Next move | Chris selects at S2767 open — see Candidates above (N4/N6/N7 lean ⭐) |
+| HEAD | (filled at merge — post-S2767 merge) |
+| Playbook version | v0.6.0 (RATIFIED S2766) |
+| Playbook rule count | 202 |
+| RUR-C1 state | I-0301 CLOSED · I-0302 CLOSED · I-0303 Phase 3 stage 2 first pass CLOSED · S2755→S2766 diagnostic infra + operator surfaces + governance CLOSED · **S2767 close-ceremony ledger v2 CLOSED** · RUR-C1 parent OPEN |
+| Session pin | `pa-d2f1f7bd302f47d2` (retired at S2767 close) |
+| Wrapper default pin | `tools/pa_local.sh` — `pa-d2f1f7bd302f47d2` (retired; forces fresh mint at S2768 open) |
+| Live infra state | S2755→S2766 diagnostic infra + operator surfaces + Playbook v0.6.0 + **S2767 CCL v2 hover-preview + docs viewer nav** operational |
+| Next move | Chris selects at S2768 open — see Candidates above |
 
 ---
 
-## Recommended session-open protocol (S2767)
+## Recommended session-open protocol (S2768)
 
 1. `context-kit orient`
 2. Read this file end-to-end
-3. Read S2766 envelope `RATIFICATION_2026-07-11_PLAYBOOK_V0_6_0.md` §4 (corroboration ladder) + §5 (Rigby SIGN watchpoints)
-4. Skim PLAYBOOK-7.4.4 rule text in `docs/ENGINEERING_PLAYBOOK.md` §7.4
-5. **Freshness + findings + tile eyeball (single-round-trip)** — see S2767 open sequence in §SESSION PIN above
-6. If `staleness_verdict != FRESH` → **rule violation of PLAYBOOK-7.4.4 the very session after codification; escalate to Chris**
+3. Read S2767 envelope `RATIFICATION_2026-07-11_close_ceremony_ledger_v2.md` §4 (Rigby SIGN) + §5 (empirical smoke tests)
+4. Skim the new `LedgerRow` component in `OpsConsoleTab.tsx` (~150 lines added)
+5. **Freshness + findings + tile eyeball (single-round-trip)** — see S2768 open sequence in §SESSION PIN above
+6. If `staleness_verdict != FRESH` → **rule violation of PLAYBOOK-7.4.4 the second session after codification; escalate to Chris**
 7. Verify runtime state: `git log --oneline -5`; confirm wrapper at retired pin
-8. Present candidate menu to Chris (highlight N4/N6/N7 net-new leans)
-9. Chris directs S2767 P0 selection
+8. Present candidate menu to Chris (highlight N6/N7/N8/N9 net-new leans)
+9. Chris directs S2768 P0 selection
 10. Mint fresh pin with candidate-scoped label
 11. Route work through Rigby joint agreement before coding
 
@@ -158,14 +169,14 @@ Same as S2766 close open items, with N5 removed (shipped) and one addition:
 
 ## Reference documents
 
-Ordered by frequency of use at S2767:
+Ordered by frequency of use at S2768:
 
-1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (L7 anchor refreshed to v0.6.0)
-2. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — **v0.6.0 (latest ratified)**
-3. [`docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_6_0.md`](docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_6_0.md) — S2766 envelope (this session)
-4. [`docs/handoffs/SESSION_2766_PLAYBOOK_V0_6_0_RATIFIED.md`](docs/handoffs/SESSION_2766_PLAYBOOK_V0_6_0_RATIFIED.md) — S2766 handoff
-5. [`docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_5_0.md`](docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_5_0.md) — prior-version envelope (context for the same-day pair)
-6. [`docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_recent_recycles.md`](docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_recent_recycles.md) — S2765 (empirical basis for PLAYBOOK-7.4.4 via §4.1 corroboration table)
-7. `core/services/td_handlers_ops.py` — PA tool handler bank (Ops Console backend)
-8. `core/views_ops_console.py` — Ops Console REST endpoints (6 views)
-9. `frontend/src/pages/workspace/tabs/OpsConsoleTab.tsx` — Ops Console page (6 sections)
+1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (L3 refreshed to S2767; L7 constitutional anchor unchanged at Playbook v0.6.0)
+2. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.6.0 (latest ratified)
+3. [`docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger_v2.md`](docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger_v2.md) — S2767 envelope (this session)
+4. [`docs/handoffs/SESSION_2767_CLOSE_CEREMONY_LEDGER_V2_RATIFIED.md`](docs/handoffs/SESSION_2767_CLOSE_CEREMONY_LEDGER_V2_RATIFIED.md) — S2767 handoff
+5. [`docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger.md`](docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger.md) — S2763 v1 envelope (predecessor)
+6. [`docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_6_0.md`](docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_6_0.md) — Playbook v0.6.0 envelope (constitutional context for the recycle rule)
+7. `frontend/src/pages/workspace/tabs/OpsConsoleTab.tsx` — Ops Console tab (edited this session)
+8. `frontend/src/components/platform/DocumentViewer.tsx` — reused unchanged
+9. `core/views_platform_command.py` — `doc_content_view` reused unchanged
