@@ -80,6 +80,16 @@ stop: ## Stop Daphne and best-effort Redis; do not forcibly kill unrelated proce
 restart: stop celery-stop start celery ## Full restart of Daphne + Celery (use this!)
 	@echo "✓ Full restart complete (Daphne + Celery)."
 
+# S2759: `recycle-all` is the canonical name for the full local "deploy" step
+# post-code-change. Same behavior as `restart` but more discoverable — matches
+# the `celery-recycle` naming convention that operators already know. Use this
+# at close of any session touching ASGI-served code (core/views/**,
+# core/services/**, core/urls.py, asgi.py, middleware, auth/permission layer)
+# OR Celery-served code (core/tasks*, Celery config). Stale processes silently
+# serve pre-merge code and were the root cause of the S2755→S2757 latent
+# regression class — see `feedback_local_truth_no_production` memory rule.
+recycle-all: restart ## S2759: full local "deploy" step — bounces Daphne + Celery + beat. Alias for `restart`. Use post-merge.
+
 restart-daphne: stop start ## Restart only Daphne (keeps Celery running)
 
 frontend-build: ## Build frontend/dist/ (Vite) + run postbuild manifest
