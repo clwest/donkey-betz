@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-10T18:51:24+00:00",
+    "generated": "2026-07-11T03:11:39+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "c8cfe6d6411d",
-    "doc_count": 2513,
-    "commit_count": 7767,
+    "git_head": "6075a6720e6c",
+    "doc_count": 2524,
+    "commit_count": 7830,
     "confidence_breakdown": {
-      "HIGH": 1612,
-      "MEDIUM": 394,
+      "HIGH": 1613,
+      "MEDIUM": 401,
       "LOW": 5,
-      "UNKNOWN": 502
+      "UNKNOWN": 505
     },
     "excludes": [
       "docs/archive/",
@@ -2583,7 +2583,7 @@
         2744,
         2745
       ],
-      "commit_count": 1222,
+      "commit_count": 1226,
       "prs": [
         10,
         11,
@@ -3139,7 +3139,9 @@
         3075,
         3077,
         3080,
-        3084
+        3084,
+        3095,
+        3110
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7480,7 +7482,7 @@
         2744,
         2745
       ],
-      "commit_count": 178,
+      "commit_count": 180,
       "prs": [
         2213,
         2219,
@@ -7643,7 +7645,8 @@
         3075,
         3077,
         3080,
-        3084
+        3084,
+        3095
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19420,6 +19423,49 @@
       "prs": [
         3072
       ]
+    },
+    "docs/handoffs/SESSION_2747_I0302_PHASE_3_WIRING_COMPLETE.md": {
+      "originating_session": 2747,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "62ee3911",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2747-close): S2748 handoff \u2014 I-0302 Phase 3 wiring COMPLETE (#3110)",
+      "sessions_touched": [
+        2747
+      ],
+      "commit_count": 2,
+      "prs": [
+        3110
+      ]
+    },
+    "docs/handoffs/SESSION_2748_I0302_PHASE_4_SUB_PHASE_0_1_2_COMPLETE.md": {
+      "originating_session": 2748,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "15fbd436",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2748-close): S2748 handoff \u2014 Phase 4 Sub-phases 0/1/2 COMPLETE + \u00a75.1.b 5-site hotfix + \u00a714 threshold codification (#3115)",
+      "sessions_touched": [
+        2748
+      ],
+      "commit_count": 2,
+      "prs": [
+        3115
+      ]
+    },
+    "docs/handoffs/SESSION_2749_I0302_PHASE_4_SUB_PHASE_3_SUBSTRATE_LARGELY_CLOSED.md": {
+      "originating_session": 2749,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "6075a672",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2749-close): S2749 handoff \u2014 Phase 4 Sub-phase 3 substrate largely closed (8 PRs)",
+      "sessions_touched": [
+        2749
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
       "originating_session": 280,
@@ -36143,6 +36189,49 @@
         3083
       ]
     },
+    "docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase1_ledger.md": {
+      "originating_session": 642,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "4712740f",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2742): I-0302 arc opened \u2014 scoping + Phase 1 Model Audit Ledger both RATIFIED (#3096)",
+      "sessions_touched": [
+        642
+      ],
+      "commit_count": 2,
+      "prs": [
+        3096
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase2_predicate_module.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "557bb2bc",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2742): I-0302 Phase 2 Predicate Module RATIFIED \u2014 Phase 3 authorized (#3098)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3098
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-10_i0302_scoping.md": {
+      "originating_session": 642,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "4712740f",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2742): I-0302 arc opened \u2014 scoping + Phase 1 Model Audit Ledger both RATIFIED (#3096)",
+      "sessions_touched": [
+        642
+      ],
+      "commit_count": 2,
+      "prs": [
+        3096
+      ]
+    },
     "docs/research/implementation/RATIFICATION_2026-07-10_real_user_readiness.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -36355,6 +36444,94 @@
         3091,
         3092,
         3094
+      ]
+    },
+    "docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md": {
+      "originating_session": 642,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "40f2bffc",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "fix(security): I-0302 \u00a714 batch-fix \u2014 9 Http404-swallow sites across 3 view files (#3117)",
+      "sessions_touched": [
+        642,
+        872
+      ],
+      "commit_count": 28,
+      "prs": [
+        3096,
+        3100,
+        3102,
+        3104,
+        3105,
+        3106,
+        3107,
+        3108,
+        3109,
+        3111,
+        3113,
+        3114,
+        3117
+      ]
+    },
+    "docs/research/implementation/tenant_boundary_lockdown/I-030202_predicate_module_design.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "1790d672",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "feat(security): I-0302 Phase 2 shipped \u2014 object-level authorization predicate module (#3097)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3097
+      ]
+    },
+    "docs/research/implementation/tenant_boundary_lockdown/I-030203_phase4_harness_architecture.md": {
+      "originating_session": 642,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "ae1321ba",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "feat(security): I-0302 Phase 4 Sub-phase 3 \u2014 intentional-immutability contract cells (#3123)",
+      "sessions_touched": [
+        642
+      ],
+      "commit_count": 8,
+      "prs": [
+        3111,
+        3112,
+        3114,
+        3123
+      ]
+    },
+    "docs/research/implementation/tenant_boundary_lockdown/I-030204_ast_conformance_rule_spec.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "f1cf8950",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "feat(security): I-0302 \u00a714 codification \u2014 flip AST harness to enforcing mode (#3118)",
+      "sessions_touched": [],
+      "commit_count": 4,
+      "prs": [
+        3116,
+        3118
+      ]
+    },
+    "docs/research/implementation/tenant_boundary_lockdown/I-0302_scoping.md": {
+      "originating_session": 642,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "4712740f",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2742): I-0302 arc opened \u2014 scoping + Phase 1 Model Audit Ledger both RATIFIED (#3096)",
+      "sessions_touched": [
+        642
+      ],
+      "commit_count": 2,
+      "prs": [
+        3096
       ]
     },
     "docs/research/implementation/tenant_boundary_lockdown/failure_data_safety_contract.md": {
