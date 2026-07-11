@@ -11,6 +11,7 @@ Created: September 30, 2025
 import logging
 from django.db.models import Count, Avg
 from datetime import datetime, timedelta
+from django.http import Http404
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
@@ -2249,6 +2250,11 @@ def toggle_project_learning(request, project_id):
             'last_run': project.last_learning_run.isoformat() if project.last_learning_run else None
         })
 
+    except Http404:
+        # I-0302 §14 batch-fix (S2749): let 404 propagate — bare `except Exception`
+        # would convert get_object_or_404's Http404 into 500. Detected by
+        # tests/security/test_i0302_p4_ast_conformance.py.
+        raise
     except Exception as e:
         logger.error(f"❌ Error toggling project learning: {e}")
         return Response({
@@ -2316,6 +2322,11 @@ def get_project_learning_status(request, project_id):
             }
         })
 
+    except Http404:
+        # I-0302 §14 batch-fix (S2749): let 404 propagate — bare `except Exception`
+        # would convert get_object_or_404's Http404 into 500. Detected by
+        # tests/security/test_i0302_p4_ast_conformance.py.
+        raise
     except Exception as e:
         logger.error(f"❌ Error getting project learning status: {e}")
         return Response({
@@ -2365,6 +2376,11 @@ def trigger_project_learning(request, project_id):
             'task_id': result.id
         })
 
+    except Http404:
+        # I-0302 §14 batch-fix (S2749): let 404 propagate — bare `except Exception`
+        # would convert get_object_or_404's Http404 into 500. Detected by
+        # tests/security/test_i0302_p4_ast_conformance.py.
+        raise
     except Exception as e:
         logger.error(f"❌ Error triggering project learning: {e}")
         return Response({
