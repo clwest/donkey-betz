@@ -2,123 +2,104 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2753 CLOSED — ENGINEERING PLAYBOOK v0.5.0 RATIFIED
+## READ THIS FIRST — SESSION 2754 CLOSED (partial) — I-0303 SCOPING RATIFIED; PHASE 1 AUDIT LEDGER AUTHORIZED
 
-**Refreshed 2026-07-11 (SESSION 2753 CLOSED — Chris D-verdict `"agree all"` on v0.5.0 amendment).**
+**Refreshed 2026-07-11 (SESSION 2754 — Chris D-verdict `"agree all"` on I-0303 scoping Q1..Q6; Phase 1 authorized to open).**
 
-**S2753 shipped (single close-bundle PR — dogfooding PLAYBOOK-7.4.1 + PLAYBOOK-7.4.3 COMBINED cadence):**
+**S2754 shipped:**
 
-- **Playbook v0.5.0 body** — Ch 7 partial activation with 5 new [GR] rules: PLAYBOOK-7.4.1/7.4.2/7.4.3 (close-ceremony delivery discipline), PLAYBOOK-7.5.1 (three-PR staged codification), PLAYBOOK-7.6.1 (watchpoint-attestation SIGN; EXTENDS PLAYBOOK-6.10.3). Top-frontmatter v0.5.0 with `version_status: ratified`, `content_hash` filled, `git_tag: playbook-v0.5.0`. Rule count 196 → 201.
-- **Evidence manifest v0.5 additions** — 14 new entries C7-11..C7-24; §10.3 lockbox paragraph; §10.4 gap update.
-- **Amendment provenance envelope** — `docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_5_0.md` with recorded PLAYBOOK-6.10.1 6-check §3 + Rigby SIGN log §4 (W1..W7 PASS across 2 turns) + Chris D-verdict §5 + workflow directive §5.1 + provenance chain §8.
-- **CLAUDE.md L7 anchor refresh** — v0.5.0 as latest ratified; ancestry v0.1.0/v0.2.0/v0.3.0/v0.4.0/v0.4.1 preserved.
-- **New MEMORY.md workflow rule** — `feedback_claude_rigby_agree_first_chris_yes_no.md` from Chris directive at D-verdict: *"Going forward you and Rigby needs to have come to an agreement and then I will either yes or no it."*
-- **S2753 handoff** — `docs/handoffs/SESSION_2753_PLAYBOOK_V0_5_0_RATIFIED.md`
-- **Docs cascade** — 4-step + `build_docs_provenance` per feedback rule (chunk count reported in PR body).
+- **I-0303 scoping RATIFIED** — third and final RUR-C1 child arc opens. `docs/research/implementation/tenant_boundary_lockdown/I-0303_scoping.md` (322 lines post-Rigby-edits). Ratification envelope: `docs/research/implementation/RATIFICATION_2026-07-11_i0303_scoping.md`. Workspace deliverable: `18194cab-b737-42bf-b747-1263af5771ae` in `fcd7e683-3bfe-4d35-9704-0e54dd587ea1` (RUR-C1 Tenant Boundary Lockdown).
+- **First arc ratification under Claude+Rigby-agree-first workflow rule** (Chris S2753 directive). Rigby SIGN edits applied inline BEFORE routing joint recommendation. Chris presented with one joint proposal, not a decision menu. Recorded in envelope §2.3 as first-trigger evidence of the workflow rule.
+- **First arc opened under Playbook v0.5.0** — will dogfood PLAYBOOK-7.5.1 (three-PR staged codification) at Phase 3; PLAYBOOK-7.6.1 (watchpoint SIGN) at every phase/arc close; PLAYBOOK-7.4.1/7.4.2/7.4.3 (close-ceremony delivery) at arc close.
+- **PA pin rotation** — `pa-44541f01cbb14b46` (retired S2753 close) → `pa-2659dfa28e124f02` (label `i0303-scoping`; minted S2754 open via `session_lifecycle open`).
+- **Close-bundle PR** #3137 merged (47cc13dd).
 
-**New rules at a glance:**
+**Six Chris D-verdicts (Q1..Q6):**
 
-| Rule | Chapter §7 slot | One-line intent |
+| Q | Topic | Verdict |
 |---|---|---|
-| PLAYBOOK-7.4.1 | §7.4 Close-ceremony delivery discipline | Phase/arc close ships as single PR bundle |
-| PLAYBOOK-7.4.2 | §7.4 (same) | Phase-close doc MUST NOT interleave with substrate PRs on shared arc doc |
-| PLAYBOOK-7.4.3 | §7.4 (same) | Close-doc + cascade PR shape: COMBINED or SPLIT; cascade MUST NOT defer |
-| PLAYBOOK-7.5.1 | §7.5 Staged codification of anti-pattern substrates | Report-only → batch-fix → enforce three-PR pattern |
-| PLAYBOOK-7.6.1 | §7.6 Session-close SIGN-cycle discipline | Watchpoint-attestation SIGN for close cycles; EXTENDS 6.10.3 |
-
-**Ch 7 status:** STUB (v0.1) with **partial activation at v0.5.0**. §7.3 (Extension deferred) unmodified — remainder deferred to v0.6+ MINOR (session-open orientation general; cross-repo coordination; multi-session amendment coordination; session-provenance integration; automation of watchpoint-SIGN recording).
+| Q1 | Trusted-source hierarchy | MANDATE (DB-row first; signed header second; payload NEVER) |
+| Q2 | System-task marker | EXPLICIT OPT-IN `@system_scope` (fail-safe) |
+| Q3 | `AsyncBoundaryProbe` shape | NEW PROBE CLASS |
+| Q4 | Coverage-gap threshold | I-0302 PRECEDENT (per-exemption SIGN + ratify) |
+| Q5 | RUR-C1 close SIGN scope | ONE PARENT-CLOSE EVENT |
+| Q6 | Canonical row reference | ROW-ID DISPATCH ONLY for user-owned-model tasks |
 
 ---
 
-## P0.5 — COST-THRESHOLD ADVANCE-TO-FREEZE ROUTING (owed since S2753 close)
+## P0 — I-0303 PHASE 1 TASK BOUNDARY AUDIT LEDGER
 
-**Do this FIRST at S2754 open.** S2753 P0.5 check-in already ran and reported clean 24.88h observation:
-- $6.66 / $500 = 1.333%
-- Top drivers: openai/gpt-5.2 $6.66 (316 calls) + openai/text-embedding-3-small $0.001 (102 calls)
-- Peak hour $0.96 (well under $20 spike threshold); no new providers; no near-threshold `[COST_MONITOR]` lines
+**Authorized to open at S2754 scoping ratification.** Target: 1 session (S2755 fresh, or S2754 continuation if context permits).
 
-**Action at S2754 open (per new Claude+Rigby-agree-first workflow rule):**
+**Scope:**
 
-1. Reach agreement with Rigby on: is 24+h clean observation enough to advance to `--set-mode freeze` (shadow mode), or extend observation another window?
-2. Present the joint recommendation to Chris for yes/no ratification.
-3. If Chris approves: run `python manage.py cost_thresholds --set-mode freeze` and record the transition in a P0.5 close deliverable + memory rule pointer.
-4. If Chris blocks: extend observation and re-check at next actionable window.
+- Materialize per-task boundary audit ledger as workspace deliverable under RUR-C1 workspace `fcd7e683-3bfe-4d35-9704-0e54dd587ea1`
+- Per task touching user-owned model (Deliverable, Initiative, ChatConversation, AgentExecution, Document):
+  - Classify **acting-identity source**: session-derived / payload-supplied / mixed / none
+  - Classify **existing verification**: present / absent / partial
+  - Classify **row reference shape**: row-ID / filter / query (Q6-driven; filter/query rows need Phase 3 refactor or explicit exemption)
+- **System-task classification**: which tasks are legitimately system-scope (`@system_scope` opt-in per Q2)
+- **Preliminary evidence at HEAD `47cc13dd`:** 19 `core/tasks*.py` files; 415 total Celery tasks per PLATFORM_INVENTORY; 6 highest-signal files (agents/content/conversations/initiatives/tasks.py/executor)
+- **Deliverable:** audit ledger + Rigby SIGN before Phase 2 opens
 
-**Do NOT flip to freeze without explicit Chris D-verdict.**
+**Phase 2 (Decorator + Base-Class Implementation)** is the next phase after Phase 1 close. Do NOT begin Phase 2 substrate work under Phase 1 authorization.
 
-Cross-visibility: Rigby workspace deliverable `06f04b41-91e1-4a00-8b8e-0905502e7d83`.
+---
+
+## P0.5 — COST-THRESHOLD ADVANCE-TO-FREEZE ROUTING (owed since S2753)
+
+**Do this in parallel or before Phase 1 substrate work.** Not blocking Phase 1.
+
+S2753 P0.5 check-in: 24.88h clean observation window ($6.66 / $500 = 1.333%; no anomalies). Route joint Claude+Rigby recommendation on `--set-mode freeze` (shadow) to Chris for yes/no. Do NOT flip without D-verdict.
 
 ---
 
 ## P0.75 — CI BILLING STATUS CHECK (still owed)
 
-**Do this after P0.5.** Still blocked at S2753 close (run #885 all 4 jobs failed with 2-sec no-step signature = billing block). `--admin` merge flag remains active.
-
-**Report at S2754 open:**
-
-1. Fresh CI run — `gh api /repos/clwest/donkey-betz-platform/actions/runs -q '.workflow_runs[0]'`.
-2. If green: drop `--admin`; delete memory rule `feedback_gh_pr_merge_admin_until_billing_fixed.md`; remove MEMORY.md line; note whether first `tests/security/**`-touching PR run passes (relevant to Phase 4 recovery gate cascade).
-3. If still red with billing signature: continue `--admin` merges + "Local verification limits" PR body sections.
+Latest S2753/S2754 check: run #885 all jobs failed with 2-sec no-step signature = billing block unchanged. `--admin` merge posture continues. Report at S2755 open whether billing has cleared.
 
 ---
 
-## P1 — POST-RATIFICATION FILL-INS (S2754 mechanical)
+## SESSION PIN — CARRIES INTO S2755
 
-1. **Playbook top-frontmatter `commit_sha`** — fill with S2753 close-bundle merge SHA (currently PLACEHOLDER). Options: (a) small follow-up PR after S2753 merges; (b) accept placeholder until Chris directs a fill sweep. v0.4.1 precedent = filled at merge time.
-2. **Playbook top-frontmatter `ratification_record.deliverable_id`** — fill once Rigby creates the workspace deliverable `RATIFICATION_20260711_PLAYBOOK_v0_5_0` in workspace `a9a16593-e0a4-44dc-8256-efc65d524b3c`. Body mirror from `docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_5_0.md`.
-3. **Ratification envelope §6 bindings** — `head_at_ratification`, `close_pr`, `workspace_ratification_deliverable_id` — filled at merge + workspace creation.
+**Pin `pa-2659dfa28e124f02`** (label `i0303-scoping`) minted S2754 open, carries through Phase 1 unless Chris directs a scope-level rotation for a different label (e.g., `i0303-phase1-audit`).
 
-**Route via Rigby (Claude+Rigby agreement first):** should the fill sweep be a single follow-up PR immediately after S2753 merges, or bundled into S2754 close if that's within one session?
+Wrapper `tools/pa_local.sh:539` currently points at `pa-2659dfa28e124f02`. If S2755 opens Phase 1 with a scope-specific pin, run `python manage.py session_lifecycle close` (retire current + mint fresh + rewrite wrapper atomically) with `--label i0303-phase1-audit`.
 
 ---
 
-## SESSION PIN — RETIRED AT S2753 CLOSE (fresh mint required at S2754 open)
+## OPEN RUNTIME ITEMS (from S2754 close)
 
-**Pin `pa-44541f01cbb14b46`** minted S2752 open for v0.5 codification scope; **retired 2026-07-11 at S2753 close** per Chris directive (`session_tool.retire` returned `updated_count=10 previously_active=true retired=true`).
-
-**Wrapper `tools/pa_local.sh` line 539 still points at the retired pin** — this is the intended failure mode. First S2754 action MUST mint fresh + update wrapper before any other PA dispatch. Sequence:
-
-```
-session_tool.create_fresh label='<S2754 scope label>' → new pa-<xxxx>
-# Edit tools/pa_local.sh line 539 to the new pin
-```
-
-S2754 scope label depends on primary work selection (P0.5 advance-to-freeze routing → I-0303 open → engineering candidate). Rigby will not dispatch until the wrapper is repointed.
+1. **I-0303 Phase 1 audit ledger** — P0 above; authorized to open.
+2. **P0.5 cost-threshold advance-to-freeze** — Claude+Rigby joint recommendation → Chris yes/no.
+3. **P0.75 CI billing** — status check; unblocks lint-enforcement flips + recovery gates.
+4. **PA celery worker bounce** — Rigby stall fix #3119 still not activated. Deferred to Chris.
+5. **RUR-C2 open eligible** — Wave 1 staged-overlap per Chris Q1 (I-0301 safety contract signed). Not opened at S2754; opens per Chris directive when I-0303 substrate needs parallel work.
 
 ---
 
-## OPEN RUNTIME ITEMS (from S2753 close)
+## Twin-pointer card (per memory rule feedback_twin_pointer_docs_at_boundaries)
 
-1. **P0.5 cost-threshold advance-to-freeze routing** — see above; owed at S2754 open.
-2. **P0.75 CI billing status** — see above; blocks lint-enforcement flips + `--admin` posture + Phase 4/arc close behavioral-verify recovery gate.
-3. **PA celery worker bounce** — Rigby stall fix #3119 still not activated. Deferred to Chris.
-4. **I-0303 (async-boundary enforcement) OPEN** — RUR-C1 gates on it; v0.5 no longer blocks per Q4 sequencing (v0.5 ratified S2753).
-5. **Rigby workspace deliverable creation** — `RATIFICATION_20260711_PLAYBOOK_v0_5_0` in workspace `a9a16593-e0a4-44dc-8256-efc65d524b3c`; UUID mirrors back into playbook top-frontmatter + ratification envelope §6.
-6. **Playbook top-frontmatter `commit_sha` fill** — post-merge follow-up.
+📁 **Repo `/docs/` — current-arc + related artifacts:**
 
----
+- **I-0303 arc scoping (RATIFIED S2754):** `docs/research/implementation/tenant_boundary_lockdown/I-0303_scoping.md`
+- **I-0303 scoping ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-11_i0303_scoping.md`
+- **Sibling I-0301 (CLOSED 2026-07-10):** `docs/research/implementation/tenant_boundary_lockdown/I-0301_scoping.md` + `I-030199_tenant_boundary_lockdown_implementation_close.md`
+- **Sibling I-0302 (CLOSED 2026-07-10):** `I-0302_scoping.md` through `I-030299_i0302_arc_close.md` in same dir
+- **Parent CAMPAIGN:** `docs/research/implementation/real_user_readiness/CAMPAIGN.md` (§4 arc slot; §5 dependency graph)
+- **Playbook v0.5.0 (governing close-ceremony discipline):** `docs/ENGINEERING_PLAYBOOK.md`
+- **Prior ratification envelopes:** `docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_5_0.md`, `RATIFICATION_2026-07-10_i0302_arc_close.md`
+- **Handoffs:** `docs/handoffs/SESSION_2753_PLAYBOOK_V0_5_0_RATIFIED.md` (prior); S2754 handoff to be created if session properly closes (partial close so far — I-0303 scoping ratified but Phase 1 pending)
 
-## PRIMARY WORK CANDIDATES — S2754
+🖥️ **Workspace UI — `/workspaces` surface:**
 
-Not locked (unlike S2753 which was Q4-D-verdict-locked). Chris directive at v0.5.0 close = new workflow: Claude+Rigby reach agreement first, Chris ratifies yes/no. So S2754 open = draft joint recommendation with Rigby, then present to Chris.
-
-**Adjacent net-new engineering candidates (per S2745 bias-engineering-over-audit rule):**
-
-1. **Cost Guardian dashboard tab** (B3a) — visible surface for P0.5 threshold state, live LLMCallLog accumulation, per-hour bin history. Claude S2751 lean carried forward. Ties directly to P0.5 workflow.
-2. **Cost Guardian Employee OS employee** (B1a) — backend-only variant of B3a.
-3. **New spider on a Chris-named data gap** — needs Chris naming.
-4. **Employee OS employee #4** — backend + admin visibility.
-
-**Meta-methodology (only if Chris explicitly asks):**
-
-- **Arc close template extraction** — arc-close doc §9.2 suggestion: extract `I-030199` + `I-030299` common structure into `arc_close_template.md`.
-- **PLAYBOOK-6.10.7 candidate** — inline hint at PLAYBOOK-6.10.2 that "recorded in amendment provenance" means an in-repo/workspace-visible artifact BEFORE SIGN dispatch (S2753 §9.4 suggestion).
-- **PLAYBOOK-7.6.2 candidate** — "author declines a NIT with rationale in §SIGN log" pattern (first-trigger recorded; second-trigger threshold not met).
-- **Claude+Rigby-agree-first codification** — first-trigger recorded S2753 D-verdict. Do NOT propose Playbook codification until second independent trigger surfaces.
-
-**Constitutional work:**
-
-- **I-0303 arc open** — RUR-C1 close-gate remaining sub-arc. Now unblocked (v0.5 ratified).
+- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — **PRIMARY** for I-0303 execution
+  - `RATIFICATION_20260711_i0303_scoping` (`18194cab-b737-42bf-b747-1263af5771ae`) — this session's ratification envelope
+  - Phase 1 audit ledger will land here as a new deliverable
+- **Architecture & Research** (`a9a16593-e0a4-44dc-8256-efc65d524b3c`) — governance / Playbook ratifications
+  - `RATIFICATION_20260711_PLAYBOOK_v0_5_0` (`4c322f48-3d0b-4e32-8a30-15a08400f887`) — v0.5.0 amendment
+- **Real User Readiness Campaign** (`638e9e90-47b4-4bd4-a872-bf16181cf3b5`) — parent program workspace
+- URL template: `/workspace?workspace_id=<uuid>&tab=work&sub=deliverables`
 
 ---
 
@@ -126,53 +107,52 @@ Not locked (unlike S2753 which was Q4-D-verdict-locked). Chris directive at v0.5
 
 | Field | Value |
 |---|---|
-| Branch | `main` (post-merge) |
-| HEAD | S2753 close bundle SHA (pending merge — recorded in S2753 handoff §1 after merge) |
-| Playbook version | **v0.5.0** (RATIFIED S2753 2026-07-11) — content_hash `sha256:6a3f897aa73c39dc3a14adefc2f7d3811995e71f3d76e8c6348ffdb39a3c46d4`; tag `playbook-v0.5.0`; `version_status: ratified` |
-| Playbook rule count | **201** (196 + 5) |
-| Chapter 7 status | STUB (v0.1) with **partial activation at v0.5.0** |
-| Constitutional Debt | Zero outstanding |
-| Session pin | `pa-44541f01cbb14b46` (v0.5 codification scope; natural retire at S2754 open) |
-| Wrapper default pin | `tools/pa_local.sh` — `pa-44541f01cbb14b46` (update at pin rotation) |
-| Live infra state | Cost threshold monitor mode $500/mo (observation ~1 day; ready to route advance-to-freeze); PA celery worker running pre-#3119 code; CI billing-blocked (`--admin` on merges) |
-| RUR arc state | I-0301 CLOSED · I-0302 CLOSED · I-0303 not yet opened (unblocked by v0.5) · RUR-C1 parent still OPEN |
-| v0.5.0 Stage 1 | SHAPE RATIFIED (S2752) |
-| v0.5.0 Stage 2 | **RATIFIED (S2753)** |
+| Branch | `main` |
+| HEAD | `47cc13dd` (S2754 I-0303 scoping ratification merge) |
+| Playbook version | v0.5.0 (RATIFIED S2753) |
+| RUR-C1 state | I-0301 CLOSED · I-0302 CLOSED · **I-0303 OPENED at scoping (S2754)** — Phase 1 authorized · RUR-C1 parent OPEN |
+| Session pin | `pa-2659dfa28e124f02` (label i0303-scoping; carries into S2755) |
+| Wrapper default pin | `tools/pa_local.sh` — `pa-2659dfa28e124f02` |
+| Live infra state | Cost threshold monitor mode $500/mo; PA celery worker running pre-#3119 code; CI billing-blocked (`--admin` on merges) |
+| RUR-C1 close-gate | Blocked until I-0303 closes AND all three arcs pass shared cross-tenant regression |
+| I-0303 next phase | **Phase 1 (Task Boundary Audit Ledger) — authorized to open** |
 
 ---
 
-## What S2753 shipped
+## What S2754 shipped (this session)
 
 | PR | Content | Notes |
 |---|---|---|
-| S2753 close bundle | Playbook v0.5.0 body + evidence manifest additions + ratification envelope + CLAUDE.md L7 refresh + MEMORY.md new rule + handoff + start-here refresh + cascade | Dogfooding PLAYBOOK-7.4.1 (single PR bundle) + PLAYBOOK-7.4.3 COMBINED cadence |
+| #3137 (47cc13dd) | I-0303 scoping doc + ratification envelope + pa_local.sh pin update | Single close-bundle PR (dogfooding PLAYBOOK-7.4.1); cascade deferred to next session or bundled with next PR |
 
-**Cumulative v0.5.0 arc:** Stage 1 (S2752, 1 PR) + Stage 2 (S2753, this bundle).
+**Not yet shipped in S2754 close:**
+- 4-step docs cascade + build_docs_provenance (feedback_docs_cascade_at_every_close rule) — DEFERRED to Phase 1 open or S2754 explicit close if session continues
+- S2754 close handoff (SESSION_2754_*.md) — DEFERRED
+- Phase 1 audit ledger open (P0 above)
 
 ---
 
-## Recommended session-open protocol (S2754)
+## Recommended session-open protocol (S2755)
 
 1. `context-kit orient`
 2. Read this file end-to-end (all sections)
-3. Read `SESSION_2753_PLAYBOOK_V0_5_0_RATIFIED.md` — S2753 delivery ledger + D-verdict + SIGN log + new workflow rule
-4. Read `docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_5_0.md` §5 (D-verdict + §5.1 workflow directive) — new agree-first-then-Chris routing rule is now active
-5. Verify runtime state: `git log --oneline -5`; confirm `tools/pa_local.sh:539` points at `pa-44541f01cbb14b46` (or the newly-minted S2754 pin if rotated at open)
-6. **P0.5** — cost-threshold advance-to-freeze routing via Claude+Rigby agreement → Chris yes/no
-7. **P0.75** — CI billing status check
-8. **P1** — post-ratification fill-ins (commit_sha + deliverable_id)
-9. **PRIMARY** — Claude+Rigby draft joint recommendation on primary work → Chris yes/no
+3. Read `RATIFICATION_2026-07-11_i0303_scoping.md` §3 (D-verdicts Q1..Q6) — these are the invariants Phase 1 audit must respect
+4. Read `docs/research/implementation/tenant_boundary_lockdown/I-0303_scoping.md` §3, §8 Phase 1 — preliminary audit + Phase 1 charter
+5. Read `docs/research/implementation/tenant_boundary_lockdown/I-0302_scoping.md` Phase 1 execution — template for I-0303 Phase 1 shape
+6. Verify runtime state: `git log --oneline -5`; confirm `tools/pa_local.sh:539` points at `pa-2659dfa28e124f02`
+7. **P0.5** — cost-threshold advance-to-freeze routing (Claude+Rigby agree first → Chris yes/no)
+8. **P0.75** — CI billing status check
+9. **P0** — Phase 1 audit ledger open (Claude+Rigby joint plan → Chris yes/no on Phase 1 opening scope)
 
 ---
 
 ## Reference documents
 
-Ordered by frequency of use at S2754:
+Ordered by frequency of use at S2755:
 
-1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (L7 anchor now v0.5.0)
-2. [`docs/EOS_RULES.md`](docs/EOS_RULES.md) — R1/R2/R3
-3. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.5.0 body (201 rules)
-4. [`docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_5_0.md`](docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_5_0.md) — v0.5.0 amendment provenance
-5. [`docs/research/platform/engineering_playbook_evidence_manifest.md`](docs/research/platform/engineering_playbook_evidence_manifest.md) — evidence set (C7-11..C7-24 v0.5 additions)
-6. [`docs/handoffs/SESSION_2753_PLAYBOOK_V0_5_0_RATIFIED.md`](docs/handoffs/SESSION_2753_PLAYBOOK_V0_5_0_RATIFIED.md) — S2753 close handoff
-7. [`docs/research/platform/playbook_v0_5_proposal_shape.md`](docs/research/platform/playbook_v0_5_proposal_shape.md) — Stage 1 shape (S2752)
+1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol
+2. [`docs/research/implementation/tenant_boundary_lockdown/I-0303_scoping.md`](docs/research/implementation/tenant_boundary_lockdown/I-0303_scoping.md) — ratified scoping (Phase 1 charter §8)
+3. [`docs/research/implementation/RATIFICATION_2026-07-11_i0303_scoping.md`](docs/research/implementation/RATIFICATION_2026-07-11_i0303_scoping.md) — Chris D-verdicts Q1..Q6
+4. [`docs/research/implementation/tenant_boundary_lockdown/I-0302_scoping.md`](docs/research/implementation/tenant_boundary_lockdown/I-0302_scoping.md) — sibling arc template
+5. [`docs/research/implementation/real_user_readiness/CAMPAIGN.md`](docs/research/implementation/real_user_readiness/CAMPAIGN.md) — parent program §4 arc slot; §5 dependency graph
+6. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.5.0 ratified body (Phase 3 uses §7.5.1; every SIGN uses §7.6.1)
