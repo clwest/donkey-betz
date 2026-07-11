@@ -354,6 +354,15 @@ class OpsHandlersMixin:
             # surface per Phase 2 §2.1 uniform-envelope design.
             return self._ops_tenant_boundary_violations(payload, trace_id)
 
+        elif action == 'staleness_warnings':
+            # S2760: surface S2759 stale-process warnings from OpsRunEvent.
+            # Complements the live ops_tool.version staleness_verdict — this
+            # action reads the accumulated warning history from the 30-min
+            # check_process_staleness Beat task. Aggregates by verdict class
+            # + head_commit_sha so operators can answer 'which merge did we
+            # forget to recycle after?'.
+            return self._ops_staleness_warnings(payload, trace_id)
+
         else:
             return {'error': f'Unknown ops_tool action: {action}'}
 
@@ -1361,6 +1370,125 @@ class OpsHandlersMixin:
                 f'No tenant_boundary_violation events in the last {window}. '
                 f"Either traffic isn't hitting decorated tasks, or enforcement "
                 f'is passing cleanly.'
+            )
+
+        return result
+
+    _STALENESS_WARNING_VERDICTS = (
+        'STALE_DAPHNE',
+        'STALE_CELERY',
+        'STALE_BOTH',
+    )
+
+    def _ops_staleness_warnings(
+        self, payload: Dict[str, Any], trace_id: str
+    ) -> Dict[str, Any]:
+        """Query S2759 staleness_warning OpsRunEvent envelopes.
+
+        Returns aggregate counts (by verdict + by head_commit_sha) plus
+        most-recent sample events with full process detail preserved. Reads
+        the accumulated warning history from the 30-min ``check_process_
+        staleness`` Beat task emissions — complements the live ``ops_tool.
+        version`` staleness_verdict which is the real-time freshness check.
+
+        The ``by_head_commit_sha`` aggregate is the operational money bucket:
+        it surfaces exactly which merges triggered stale-process warnings
+        (i.e., which merges the operator forgot to run ``make recycle-all``
+        after). Grouping by head commit SHA rather than by timestamp turns
+        the 30-min Beat cadence into a clear "which commits leaked" report.
+
+        Payload:
+          window: 1h/6h/24h/7d/30d (default 24h)
+          verdict: one of STALE_DAPHNE / STALE_CELERY / STALE_BOTH
+          limit: max sample_events (default 20, max 100)
+        """
+        from django.utils import timezone
+        from datetime import timedelta
+
+        try:
+            from core.models_ops_runs import OpsRunEvent
+        except ImportError:
+            return {'error': 'OpsRunEvent model not available'}
+
+        window = payload.get('window', '24h')
+        hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 24)
+        cutoff = timezone.now() - timedelta(hours=hours)
+
+        verdict_filter = payload.get('verdict') or None
+        if verdict_filter and verdict_filter not in self._STALENESS_WARNING_VERDICTS:
+            return {
+                'error': f'invalid verdict {verdict_filter!r}; '
+                         f'allowed: {list(self._STALENESS_WARNING_VERDICTS)}'
+            }
+        limit = min(max(int(payload.get('limit', 20) or 20), 1), 100)
+
+        qs = OpsRunEvent.objects.filter(
+            label='staleness_warning',
+            created_at__gte=cutoff,
+        ).order_by('-created_at')
+
+        # Defensive scan cap (parallel to _ops_tenant_boundary_violations F7)
+        MAX_AGG_SCAN = 5000
+        rows = list(qs.values('detail', 'created_at')[:MAX_AGG_SCAN])
+
+        def _matches(row):
+            detail = row.get('detail') or {}
+            if verdict_filter:
+                if detail.get('verdict') != verdict_filter:
+                    return False
+            return True
+
+        filtered = [r for r in rows if _matches(r)]
+
+        by_verdict: Dict[str, int] = {}
+        by_head_commit_sha: Dict[str, int] = {}
+
+        for r in filtered:
+            detail = r.get('detail') or {}
+            v = detail.get('verdict') or '(unknown)'
+            sha = detail.get('head_commit_sha') or '(unknown)'
+            sha_short = sha[:12] if sha != '(unknown)' else sha
+            by_verdict[v] = by_verdict.get(v, 0) + 1
+            by_head_commit_sha[sha_short] = by_head_commit_sha.get(sha_short, 0) + 1
+
+        sample_events = []
+        for r in filtered[:limit]:
+            detail = r.get('detail') or {}
+            sha = detail.get('head_commit_sha') or None
+            sample_events.append({
+                'verdict': detail.get('verdict'),
+                'head_commit_sha_short': sha[:12] if sha else None,
+                'head_commit_timestamp': detail.get('head_commit_timestamp'),
+                'daphne_pid': detail.get('daphne_pid'),
+                'daphne_pid_age_seconds': detail.get('daphne_pid_age_seconds'),
+                'daphne_started_before_head_commit': detail.get(
+                    'daphne_started_before_head_commit',
+                ),
+                'celery_workers_status': detail.get('celery_workers_status', []),
+                'fix': detail.get('fix'),
+                'created_at': r['created_at'].isoformat() if r.get('created_at') else None,
+            })
+
+        result: Dict[str, Any] = {
+            'action': 'staleness_warnings',
+            'window': window,
+            'window_cutoff': cutoff.isoformat(),
+            'verdict_filter': verdict_filter or '(all)',
+            'total_count': len(filtered),
+            'by_verdict': by_verdict,
+            'by_head_commit_sha': by_head_commit_sha,
+            'sample_events': sample_events,
+        }
+
+        if len(rows) >= MAX_AGG_SCAN:
+            result['aggregation_scan_capped'] = True
+            result['aggregation_scan_limit'] = MAX_AGG_SCAN
+
+        if result['total_count'] == 0:
+            result['note'] = (
+                f'No staleness_warning events in the last {window}. '
+                f"Either verdict has been FRESH, or the check_process_staleness "
+                f"Beat task isn't emitting — confirm via ops_tool.version."
             )
 
         return result
