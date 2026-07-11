@@ -2394,6 +2394,7 @@ urlpatterns = [
     path('api/ops/blocked-agents/', lambda r: __import__('core.views_ops_console', fromlist=['blocked_agents']).blocked_agents(r), name='ops-blocked-agents'),
     path('api/ops/health-summary/', lambda r: __import__('core.views_ops_console', fromlist=['health_summary']).health_summary(r), name='ops-health-summary'),
     path('api/ops/close-ceremony-ledger/', lambda r: __import__('core.views_ops_console', fromlist=['close_ceremony_ledger']).close_ceremony_ledger(r), name='ops-close-ceremony-ledger'),
+    path('api/ops/recent-recycles/', lambda r: __import__('core.views_ops_console', fromlist=['recent_recycles']).recent_recycles(r), name='ops-recent-recycles'),
 
     # Spider Dashboard API endpoints
     path('api/spider/stats/', lambda r: __import__('ai_core.api.spider_api', fromlist=['SpiderStatsAPI']).SpiderStatsAPI.as_view()(r), name='spider_stats'),

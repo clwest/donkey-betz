@@ -363,6 +363,16 @@ class OpsHandlersMixin:
             # forget to recycle after?'.
             return self._ops_staleness_warnings(payload, trace_id)
 
+        elif action == 'recent_recycles':
+            # S2765: read logs/recycle_events.jsonl — the tail of
+            # `make recycle-all` events emitted by the Makefile after each
+            # local deploy step. Answers 'when did we last recycle?' and
+            # 'which SHAs was the stack recycled at?'. Complements
+            # ops_tool.version (live snapshot) + ops_tool.staleness_warnings
+            # (Beat-emitted post-hoc detection) with a first-party operator
+            # action timeline.
+            return self._ops_recent_recycles(payload, trace_id)
+
         else:
             return {'error': f'Unknown ops_tool action: {action}'}
 
@@ -1491,6 +1501,127 @@ class OpsHandlersMixin:
                 f"Beat task isn't emitting — confirm via ops_tool.version."
             )
 
+        return result
+
+    def _ops_recent_recycles(
+        self, payload: Dict[str, Any], trace_id: str
+    ) -> Dict[str, Any]:
+        """S2765: read tail of ``logs/recycle_events.jsonl``.
+
+        The ``make recycle-all`` Makefile target appends one JSONL line per
+        invocation (POSIX-atomic append; lines < PIPE_BUF). This handler
+        reads the tail defensively — malformed lines are skipped so a
+        partial write from a rare concurrent invocation doesn't blank the
+        whole timeline. Complements the S2759 stale-process detection
+        (post-hoc) and ``ops_tool.version`` (live snapshot) with a
+        first-party operator-action timeline.
+
+        Payload:
+          limit: max events (default 10, max 50)
+        """
+        import json
+        from datetime import datetime, timezone
+        from pathlib import Path
+        from django.conf import settings
+
+        try:
+            limit = int(payload.get('limit', 10) or 10)
+        except (TypeError, ValueError):
+            limit = 10
+        limit = max(1, min(limit, 50))
+
+        log_path = Path(settings.BASE_DIR) / 'logs' / 'recycle_events.jsonl'
+        resolved = log_path.resolve()
+        base = Path(settings.BASE_DIR).resolve()
+        try:
+            resolved.relative_to(base)
+        except ValueError:
+            return {
+                'action': 'recent_recycles',
+                'log_exists': False,
+                'items': [],
+                'count': 0,
+                'limit': limit,
+                'note': 'log path resolved outside BASE_DIR; refusing to read',
+            }
+
+        if not resolved.exists():
+            return {
+                'action': 'recent_recycles',
+                'log_exists': False,
+                'items': [],
+                'count': 0,
+                'limit': limit,
+                'note': (
+                    'logs/recycle_events.jsonl not present. '
+                    'The Makefile emits this file on `make recycle-all`; run '
+                    'a local recycle once to bootstrap.'
+                ),
+            }
+
+        try:
+            lines = resolved.read_text(errors='replace').splitlines()
+        except OSError as exc:
+            return {
+                'action': 'recent_recycles',
+                'log_exists': True,
+                'items': [],
+                'count': 0,
+                'limit': limit,
+                'note': f'read failed: {exc!s}',
+            }
+
+        # Defensive: skip malformed lines (Rigby SIGN concern §4.2 —
+        # concurrent JSONL writes could interleave; a partial trailing
+        # line shouldn't blank the timeline).
+        events = []
+        malformed = 0
+        for line in reversed(lines):  # tail-first
+            if len(events) >= limit:
+                break
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                evt = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                malformed += 1
+                continue
+            if not isinstance(evt, dict):
+                malformed += 1
+                continue
+            ts = evt.get('ts')
+            sha = evt.get('sha') or ''
+            label = evt.get('label') or 'recycle-all'
+            seconds_ago = None
+            if isinstance(ts, str):
+                try:
+                    parsed = datetime.fromisoformat(ts.replace('Z', '+00:00'))
+                    if parsed.tzinfo is None:
+                        parsed = parsed.replace(tzinfo=timezone.utc)
+                    seconds_ago = int((datetime.now(timezone.utc) - parsed).total_seconds())
+                except (ValueError, TypeError):
+                    seconds_ago = None
+            events.append({
+                'timestamp': ts,
+                'sha': sha,
+                'sha_short': sha[:12] if sha and sha != 'unknown' else sha,
+                'label': label,
+                'seconds_ago': seconds_ago,
+            })
+
+        result: Dict[str, Any] = {
+            'action': 'recent_recycles',
+            'log_exists': True,
+            'log_path': 'logs/recycle_events.jsonl',
+            'items': events,
+            'count': len(events),
+            'limit': limit,
+        }
+        if malformed:
+            result['malformed_lines_skipped'] = malformed
+        if not events:
+            result['note'] = 'log file exists but contained no parseable events.'
         return result
 
     def _ops_execution_detail(self, payload: Dict[str, Any], trace_id: str) -> Dict[str, Any]:

@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-11T21:50:44+00:00",
+    "generated": "2026-07-11T22:00:58+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "8785c3125458",
-    "doc_count": 2558,
-    "commit_count": 7888,
+    "git_head": "b1ae6561e8b2",
+    "doc_count": 2560,
+    "commit_count": 7890,
     "confidence_breakdown": {
-      "HIGH": 1627,
+      "HIGH": 1628,
       "MEDIUM": 402,
       "LOW": 5,
-      "UNKNOWN": 524
+      "UNKNOWN": 525
     },
     "excludes": [
       "docs/archive/",
@@ -2586,7 +2586,7 @@
         2745,
         2749
       ],
-      "commit_count": 1248,
+      "commit_count": 1250,
       "prs": [
         10,
         11,
@@ -3155,7 +3155,8 @@
         3143,
         3144,
         3150,
-        3152
+        3152,
+        3153
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7497,7 +7498,7 @@
         2745,
         2749
       ],
-      "commit_count": 196,
+      "commit_count": 198,
       "prs": [
         2213,
         2219,
@@ -7669,7 +7670,8 @@
         3141,
         3143,
         3150,
-        3152
+        3152,
+        3153
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19718,6 +19720,21 @@
       "commit_count": 2,
       "prs": [
         3152
+      ]
+    },
+    "docs/handoffs/SESSION_2764_OPS_HEALTH_TILE_V2_SLO_RATIFIED.md": {
+      "originating_session": 2764,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "b1ae6561",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ui): S2764 Ops Health tile v2 \u2014 SLO summary card ratified (#3153)",
+      "sessions_touched": [
+        2764
+      ],
+      "commit_count": 2,
+      "prs": [
+        3153
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -36631,6 +36648,19 @@
       "commit_count": 2,
       "prs": [
         3150
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_ops_health_tile_v2_slo.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "b1ae6561",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ui): S2764 Ops Health tile v2 \u2014 SLO summary card ratified (#3153)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3153
       ]
     },
     "docs/research/implementation/RATIFICATION_2026-07-11_ops_sibling_401_fix.md": {

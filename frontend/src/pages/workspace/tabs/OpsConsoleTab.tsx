@@ -8,7 +8,7 @@ import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   AlertTriangle, CheckCircle, XCircle, Loader2, Shield,
-  Clock, Zap, Activity, Ban, TrendingDown, Layers, Copy, Check,
+  Clock, Zap, Activity, Ban, TrendingDown, Layers, Copy, Check, RotateCw,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { api } from '@/lib/api'
@@ -52,6 +52,29 @@ interface CloseCeremonyLedger {
   items: CloseCeremonyItem[]
   count: number
   limit: number
+}
+
+interface RecycleEvent {
+  timestamp: string | null
+  sha: string
+  sha_short: string
+  label: string
+  seconds_ago: number | null
+}
+
+interface RecentRecyclesResponse {
+  items: RecycleEvent[]
+  count: number
+  limit: number
+  log_exists: boolean
+  note?: string
+}
+
+function formatAgo(seconds: number): string {
+  if (seconds < 60) return `${seconds}s ago`
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`
+  return `${Math.floor(seconds / 86400)}d ago`
 }
 
 export function OpsConsoleTab() {
@@ -112,6 +135,20 @@ export function OpsConsoleTab() {
     queryFn: async () => {
       try {
         const r = await api.get<CloseCeremonyLedger>('/ops/close-ceremony-ledger/?limit=10')
+        return r.data
+      } catch { return null }
+    },
+    staleTime: 60000,
+  })
+
+  // S2765: recent recycle events — JSONL-backed (logs/recycle_events.jsonl,
+  // emitted by `make recycle-all` post-restart). Answers "when did we last
+  // recycle?" without a Rigby round-trip.
+  const recyclesQuery = useQuery<RecentRecyclesResponse | null>({
+    queryKey: ['ops-recent-recycles'],
+    queryFn: async () => {
+      try {
+        const r = await api.get<RecentRecyclesResponse>('/ops/recent-recycles/?limit=10')
         return r.data
       } catch { return null }
     },
@@ -362,6 +399,35 @@ export function OpsConsoleTab() {
         <div className="text-center py-12 text-gray-500">
           <CheckCircle size={32} className="mx-auto mb-2 opacity-50" />
           <p className="text-sm">All systems healthy. No breaches, failures, or blocked agents.</p>
+        </div>
+      )}
+
+      {/* S2765: Recent Recycles */}
+      {recyclesQuery.data && recyclesQuery.data.log_exists && recyclesQuery.data.items.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+            <RotateCw size={14} />
+            Recent Recycles (last {recyclesQuery.data.count})
+          </h3>
+          <div className="space-y-1.5">
+            {recyclesQuery.data.items.map((evt, i) => (
+              <div key={`${evt.timestamp}-${i}`} className="flex items-center gap-3 p-2 rounded bg-dark-card border border-dark-border">
+                <RotateCw size={12} className="text-green-400 shrink-0" />
+                <code className="text-xs text-primary-400 font-mono shrink-0">
+                  {evt.sha_short || 'unknown'}
+                </code>
+                <span className="text-xs text-gray-500 truncate flex-1">
+                  {evt.timestamp}
+                </span>
+                {evt.seconds_ago !== null && (
+                  <span className="text-xs text-gray-400 shrink-0">
+                    {formatAgo(evt.seconds_ago)}
+                  </span>
+                )}
+                <span className="text-xs text-gray-600 shrink-0">{evt.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
