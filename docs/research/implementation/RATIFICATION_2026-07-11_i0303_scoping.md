@@ -48,8 +48,8 @@ depends_on_ratified_artifacts:
   - Engineering Playbook v0.5.0 (ratified 2026-07-11 S2753) — close-ceremony discipline §7.4; staged codification §7.5.1 (Phase 3 dogfood); watchpoint SIGN §7.6.1 (every phase/arc-close SIGN dogfood)
   - I-0301 Failure-Data Safety Contract (ratified 2026-07-10)
   - I-0302 predicate module + shared cross-tenant regression harness (ratified 2026-07-10)
-workspace_ratification_deliverable_id: TBD (filled at commit — workspace deliverable will be created in RUR-C1 workspace `fcd7e683-3bfe-4d35-9704-0e54dd587ea1`)
-close_pr: TBD (filled at merge)
+workspace_ratification_deliverable_id: 18194cab-b737-42bf-b747-1263af5771ae
+close_pr: "#3137 (merged 47cc13dd)"
 ---
 
 # I-0303 Async Tenant-Boundary Enforcement — Scoping Ratification Record
