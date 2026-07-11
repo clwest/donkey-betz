@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-11T03:11:39+00:00",
+    "generated": "2026-07-11T04:03:53+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "6075a6720e6c",
-    "doc_count": 2524,
-    "commit_count": 7830,
+    "git_head": "74b5162e6a36",
+    "doc_count": 2525,
+    "commit_count": 7838,
     "confidence_breakdown": {
       "HIGH": 1613,
-      "MEDIUM": 401,
+      "MEDIUM": 402,
       "LOW": 5,
       "UNKNOWN": 505
     },
@@ -2581,9 +2581,10 @@
         2742,
         2743,
         2744,
-        2745
+        2745,
+        2749
       ],
-      "commit_count": 1226,
+      "commit_count": 1228,
       "prs": [
         10,
         11,
@@ -3141,7 +3142,8 @@
         3080,
         3084,
         3095,
-        3110
+        3110,
+        3124
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7480,9 +7482,10 @@
         2742,
         2743,
         2744,
-        2745
+        2745,
+        2749
       ],
-      "commit_count": 180,
+      "commit_count": 182,
       "prs": [
         2213,
         2219,
@@ -7646,7 +7649,8 @@
         3077,
         3080,
         3084,
-        3095
+        3095,
+        3124
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19458,14 +19462,31 @@
       "originating_session": 2749,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "6075a672",
+      "first_commit_sha": "9ea4475b",
       "first_commit_date": "2026-07-10",
-      "first_commit_subject": "docs(s2749-close): S2749 handoff \u2014 Phase 4 Sub-phase 3 substrate largely closed (8 PRs)",
+      "first_commit_subject": "docs(s2749-close): S2749 handoff \u2014 Phase 4 Sub-phase 3 substrate largely closed (8 PRs) (#3124)",
       "sessions_touched": [
         2749
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3124
+      ]
+    },
+    "docs/handoffs/SESSION_2750_I0302_PHASE_4_SUB_PHASE_3_CLOSED.md": {
+      "originating_session": 2750,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "74b5162e",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2750-close): S2750 handoff \u2014 Sub-phase 3 CLOSED (2 PRs) + Phase 4 close opens (#3127)",
+      "sessions_touched": [
+        2750
+      ],
+      "commit_count": 2,
+      "prs": [
+        3127
+      ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
       "originating_session": 280,
@@ -36491,18 +36512,20 @@
       "originating_session": 642,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "ae1321ba",
+      "first_commit_sha": "ad3721db",
       "first_commit_date": "2026-07-10",
-      "first_commit_subject": "feat(security): I-0302 Phase 4 Sub-phase 3 \u2014 intentional-immutability contract cells (#3123)",
+      "first_commit_subject": "feat(security): I-0302 Phase 4 Sub-phase 3 \u2014 VIP-scope carve-out coverage on get_deliverable (#3126)",
       "sessions_touched": [
         642
       ],
-      "commit_count": 8,
+      "commit_count": 12,
       "prs": [
         3111,
         3112,
         3114,
-        3123
+        3123,
+        3125,
+        3126
       ]
     },
     "docs/research/implementation/tenant_boundary_lockdown/I-030204_ast_conformance_rule_spec.md": {
