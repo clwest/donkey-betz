@@ -2,32 +2,34 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2762 CLOSED — OPS CONSOLE SIBLING 401 FIX RATIFIED
+## READ THIS FIRST — SESSION 2763 CLOSED — CLOSE-CEREMONY LEDGER RATIFIED
 
-**Refreshed 2026-07-11 (SESSION 2762 CLOSED — three broken cards on the Ops Console page un-broken via mechanical mirror of the S2761 `api.get` pattern. Eighth consecutive phase-close in two days.).**
+**Refreshed 2026-07-11 (SESSION 2763 CLOSED — net-new operator surface for fast session-open context re-load. Ninth consecutive phase-close in two days. Second corroboration of the recycle-after-merge rule.).**
 
-**S2762 shipped in 1-PR close-ceremony bundle (per PLAYBOOK-7.4.1):**
+**S2763 shipped in 1-PR close-ceremony bundle (per PLAYBOOK-7.4.1):**
 
-- **Frontend** (`frontend/src/pages/workspace/tabs/OpsConsoleTab.tsx`): swap raw `fetch({credentials: 'include'})` → `api.get()` for `sloQuery` / `sigQuery` / `blockedQuery` (3 sibling queries below the S2761 tile). Mirror of the ratified S2761 `healthQuery` pattern; adds `Authorization: Token <token>` via axios interceptor.
-- Ratification envelope: `RATIFICATION_2026-07-11_ops_sibling_401_fix.md`
+- **Backend** (`core/views_ops_console.py`): new `close_ceremony_ledger` view returning last N handoffs paired with ratification envelopes. Reads `docs/handoffs/SESSION_*.md` + `docs/research/implementation/RATIFICATION_*.md` from fixed roots with resolve-then-relative-to path validation (Rigby SIGN concern addressed pre-code).
+- **URL** (`core/urls.py:2396`): `/api/ops/close-ceremony-ledger/` route registered.
+- **Frontend** (`frontend/src/pages/workspace/tabs/OpsConsoleTab.tsx`): new "Recent Close-Ceremonies (last N)" section below Blocked Agents with copy-to-clipboard cards for handoff + envelope paths.
+- Ratification envelope: `RATIFICATION_2026-07-11_close_ceremony_ledger.md`
 - Docs cascade: 4-step complete (index → corpus → sync → embed) + provenance rebuild
-- Handoff: `SESSION_2762_OPS_SIBLING_401_FIX_RATIFIED.md`
+- Handoff: `SESSION_2763_CLOSE_CEREMONY_LEDGER_RATIFIED.md`
 
 ---
 
 ## THE PIVOT — WHY THIS SHIP MATTERS
 
-S2761 closed with three broken cards on the same page Chris just live-verified — filed as an out-of-scope follow-up in S2761 §6. S2762 ships that follow-up as candidate 1b (Claude's top lean, Chris "go with your recommendation"). Un-breaks SLO Status grid + Failure Signatures list + Blocked Agents list without touching the freshly ratified S2761 tile above them.
+Chris explicitly picked **N3** from the S2762 candidate menu: net-new engineering per S2745 engineering-bias directive. Ships a browser-visible operator surface for "what shipped recently?" that had previously required terminal + editor round-trips.
 
-**Verify-before-build was cheap here** — reference pattern was 10 lines above the broken siblings, in the same file. No new abstraction. Total analysis = one Read call.
+**Combined-round-trip discovery:** S2763 batched freshness check + design SIGN into a single Rigby prompt. Rigby returned the freshness verdict (FRESH · SHA matches HEAD — corroborating the recycle-after-merge rule) alongside the design SIGN (PASS with a legit path-traversal risk called out). Hardening was applied BEFORE the view body was written — cheaper than retrofit.
 
 ---
 
-## S2763 CANDIDATES (Chris selects at open)
+## S2764 CANDIDATES (Chris selects at open)
 
 ### Candidate 1 — S2761 smoke test (~20 min)
 
-Smoke test `/api/ops/health-summary/` — assert 200 + all top-level keys present (Rigby F3 recommendation from S2761).
+Smoke test `/api/ops/health-summary/` — assert 200 + all top-level keys present.
 
 ### Candidate 2 — S2758 D2 canonical AgentExecution vs AgentTaskExecution decision
 
@@ -39,11 +41,12 @@ REPORT-ONLY-shape PR for `tasks_initiatives.py` + `tasks_content.py` + `tasks_me
 
 ### Candidate 4 — Net-new engineering
 
-Per S2745 engineering-bias directive. Chris's 8-in-2-days pattern favors visible operator surfaces + short close-ceremonies. Standing proposals from S2762 menu:
+Per S2745 engineering-bias directive. Standing proposals + new:
 
 - **N1** — Ops Health tile v2: add SLO summary panel (now that the SLO query works)
 - **N2** — New PA tool `ops_tool.recent_recycles` — surface last N `make recycle-all` events + auth-refresh events
-- **N3** — Workspace tab card "Session close-ceremony ledger" — read-only view of last 10 handoffs + ratification envelopes as clickable cards
+- **N4** *(new S2763)* — Close-Ceremony Ledger v2: render title/date/one-liner previews when a card is hovered/clicked; navigate to a `/docs/*` viewer route
+- **N5** *(new S2763)* — Playbook amendment proposal for the recycle-after-merge rule (after one more independent corroboration this rule ships to §7.4.1)
 
 ### Housekeeping (still owed)
 
@@ -52,29 +55,29 @@ Per S2745 engineering-bias directive. Chris's 8-in-2-days pattern favors visible
 
 ---
 
-## SESSION PIN — S2762 RETIRED (fresh mint required at S2763 open)
+## SESSION PIN — S2763 RETIRED (fresh mint required at S2764 open)
 
-**Pin history (S2762):**
+**Pin history (S2763):**
 
-- `pa-572f3ba386964005` (label `s2762-ops-sibling-401-fix`) minted S2762 open; **retired at S2762 close**
+- `pa-2e382508b79d478b` (label `s2763-close-ceremony-ledger`) minted S2763 open; **retired at S2763 close**
 
-**Wrapper `tools/pa_local.sh:539` still points at `pa-572f3ba386964005` (retired)** — intended failure mode forces S2763 first-action fresh mint.
+**Wrapper `tools/pa_local.sh:539` still points at `pa-2e382508b79d478b` (retired)** — intended failure mode forces S2764 first-action fresh mint.
 
-**S2763 open sequence:**
+**S2764 open sequence:**
 
 ```
 context-kit orient
 
 # Read this file end-to-end
 
-# Freshness check + findings check + tile eyeball (single Rigby + browser round-trip)
-bash tools/pa_local.sh "S2763 open — three quick tool invocations: (1) ops_tool.version report staleness_verdict + head_commit_sha (2) ops_tool.tenant_boundary_violations window=24h limit=5 (3) ops_tool.staleness_warnings window=24h limit=5"
+# Freshness check + tile eyeball (single Rigby + browser round-trip). Watch for FRESH — that's the THIRD corroboration point for the recycle-after-merge rule.
+bash tools/pa_local.sh "S2764 open — three quick tool invocations: (1) ops_tool.version report staleness_verdict + head_commit_sha (2) ops_tool.tenant_boundary_violations window=24h limit=5 (3) ops_tool.staleness_warnings window=24h limit=5"
 
-# Browser eyeball: hard-refresh localhost:8000/workspace?tab=system&sub=ops — All FOUR sections (Health tile + SLO grid + Signatures + Blocked) render without 401
+# Browser eyeball: hard-refresh localhost:8000/workspace?tab=system&sub=ops — FIVE sections should render: Health tile + SLO grid + Signatures + Blocked + Recent Close-Ceremonies (should include S2763 at top)
 
-# If verdict != FRESH → run make recycle-all before continuing (watch for corroboration of the S2762 post-merge recycle rule)
+# If verdict != FRESH → run make recycle-all before continuing (would be the negative result for the recycle-after-merge rule; escalate to Chris before codifying).
 
-# Mint fresh pin scoped to selected S2763 candidate
+# Mint fresh pin scoped to selected S2764 candidate
 python manage.py session_lifecycle open --label <candidate-scoped-label>
 
 grep '^python tools/pa_chat.py' tools/pa_local.sh
@@ -84,7 +87,7 @@ Rigby will not dispatch until wrapper is repointed.
 
 ---
 
-## OPEN RUNTIME ITEMS (from S2762 close)
+## OPEN RUNTIME ITEMS (from S2763 close)
 
 1. **S2761 smoke test** — Candidate 1 above
 2. **S2758 D2 canonical decision** — Candidate 2 above
@@ -96,26 +99,28 @@ Rigby will not dispatch until wrapper is repointed.
 8. **S2758 D1 process_pa_chat_task payload strip** — deferred (HTTP-side bootstrap refactor)
 9. **S2758 D5 local shim retirement** — depends on D2 canonical decision
 10. **HMAC signing of `x-acting-user-id` header** — Phase 2 §6 limitation
-11. **`recycle-all AFTER merge` rule codification watch** — S2762 followed it; if S2763 opens FRESH not STALE_BOTH, that's corroboration to codify into playbook
+11. **`recycle-all AFTER merge` rule codification watch** — S2762 and S2763 corroborated; **one more independent arc-close → propose Playbook amendment to §7.4.1**
 
 ---
 
 ## Twin-pointer card
 
-📁 **Repo `/docs/` + `/core/` + `/frontend/` — S2762 artifacts:**
+📁 **Repo `/docs/` + `/core/` + `/frontend/` — S2763 artifacts:**
 
-- **Frontend fix:** `frontend/src/pages/workspace/tabs/OpsConsoleTab.tsx` (sloQuery/sigQuery/blockedQuery)
-- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-11_ops_sibling_401_fix.md`
-- **Handoff:** `docs/handoffs/SESSION_2762_OPS_SIBLING_401_FIX_RATIFIED.md`
-- **Precedent envelope (canonical pattern):** `docs/research/implementation/RATIFICATION_2026-07-11_ops_health_tile.md`
+- **Backend view:** `core/views_ops_console.py` (`close_ceremony_ledger` + `_safe_relpath` + `_index_envelopes_by_session`)
+- **URL:** `core/urls.py:2396`
+- **Frontend section:** `frontend/src/pages/workspace/tabs/OpsConsoleTab.tsx` (Recent Close-Ceremonies)
+- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger.md`
+- **Handoff:** `docs/handoffs/SESSION_2763_CLOSE_CEREMONY_LEDGER_RATIFIED.md`
+- **Precedent envelopes:** S2761 tile (composition pattern), S2762 sibling fix (api.get pattern)
 - **Playbook v0.5.0:** `docs/ENGINEERING_PLAYBOOK.md`
 
 🖥️ **Workspace UI — `/workspaces` surface:**
 
-- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — governance + content mirrors for S2762 (pending post-merge)
+- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — governance + content mirrors for S2763
 - **Architecture & Research** (`a9a16593-e0a4-44dc-8256-efc65d524b3c`) — governance / Playbook ratifications
 - **Real User Readiness Campaign** (`638e9e90-47b4-4bd4-a872-bf16181cf3b5`) — parent program
-- **Live surface:** `localhost:8000/workspace?tab=system&sub=ops` — Ops Health tile + newly-working SLO / Signatures / Blocked cards
+- **Live surface:** `localhost:8000/workspace?tab=system&sub=ops` — Ops Health tile + SLO / Signatures / Blocked cards + Recent Close-Ceremonies list
 
 ---
 
@@ -124,26 +129,26 @@ Rigby will not dispatch until wrapper is repointed.
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | (filled at merge — post-S2762 sibling 401 fix merge) |
+| HEAD | (filled at merge — post-S2763 close-ceremony ledger merge) |
 | Playbook version | v0.5.0 (RATIFIED S2753) |
-| RUR-C1 state | I-0301 CLOSED · I-0302 CLOSED · I-0303 Phase 3 stage 2 first pass CLOSED · S2755→S2761 diagnostic infra + tile CLOSED · **S2762 sibling 401 fix CLOSED** · RUR-C1 parent OPEN |
-| Session pin | `pa-572f3ba386964005` (retired at S2762 close) |
-| Wrapper default pin | `tools/pa_local.sh:539` — `pa-572f3ba386964005` (retired; forces fresh mint at S2763 open) |
-| Live infra state | S2755→S2761 diagnostic infra + tile + sibling cards operational; process freshness FRESH at close |
-| Next move | Chris selects at S2763 open — see Candidates above |
+| RUR-C1 state | I-0301 CLOSED · I-0302 CLOSED · I-0303 Phase 3 stage 2 first pass CLOSED · S2755→S2762 diagnostic infra + tile + sibling fix CLOSED · **S2763 close-ceremony ledger CLOSED** · RUR-C1 parent OPEN |
+| Session pin | `pa-2e382508b79d478b` (retired at S2763 close) |
+| Wrapper default pin | `tools/pa_local.sh:539` — `pa-2e382508b79d478b` (retired; forces fresh mint at S2764 open) |
+| Live infra state | S2755→S2762 diagnostic infra + tile + sibling cards + ledger operational; process freshness FRESH at close |
+| Next move | Chris selects at S2764 open — see Candidates above |
 
 ---
 
-## Recommended session-open protocol (S2763)
+## Recommended session-open protocol (S2764)
 
 1. `context-kit orient`
 2. Read this file end-to-end
-3. Read S2762 envelope `RATIFICATION_2026-07-11_ops_sibling_401_fix.md` §2 (ratified deliverables) + §6 (operational follow-up)
-4. **Freshness + findings + tile eyeball (single-round-trip)** — see S2763 open sequence in §SESSION PIN above
-5. If `staleness_verdict != FRESH` → `make recycle-all` before continuing (watch for corroboration signal)
+3. Read S2763 envelope `RATIFICATION_2026-07-11_close_ceremony_ledger.md` §2 (ratified deliverables) + §3 (security hardening)
+4. **Freshness + findings + tile eyeball (single-round-trip)** — see S2764 open sequence in §SESSION PIN above
+5. If `staleness_verdict != FRESH` → `make recycle-all` before continuing (escalate to Chris — would be a negative signal for the recycle-after-merge rule)
 6. Verify runtime state: `git log --oneline -5`; confirm wrapper at retired pin
 7. Present candidate menu to Chris
-8. Chris directs S2763 P0 selection
+8. Chris directs S2764 P0 selection
 9. Mint fresh pin with candidate-scoped label
 10. Route work through Rigby joint agreement before coding
 
@@ -151,11 +156,12 @@ Rigby will not dispatch until wrapper is repointed.
 
 ## Reference documents
 
-Ordered by frequency of use at S2763:
+Ordered by frequency of use at S2764:
 
 1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol
-2. [`docs/research/implementation/RATIFICATION_2026-07-11_ops_sibling_401_fix.md`](docs/research/implementation/RATIFICATION_2026-07-11_ops_sibling_401_fix.md) — S2762 envelope (this session)
-3. [`docs/research/implementation/RATIFICATION_2026-07-11_ops_health_tile.md`](docs/research/implementation/RATIFICATION_2026-07-11_ops_health_tile.md) — S2761 (canonical `api.get` pattern)
-4. `frontend/src/pages/workspace/tabs/OpsConsoleTab.tsx` — Ops Console page
-5. `frontend/src/lib/api.ts` — axios instance with token-attaching interceptor
-6. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.5.0
+2. [`docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger.md`](docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger.md) — S2763 envelope (this session)
+3. [`docs/research/implementation/RATIFICATION_2026-07-11_ops_sibling_401_fix.md`](docs/research/implementation/RATIFICATION_2026-07-11_ops_sibling_401_fix.md) — S2762
+4. [`docs/research/implementation/RATIFICATION_2026-07-11_ops_health_tile.md`](docs/research/implementation/RATIFICATION_2026-07-11_ops_health_tile.md) — S2761
+5. `core/views_ops_console.py` — Ops Console REST endpoints (5 views now)
+6. `frontend/src/pages/workspace/tabs/OpsConsoleTab.tsx` — Ops Console page (5 sections now)
+7. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.5.0
