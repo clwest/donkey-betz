@@ -18,12 +18,21 @@ trusted state and dispatch-declared acting identity.
     circularity — task modules consume this file at import time.
 
 **Public API:**
-  * ``@enforce_tenant_boundary(model=X, id_kwarg='...')`` — function-tier
-    decorator for existing ``@shared_task`` bodies.
+  * ``@enforce_tenant_boundary(model=X, id_kwarg='...', lookup_field='pk',
+    warn_only=False)`` — function-tier decorator for existing
+    ``@shared_task`` bodies. ``lookup_field`` selects the row-lookup field
+    (Phase 3 REPORT-ONLY widening — production tasks dispatch on CharField
+    natural keys like ``conversation_id`` / ``execution_id``, not PKs).
+    ``warn_only=True`` (Phase 3 REPORT-ONLY mode) emits the operator
+    envelope but does NOT raise — body runs regardless.
   * ``TenantScopedTask`` — Celery ``Task`` base class for new task classes;
-    declares ``tenant_model`` + ``tenant_id_kwarg`` class attributes.
+    declares ``tenant_model``, ``tenant_id_kwarg``, ``tenant_lookup_field``
+    (default ``'pk'``), and ``warn_only`` (default ``False``) class attrs.
   * ``@system_scope`` — explicit opt-in marker for tasks that legitimately
     act as the platform, not as a user (Q2 D-verdict fail-safe default).
+  * ``apply_async_with_actor(task, user, *, args=(), kwargs=None, ...)`` —
+    Phase 3 dispatch helper. Attaches ``x-acting-user-id`` to Celery task
+    headers while preserving all other caller-provided correlation headers.
   * ``TenantBoundaryViolation`` — exception raised on any enforcement
     failure; caught by ``task_failure`` signal hook to emit operator
     envelope. Carries the internal ``failure_kind`` discriminator.
@@ -167,7 +176,8 @@ def _get_predicate_for_model(model_cls: type) -> Optional[Callable]:
     core/tasks*.py modules; those modules can't safely trigger a full model
     graph load at their own import time).
 
-    Returns ``None`` for any model not in the 5 ratified I-0302 predicates.
+    Returns ``None`` for any model not in the 5 ratified I-0302 predicates
+    plus the Phase 3 REPORT-ONLY ``AgentTaskExecution`` shim (see below).
     Caller fails-closed with ``failure_kind='unregistered_model'``.
     """
     from core.security.object_authz import (
@@ -181,13 +191,31 @@ def _get_predicate_for_model(model_cls: type) -> Optional[Callable]:
     from core.models_deliverables import Deliverable
     from core.models_document_registry import Initiative
     from core.models_unified_system import AgentExecution
+    from core.models.agents_registry.models import AgentTaskExecution
     from content.models import Document
+
+    # TODO(I-0303 BATCH-FIX): promote can_read_agent_task_execution to
+    # core.security.object_authz and reconcile with can_read_agent_execution
+    # per Phase 1 §4.4 duplicate-class caveat. This is a TEMPORARY Phase 3
+    # REPORT-ONLY shim — do NOT rely on this location for the canonical
+    # AgentExecution vs AgentTaskExecution decision.
+    def can_read_agent_task_execution(user, row) -> bool:
+        """Phase 3 REPORT-ONLY shim predicate for AgentTaskExecution.
+
+        Row.user is a nullable ForeignKey; null-user rows are unowned and
+        rejected (fail-safe default matching Q2 D-verdict). BATCH-FIX
+        canonicalization will retire either this predicate OR the sibling
+        AgentTaskExecution model.
+        """
+        row_user_id = getattr(row, "user_id", None)
+        return row_user_id is not None and row_user_id == user.pk
 
     predicate_map = {
         Deliverable: can_read_deliverable,
         ChatConversation: can_read_chat_conversation,
         Initiative: can_read_initiative,
         AgentExecution: can_read_agent_execution,
+        AgentTaskExecution: can_read_agent_task_execution,
         Document: can_read_document,
     }
     return predicate_map.get(model_cls)
@@ -232,6 +260,7 @@ def _check_boundary(
     headers: dict,
     task_name: str,
     signature: Optional[inspect.Signature] = None,
+    lookup_field: str = "pk",
 ) -> None:
     """Run the tenant-boundary check. Raises ``TenantBoundaryViolation`` on
     any failure. Silent return means enforcement passed and the task body
@@ -239,6 +268,12 @@ def _check_boundary(
 
     Called by ``enforce_tenant_boundary`` wrapper and ``TenantScopedTask``
     ``__call__``. Not intended for direct caller use.
+
+    ``lookup_field`` selects the row-lookup field for
+    ``model_cls.objects.filter(**{lookup_field: row_id})``. Default ``'pk'``
+    preserves Phase 2 behavior. Phase 3 REPORT-ONLY targets that dispatch
+    on natural-key CharFields (``conversation_id``, ``execution_id``) pass
+    the matching field name explicitly.
     """
     support_code = make_support_code(SUPPORT_COMPONENT)
     model_label = model_cls.__name__
@@ -255,7 +290,7 @@ def _check_boundary(
             model_label=model_label,
         )
 
-    row = model_cls.objects.filter(pk=row_id).first()
+    row = model_cls.objects.filter(**{lookup_field: row_id}).first()
     if row is None:
         raise TenantBoundaryViolation(
             support_code=support_code,
@@ -322,7 +357,13 @@ def _check_boundary(
 # --------------------------------------------------------------------------
 
 
-def enforce_tenant_boundary(*, model: type, id_kwarg: str) -> Callable:
+def enforce_tenant_boundary(
+    *,
+    model: type,
+    id_kwarg: str,
+    lookup_field: str = "pk",
+    warn_only: bool = False,
+) -> Callable:
     """Wrap a Celery task body with tenant-boundary enforcement.
 
     Usage::
@@ -332,9 +373,23 @@ def enforce_tenant_boundary(*, model: type, id_kwarg: str) -> Callable:
         def process_deliverable(self, deliverable_id, ...):
             ...
 
+    ``lookup_field`` (Phase 3 REPORT-ONLY substrate widening): row-lookup
+    field for the tier-1 check. Default ``'pk'`` matches Phase 2 behavior.
+    Tasks that dispatch on natural-key CharFields — the pattern surfaced
+    at Phase 3 wiring for ``conversation_id`` / ``execution_id`` — pass
+    the matching field name explicitly.
+
+    ``warn_only=True`` (Phase 3 REPORT-ONLY mode): TenantBoundaryViolation
+    is caught inside the wrapper, the operator envelope is emitted (same
+    OpsRunEvent shape as enforcement mode), and the task body runs
+    normally. Only ``TenantBoundaryViolation`` is caught — any other
+    exception raised by ``_check_boundary`` propagates unchanged. BATCH-FIX
+    → ENFORCEMENT-FLIP PRs convert ``warn_only=True`` sites to hard-gate.
+
     Requires the task to be dispatched via ``apply_async(..., headers={
     "x-acting-user-id": str(user.pk)})`` — the acting-identity header is
     trusted transport metadata; payload-supplied identity is NEVER consulted.
+    Callers use ``apply_async_with_actor(task, user, ...)`` (below).
 
     Mutually exclusive with ``@system_scope``. Phase 3 conformance check
     will reject any user-owned-model task lacking exactly one marker.
@@ -344,6 +399,8 @@ def enforce_tenant_boundary(*, model: type, id_kwarg: str) -> Callable:
         # Pyright's dynamic-attribute rules on Callable / _Wrapped protocols
         setattr(target, "__rur_tenant_model__", model)
         setattr(target, "__rur_tenant_id_kwarg__", id_kwarg)
+        setattr(target, "__rur_tenant_lookup_field__", lookup_field)
+        setattr(target, "__rur_tenant_warn_only__", warn_only)
 
         # Cache signature at decoration time — handles positional dispatch
         # (Phase 1 §4.4: tier-0 tasks like execute_agent take positional
@@ -373,19 +430,31 @@ def enforce_tenant_boundary(*, model: type, id_kwarg: str) -> Callable:
                         headers = raw_headers
                 task_name = getattr(task, "name", None) or task_name
 
-            _check_boundary(
-                model_cls=model,
-                id_kwarg=id_kwarg,
-                args=args,
-                kwargs=kwargs,
-                headers=headers,
-                task_name=task_name,
-                signature=target_signature,
-            )
+            try:
+                _check_boundary(
+                    model_cls=model,
+                    id_kwarg=id_kwarg,
+                    args=args,
+                    kwargs=kwargs,
+                    headers=headers,
+                    task_name=task_name,
+                    signature=target_signature,
+                    lookup_field=lookup_field,
+                )
+            except TenantBoundaryViolation as violation:
+                if warn_only:
+                    # Phase 3 REPORT-ONLY mode: emit envelope, fall through
+                    # to body. task_failure signal will NOT fire (violation
+                    # never escaped), so we call the parallel emission path.
+                    _emit_warn_only_envelope(violation)
+                else:
+                    raise
             return target(*args, **kwargs)
 
         setattr(wrapper, "__rur_tenant_model__", model)
         setattr(wrapper, "__rur_tenant_id_kwarg__", id_kwarg)
+        setattr(wrapper, "__rur_tenant_lookup_field__", lookup_field)
+        setattr(wrapper, "__rur_tenant_warn_only__", warn_only)
         return wrapper
 
     return decorator
@@ -404,11 +473,14 @@ class TenantScopedTask(_CeleryTask):
     before each task invocation.
 
     Subclasses declare ``tenant_model`` + ``tenant_id_kwarg`` class
-    attributes::
+    attributes; ``tenant_lookup_field`` (default ``'pk'``) and
+    ``warn_only`` (default ``False``) may be overridden per subclass::
 
         class UpdateDeliverableTask(TenantScopedTask):
             tenant_model = Deliverable
             tenant_id_kwarg = "deliverable_id"
+            # tenant_lookup_field = 'pk'  # default
+            # warn_only = False  # default (enforcement mode)
 
             def run(self, deliverable_id, **kwargs):
                 ...
@@ -416,7 +488,8 @@ class TenantScopedTask(_CeleryTask):
     Applied at task-registration time via ``@shared_task(base=...)`` or
     ``@app.task(base=...)``. Same trusted-source hierarchy as the
     function-tier decorator: DB row + ``x-acting-user-id`` header +
-    ratified predicate. Same failure envelope.
+    ratified predicate. Same failure envelope. Same warn-only semantics
+    (only ``TenantBoundaryViolation`` caught; other exceptions propagate).
 
     A subclass may opt-in to system scope via ``@system_scope`` at the
     class level. Enforcement is skipped for system-scope classes.
@@ -424,6 +497,8 @@ class TenantScopedTask(_CeleryTask):
 
     tenant_model: Optional[type] = None
     tenant_id_kwarg: Optional[str] = None
+    tenant_lookup_field: str = "pk"
+    warn_only: bool = False
 
     def __call__(self, *args, **kwargs):
         if getattr(type(self), _SYSTEM_SCOPE_ATTR, False):
@@ -457,15 +532,22 @@ class TenantScopedTask(_CeleryTask):
         except (TypeError, ValueError):
             run_signature = None
 
-        _check_boundary(
-            model_cls=model,
-            id_kwarg=id_kwarg,
-            args=args,
-            kwargs=kwargs,
-            headers=headers,
-            task_name=task_name,
-            signature=run_signature,
-        )
+        try:
+            _check_boundary(
+                model_cls=model,
+                id_kwarg=id_kwarg,
+                args=args,
+                kwargs=kwargs,
+                headers=headers,
+                task_name=task_name,
+                signature=run_signature,
+                lookup_field=self.tenant_lookup_field,
+            )
+        except TenantBoundaryViolation as violation:
+            if self.warn_only:
+                _emit_warn_only_envelope(violation)
+            else:
+                raise
         return super().__call__(*args, **kwargs)
 
 
@@ -552,6 +634,40 @@ def _build_task_operator_envelope(
     }
 
 
+def _emit_warn_only_envelope(exc: TenantBoundaryViolation) -> None:
+    """Emit the operator envelope for a warn-only tenant-boundary violation.
+
+    In warn-only mode (Phase 3 REPORT-ONLY substrate widening) the wrapper
+    catches ``TenantBoundaryViolation`` before it escapes the task, so
+    ``celery.signals.task_failure`` never fires. This helper is the
+    parallel emission path: same ``_build_task_operator_envelope`` output,
+    same ``_emit_operator_envelope_best_effort`` target — so warn-only and
+    enforcement-mode audit trails land in ``OpsRunEvent`` byte-identically.
+    Distinguish via ``task_context.failure_kind`` (already emitted).
+
+    Best-effort per Q9 discipline — any exception during emission is
+    swallowed rather than breaking the (warn-only) task body's execution.
+    """
+    try:
+        from celery import current_task
+
+        sender = current_task
+        task_id: Optional[str] = None
+        if current_task is not None:
+            request = getattr(current_task, "request", None)
+            if request is not None:
+                task_id = getattr(request, "id", None)
+        envelope = _build_task_operator_envelope(
+            sender=sender, task_id=task_id, exc=exc
+        )
+        _emit_operator_envelope_best_effort(envelope)
+    except Exception:  # noqa: BLE001 — Q9 best-effort
+        logger.warning(
+            "warn-only tenant-boundary envelope emission failed (swallowed)",
+            exc_info=True,
+        )
+
+
 def _register_task_failure_hook() -> None:
     """Connect a ``task_failure`` signal handler that emits an operator
     envelope whenever a ``TenantBoundaryViolation`` is raised.
@@ -588,6 +704,59 @@ def _register_task_failure_hook() -> None:
 _register_task_failure_hook()
 
 
+# --------------------------------------------------------------------------
+# Dispatch helper — attach acting-user identity to Celery task headers
+# --------------------------------------------------------------------------
+
+
+def apply_async_with_actor(
+    task,
+    user,
+    *,
+    args: tuple = (),
+    kwargs: Optional[dict] = None,
+    headers: Optional[dict] = None,
+    **options,
+):
+    """Dispatch a Celery task with the acting user's identity attached as
+    transport-header metadata.
+
+    Merges caller-provided ``headers`` with the acting-user header. The
+    acting-user header is only inserted if the caller did not already
+    provide one (caller wins on explicit ``x-acting-user-id`` collision).
+    All other correlation headers (``x-request-id``, ``x-trace-id``, etc.)
+    are preserved unchanged.
+
+    Usage::
+
+        from core.security.task_enforcement import apply_async_with_actor
+
+        apply_async_with_actor(
+            process_deliverable, request.user,
+            kwargs={"deliverable_id": str(deliverable.pk)},
+        )
+
+    Equivalent to::
+
+        process_deliverable.apply_async(
+            kwargs={"deliverable_id": str(deliverable.pk)},
+            headers={"x-acting-user-id": str(request.user.pk)},
+        )
+
+    Phase 3 BATCH-FIX PR converts HTTP dispatch sites to this helper. The
+    helper ships in the REPORT-ONLY substrate PR so BATCH-FIX has a stable
+    call target already in place.
+    """
+    merged_headers: dict = dict(headers) if headers else {}
+    merged_headers.setdefault(ACTING_USER_HEADER, str(user.pk))
+    return task.apply_async(
+        args=args,
+        kwargs=kwargs or {},
+        headers=merged_headers,
+        **options,
+    )
+
+
 __all__ = [
     "REASON_CODE_TENANT_BOUNDARY",
     "SUPPORT_COMPONENT",
@@ -596,4 +765,5 @@ __all__ = [
     "TenantScopedTask",
     "enforce_tenant_boundary",
     "system_scope",
+    "apply_async_with_actor",
 ]
