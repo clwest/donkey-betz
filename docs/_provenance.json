@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-11T04:03:53+00:00",
+    "generated": "2026-07-11T14:22:20+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "74b5162e6a36",
-    "doc_count": 2525,
-    "commit_count": 7838,
+    "git_head": "d5e54777df6f",
+    "doc_count": 2531,
+    "commit_count": 7848,
     "confidence_breakdown": {
-      "HIGH": 1613,
+      "HIGH": 1615,
       "MEDIUM": 402,
       "LOW": 5,
-      "UNKNOWN": 505
+      "UNKNOWN": 509
     },
     "excludes": [
       "docs/archive/",
@@ -2584,7 +2584,7 @@
         2745,
         2749
       ],
-      "commit_count": 1228,
+      "commit_count": 1234,
       "prs": [
         10,
         11,
@@ -3143,7 +3143,10 @@
         3084,
         3095,
         3110,
-        3124
+        3124,
+        3128,
+        3130,
+        3132
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7485,7 +7488,7 @@
         2745,
         2749
       ],
-      "commit_count": 182,
+      "commit_count": 184,
       "prs": [
         2213,
         2219,
@@ -7650,7 +7653,8 @@
         3080,
         3084,
         3095,
-        3124
+        3124,
+        3128
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19486,6 +19490,36 @@
       "commit_count": 2,
       "prs": [
         3127
+      ]
+    },
+    "docs/handoffs/SESSION_2751_I0302_ARC_CLOSED.md": {
+      "originating_session": 2751,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "d5e54777",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2751-arc-close-out): S2751 part 2 handoff (arc close) + start-here refresh + cascade (#3132)",
+      "sessions_touched": [
+        2751
+      ],
+      "commit_count": 2,
+      "prs": [
+        3132
+      ]
+    },
+    "docs/handoffs/SESSION_2751_I0302_PHASE_4_CLOSED.md": {
+      "originating_session": 2751,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "2a691ca5",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(s2751-close): S2751 handoff \u2014 I-0302 Phase 4 CLOSED (1 close-doc PR + cascade) + start-here refresh for S2752 (#3130)",
+      "sessions_touched": [
+        2751
+      ],
+      "commit_count": 2,
+      "prs": [
+        3130
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -36210,6 +36244,19 @@
         3083
       ]
     },
+    "docs/research/implementation/RATIFICATION_2026-07-10_i0302_arc_close.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "1176b67a",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(i0302-arc-close): I-0302 Object-Level Authorization ARC CLOSED \u2014 ratification + arc-close doc + final I-030203 append (#3131)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3131
+      ]
+    },
     "docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase1_ledger.md": {
       "originating_session": 642,
       "confidence": "MEDIUM",
@@ -36236,6 +36283,19 @@
       "commit_count": 2,
       "prs": [
         3098
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-10_i0302_phase4_close.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "f341581a",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(i0302-p4-close): I-0302 Phase 4 CLOSED \u2014 ratification record + close doc + arch doc amendments (#3129)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3129
       ]
     },
     "docs/research/implementation/RATIFICATION_2026-07-10_i0302_scoping.md": {
@@ -36512,20 +36572,22 @@
       "originating_session": 642,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "ad3721db",
+      "first_commit_sha": "1176b67a",
       "first_commit_date": "2026-07-10",
-      "first_commit_subject": "feat(security): I-0302 Phase 4 Sub-phase 3 \u2014 VIP-scope carve-out coverage on get_deliverable (#3126)",
+      "first_commit_subject": "docs(i0302-arc-close): I-0302 Object-Level Authorization ARC CLOSED \u2014 ratification + arc-close doc + final I-030203 append (#3131)",
       "sessions_touched": [
         642
       ],
-      "commit_count": 12,
+      "commit_count": 16,
       "prs": [
         3111,
         3112,
         3114,
         3123,
         3125,
-        3126
+        3126,
+        3129,
+        3131
       ]
     },
     "docs/research/implementation/tenant_boundary_lockdown/I-030204_ast_conformance_rule_spec.md": {
@@ -36540,6 +36602,32 @@
       "prs": [
         3116,
         3118
+      ]
+    },
+    "docs/research/implementation/tenant_boundary_lockdown/I-030205_phase4_close.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "f341581a",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(i0302-p4-close): I-0302 Phase 4 CLOSED \u2014 ratification record + close doc + arch doc amendments (#3129)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3129
+      ]
+    },
+    "docs/research/implementation/tenant_boundary_lockdown/I-030299_i0302_arc_close.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "1176b67a",
+      "first_commit_date": "2026-07-10",
+      "first_commit_subject": "docs(i0302-arc-close): I-0302 Object-Level Authorization ARC CLOSED \u2014 ratification + arc-close doc + final I-030203 append (#3131)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3131
       ]
     },
     "docs/research/implementation/tenant_boundary_lockdown/I-0302_scoping.md": {
