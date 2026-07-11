@@ -238,4 +238,4 @@ ORM-direct create preferred over Rigby's `deliverable_tool.create` (which has kn
 
 **Final RUR-C1 workspace deliverable count post-fix:** 9 (was 3).
 
-**Session pin rotation for S2754a:** `pa-2659dfa28e124f02` (S2754 close) → `pa-8663e11a0db64131` (S2754a addendum). Wrapper `tools/pa_local.sh:539` currently points at `pa-8663e11a0db64131`; will be retired at S2754a close.
+**Session pin rotation for S2754a:** `pa-2659dfa28e124f02` (S2754 close) → `pa-8663e11a0db64131` (S2754a addendum). **S2754a pin retired at S2754a close** per Chris directive (`session_tool.retire` returned `updated_count=2 previously_active=true retired=true`). Wrapper `tools/pa_local.sh:539` intentionally left pointing at the retired pin — intended failure mode forcing S2755's first action to be a fresh `session_lifecycle open` + wrapper re-point before any other PA dispatch. **Chris will open S2755 in a fresh terminal.**
