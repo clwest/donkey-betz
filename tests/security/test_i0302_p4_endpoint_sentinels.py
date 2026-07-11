@@ -51,7 +51,11 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 REPORT_DIR = REPO_ROOT / "test_reports"
 REPORT_PATH = REPORT_DIR / "i0302_p4_endpoint_sentinels.json"
 
-ENFORCE_SENTINEL_POSTURE = False
+# Flipped to True at S2749 close after batch-fix PR #3121 achieved
+# zero-known-violations (23 @superuser_required additions across
+# views_diagnostics.py). Report-only code path remains functional
+# for future rollback.
+ENFORCE_SENTINEL_POSTURE = True
 
 
 # --------------------------------------------------------------------------
