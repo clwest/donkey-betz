@@ -7,9 +7,16 @@ Public API discipline (Rigby S2742 Stage 1 SIGN Q2 constraint):
 - Callers MUST NOT construct ad-hoc codes; every `reason_code` string
   MUST appear in REASON_CODES.
 
-The 14 entries below are the frozen enum per contract §4. Additions
-require a new ratification record referencing the safety contract per
-contract §10.
+The frozen enum per contract §4. Additions require a new ratification
+record referencing the safety contract per contract §10. Current
+amendments:
+
+- ``tenant_boundary_violation`` — added at I-0303 Phase 2 (2026-07-11)
+  per docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase2_task_enforcement.md.
+  Emitted by ``core.security.task_enforcement`` when an async-boundary
+  tenant check fails (missing row / missing acting identity / predicate
+  rejection). Same user-facing envelope regardless of failure_kind —
+  existence-oracle protection per I-0303 scoping §1 harness contract.
 """
 from __future__ import annotations
 
@@ -143,6 +150,13 @@ REASON_CODES: Final[dict[str, ReasonCode]] = {
             retryable=False,
             terminal_state="FAILED",
             typical_status=503,
+        ),
+        ReasonCode(
+            code="tenant_boundary_violation",
+            default_message="You do not have access to that resource.",
+            retryable=False,
+            terminal_state="DENIED",
+            typical_status=403,
         ),
     )
 }
