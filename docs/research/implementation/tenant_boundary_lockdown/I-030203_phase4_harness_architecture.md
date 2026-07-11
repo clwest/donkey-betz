@@ -271,7 +271,7 @@ Sequential per §7 blockedBy dependency chain. Each step has its own PR (or boun
 11. **Endpoint sentinels** — Sub-phase 3; depends on fixture + AST scan
 12. **Coverage-gap report + posture probes** — DONE Sub-phase 3 (S2750) — `tests/security/test_i0302_p4_coverage_gap_report.py` emits `test_reports/i0302_p4_coverage_gaps.json` covering §5.3.b (ChatConversation ~126 sites, live enum 114/36 vs ledger 126/43), §5.1.a (Deliverable 4 hand-picked sites), §5.5.a (Document WebSocket 3 sites). All rows ship `posture_probed: false` — current deferred surfaces are non-HTTP-addressable (services/tasks/agents/Employee-OS) or WebSocket (probe-exempt per §4.3). Probe-machinery structure supports future HTTP-addressable rows without redesign.
 13. **Intentional-immutability contract for Initiative + ChatConversation** — Sub-phase 3 — assert unsafe methods (PUT/PATCH/DELETE) return 405/404 as absence-contract per Chris D-verdict at S2748
-14. **VIP-scope carve-out coverage on `get_deliverable`** — Sub-phase 3 — extend fixture with VIP membership row; test the VIP-workspace read path currently deferred in Sub-phase 2 GET-item cell
+14. **VIP-scope carve-out coverage on `get_deliverable`** — DONE Sub-phase 3 (S2750) — `tests/security/fixtures/tenant_boundary.py` extended with `tb_vip_user` + `tb_vip_invite_in_ws_a` (redeemed VIPInvite binding vip_user to workspace_a); `tb_golden` bundle extended. New matrix cell `TestMatrixDeliverableGetItemVIPCarveOut` in `test_i0302_p4_matrix_harness.py` — 2 tests: VIP with matching workspace_a → 200 (carve-out fires), VIP with mismatched workspace_b → 403 (carve-out is scoped, not blanket). Chris-ratified VIP feature preservation from §5.1.b 5th-site fix (see `views_deliverables.py:191-208`) now has regression coverage.
 15. **Rigby SIGN on shipped harness + Chris ratification** — Phase 4 close
 
 ### §6.a Sub-phase 3 research inputs (per Rigby SIGN F2 2026-07-10)
@@ -315,6 +315,7 @@ Phase 4 closes when ALL of the following hold:
 | S2749 | Intentional-immutability contract cells (Initiative + ChatConversation) | `tests/security/test_i0302_p4_matrix_harness.py` §7 |
 | S2749 | Rigby gpt-5.2 stall post-mortem fix (provider fallback + response body capture) | PR #3119 |
 | S2750 | Deferred-surface coverage-gap report | `tests/security/test_i0302_p4_coverage_gap_report.py` + `test_reports/i0302_p4_coverage_gaps.json` |
+| S2750 | VIP-scope carve-out coverage on `get_deliverable` | `tb_vip_user` + `tb_vip_invite_in_ws_a` fixtures; `TestMatrixDeliverableGetItemVIPCarveOut` matrix cell |
 | TBD | Rigby SIGN-PASS on shipped harness | Task 10 |
 | TBD | Chris ratification + Phase 4 close | Task 10; close statement appended here or in `I-030204_phase4_close.md` |
 

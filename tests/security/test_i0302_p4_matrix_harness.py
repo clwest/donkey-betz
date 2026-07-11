@@ -525,6 +525,76 @@ class TestMatrixDeliverableGetItem:
         )
 
 
+class TestMatrixDeliverableGetItemVIPCarveOut:
+    """Matrix cell: Deliverable GET-item VIP demo-viewer carve-out.
+
+    Contract ref: `core/views_deliverables.py:161-228` get_deliverable +
+    `core/vip_scope.py:get_vip_scope`.
+
+    A redeemed VIPInvite binding a VIP user to a workspace grants that
+    user read access to any Deliverable in that workspace, even when
+    they are neither the row owner nor staff. This is a **Chris-ratified
+    product feature** preserved through the §5.1.b 5th-site hotfix
+    (added `@token_auth_required` to gate anonymous; kept the VIP
+    carve-out below the auth gate). Explicit regression coverage was
+    deferred at Sub-phase 2 close pending fixture extension; this cell
+    closes that deferral.
+
+    Boundary the tests protect:
+      1. VIP with matching workspace → 200 (carve-out fires).
+      2. VIP with mismatched workspace → 403 (carve-out does NOT bypass
+         cross-workspace boundary).
+      3. Silent scope-lookup failure does not accidentally grant access
+         — covered by the mismatch test (returns 403, not 500 → 200).
+    """
+
+    def _url(self, deliverable_id) -> str:
+        return f"/api/deliverables/{deliverable_id}/"
+
+    def test_vip_with_matching_workspace_can_read(
+        self, client, tb_golden
+    ):
+        """VIP viewer bound to workspace_a can read a deliverable in
+        workspace_a even though the row owner is user_a, not the viewer.
+
+        This exercises the carve-out branch at views_deliverables.py:
+        191-208 — vip_allowed = True, endpoint returns 200 + content.
+        """
+        client.force_login(tb_golden["vip_user"])
+        d = tb_golden["deliverables_a"][0]
+        resp = client.get(self._url(d.id))
+        assert resp.status_code == 200, (
+            f"VIP with matching workspace_a must read deliverable in "
+            f"workspace_a; got {resp.status_code}. Fixture check: "
+            f"vip_invite.workspace_id={tb_golden['vip_invite_in_ws_a'].workspace_id}, "
+            f"deliverable.workspace_id={d.workspace_id}"
+        )
+
+    def test_vip_with_mismatched_workspace_blocked(
+        self, client, tb_golden
+    ):
+        """VIP viewer bound to workspace_a canNOT read a deliverable in
+        workspace_b — workspace_id mismatch returns 403 (explicit denial
+        at views_deliverables.py:204-208) to ensure the carve-out is
+        scoped, not a blanket cross-tenant bypass.
+
+        The exact-403 assertion (rather than `in {403, 404}`) is
+        deliberate: 403 is the ratified branch for this path. A future
+        migration to 404 (existence-leak posture per §3.1(b)) is a
+        meaningful policy change that should break this assertion
+        loudly rather than silently drift.
+        """
+        client.force_login(tb_golden["vip_user"])
+        d = tb_golden["deliverables_b"][0]
+        resp = client.get(self._url(d.id))
+        assert resp.status_code == 403, (
+            f"VIP with workspace_a must NOT read deliverable in "
+            f"workspace_b; got {resp.status_code}. If 200: carve-out "
+            f"leaked cross-workspace. If 500: scope lookup crashed "
+            f"(swallow-except regression). Expected 403."
+        )
+
+
 class TestMatrixChatConversationList:
     """Matrix cell: ChatConversation LIST via /api/pa/conversations/.
 
