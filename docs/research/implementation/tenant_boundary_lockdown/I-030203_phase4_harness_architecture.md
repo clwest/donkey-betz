@@ -290,9 +290,9 @@ Before Sub-phase 3 opens, run these research passes (bounded, docs-only outcomes
 
 Phase 4 closes when ALL of the following hold:
 
-1. Matrix runner (§1.1) exists and passes for all 5 × 7 = 35 cells (minus explicit deferred skips per §4).
-2. Endpoint sentinels (§1.2) exist for at least 10 hand-picked risk endpoints and pass across 4 roles.
-3. AST scan module (§5.1) is wired into the harness; harness fails collection if `@ops_aggregate_allowed` contract is violated. Zero current uses at Phase 4 close is acceptable (baseline established).
+1. Matrix runner (§1.1) exists and passes for all 5 × 7 = 35 cells (minus explicit deferred skips per §4). **Extended at S2749 close** with intentional-immutability contract cells for Initiative + ChatConversation — 48 cells (2 models × 2 endpoints [LIST + DETAIL] × 3 methods [PUT/PATCH/DELETE] × 4 roles) asserting `status in {401, 403, 404, 405}` per S2748 Chris D-verdict "treat as intentional immutability."
+2. Endpoint sentinels (§1.2) exist for at least 10 hand-picked risk endpoints and pass across 4 roles. **DONE (S2749):** 28 cockpit ops sentinels shipped in enforcing mode via PRs #3120 → #3121 → #3122. Batch-fix added `@superuser_required` to 23 sites in `views_diagnostics.py`. Report at `test_reports/i0302_p4_endpoint_sentinels.json`.
+3. AST scan module (§5.1) is wired into the harness; harness fails collection if `@ops_aggregate_allowed` contract is violated. Zero current uses at Phase 4 close is acceptable (baseline established). **DONE (S2749):** §14 codification substrate for Http404-swallow anti-pattern extended the AST scan approach via PRs #3116 → #3117 → #3118. Batch-fix patched 9 sites across 3 view files. Report at `test_reports/i0302_p4_ast_conformance.json`. Related spec: `I-030204_ast_conformance_rule_spec.md`.
 4. Deferred-surface coverage-gap report (§4.2) emits structured JSON on test run; skipped sites are enumerated with ledger refs.
 5. `security-conformance.yml` runs the Phase 4 harness on every PR touching the relevant surface.
 6. Rigby SIGN-PASS on shipped harness.
@@ -310,6 +310,10 @@ Phase 4 closes when ALL of the following hold:
 | S2748 | Chris D-verdict "agree all + ship bonus tightening" | This doc frontmatter + I-030201 §11.6 |
 | S2748 | `@ops_aggregate_allowed` decorator landed + smoke test | `core/security/decorators.py` + `tests/security/test_i0302_p4_ops_aggregate_decorator.py` |
 | S2748+ | Harness implementation | Task list 5-9 |
+| S2749 | §14 AST codification substrate (report-only → batch-fix → enforce) | PRs #3116 → #3117 → #3118 |
+| S2749 | Endpoint sentinels substrate (report-only → batch-fix → enforce) | PRs #3120 → #3121 → #3122 |
+| S2749 | Intentional-immutability contract cells (Initiative + ChatConversation) | `tests/security/test_i0302_p4_matrix_harness.py` §7 |
+| S2749 | Rigby gpt-5.2 stall post-mortem fix (provider fallback + response body capture) | PR #3119 |
 | TBD | Rigby SIGN-PASS on shipped harness | Task 10 |
 | TBD | Chris ratification + Phase 4 close | Task 10; close statement appended here or in `I-030204_phase4_close.md` |
 

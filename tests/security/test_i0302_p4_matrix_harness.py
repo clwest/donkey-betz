@@ -581,3 +581,139 @@ class TestMatrixChatConversationList:
             f"Superuser must not see cross-tenant conversations; got "
             f"leaked ids: {ids & forbidden}"
         )
+
+
+# --------------------------------------------------------------------------
+# §7 — Intentional-immutability contract (Sub-phase 3)
+# --------------------------------------------------------------------------
+#
+# S2748 endpoint discovery finding: Initiative + ChatConversation have no
+# user-facing CRUD UPDATE/DELETE endpoints. Chris D-verdict at S2748 close:
+# "treat as intentional immutability." Sub-phase 3 formalizes this as an
+# absence-contract.
+#
+# The contract: PUT / PATCH / DELETE against any of these endpoints MUST
+# return one of {401, 403, 404, 405} — the request is rejected by
+# middleware, method-check, or route-resolution BEFORE any handler code
+# runs. Any 200 / 400 / 500 means a mutation handler was reached — that's
+# a bug and a regression of the intentional-immutability invariant.
+#
+# Assertion posture per role: the invariant holds regardless of role. All
+# 4 roles get one of {401, 403, 404, 405}. This is deliberately weaker
+# than the ops-superuser-only invariant in test_i0302_p4_endpoint_sentinels.py
+# — the point isn't role-scoped rejection, it's "no mutation handler exists."
+#
+# Refs:
+#   I-030203 §6 Sub-phase 3 pipeline (steps 10-15)
+#   I-030203 §6.a AgentExecution mutation semantics research input
+#   S2748 handoff §5.2 (deferred formalization → Sub-phase 3)
+
+
+_IMMUTABILITY_REJECT_CODES = {401, 403, 404, 405}
+_UNSAFE_METHODS = ("put", "patch", "delete")
+
+
+def _hit_unsafe(url: str, method: str, client_) -> int:
+    """Issue the unsafe method against the URL; return the status code."""
+    method_fn = getattr(client_, method.lower())
+    return method_fn(url).status_code
+
+
+class TestIntentionalImmutabilityInitiative:
+    """Initiative is intentionally immutable — assert absence of CRUD UPDATE/DELETE.
+
+    Endpoints under test:
+      - /api/initiatives/                (LIST — GET-only per views_research_demo.py:1337)
+      - /api/initiatives/<fake-uuid>/    (no detail endpoint exists — 404 expected)
+    """
+
+    LIST_URL = "/api/initiatives/"
+    DETAIL_URL = "/api/initiatives/00000000-0000-0000-0000-000000000000/"
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_list_unsafe_method_anonymous(self, method):
+        assert _hit_unsafe(self.LIST_URL, method, Client()) in _IMMUTABILITY_REJECT_CODES
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_list_unsafe_method_user_a(self, client, tb_golden, method):
+        client.force_login(tb_golden["user_a"])
+        assert _hit_unsafe(self.LIST_URL, method, client) in _IMMUTABILITY_REJECT_CODES
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_list_unsafe_method_user_b(self, client, tb_golden, method):
+        client.force_login(tb_golden["user_b"])
+        assert _hit_unsafe(self.LIST_URL, method, client) in _IMMUTABILITY_REJECT_CODES
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_list_unsafe_method_superuser(self, client, tb_golden, method):
+        client.force_login(tb_golden["superuser"])
+        assert _hit_unsafe(self.LIST_URL, method, client) in _IMMUTABILITY_REJECT_CODES
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_detail_unsafe_method_anonymous(self, method):
+        assert _hit_unsafe(self.DETAIL_URL, method, Client()) in _IMMUTABILITY_REJECT_CODES
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_detail_unsafe_method_user_a(self, client, tb_golden, method):
+        client.force_login(tb_golden["user_a"])
+        assert _hit_unsafe(self.DETAIL_URL, method, client) in _IMMUTABILITY_REJECT_CODES
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_detail_unsafe_method_user_b(self, client, tb_golden, method):
+        client.force_login(tb_golden["user_b"])
+        assert _hit_unsafe(self.DETAIL_URL, method, client) in _IMMUTABILITY_REJECT_CODES
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_detail_unsafe_method_superuser(self, client, tb_golden, method):
+        client.force_login(tb_golden["superuser"])
+        assert _hit_unsafe(self.DETAIL_URL, method, client) in _IMMUTABILITY_REJECT_CODES
+
+
+class TestIntentionalImmutabilityChatConversation:
+    """ChatConversation is intentionally immutable — assert absence of CRUD UPDATE/DELETE.
+
+    Endpoints under test:
+      - /api/pa/conversations/                (LIST — GET-only per views_personal_assistant.py:1540)
+      - /api/pa/conversations/<fake-id>/      (DETAIL — GET-only per views_personal_assistant.py:1618)
+    """
+
+    LIST_URL = "/api/pa/conversations/"
+    DETAIL_URL = "/api/pa/conversations/pa-tb-fake-conversation-id/"
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_list_unsafe_method_anonymous(self, method):
+        assert _hit_unsafe(self.LIST_URL, method, Client()) in _IMMUTABILITY_REJECT_CODES
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_list_unsafe_method_user_a(self, client, tb_golden, method):
+        client.force_login(tb_golden["user_a"])
+        assert _hit_unsafe(self.LIST_URL, method, client) in _IMMUTABILITY_REJECT_CODES
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_list_unsafe_method_user_b(self, client, tb_golden, method):
+        client.force_login(tb_golden["user_b"])
+        assert _hit_unsafe(self.LIST_URL, method, client) in _IMMUTABILITY_REJECT_CODES
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_list_unsafe_method_superuser(self, client, tb_golden, method):
+        client.force_login(tb_golden["superuser"])
+        assert _hit_unsafe(self.LIST_URL, method, client) in _IMMUTABILITY_REJECT_CODES
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_detail_unsafe_method_anonymous(self, method):
+        assert _hit_unsafe(self.DETAIL_URL, method, Client()) in _IMMUTABILITY_REJECT_CODES
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_detail_unsafe_method_user_a(self, client, tb_golden, method):
+        client.force_login(tb_golden["user_a"])
+        assert _hit_unsafe(self.DETAIL_URL, method, client) in _IMMUTABILITY_REJECT_CODES
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_detail_unsafe_method_user_b(self, client, tb_golden, method):
+        client.force_login(tb_golden["user_b"])
+        assert _hit_unsafe(self.DETAIL_URL, method, client) in _IMMUTABILITY_REJECT_CODES
+
+    @pytest.mark.parametrize("method", _UNSAFE_METHODS)
+    def test_detail_unsafe_method_superuser(self, client, tb_golden, method):
+        client.force_login(tb_golden["superuser"])
+        assert _hit_unsafe(self.DETAIL_URL, method, client) in _IMMUTABILITY_REJECT_CODES
