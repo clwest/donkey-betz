@@ -228,6 +228,7 @@ htmlcov/
 .pytest_cache/
 cover/
 tests/artifacts/*.png
+test_reports/
 
 # Documentation
 docs/_build/
