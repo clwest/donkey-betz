@@ -132,7 +132,9 @@ Phase 1 records per-task classification; Phase 2 chooses the canonical mechanism
 
 ### §3.5 — Predicate module reuse (§2.8 preliminary)
 
-I-0302 Phase 2 predicate module lives at `core/tenant_boundary_lockdown/predicates.py` (11 predicate functions + 60 unit tests, ratified 2026-07-10). Import from task-scope code is subject to the same import-layering constraint recorded at I-0302 §6.1 — task modules cannot import Django views, but the predicate module is service-layer and importable from tasks per the layering spec.
+I-0302 Phase 2 predicate module lives at `core/security/object_authz.py` (11 predicate functions + 60 unit tests, ratified 2026-07-10). Import from task-scope code is subject to the same import-layering constraint recorded at I-0302 §6.1 — task modules cannot import Django views, but the predicate module is service-layer and importable from tasks per the layering spec.
+
+> **S2755 amendment (2026-07-11):** the original scoping text referenced `core/tenant_boundary_lockdown/predicates.py` — that path was never landed. The ratified I-0302 Phase 2 module is at `core/security/object_authz.py` (I-030202_predicate_module_design.md §2 correctly names this path). Phase 2 of I-0303 lands the enforcement substrate at `core/security/task_enforcement.py` — same package, one directory-deep, matching the I-0302 precedent.
 
 Phase 2 of I-0303 will confirm import graph is clean (no circular dependency introduced).
 
@@ -243,7 +245,7 @@ Interim policy for tasks whose payload legitimately has NO acting user:
 
 ### Phase 2 — Decorator + Base-Class Implementation (target: 1 session)
 
-- Author `@enforce_tenant_boundary` decorator + `TenantScopedTask` base class in `core/tenant_boundary_lockdown/task_enforcement.py`
+- Author `@enforce_tenant_boundary` decorator + `TenantScopedTask` base class in `core/security/task_enforcement.py` (path amended S2755 — see §3.5 note)
 - Import the I-0302 predicate module (import-layering verified)
 - Unit tests: happy path + user-A-attempts-user-B-row + system-task-passthrough + missing-identity-rejection
 - Rigby SIGN on the enforcement module before Phase 3 opens
@@ -325,7 +327,7 @@ I-0303 close ceremony follows PLAYBOOK-7.4.1/7.4.2/7.4.3 (close-ceremony deliver
 - **I-0302 §7.2 deferral:** identifies exactly what I-0303 must cover (Celery task workspace-scope re-verification + reject unsafe dispatches + user-A → user-B negative tests)
 - **CAMPAIGN.md §4 arc slot:** I-0303 Async Tenant-Boundary Enforcement, effort M, prereq I-0301 safety contract signed
 - **CAMPAIGN.md §5 dependency:** RUR-C1 parent close requires all three arcs pass shared regression
-- **Predicate module:** `core/tenant_boundary_lockdown/predicates.py` (ratified I-0302 Phase 2)
+- **Predicate module:** `core/security/object_authz.py` (ratified I-0302 Phase 2; scoping-time path reference amended S2755 — see §3.5 note)
 - **Regression harness:** `tests/security/` (ratified I-0302 Phase 4)
 - **Failure-data safety contract:** `docs/research/implementation/tenant_boundary_lockdown/failure_data_safety_contract.md` (ratified I-0301)
 - **Close-ceremony discipline (new):** PLAYBOOK-7.4.1/7.4.2/7.4.3/7.5.1/7.6.1 (ratified v0.5.0 S2753)
