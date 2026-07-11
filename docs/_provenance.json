@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-11T22:00:58+00:00",
+    "generated": "2026-07-11T22:43:03+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "b1ae6561e8b2",
-    "doc_count": 2560,
-    "commit_count": 7890,
+    "git_head": "f2cba2917922",
+    "doc_count": 2563,
+    "commit_count": 7892,
     "confidence_breakdown": {
-      "HIGH": 1628,
+      "HIGH": 1629,
       "MEDIUM": 402,
-      "LOW": 5,
-      "UNKNOWN": 525
+      "LOW": 6,
+      "UNKNOWN": 526
     },
     "excludes": [
       "docs/archive/",
@@ -2586,7 +2586,7 @@
         2745,
         2749
       ],
-      "commit_count": 1250,
+      "commit_count": 1252,
       "prs": [
         10,
         11,
@@ -3156,7 +3156,8 @@
         3144,
         3150,
         3152,
-        3153
+        3153,
+        3154
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7498,7 +7499,7 @@
         2745,
         2749
       ],
-      "commit_count": 198,
+      "commit_count": 200,
       "prs": [
         2213,
         2219,
@@ -7671,7 +7672,8 @@
         3143,
         3150,
         3152,
-        3153
+        3153,
+        3154
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19736,6 +19738,34 @@
       "prs": [
         3153
       ]
+    },
+    "docs/handoffs/SESSION_2765_OPS_TOOL_RECENT_RECYCLES_RATIFIED.md": {
+      "originating_session": 2765,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "f2cba291",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ops): S2765 ops_tool.recent_recycles PA tool + operator timeline ratified (#3154)",
+      "sessions_touched": [
+        2765
+      ],
+      "commit_count": 2,
+      "prs": [
+        3154
+      ]
+    },
+    "docs/handoffs/SESSION_2766_PLAYBOOK_V0_6_0_RATIFIED.md": {
+      "originating_session": 2766,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2766
+      ],
+      "commit_count": 0,
+      "prs": []
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
       "originating_session": 280,
@@ -36674,6 +36704,19 @@
       "commit_count": 2,
       "prs": [
         3151
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_recent_recycles.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "f2cba291",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ops): S2765 ops_tool.recent_recycles PA tool + operator timeline ratified (#3154)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3154
       ]
     },
     "docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_staleness_warnings.md": {
