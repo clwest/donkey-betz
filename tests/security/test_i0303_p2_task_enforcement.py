@@ -798,3 +798,128 @@ def test_agent_task_execution_shim_predicate_null_user_rejected():
     user = MagicMock()
     user.pk = 42
     assert predicate(user, row) is False
+
+
+# --------------------------------------------------------------------------
+# S2757 Phase 3 BATCH-FIX PR — B1 payload strip + B2 dispatch conversion
+# --------------------------------------------------------------------------
+#
+# Watchpoint tests: (1) apply_async_with_actor(user=None) omits header
+# cleanly; (2) _impl_summarize_conversation_task re-derives user_id from
+# ChatConversation.user_id, not payload.
+
+
+def test_apply_async_with_actor_omits_header_when_user_is_none(db):
+    """S2757 B2 watchpoint 1 — apply_async_with_actor(user=None) MUST omit
+    the x-acting-user-id header entirely and still dispatch cleanly. Substrate
+    enforcement then emits ``missing_acting_identity`` at the task boundary,
+    which is the correct report-only outcome for anonymous dispatches."""
+    task = MagicMock()
+    apply_async_with_actor(task, None, kwargs={"payload": "anon"})
+
+    task.apply_async.assert_called_once()
+    call_headers = task.apply_async.call_args.kwargs["headers"]
+    assert ACTING_USER_HEADER not in call_headers, (
+        "apply_async_with_actor(user=None) must NOT set x-acting-user-id"
+    )
+    # Correlation headers still preserved (empty dict passed)
+    assert call_headers == {}
+
+
+def test_apply_async_with_actor_none_user_preserves_correlation_headers(db):
+    """S2757 B2 watchpoint 1 — with user=None, caller-provided correlation
+    headers are still preserved unchanged."""
+    task = MagicMock()
+    apply_async_with_actor(
+        task,
+        None,
+        kwargs={},
+        headers={"x-request-id": "req-anon-42"},
+    )
+
+    call_headers = task.apply_async.call_args.kwargs["headers"]
+    assert ACTING_USER_HEADER not in call_headers
+    assert call_headers["x-request-id"] == "req-anon-42"
+
+
+@pytest.mark.django_db
+def test_summarize_conversation_task_derives_user_from_conversation(
+    tb_user_a, tb_conversations_a, monkeypatch
+):
+    """S2757 B1 — _impl_summarize_conversation_task derives user_id from
+    ChatConversation.user_id (Q1 DB-row-derived), not from a payload kwarg
+    (payload user_id was stripped). Ownership of resulting Deliverable +
+    ConversationMemory rows attributes to the conversation owner.
+    """
+    from core.tasks_conversations import _impl_summarize_conversation_task
+
+    captured = {}
+
+    class _StubDeliverable:
+        id = "stub-deliverable-id"
+
+    def _stub_create_deliverable(**kwargs):
+        captured["deliverable_kwargs"] = kwargs
+        return _StubDeliverable()
+
+    def _stub_llm(*args, **kwargs):
+        return {"response": "STUB_SUMMARY"}
+
+    # Patch LLM + Deliverable factory to avoid real network + DB heavy paths
+    from core.services import deliverable_factory as df_module
+    from core.llm_enforcer import LLMEnforcer
+
+    monkeypatch.setattr(df_module, "create_deliverable", _stub_create_deliverable)
+    monkeypatch.setattr(LLMEnforcer, "enforce_real_ai", _stub_llm, raising=True)
+
+    # Skip embedding path (best-effort try/except in impl catches failure anyway)
+    from core.services.embedding_service import EmbeddingService
+    def _stub_embed(self, text, agent_name=None):
+        raise RuntimeError("skip-embed-in-test")
+    monkeypatch.setattr(EmbeddingService, "create_embedding", _stub_embed, raising=True)
+
+    # tb_conversations_a[0] is a conversation_id (CharField), owned by tb_user_a
+    conv_id = tb_conversations_a[0]
+
+    # Invoke impl directly (bypass Celery machinery)
+    class _StubSelf:
+        pass
+
+    _impl_summarize_conversation_task(_StubSelf(), conv_id)
+
+    assert "deliverable_kwargs" in captured, "create_deliverable was not called"
+    assert captured["deliverable_kwargs"]["user_id"] == tb_user_a.pk, (
+        f"Deliverable ownership must derive from ChatConversation.user_id "
+        f"({tb_user_a.pk}), got {captured['deliverable_kwargs'].get('user_id')}. "
+        f"Q1 trusted-source hierarchy violated if payload path is reachable."
+    )
+
+
+@pytest.mark.django_db
+def test_summarize_conversation_task_empty_conversation_yields_no_deliverable(
+    tb_user_a, monkeypatch
+):
+    """S2757 B1 — when conversation_id matches no ChatConversation rows,
+    _impl early-returns without calling create_deliverable. user_id fallback
+    to None is not exercised because the empty-turns guard fires first
+    (existing behavior preserved)."""
+    from core.tasks_conversations import _impl_summarize_conversation_task
+
+    captured = {"called": False}
+
+    def _stub_create_deliverable(**kwargs):
+        captured["called"] = True
+        return MagicMock()
+
+    from core.services import deliverable_factory as df_module
+    monkeypatch.setattr(df_module, "create_deliverable", _stub_create_deliverable)
+
+    class _StubSelf:
+        pass
+
+    result = _impl_summarize_conversation_task(_StubSelf(), "s2757-nonexistent-conv-id")
+
+    assert result is None
+    assert captured["called"] is False, (
+        "Empty-conversation path must not attempt to create a Deliverable"
+    )

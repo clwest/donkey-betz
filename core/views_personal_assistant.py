@@ -463,15 +463,23 @@ def unified_pa_chat(request):
                 logger.warning(f"PA chat received invalid workspace_id: {workspace_id}")
 
         from core.tasks import process_pa_chat_task
+        from core.security.task_enforcement import apply_async_with_actor
 
-        task = process_pa_chat_task.delay(
-            user_id=request.user.id,
-            message=message,
-            context=context,
-            generate_audio=generate_audio,
-            conversation_id=conversation_id,
-            source=source,
-            platform=platform,
+        # S2757 B2 — dispatch via apply_async_with_actor so the trusted
+        # x-acting-user-id header lands on the task; payload user_id kept
+        # for conversation-bootstrap semantics (Phase 3 D1 deferral).
+        task = apply_async_with_actor(
+            process_pa_chat_task,
+            request.user,
+            kwargs=dict(
+                user_id=request.user.id,
+                message=message,
+                context=context,
+                generate_audio=generate_audio,
+                conversation_id=conversation_id,
+                source=source,
+                platform=platform,
+            ),
         )
 
         # Dispatch autonomous Claude Code agent if message addresses it
@@ -606,16 +614,23 @@ def pa_conversation_post_message(request, conversation_id):
         task_id = None
         if trigger_pa:
             from core.tasks import process_pa_chat_task
+            from core.security.task_enforcement import apply_async_with_actor
             context = request.data.get('context', {})
             context['source'] = source
             context['already_stored'] = True  # Prevent duplicate user message broadcast
-            task = process_pa_chat_task.delay(
-                user_id=str(request.user.id),
-                message=message,
-                context=context,
-                conversation_id=conversation_id,
-                source=source,
-                platform='cli' if source == 'claude-code' else 'web',
+            # S2757 B2 — dispatch via apply_async_with_actor; payload user_id
+            # kept for conversation-bootstrap semantics (Phase 3 D1 deferral).
+            task = apply_async_with_actor(
+                process_pa_chat_task,
+                request.user,
+                kwargs=dict(
+                    user_id=str(request.user.id),
+                    message=message,
+                    context=context,
+                    conversation_id=conversation_id,
+                    source=source,
+                    platform='cli' if source == 'claude-code' else 'web',
+                ),
             )
             task_id = str(task.id)
 

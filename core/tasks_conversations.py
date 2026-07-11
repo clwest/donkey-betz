@@ -3460,21 +3460,33 @@ def _impl_trigger_signal_driven_conversation(self, auto_topic_id: str):
 
 
 
-def _impl_summarize_conversation_task(self, conversation_id, user_id=None):
+def _impl_summarize_conversation_task(self, conversation_id):
     """
     Summarize a PA conversation thread via LLM and save as pinned Deliverable.
 
     Dispatched by conversation_tool summary action. Runs on content queue.
+
+    S2757 B1 — payload ``user_id`` stripped (Phase 1 §5.1 Q1 explicit
+    violation target). Ownership re-derived from ``ChatConversation.user_id``
+    per Q1 trusted-source hierarchy (DB row → transport header → NEVER
+    payload). Empty-conversation edge case yields ``user_id=None`` (unowned
+    downstream Deliverable + no ConversationMemory row) — matches prior
+    behavior when payload user_id was None.
     """
     from core.models import ChatConversation
     from core.models_deliverables import Deliverable
 
     logger.info(f"[CONVERSATION] Summarizing conversation {conversation_id}")
 
-    turns = list(
+    turns_qs = (
         ChatConversation.objects.filter(conversation_id=conversation_id)
         .order_by('created_at')
-        .values('user_message', 'assistant_response', 'created_at', 'session_title')
+    )
+    # Re-derive user_id from the conversation row (Q1 DB-row-derived, not payload)
+    first_row = turns_qs.only('user_id', 'session_title').first()
+    user_id = first_row.user_id if first_row else None
+    turns = list(
+        turns_qs.values('user_message', 'assistant_response', 'created_at', 'session_title')
     )
     if not turns:
         logger.warning(f"[CONVERSATION] No turns found for {conversation_id}")
