@@ -152,3 +152,35 @@ def test_stack_with_superuser_required_super_reaches_view(rf, superuser):
 
     assert response.status_code == 200
     assert response.content == b"aggregate"
+    assert getattr(my_view, "_ops_aggregate_allowed", False) is True
+
+
+def test_reversed_stack_ordering_preserves_auth_and_marker(rf, anon_user, regular_user, superuser):
+    """§11.1 ordering not semantically significant.
+
+    Rigby SIGN-WITH-EDITS Q3 (2026-07-10): verify that placing
+    @ops_aggregate_allowed OUTER and @superuser_required INNER still yields
+    the same three-role auth posture (anon 401, non-super 403, super 200)
+    AND that the marker attribute survives.
+    """
+
+    @ops_aggregate_allowed
+    @superuser_required
+    def my_view(request):
+        return HttpResponse("aggregate", status=200)
+
+    assert getattr(my_view, "_ops_aggregate_allowed", False) is True
+
+    anon_request = rf.get("/ops/aggregate/")
+    anon_request.user = anon_user
+    assert my_view(anon_request).status_code == 401
+
+    reg_request = rf.get("/ops/aggregate/")
+    reg_request.user = regular_user
+    assert my_view(reg_request).status_code == 403
+
+    super_request = rf.get("/ops/aggregate/")
+    super_request.user = superuser
+    super_response = my_view(super_request)
+    assert super_response.status_code == 200
+    assert super_response.content == b"aggregate"
