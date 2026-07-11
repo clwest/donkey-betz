@@ -2,9 +2,9 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2754 CLOSED — I-0303 SCOPING + PHASE 1 LEDGER RATIFIED; PHASE 2 AUTHORIZED
+## READ THIS FIRST — SESSION 2754 + S2754a CLOSED — I-0303 SCOPING + PHASE 1 LEDGER RATIFIED + CONTENT-DELIVERABLE GAP FIXED; PHASE 2 AUTHORIZED
 
-**Refreshed 2026-07-11 (SESSION 2754 CLOSED — two Chris D-verdicts: I-0303 scoping Q1..Q6 + Phase 1 audit ledger. Phase 2 authorized to open at S2755).**
+**Refreshed 2026-07-11 (SESSION 2754 CLOSED — two Chris D-verdicts: I-0303 scoping Q1..Q6 + Phase 1 audit ledger. Phase 2 authorized to open at S2755. S2754a addendum: content-deliverable gap discovered + fixed — 6 content mirrors created for I-0302/I-0303; new twin-canonical-representations rule codified).**
 
 **S2754 shipped (5 PRs total):**
 
@@ -106,10 +106,19 @@ Rigby will not dispatch until the wrapper is repointed to the new pin.
 
 🖥️ **Workspace UI — `/workspaces` surface:**
 
-- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — **PRIMARY** for I-0303 execution + phase ratifications
-  - `RATIFICATION_20260711_i0303_scoping` (`18194cab-b737-42bf-b747-1263af5771ae`) — scoping envelope
-  - `RATIFICATION_20260711_i0303_phase1_ledger` (`2020bc4f-ef7d-42e8-9ee5-38be928ba483`) — Phase 1 envelope
-  - Phase 2 module ratification will land here as new deliverable
+- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — **PRIMARY** for I-0303 execution + phase ratifications. **9 deliverables total** after S2754a backfill.
+  - Governance-truth (ratification envelopes):
+    - `RATIFICATION_20260711_i0303_scoping` (`18194cab-b737-42bf-b747-1263af5771ae`)
+    - `RATIFICATION_20260711_i0303_phase1_ledger` (`2020bc4f-ef7d-42e8-9ee5-38be928ba483`)
+  - Engineering-truth (content mirrors — 7 total: 6 from S2754a backfill + 1 pre-existing I-0301):
+    - `I-0303 — Scoping (mirror)` — `f8af6aad-05ae-4d9f-b61b-3a81d6604b57`
+    - `I-0303 — Audit Ledger (mirror)` — `0462ac90-dc11-4196-a549-150ff271b7e3`
+    - `I-0302 — Scoping (mirror)` — `80c83e8c-d130-4b65-9204-de279fae6b83`
+    - `I-030201 — Audit Ledger (mirror)` — `c16e582c-ed09-4747-9d77-a4804a746b99`
+    - `I-030202 — Design (mirror)` — `e916cbe9-1bb9-4b17-a54d-daed25725efb`
+    - `I-030299 — Arc Close (mirror)` — `5d879edd-d654-4fd3-b955-89f700c8416a`
+    - `I-0301 Phase 1 Audit Ledger — HTTP AllowAny Surface Classification` — `1ca36f84-...` (pre-existing; Rigby-prefix stripped at S2754a)
+  - Phase 2 module ratification will land here as TWO new deliverables (per twin-canonical-representations rule)
 - **Architecture & Research** (`a9a16593-e0a4-44dc-8256-efc65d524b3c`) — governance / Playbook ratifications
   - `RATIFICATION_20260711_PLAYBOOK_v0_5_0` (`4c322f48-3d0b-4e32-8a30-15a08400f887`)
 - **Real User Readiness Campaign** (`638e9e90-47b4-4bd4-a872-bf16181cf3b5`) — parent program workspace
