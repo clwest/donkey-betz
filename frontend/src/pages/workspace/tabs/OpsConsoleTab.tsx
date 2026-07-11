@@ -31,8 +31,8 @@ export function OpsConsoleTab() {
   // S2761: unified health summary — freshness verdict + I-0303 tenant
   // boundary violation counts + S2759 staleness warning counts. Wraps the
   // three S2755→S2760 diagnostic surfaces into one always-visible tile.
-  // Uses axios `api` instance so the Authorization token attaches (raw
-  // fetch omits it and 401s — see the sibling SLO/failure/blocked queries).
+  // S2762: sibling SLO/failure/blocked queries below now share this
+  // `api.get` pattern (raw fetch omitted the Authorization token → 401).
   const healthQuery = useQuery<OpsHealthSummary | null>({
     queryKey: ['ops-health-summary'],
     queryFn: async () => {
@@ -44,40 +44,34 @@ export function OpsConsoleTab() {
     refetchInterval: 30000,
   })
 
-  // Fetch SLO status
   const sloQuery = useQuery({
     queryKey: ['ops-slo'],
     queryFn: async () => {
       try {
-        const r = await fetch('/api/ops/slo-status/', { credentials: 'include' })
-        if (!r.ok) return null
-        return r.json()
+        const r = await api.get('/ops/slo-status/')
+        return r.data
       } catch { return null }
     },
     staleTime: 60000,
   })
 
-  // Fetch failure signatures
   const sigQuery = useQuery({
     queryKey: ['ops-signatures'],
     queryFn: async () => {
       try {
-        const r = await fetch('/api/ops/failure-signatures/?window=24h&limit=10', { credentials: 'include' })
-        if (!r.ok) return null
-        return r.json()
+        const r = await api.get('/ops/failure-signatures/?window=24h&limit=10')
+        return r.data
       } catch { return null }
     },
     staleTime: 60000,
   })
 
-  // Fetch blocked agents
   const blockedQuery = useQuery({
     queryKey: ['ops-blocked'],
     queryFn: async () => {
       try {
-        const r = await fetch('/api/ops/blocked-agents/', { credentials: 'include' })
-        if (!r.ok) return null
-        return r.json()
+        const r = await api.get('/ops/blocked-agents/')
+        return r.data
       } catch { return null }
     },
     staleTime: 60000,
