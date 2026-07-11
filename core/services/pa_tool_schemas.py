@@ -2456,6 +2456,7 @@ PA_TOOL_SCHEMAS = [
                         "focus_mode_status", "focus_mode_update",
                         "celery_task_history", "execution_detail", "execution_search",
                         "memory_pressure", "top_consumers", "zombie_thread_rate",
+                        "tenant_boundary_violations",
                     ],
                     "description": (
                         "overview: one-shot ops snapshot — version + slo_status + top failure_signatures "
@@ -2500,7 +2501,17 @@ PA_TOOL_SCHEMAS = [
                         "can't kill threads — bounded by --max-tasks-per-child recycling. Use when "
                         "asked about agent hangs, timeout rates, upstream-provider degradation. "
                         "Pass hours (default 24, max 168) and optional agent_name to filter. "
-                        "Alert at >5/hour for any single agent."
+                        "Alert at >5/hour for any single agent. "
+                        "tenant_boundary_violations: query OpsRunEvent for I-0303 "
+                        "tenant_boundary_violation envelopes (Phase 3 REPORT-ONLY substrate). "
+                        "Returns total_count + by_task_name + by_failure_kind + by_task_and_kind "
+                        "aggregates + sample_events (most-recent). Optional filters: task_name "
+                        "(substring match), failure_kind (one of missing_row_id/row_not_found/"
+                        "missing_acting_identity/acting_user_not_found/unregistered_model/"
+                        "predicate_rejected), limit (default 20, max 100). Empty state includes "
+                        "a diagnostic note. Use when asked about tenant boundary violations, "
+                        "cross-tenant reports, I-0303 findings, or which tasks are surfacing "
+                        "report-only warn violations."
                     ),
                 },
                 "window": {
@@ -2522,7 +2533,15 @@ PA_TOOL_SCHEMAS = [
                 },
                 "task_name": {
                     "type": "string",
-                    "description": "For celery_task_history: filter by task name (substring match, e.g. 'cleanup_stale'). Omit for all tasks.",
+                    "description": "For celery_task_history and tenant_boundary_violations: filter by task name (substring match, e.g. 'cleanup_stale', 'summarize_conversation'). Omit for all tasks.",
+                },
+                "failure_kind": {
+                    "type": "string",
+                    "enum": [
+                        "missing_row_id", "row_not_found", "missing_acting_identity",
+                        "acting_user_not_found", "unregistered_model", "predicate_rejected",
+                    ],
+                    "description": "For tenant_boundary_violations: filter by failure_kind discriminator (one of the 6 I-0303 Phase 2 failure kinds). Omit for all kinds.",
                 },
                 "execution_id": {
                     "type": "string",
