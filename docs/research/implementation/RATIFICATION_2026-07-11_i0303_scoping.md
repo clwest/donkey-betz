@@ -49,6 +49,7 @@ depends_on_ratified_artifacts:
   - I-0301 Failure-Data Safety Contract (ratified 2026-07-10)
   - I-0302 predicate module + shared cross-tenant regression harness (ratified 2026-07-10)
 workspace_ratification_deliverable_id: 18194cab-b737-42bf-b747-1263af5771ae
+workspace_content_mirror_deliverable_id: f8af6aad-05ae-4d9f-b61b-3a81d6604b57  # S2754a backfill per twin-deliverable rule
 close_pr: "#3137 (merged 47cc13dd)"
 ---
 
