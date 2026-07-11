@@ -198,3 +198,231 @@ class TestStaffTighteningStats:
             f"total={total} (regression against §5.1.a Option A "
             f"staff-tightening)"
         )
+
+
+# ==========================================================================
+# DELETE — /api/deliverables/<uuid>/delete/ — §5.1.b hotfix regression
+# ==========================================================================
+
+
+class TestDeleteDeliverableScoping:
+    """Exercises §5.1.b hotfix (2026-07-10, S2748).
+
+    Pre-hotfix: `delete_deliverable` fetched via
+    `get_object_or_404(Deliverable, id=deliverable_id)` with no
+    ownership filter — any authenticated caller could DELETE any
+    deliverable whose id they knew.
+
+    Post-hotfix: source-fetch wrapped in `scope_queryset_deliverable`
+    (mirrors the D1 clone_deliverable pattern) — non-owners receive
+    404 instead of destructive success.
+    """
+
+    def _url(self, deliverable_id) -> str:
+        return f"/api/deliverables/{deliverable_id}/delete/"
+
+    def test_owner_can_delete_own_deliverable(
+        self, client, user_a, deliverable_a
+    ):
+        client.force_login(user_a)
+        resp = client.post(self._url(deliverable_a.id))
+        assert resp.status_code == 200, (
+            f"Owner must be able to delete own deliverable; got {resp.status_code}"
+        )
+        # Confirm the row is actually gone.
+        assert not Deliverable.objects.filter(id=deliverable_a.id).exists()
+
+    def test_non_owner_cannot_delete(
+        self, client, user_a, user_b, deliverable_a
+    ):
+        # Pre-hotfix: this succeeded with 200 and deleted deliverable_a.
+        # Post-hotfix: predicate scoping returns .none() for user_b, so
+        # get_object_or_404 raises Http404.
+        client.force_login(user_b)
+        resp = client.post(self._url(deliverable_a.id))
+        assert resp.status_code == 404, (
+            f"Non-owner must receive 404 on delete of another user's "
+            f"deliverable; got {resp.status_code} (regression against §5.1.b hotfix)"
+        )
+        # Confirm the row is NOT gone.
+        assert Deliverable.objects.filter(id=deliverable_a.id).exists(), (
+            "Non-owner delete must NOT destroy the row — §5.1.b hotfix contract."
+        )
+
+    def test_anonymous_blocked(self, deliverable_a):
+        # @token_auth_required on delete_deliverable → 401 for anon.
+        resp = Client().post(self._url(deliverable_a.id))
+        assert resp.status_code in (401, 403), (
+            f"Anonymous caller must be blocked from delete; got {resp.status_code}"
+        )
+        # Row must still exist.
+        assert Deliverable.objects.filter(id=deliverable_a.id).exists()
+
+
+# ==========================================================================
+# LINK — /api/deliverables/<uuid>/link-workspace/ — §5.1.b hotfix regression
+# ==========================================================================
+
+
+class TestLinkDeliverableWorkspaceScoping:
+    """Exercises §5.1.b hotfix (2026-07-10, S2748) for `link_deliverable_workspace`.
+
+    Pre-hotfix: both the source deliverable fetch AND the target workspace
+    fetch were unscoped. Attacker could (a) hijack an unclaimed deliverable
+    into their own workspace, OR (b) dump their own deliverable into
+    another user's workspace.
+
+    Post-hotfix: source-fetch via `scope_queryset_deliverable`; target
+    workspace gate via `user_can_access_workspace`.
+    """
+
+    def _url(self, deliverable_id) -> str:
+        return f"/api/deliverables/{deliverable_id}/link-workspace/"
+
+    def _body(self, workspace_id) -> str:
+        import json
+
+        return json.dumps({"workspace_id": str(workspace_id)})
+
+    def test_non_owner_cannot_link_source_deliverable(
+        self, client, user_a, user_b, workspace_a, workspace_b, deliverable_a
+    ):
+        # user_b tries to link user_a's deliverable to user_b's own workspace.
+        # Predicate scoping means user_b's queryset returns .none() for
+        # deliverable_a, so source-fetch 404s.
+        client.force_login(user_b)
+        resp = client.post(
+            self._url(deliverable_a.id),
+            data=self._body(workspace_b.id),
+            content_type="application/json",
+        )
+        assert resp.status_code == 404, (
+            f"Non-owner must not be able to link another user's deliverable; "
+            f"got {resp.status_code} (regression against §5.1.b hotfix)"
+        )
+        # Original workspace unchanged.
+        deliverable_a.refresh_from_db()
+        assert deliverable_a.workspace_id == workspace_a.id
+
+    def test_owner_cannot_link_to_foreign_workspace(
+        self, client, user_a, workspace_b, deliverable_a
+    ):
+        # user_a owns deliverable_a and requests it be linked to user_b's
+        # workspace. Source-fetch passes (owner), but target-workspace
+        # gate rejects (`user_can_access_workspace` returns False).
+        client.force_login(user_a)
+        resp = client.post(
+            self._url(deliverable_a.id),
+            data=self._body(workspace_b.id),
+            content_type="application/json",
+        )
+        assert resp.status_code == 404, (
+            f"Owner must not be able to link deliverable to a foreign "
+            f"workspace; got {resp.status_code} (regression against §5.1.b)"
+        )
+
+    def test_anonymous_blocked(self, deliverable_a, workspace_a):
+        # @token_auth_required on link_deliverable_workspace → 401 for anon.
+        resp = Client().post(
+            self._url(deliverable_a.id),
+            data=self._body(workspace_a.id),
+            content_type="application/json",
+        )
+        assert resp.status_code in (401, 403)
+
+
+# ==========================================================================
+# RECORD EVENT — /api/deliverables/<uuid>/event/ — §5.1.b hotfix regression
+# ==========================================================================
+
+
+class TestRecordDeliverableEventScoping:
+    """Exercises §5.1.b hotfix (2026-07-10, S2748) for `record_deliverable_event`.
+
+    Pre-hotfix: (a) NO auth gate — anonymous callers could poison the
+    audit log with false event rows; (b) NO ownership check —
+    authenticated non-owners could attribute events (e.g., fake "shared")
+    to another user's deliverable.
+
+    Post-hotfix: @token_auth_required + scope_queryset_deliverable
+    source-fetch.
+    """
+
+    def _url(self, deliverable_id) -> str:
+        return f"/api/deliverables/{deliverable_id}/event/"
+
+    def _body(self) -> str:
+        import json
+
+        return json.dumps({"event_type": "shared", "metadata": {}})
+
+    def test_anonymous_blocked(self, deliverable_a):
+        # Pre-hotfix: anonymous → 200 + DeliverableEvent row created
+        # (audit-log poisoning). Post-hotfix: @token_auth_required
+        # returns 401.
+        from core.models_deliverables import DeliverableEvent
+
+        pre_count = DeliverableEvent.objects.filter(
+            deliverable=deliverable_a
+        ).count()
+        resp = Client().post(
+            self._url(deliverable_a.id),
+            data=self._body(),
+            content_type="application/json",
+        )
+        assert resp.status_code in (401, 403), (
+            f"Anonymous caller must be blocked from event emission; "
+            f"got {resp.status_code} (regression against §5.1.b auth gate)"
+        )
+        # No new event row created.
+        assert (
+            DeliverableEvent.objects.filter(deliverable=deliverable_a).count()
+            == pre_count
+        )
+
+    def test_non_owner_blocked(
+        self, client, user_a, user_b, deliverable_a
+    ):
+        from core.models_deliverables import DeliverableEvent
+
+        pre_count = DeliverableEvent.objects.filter(
+            deliverable=deliverable_a
+        ).count()
+        client.force_login(user_b)
+        resp = client.post(
+            self._url(deliverable_a.id),
+            data=self._body(),
+            content_type="application/json",
+        )
+        assert resp.status_code == 404, (
+            f"Non-owner must not be able to emit events on another user's "
+            f"deliverable; got {resp.status_code} (regression against §5.1.b)"
+        )
+        assert (
+            DeliverableEvent.objects.filter(deliverable=deliverable_a).count()
+            == pre_count
+        )
+
+    def test_owner_can_emit_event(
+        self, client, user_a, deliverable_a
+    ):
+        from core.models_deliverables import DeliverableEvent
+
+        pre_count = DeliverableEvent.objects.filter(
+            deliverable=deliverable_a
+        ).count()
+        client.force_login(user_a)
+        resp = client.post(
+            self._url(deliverable_a.id),
+            data=self._body(),
+            content_type="application/json",
+        )
+        assert resp.status_code == 200, (
+            f"Owner must be able to emit events on own deliverable; "
+            f"got {resp.status_code}"
+        )
+        # New event row created.
+        assert (
+            DeliverableEvent.objects.filter(deliverable=deliverable_a).count()
+            == pre_count + 1
+        )

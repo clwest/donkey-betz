@@ -244,6 +244,60 @@ Ratified via Rigby SIGN Q1-Q7 on D1. Three amendments captured here:
 
 Entry criteria to reopen: Phase 0 multi-tenant flip / new staff-support role / external user exposure / regression finding traces to a D1-scope file. Inventory retained in this ledger and referenced from Rigby workspace deliverables `69b317b3` (B1) + `74846a3b` (B2a) + `778acfc3` (B2b) + `c79f9a3b` (Sub-phase B close) chain of custody.
 
+#### §5.1.b Amendment — Post-D1 hotfix on 3 destructive-mutation sites in `views_deliverables.py` (2026-07-10, S2748)
+
+Surfaced during Phase 4 Sub-phase 2 endpoint discovery. Codebase-wide sweep for `get_object_or_404(<CanonicalModel>, id=...)` (per Rigby SIGN Q3, ratified by Chris D-verdict) revealed **three destructive-mutation sites** missed by the D1 12-site sweep. All three ship in a single hotfix PR under this amendment.
+
+**Sweep methodology (Rigby SIGN Q3 guardrail):** codebase-wide grep for:
+- `get_object_or_404(<AnyOfThe5CanonicalModels>, id=...)` — unscoped fetch-by-id pattern
+- `<Model>.objects.get(id=...)` inside token-auth'd views — unscoped ORM-get pattern
+
+Scoped to the 5 canonical models first, then widened by finding class. Non-canonical models (`LegalDocument`, `LitigationDocument`, `ReviewDocument`) noted for follow-on I-0302 scope carve-out reviews (not in this PR).
+
+**Three sites fixed in this PR:**
+
+| # | Site | Op | Pre-hotfix gap | Fix |
+|---|---|---|---|---|
+| 1 | `core/views_deliverables.py:243-275` `delete_deliverable` | DELETE | `get_object_or_404(Deliverable, id=...)` — any authenticated caller could delete any deliverable by id | Scope source-fetch via `scope_queryset_deliverable` + `except Http404: raise` |
+| 2 | `core/views_deliverables.py:528-579` `link_deliverable_workspace` | MUTATE (workspace FK rewrite) | (a) source-fetch unscoped — hijack unclaimed deliverable; (b) target workspace fetch unscoped — dump deliverable into another user's workspace | (a) Scope source-fetch via `scope_queryset_deliverable`; (b) gate target workspace via `user_can_access_workspace`; (c) `except Http404: raise` |
+| 3 | `core/views_deliverables.py:1044-1102` `record_deliverable_event` | MUTATE (creates audit event) | (a) NO auth gate — anonymous audit-log poisoning; (b) NO ownership check — authenticated non-owner can attribute events (e.g., fake "shared") to another user's row | (a) Add `@token_auth_required`; (b) scope source-fetch via `scope_queryset_deliverable`; (c) `except Http404: raise` |
+
+**Site 1 pre-hotfix code (HEAD `0edc85cc`):**
+```python
+@require_POST
+@token_auth_required
+def delete_deliverable(request, deliverable_id):
+    try:
+        deliverable = get_object_or_404(Deliverable, id=deliverable_id)
+        title = deliverable.title
+        deliverable.delete()
+        ...
+```
+
+**Site 2 pre-hotfix code:** unscoped `get_object_or_404(Deliverable, id=deliverable_id)` at line 535 + unscoped `get_object_or_404(ProjectWorkspace, id=workspace_id)` at line 543. Attack: (a) attacker discovers Deliverable id with `workspace_id=None` (any workspace-null row visible to staff or created without workspace binding); (b) posts to `/api/deliverables/<victim_id>/link-workspace/` with `workspace_id=<attacker's own workspace>`; (c) deliverable now belongs to attacker's workspace — full read + delete + edit access.
+
+**Site 3 pre-hotfix code:** `@require_POST` decorator only (NO `@token_auth_required`), unscoped `get_object_or_404(Deliverable, id=deliverable_id)`. Attack: (a) attacker POSTs to `/api/deliverables/<any_id>/events/` from anonymous session; (b) event fires with `request.user` = AnonymousUser (or fake authenticated user with token); (c) `DeliverableEvent` row created with `event_type='shared'` or similar — poisons the deliverable's audit log with false-attribution events. `_emit_event` calls `deliverable=<row>, event_type=<attacker choice>` — the auditable trail is broken.
+
+**Why missed by D1 sweep:** D1 caller re-audit tabulated `views_deliverables.py` as "4 hits (:70, :305, :550, :804)" — the specific `scope_queryset_deliverable(...)` grep. Sites 1-3 had NO prior scoping call, so the grep skipped over them entirely. Grep-scope blind spot for endpoints that had no prior scoping call to update.
+
+**Guardrail (Rigby SIGN Q3 codified):** every future arc that touches predicate scoping MUST run this codebase-wide grep for `get_object_or_404(<Model>, id=...)` patterns per canonical model BEFORE declaring the sweep complete. Written into Phase 4 harness Sub-phase 2 opening protocol as the endpoint-discovery precondition.
+
+**Delivered:**
+- Code fixes in `core/views_deliverables.py:243-275` (delete), `:528-579` (link), `:1044-1102` (record)
+- Regression tests in `tests/security/test_i0302_d1_deliverable_wiring.py`:
+  - `TestDeleteDeliverableScoping` (3 tests: owner delete, non-owner 404, anon blocked)
+  - `TestLinkDeliverableWorkspaceScoping` (source-fetch scoping + target-workspace gating; anon blocked)
+  - `TestRecordDeliverableEventScoping` (auth gate + source-fetch scoping; anon blocked; non-owner blocked)
+- No migration required
+- No config change
+- No fleet-caller impact (all 3 endpoints are user-facing UI, no fleet consumers)
+
+**Chain of custody:**
+- Surfaced: S2748 Phase 4 Sub-phase 2 endpoint discovery (site 1)
+- Sweep expansion: Rigby SIGN Q3 ratified codebase-wide `get_object_or_404(<Model>, id=...)` grep 2026-07-10 (found sites 2 + 3)
+- Ratifier: Chris D-verdict "B — hotfix PR first, then Sub-phase 2" 2026-07-10 S2748 + Chris D-verdict "A — expand this PR" for full 3-site scope
+- PR: [#3113](https://github.com/clwest/donkey-betz-platform/pull/3113); Rigby SIGN pin `pa-59d27abadeed4411`
+
 ### §5.2 Initiative (Q7 per-user) — dominant category: **UNSCOPED (REG RISK)**
 
 **Critical §4 finding: 100% of Initiative rows have `owner=NULL`.** No caller uses `owner=` filter (grep confirmed). Every read currently returns ALL initiatives to ALL users. Backfill is a hard Phase 3 blocker.
