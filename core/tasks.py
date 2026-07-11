@@ -13121,9 +13121,12 @@ def run_source_pack_workflow(self, run_id):
     lookup_field="conversation_id",
     warn_only=True,
 )
-def summarize_conversation_task(self, conversation_id, user_id=None):
+def summarize_conversation_task(self, conversation_id):
+    # S2757 B1 — payload user_id stripped (Phase 1 §5.1 Q1 explicit
+    # violation target). Ownership re-derived from ChatConversation.user_id
+    # inside _impl per Q1 trusted-source hierarchy.
     from core.tasks_conversations import _impl_summarize_conversation_task
-    return _impl_summarize_conversation_task(self, conversation_id, user_id)
+    return _impl_summarize_conversation_task(self, conversation_id)
 @shared_task(
     name='core.tasks.ops_control_loop',
     ignore_result=True,
