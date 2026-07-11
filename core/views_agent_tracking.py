@@ -9,6 +9,7 @@ import logging
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 
 from content.models import CreativeProject
@@ -77,6 +78,11 @@ def project_agents(request, project_id):
             }
         })
 
+    except Http404:
+        # I-0302 §14 batch-fix (S2749): let 404 propagate — bare `except Exception`
+        # would convert get_object_or_404's Http404 into 500. Detected by
+        # tests/security/test_i0302_p4_ast_conformance.py.
+        raise
     except CreativeProject.DoesNotExist:
         return Response({
             'success': False,
@@ -144,6 +150,11 @@ def agent_timeline(request, project_id):
             }
         })
 
+    except Http404:
+        # I-0302 §14 batch-fix (S2749): let 404 propagate — bare `except Exception`
+        # would convert get_object_or_404's Http404 into 500. Detected by
+        # tests/security/test_i0302_p4_ast_conformance.py.
+        raise
     except CreativeProject.DoesNotExist:
         return Response({
             'success': False,
@@ -206,6 +217,11 @@ def rate_contribution(request, contribution_id):
             }
         })
 
+    except Http404:
+        # I-0302 §14 batch-fix (S2749): let 404 propagate — bare `except Exception`
+        # would convert get_object_or_404's Http404 into 500. Detected by
+        # tests/security/test_i0302_p4_ast_conformance.py.
+        raise
     except ValueError as e:
         return Response({
             'success': False,
@@ -271,6 +287,11 @@ def mark_contribution_selected(request, contribution_id):
             }
         })
 
+    except Http404:
+        # I-0302 §14 batch-fix (S2749): let 404 propagate — bare `except Exception`
+        # would convert get_object_or_404's Http404 into 500. Detected by
+        # tests/security/test_i0302_p4_ast_conformance.py.
+        raise
     except AgentContribution.DoesNotExist:
         return Response({
             'success': False,

@@ -256,6 +256,11 @@ def save_deliverable(request, deliverable_id):
             'deliverable': _serialize_deliverable(deliverable, include_content=False)
         })
 
+    except Http404:
+        # I-0302 §14 batch-fix (S2749): let 404 propagate — bare `except Exception`
+        # would convert get_object_or_404's Http404 into 500. Detected by
+        # tests/security/test_i0302_p4_ast_conformance.py.
+        raise
     except Exception as e:
         logger.error(f"Error saving deliverable {deliverable_id}: {e}", exc_info=True)
         return JsonResponse({
@@ -553,6 +558,11 @@ def export_deliverable(request, deliverable_id):
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
         return response
 
+    except Http404:
+        # I-0302 §14 batch-fix (S2749): let 404 propagate — bare `except Exception`
+        # would convert get_object_or_404's Http404 into 500. Detected by
+        # tests/security/test_i0302_p4_ast_conformance.py.
+        raise
     except Exception as e:
         logger.error(f"Error exporting deliverable {deliverable_id}: {e}", exc_info=True)
         return JsonResponse({
