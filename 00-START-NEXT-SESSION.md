@@ -60,15 +60,27 @@ Not blocking Phase 2. Latest S2753/S2754 check: run #885 all jobs failed with 2-
 
 ---
 
-## SESSION PIN — RETIRED AT S2754 CLOSE (fresh mint required at S2755 open)
+## SESSION PIN — BOTH S2754 + S2754a PINS RETIRED (fresh mint required at S2755 open in fresh terminal)
 
-**Pin `pa-2659dfa28e124f02`** (label `i0303-scoping`) minted S2754 open; **retired 2026-07-11 at S2754 close** per Chris directive (`session_tool.retire` returned `updated_count=6 previously_active=true retired=true`).
+**Pin history (S2754 arc):**
+- `pa-2659dfa28e124f02` (label `i0303-scoping`) minted S2754 open; **retired at S2754 close** (`updated_count=6 previously_active=true retired=true`)
+- `pa-8663e11a0db64131` (label `s2754a-content-deliverable-gap`) minted S2754a open; **retired at S2754a close** (`updated_count=2 previously_active=true retired=true`)
 
-**Wrapper `tools/pa_local.sh:539` still points at the retired pin** — intended failure mode forces S2755 first-action fresh mint before any other PA dispatch. Sequence:
+**Wrapper `tools/pa_local.sh:539` still points at `pa-8663e11a0db64131` (retired)** — intended failure mode forces S2755 first-action fresh mint before any other PA dispatch. Chris will open S2755 in a fresh terminal.
+
+**S2755 open sequence (in fresh terminal):**
 
 ```
+# Session-open orient (feedback rule)
+context-kit orient
+
+# Read this file end-to-end
+
+# Mint fresh pin scoped to Phase 2 work
 python manage.py session_lifecycle open --label i0303-phase2-module
-# Atomic: mints fresh pin + rewrites wrapper line 539
+
+# Confirm wrapper repoint
+grep '^python tools/pa_chat.py' tools/pa_local.sh
 ```
 
 Rigby will not dispatch until the wrapper is repointed to the new pin.

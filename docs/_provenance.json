@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-11T16:05:34+00:00",
+    "generated": "2026-07-11T16:24:22+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "fe1cf38e1d9f",
-    "doc_count": 2539,
-    "commit_count": 7864,
+    "git_head": "2c5e6eadbb9e",
+    "doc_count": 2540,
+    "commit_count": 7868,
     "confidence_breakdown": {
-      "HIGH": 1617,
+      "HIGH": 1618,
       "MEDIUM": 402,
       "LOW": 5,
       "UNKNOWN": 515
@@ -2586,7 +2586,7 @@
         2745,
         2749
       ],
-      "commit_count": 1238,
+      "commit_count": 1240,
       "prs": [
         10,
         11,
@@ -3150,7 +3150,8 @@
         3130,
         3132,
         3133,
-        3134
+        3134,
+        3141
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7492,7 +7493,7 @@
         2745,
         2749
       ],
-      "commit_count": 188,
+      "commit_count": 190,
       "prs": [
         2213,
         2219,
@@ -7660,7 +7661,8 @@
         3124,
         3128,
         3133,
-        3134
+        3134,
+        3141
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19557,6 +19559,22 @@
       "prs": [
         3134,
         3136
+      ]
+    },
+    "docs/handoffs/SESSION_2754_I0303_SCOPING_AND_PHASE1_CLOSED.md": {
+      "originating_session": 2754,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "2c5e6ead",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "docs(s2754a): content-deliverable gap discovered + fixed; twin-canonical-representations rule codified (#3142)",
+      "sessions_touched": [
+        2754
+      ],
+      "commit_count": 4,
+      "prs": [
+        3141,
+        3142
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -36381,28 +36399,30 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "fe1cf38e",
+      "first_commit_sha": "2c5e6ead",
       "first_commit_date": "2026-07-11",
-      "first_commit_subject": "docs(i0303-phase1): fill placeholders + refresh start-here for S2755 Phase 2 open (#3140)",
+      "first_commit_subject": "docs(s2754a): content-deliverable gap discovered + fixed; twin-canonical-representations rule codified (#3142)",
       "sessions_touched": [],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         3139,
-        3140
+        3140,
+        3142
       ]
     },
     "docs/research/implementation/RATIFICATION_2026-07-11_i0303_scoping.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "a957e225",
+      "first_commit_sha": "2c5e6ead",
       "first_commit_date": "2026-07-11",
-      "first_commit_subject": "docs(i0303-scoping): fill post-ratification placeholders + refresh start-here for S2755 Phase 1 open (#3138)",
+      "first_commit_subject": "docs(s2754a): content-deliverable gap discovered + fixed; twin-canonical-representations rule codified (#3142)",
       "sessions_touched": [],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         3137,
-        3138
+        3138,
+        3142
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
