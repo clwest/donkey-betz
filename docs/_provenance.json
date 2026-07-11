@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-11T21:17:23+00:00",
+    "generated": "2026-07-11T21:34:34+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "70a233baee77",
-    "doc_count": 2552,
-    "commit_count": 7882,
+    "git_head": "7db82c8434bf",
+    "doc_count": 2556,
+    "commit_count": 7886,
     "confidence_breakdown": {
-      "HIGH": 1624,
+      "HIGH": 1626,
       "MEDIUM": 402,
       "LOW": 5,
-      "UNKNOWN": 521
+      "UNKNOWN": 523
     },
     "excludes": [
       "docs/archive/",
@@ -2586,7 +2586,7 @@
         2745,
         2749
       ],
-      "commit_count": 1244,
+      "commit_count": 1246,
       "prs": [
         10,
         11,
@@ -3153,7 +3153,8 @@
         3134,
         3141,
         3143,
-        3144
+        3144,
+        3150
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7495,7 +7496,7 @@
         2745,
         2749
       ],
-      "commit_count": 192,
+      "commit_count": 194,
       "prs": [
         2213,
         2219,
@@ -7665,7 +7666,8 @@
         3133,
         3134,
         3141,
-        3143
+        3143,
+        3150
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19669,6 +19671,36 @@
       "commit_count": 2,
       "prs": [
         3149
+      ]
+    },
+    "docs/handoffs/SESSION_2761_OPS_HEALTH_TILE_RATIFIED.md": {
+      "originating_session": 2761,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "c39258f8",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ui): S2761 Ops Health Command Center tile ratified (#3150)",
+      "sessions_touched": [
+        2761
+      ],
+      "commit_count": 2,
+      "prs": [
+        3150
+      ]
+    },
+    "docs/handoffs/SESSION_2762_OPS_SIBLING_401_FIX_RATIFIED.md": {
+      "originating_session": 2762,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "7db82c84",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "fix(ui): S2762 Ops Console sibling 401 fix ratified (#3151)",
+      "sessions_touched": [
+        2762
+      ],
+      "commit_count": 2,
+      "prs": [
+        3151
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -36556,6 +36588,32 @@
         3137,
         3138,
         3142
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_ops_health_tile.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "c39258f8",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ui): S2761 Ops Health Command Center tile ratified (#3150)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3150
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_ops_sibling_401_fix.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "7db82c84",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "fix(ui): S2762 Ops Console sibling 401 fix ratified (#3151)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3151
       ]
     },
     "docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_staleness_warnings.md": {
