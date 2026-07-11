@@ -198,3 +198,62 @@ class TestStaffTighteningStats:
             f"total={total} (regression against §5.1.a Option A "
             f"staff-tightening)"
         )
+
+
+# ==========================================================================
+# DELETE — /api/deliverables/<uuid>/delete/ — §5.1.b hotfix regression
+# ==========================================================================
+
+
+class TestDeleteDeliverableScoping:
+    """Exercises §5.1.b hotfix (2026-07-10, S2748).
+
+    Pre-hotfix: `delete_deliverable` fetched via
+    `get_object_or_404(Deliverable, id=deliverable_id)` with no
+    ownership filter — any authenticated caller could DELETE any
+    deliverable whose id they knew.
+
+    Post-hotfix: source-fetch wrapped in `scope_queryset_deliverable`
+    (mirrors the D1 clone_deliverable pattern) — non-owners receive
+    404 instead of destructive success.
+    """
+
+    def _url(self, deliverable_id) -> str:
+        return f"/api/deliverables/{deliverable_id}/delete/"
+
+    def test_owner_can_delete_own_deliverable(
+        self, client, user_a, deliverable_a
+    ):
+        client.force_login(user_a)
+        resp = client.post(self._url(deliverable_a.id))
+        assert resp.status_code == 200, (
+            f"Owner must be able to delete own deliverable; got {resp.status_code}"
+        )
+        # Confirm the row is actually gone.
+        assert not Deliverable.objects.filter(id=deliverable_a.id).exists()
+
+    def test_non_owner_cannot_delete(
+        self, client, user_a, user_b, deliverable_a
+    ):
+        # Pre-hotfix: this succeeded with 200 and deleted deliverable_a.
+        # Post-hotfix: predicate scoping returns .none() for user_b, so
+        # get_object_or_404 raises Http404.
+        client.force_login(user_b)
+        resp = client.post(self._url(deliverable_a.id))
+        assert resp.status_code == 404, (
+            f"Non-owner must receive 404 on delete of another user's "
+            f"deliverable; got {resp.status_code} (regression against §5.1.b hotfix)"
+        )
+        # Confirm the row is NOT gone.
+        assert Deliverable.objects.filter(id=deliverable_a.id).exists(), (
+            "Non-owner delete must NOT destroy the row — §5.1.b hotfix contract."
+        )
+
+    def test_anonymous_blocked(self, deliverable_a):
+        # @token_auth_required on delete_deliverable → 401 for anon.
+        resp = Client().post(self._url(deliverable_a.id))
+        assert resp.status_code in (401, 403), (
+            f"Anonymous caller must be blocked from delete; got {resp.status_code}"
+        )
+        # Row must still exist.
+        assert Deliverable.objects.filter(id=deliverable_a.id).exists()
