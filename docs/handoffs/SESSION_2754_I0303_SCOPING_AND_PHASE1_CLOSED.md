@@ -204,3 +204,38 @@ Per feedback rule `feedback_xx99_meta_methodology_section`, scoped to S2754 clos
 - [`docs/research/implementation/tenant_boundary_lockdown/I-0302_scoping.md`](../research/implementation/tenant_boundary_lockdown/I-0302_scoping.md) — sibling arc template
 - [`docs/research/implementation/real_user_readiness/CAMPAIGN.md`](../research/implementation/real_user_readiness/CAMPAIGN.md) — parent program
 - [`docs/ENGINEERING_PLAYBOOK.md`](../ENGINEERING_PLAYBOOK.md) — v0.5.0 body
+
+---
+
+## §10 S2754a Addendum — Content-Deliverable Gap Discovered + Fixed
+
+**Trigger:** Chris noticed the workspace UI showed only 3 deliverables in RUR-C1 despite two full ratifications this session (S2754 scoping + S2754 Phase 1). Rigby had created I-0301's Phase 1 Ledger content deliverable directly during her Phase 1 work; for I-0302 and I-0303, only the ratification envelopes were created — the content-doc mirror step was missed in Claude's dispatch to Rigby.
+
+**Root cause:** I-0302 scoping doc §8 line 274 EXPLICITLY called for "materialize the audit ledger as a workspace deliverable under fcd7e683" — the requirement was documented, execution was missed at every I-0302 and I-0303 phase close.
+
+**Fix applied (S2754a):**
+
+- **6 TIER 1 content deliverables created** via ORM in RUR-C1 workspace `fcd7e683-...`:
+  - `f8af6aad-...` — I-0303 Scoping (mirror)
+  - `0462ac90-...` — I-0303 Audit Ledger (mirror)
+  - `80c83e8c-...` — I-0302 Scoping (mirror)
+  - `c16e582c-...` — I-030201 Audit Ledger (mirror)
+  - `e916cbe9-...` — I-030202 Design (mirror)
+  - `5d879edd-...` — I-030299 Arc Close (mirror)
+- **TIER 3 cleanup:** existing I-0301 Phase 1 Ledger deliverable `1ca36f84-...` — `Rigby:` title prefix stripped
+- **S2754 ratification envelopes** amended with `workspace_content_mirror_deliverable_id` cross-reference
+
+**Rule codified (Chris canonical phrasing, S2754a):** `feedback_twin_deliverable_at_every_ratification.md` (memory)
+
+> **"Every ratifiable engineering artifact has two canonical representations:**
+> **1. the content document (the engineering truth)**
+> **2. the ratification envelope (the governance truth)**
+> **A phase is not complete until both are mirrored into the workspace."**
+
+Framed as a **semantic rule about what a ratifiable artifact IS**, not an implementation mechanic. An artifact without its content-document representation is not observable as engineering work; an artifact without its ratification-envelope representation is not observable as governance work. Both must exist for the artifact to be a complete ratifiable event in the workspace.
+
+ORM-direct create preferred over Rigby's `deliverable_tool.create` (which has known title-prefix + diagnostic-marker bugs; 3 memory rules already document them).
+
+**Final RUR-C1 workspace deliverable count post-fix:** 9 (was 3).
+
+**Session pin rotation for S2754a:** `pa-2659dfa28e124f02` (S2754 close) → `pa-8663e11a0db64131` (S2754a addendum). Wrapper `tools/pa_local.sh:539` currently points at `pa-8663e11a0db64131`; will be retired at S2754a close.

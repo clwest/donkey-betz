@@ -44,6 +44,7 @@ depends_on_ratified_artifacts:
   - I-0302 Phase 2 Predicate Module (ratified 2026-07-10): core/tenant_boundary_lockdown/predicates.py — Phase 2 of I-0303 imports
   - Engineering Playbook v0.5.0 (ratified S2753): PLAYBOOK-7.5.1 (Phase 3 dogfood); PLAYBOOK-7.6.1 (Phase 4 SIGN dogfood); PLAYBOOK-7.4.x (arc-close dogfood at Phase 5)
 workspace_ratification_deliverable_id: 2020bc4f-ef7d-42e8-9ee5-38be928ba483
+workspace_content_mirror_deliverable_id: 0462ac90-dc11-4196-a549-150ff271b7e3  # S2754a backfill per twin-deliverable rule
 close_pr: "#3139 (merged 543ab9ad)"
 ---
 
