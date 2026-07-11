@@ -25,6 +25,11 @@ from core.services.redis_lock import (
     release_singleton_lock,
     singleton_task,
 )
+# S2756 (I-0303 Phase 3 REPORT-ONLY): tenant-boundary enforcement decorator
+# for REG-RISK facades. warn_only=True — logs violations to OpsRunEvent,
+# does not raise. BATCH-FIX PR converts to enforcement mode.
+from core.models import ChatConversation
+from core.security.task_enforcement import enforce_tenant_boundary
 
 from django.db import models  # Session 1083
 
@@ -11944,6 +11949,12 @@ def claude_code_agent_respond(conversation_id, message_text, source, agent_name=
 # stuck in `unacked` until visibility_timeout (1h). Acking on receipt is the right tradeoff
 # for chat: a lost message on worker crash is preferable to UI stuck waiting an hour.
 @shared_task(bind=True, time_limit=300, soft_time_limit=280, acks_late=False)
+@enforce_tenant_boundary(
+    model=ChatConversation,
+    id_kwarg="conversation_id",
+    lookup_field="conversation_id",
+    warn_only=True,
+)
 def process_pa_chat_task(self, user_id, message, context=None, generate_audio=False, conversation_id=None, source='web', platform='web'):
     from core.tasks_misc import _impl_process_pa_chat_task
     return _impl_process_pa_chat_task(self, user_id, message, context, generate_audio, conversation_id, source, platform)
@@ -13104,6 +13115,12 @@ def run_source_pack_workflow(self, run_id):
     from core.tasks_content import _impl_run_source_pack_workflow
     return _impl_run_source_pack_workflow(self, run_id)
 @shared_task(bind=True, ignore_result=True)
+@enforce_tenant_boundary(
+    model=ChatConversation,
+    id_kwarg="conversation_id",
+    lookup_field="conversation_id",
+    warn_only=True,
+)
 def summarize_conversation_task(self, conversation_id, user_id=None):
     from core.tasks_conversations import _impl_summarize_conversation_task
     return _impl_summarize_conversation_task(self, conversation_id, user_id)
