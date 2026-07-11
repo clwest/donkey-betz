@@ -298,6 +298,51 @@ def delete_deliverable(request, deliverable_id):
 - Ratifier: Chris D-verdict "B — hotfix PR first, then Sub-phase 2" 2026-07-10 S2748 + Chris D-verdict "A — expand this PR" for full 3-site scope
 - PR: [#3113](https://github.com/clwest/donkey-betz-platform/pull/3113); Rigby SIGN pin `pa-59d27abadeed4411`
 
+**Sub-phase 2 extension — 2 more `except Exception` swallows Http404 (2026-07-10):**
+
+While writing Sub-phase 2 matrix cells for Deliverable state-toggle mutations (save/unsave/templateize), the harness caught the same pattern that motivated the §5.1.b delete fix. `unsave_deliverable` (`:295`) and `templateize_deliverable` (`:390`) both used a broad `try: ... except Exception as e: return 500` block that swallowed the predicate-filter's Http404 and converted 404 to 500. Both mutations were already correctly scoped by `user=request.user` in the filter (so the mutation was gated — no security-boundary hole), but the HTTP semantic was wrong. Fixed inline in the Sub-phase 2 PR by adding `except Http404: raise` before the broad `except Exception` in both functions. Trivial 2-line fix per site; same class as delete/clone/link/record. Regression coverage lives in `TestMatrixDeliverableUnsave` + `TestMatrixDeliverableTemplateize` in the harness matrix runner.
+
+**Sub-phase 2 extension — 5th site: anonymous content leak on `get_deliverable` (2026-07-10):**
+
+While tightening `TestMatrixDeliverableGetItem.test_anonymous_blocked_or_scoped` per Rigby Sub-phase 2 Q2 Edit 2 (content-leak invariant when status=200), the harness caught **a real anonymous content leak** at `get_deliverable` (`:161-202`).
+
+**Pre-hotfix code:**
+```python
+@require_GET
+def get_deliverable(request, deliverable_id):
+    try:
+        deliverable = get_object_or_404(Deliverable, id=deliverable_id)
+        if deliverable.user and request.user.is_authenticated:  # <-- gate SKIPPED for anonymous
+            if deliverable.user != request.user and not request.user.is_staff:
+                # ... VIP + 403 logic ...
+        return JsonResponse({'success': True, 'deliverable': _serialize_deliverable(deliverable, include_content=True)})
+```
+
+**Impact:** ANY anonymous caller with knowledge of a deliverable UUID received 200 + full serialized content (`include_content=True`). The access-check guard clause requires `request.user.is_authenticated` — anonymous skips the entire access check and proceeds to return the row. No auth gate. No `is_public` check. No predicate scoping.
+
+**Hotfix:** Added `@token_auth_required` decorator + `except Http404: raise` clause. Anonymous now → 401. Preserved carve-outs (documented in the source comment):
+- VIP scope carve-out — VIP substrate is a real product feature; NOT scope-creepable in this hotfix
+- Staff bypass — §5.1.a Option A tightening applied to LIST + stats only; get_deliverable was outside D1 scope. Sub-phase 3 can evaluate whether to extend Option A tightening here as a separate decision.
+
+**Guardrail:** the harness `TestMatrixDeliverableGetItem.test_anonymous_blocked_or_scoped` now asserts `resp.status_code in (401, 403)` — the content-leak invariant is now a hard block, not a body-inspection tolerance. Regression coverage owned by the matrix cell going forward.
+
+**Chain of custody (5th site):** Chris D-verdict "A — expand this PR" 2026-07-10 S2748 second occurrence within Sub-phase 2 close. Rigby SIGN pin `pa-59d27abadeed4411`.
+
+Guardrail: the §5.1.b codebase-wide grep methodology now includes as an explicit check "search for `except Exception as e:` blocks that catch `Http404` from a nested `get_object_or_404` call."
+
+**§14 two-triggers threshold — MET at Sub-phase 2 close (per Rigby SIGN 2026-07-10):**
+
+The Http404-swallowing pattern has now surfaced across FIVE sites in `views_deliverables.py`:
+1. `clone_deliverable` — fixed at Phase 3 D1 wiring (added `except Http404: raise` after harness precursor)
+2. `delete_deliverable` — fixed at §5.1.b hotfix (PR #3113)
+3. `unsave_deliverable` — fixed at Sub-phase 2 (this PR) after harness caught 500-instead-of-404
+4. `templateize_deliverable` — fixed at Sub-phase 2 (this PR) after harness caught 500-instead-of-404
+5. `get_deliverable` — fixed at Sub-phase 2 (this PR) alongside the anonymous auth-gate fix; the `except Exception` block would have swallowed the newly-relevant Http404 without the same `except Http404: raise` clause
+
+Five independent instances of the same anti-pattern in a single view file crosses the §14 two-triggers-plus threshold decisively. **Sub-phase 3 MUST codify a grep/audit check for `except Exception` around `get_object_or_404`** — either a repo-wide CI-time AST scan or a pre-commit-scope grep hook that fails on any new `try: get_object_or_404 ... except Exception` block that does not have an earlier `except Http404: raise` clause. Codification target: Sub-phase 3 opening protocol OR a Phase 4 harness component (extends the AST scan module scope).
+
+Rigby SIGN pin `pa-59d27abadeed4411`; Chris D-verdict path for the codification itself follows normal §14 process (draft → Rigby SIGN → Chris ratify).
+
 ### §5.2 Initiative (Q7 per-user) — dominant category: **UNSCOPED (REG RISK)**
 
 **Critical §4 finding: 100% of Initiative rows have `owner=NULL`.** No caller uses `owner=` filter (grep confirmed). Every read currently returns ALL initiatives to ALL users. Backfill is a hard Phase 3 blocker.

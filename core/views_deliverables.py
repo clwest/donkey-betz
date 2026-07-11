@@ -159,13 +159,34 @@ def list_deliverables(request):
 
 
 @require_GET
+@token_auth_required
 def get_deliverable(request, deliverable_id):
     """Get a single deliverable with full content."""
     try:
+        # I-0302 §5.1.b hotfix extension (2026-07-10, S2748 Sub-phase 2):
+        # added @token_auth_required. Pre-hotfix, the endpoint had NO
+        # auth gate and the access-check guard `if deliverable.user and
+        # request.user.is_authenticated:` skipped the ENTIRE access check
+        # for anonymous callers — any anonymous caller with knowledge of
+        # a deliverable id received 200 + full content. Surfaced by
+        # Phase 4 harness `TestMatrixDeliverableGetItem.
+        # test_anonymous_blocked_or_scoped` with Rigby Q2 Edit 2 content-
+        # leak assertion. Ledger amendment: I-030201 §5.1.b (5th site).
+        #
+        # NOT changed in this hotfix (preserved carve-outs):
+        # - VIP scope carve-out: authenticated non-owner non-staff with
+        #   `scope.is_vip and scope.workspace_id == deliverable.workspace_id`
+        #   still gets access. VIP substrate is a real product feature,
+        #   not scope-creepable in this hotfix.
+        # - Staff bypass: authenticated staff (non-superuser) still gets
+        #   access. §5.1.a Option A tightening applied to LIST + stats
+        #   only; get_deliverable was outside D1 scope. Sub-phase 3 can
+        #   evaluate whether to extend Option A tightening here.
         deliverable = get_object_or_404(Deliverable, id=deliverable_id)
 
-        # Check access permissions
-        if deliverable.user and request.user.is_authenticated:
+        # Check access permissions (now that request.user.is_authenticated
+        # is guaranteed True by @token_auth_required).
+        if deliverable.user:
             if deliverable.user != request.user and not request.user.is_staff:
                 # Allow VIP users to view deliverables in their assigned workspace
                 vip_allowed = False
@@ -194,6 +215,11 @@ def get_deliverable(request, deliverable_id):
             'deliverable': _serialize_deliverable(deliverable, include_content=True)
         })
 
+    except Http404:
+        # Let 404 propagate — bare `except Exception` below would convert
+        # get_object_or_404's 404 into a 500 (5th site of the pattern
+        # documented in §5.1.b tail).
+        raise
     except Exception as e:
         logger.error(f"Error getting deliverable {deliverable_id}: {e}", exc_info=True)
         return JsonResponse({
@@ -292,6 +318,12 @@ def unsave_deliverable(request, deliverable_id):
             'deliverable': _serialize_deliverable(deliverable, include_content=False)
         })
 
+    except Http404:
+        # I-0302 §5.1.b extension (S2748 Sub-phase 2): let 404 propagate.
+        # Broader `except Exception` below would convert the filter's 404
+        # into a 500, breaking existence-oracle semantics. Same class as
+        # the delete_deliverable fix from §5.1.b hotfix PR #3113.
+        raise
     except Exception as e:
         logger.error(f"Error unsaving deliverable {deliverable_id}: {e}", exc_info=True)
         return JsonResponse({
@@ -387,6 +419,10 @@ def templateize_deliverable(request, deliverable_id):
             'deliverable': _serialize_deliverable(deliverable, include_content=False)
         })
 
+    except Http404:
+        # I-0302 §5.1.b extension (S2748 Sub-phase 2): let 404 propagate.
+        # Same class as delete_deliverable/unsave_deliverable fix.
+        raise
     except Exception as e:
         logger.error(f"Error templateizing deliverable {deliverable_id}: {e}", exc_info=True)
         return JsonResponse({
