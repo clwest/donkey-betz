@@ -292,6 +292,12 @@ def unsave_deliverable(request, deliverable_id):
             'deliverable': _serialize_deliverable(deliverable, include_content=False)
         })
 
+    except Http404:
+        # I-0302 §5.1.b extension (S2748 Sub-phase 2): let 404 propagate.
+        # Broader `except Exception` below would convert the filter's 404
+        # into a 500, breaking existence-oracle semantics. Same class as
+        # the delete_deliverable fix from §5.1.b hotfix PR #3113.
+        raise
     except Exception as e:
         logger.error(f"Error unsaving deliverable {deliverable_id}: {e}", exc_info=True)
         return JsonResponse({
@@ -387,6 +393,10 @@ def templateize_deliverable(request, deliverable_id):
             'deliverable': _serialize_deliverable(deliverable, include_content=False)
         })
 
+    except Http404:
+        # I-0302 §5.1.b extension (S2748 Sub-phase 2): let 404 propagate.
+        # Same class as delete_deliverable/unsave_deliverable fix.
+        raise
     except Exception as e:
         logger.error(f"Error templateizing deliverable {deliverable_id}: {e}", exc_info=True)
         return JsonResponse({

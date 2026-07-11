@@ -248,6 +248,40 @@ def tb_deliverables_b(tb_user_b, tb_workspace_b):
     ]
 
 
+@pytest.fixture
+def tb_cross_tenant_deliverable(tb_user_b, tb_workspace_a):
+    """Adversarial fixture — Deliverable with user=user_b + workspace=workspace_a.
+
+    Rigby SIGN F1A (Sub-phase 2 open, 2026-07-10). Under `ProjectWorkspace`'s
+    single-owner constraint (no membership table exists), this row is the
+    closest analog to the "shared workspace" edge Rigby wanted. It exists
+    ONLY to stress-test predicate-scoping code paths that might
+    accidentally scope by `user_id` instead of `workspace_id` (or use
+    an "either/or" filter that leaks the row to the wrong tenant).
+
+    Contract per `scope_queryset_deliverable` (workspace-scoped predicate):
+    - VISIBLE to user_a  (owns workspace_a → workspace_id matches)
+    - INVISIBLE to user_b (does NOT own workspace_a; user_id ownership
+      is IGNORED by the predicate — this is the boundary)
+    - VISIBLE to superuser (documented permission bypass in
+      `user_can_access_workspace`; not a tenancy bypass in the queryset
+      path, but the fixture is unrelated to superuser's own workspaces
+      so behavior depends on the endpoint)
+
+    NOT a valid business state. Do not treat as a template for real
+    Deliverable creation flows.
+    """
+    from core.models_deliverables import Deliverable
+
+    return Deliverable.objects.create(
+        user=tb_user_b,
+        workspace=tb_workspace_a,
+        title=f"tb-cross-tenant-{uuid.uuid4().hex[:6]}",
+        deliverable_type="text",
+        content="adversarial cross-tenant row (F1A) — see fixture docstring",
+    )
+
+
 # --------------------------------------------------------------------------
 # Document (per-user)
 # --------------------------------------------------------------------------
@@ -304,6 +338,7 @@ def tb_golden(
     tb_conversations_b,
     tb_deliverables_a,
     tb_deliverables_b,
+    tb_cross_tenant_deliverable,
     tb_documents_a,
     tb_documents_b,
 ):
@@ -311,7 +346,10 @@ def tb_golden(
 
     Use this fixture in matrix cells that need the complete data shape:
     two isolated users, one superuser, per-model N=3 owned rows per user,
-    plus one null-user AgentExecution for the Session 642 carve-out probe.
+    plus one null-user AgentExecution for the Session 642 carve-out probe,
+    plus one adversarial cross-tenant Deliverable (F1A) — user_b owns the
+    row but workspace_a owns the workspace binding. See
+    `tb_cross_tenant_deliverable` docstring for the contract.
     """
     return {
         "user_a": tb_user_a,
@@ -328,6 +366,7 @@ def tb_golden(
         "conversations_b": tb_conversations_b,
         "deliverables_a": tb_deliverables_a,
         "deliverables_b": tb_deliverables_b,
+        "cross_tenant_deliverable": tb_cross_tenant_deliverable,
         "documents_a": tb_documents_a,
         "documents_b": tb_documents_b,
     }
