@@ -319,14 +319,24 @@ class LLMEnforcer:
 
             logger.info(f"✅ REAL AI RESPONSE generated - {provider}/{model} - {response.get('tokens', 0)} tokens ({latency_ms}ms)")
 
-            # Session 802/803: Persist to CostTracking and LLMCallLog databases
+            # Session 802/803: Persist to CostTracking and LLMCallLog databases.
+            # Session 2749: capture first 500 chars of response body on stall
+            # (success=True + completion_tokens < 100) — removes the "success
+            # w/ tiny completion" diagnostic blind spot that hid the gpt-5.2
+            # stall on the S2749 I-0302 §14 AST-rule ask.
+            _output_tokens = response.get('output_tokens', 0)
+            _stall_preview = (
+                response.get('content', '')[:500]
+                if _output_tokens < 100
+                else ''
+            )
             self._save_cost_tracking(
                 provider=provider,
                 model=model,
                 agent_name=agent_name,
                 task_type=task_type,
                 input_tokens=response.get('input_tokens', 0),
-                output_tokens=response.get('output_tokens', 0),
+                output_tokens=_output_tokens,
                 total_tokens=response.get('tokens', 0),
                 cost=response.get('cost', 0),
                 latency_ms=latency_ms,
@@ -334,6 +344,7 @@ class LLMEnforcer:
                 trace_id=trace_id,
                 cached_input_tokens=response.get('cached_input_tokens', 0),
                 cost_estimator_version=response.get('cost_estimator_version', COST_ESTIMATOR_VERSION),
+                response_preview=_stall_preview,
             )
 
             result = {
@@ -694,12 +705,17 @@ class LLMEnforcer:
         trace_id: str = "",
         cached_input_tokens: int = 0,
         cost_estimator_version: str = COST_ESTIMATOR_VERSION,
+        response_preview: str = "",
     ) -> None:
         """
         Session 802: Persist LLM usage to both CostTracking and LLMCallLog.
 
         Session 803: Added LLMCallLog for analytics UI display.
         This enables the LLM Routing page to show actual API costs over time.
+
+        Session 2749: response_preview populated on stall — success=True
+        with tiny completion_tokens — so future diagnostics can see what
+        the LLM actually returned instead of guessing from token counts.
         """
         # Save to LLMCallLog (used by LLM Routing analytics UI)
         try:
@@ -718,6 +734,7 @@ class LLMEnforcer:
                 success=success,
                 error_message=error_message,
                 trace_id=trace_id,
+                response_preview=response_preview,
             )
             logger.debug(f"💾 Saved LLM call log: {provider}/{model} - ${cost:.6f}")
         except Exception as e:
