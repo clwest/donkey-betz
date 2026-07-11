@@ -1,6 +1,6 @@
 # CLAUDE - AI Session Entry Point
 
-**Last Updated:** July 11, 2026 (Session 2766 — Engineering Playbook v0.6.0 MINOR ratified; first MINOR since v0.5.0 same day; PLAYBOOK-7.4.4 recycle-after-merge codified under existing §7.4 Close-ceremony delivery discipline; L7 anchor refreshed to reference v0.6.0 as the latest ratified version, with v0.1.0/v0.2.0/v0.3.0/v0.4.0/v0.4.1/v0.5.0 ancestry preserved)
+**Last Updated:** July 11, 2026 (Session 2767 — Close-Ceremony Ledger v2 shipped: hover-preview tooltips + click-to-open via existing DocumentViewer drawer; frontend-only edit to `OpsConsoleTab.tsx` with zero new backend routes; reuses public-by-design `/api/platform/doc-content/`. First close-cycle after PLAYBOOK-7.4.4 codification — recycle-after-merge dogfooded successfully. L7 constitutional anchor unchanged; Playbook v0.6.0 remains latest ratified version.)
 
 > **Anchors (context-kit pattern):** [`docs/PLATFORM_WHAT_IT_IS.md`](docs/PLATFORM_WHAT_IT_IS.md) is the **narrative anchor** (system glossary, subsystem summaries — not a counts source). [`docs/PLATFORM_INVENTORY.md`](docs/PLATFORM_INVENTORY.md) is the **runtime/inventory anchor** and is the **sole authoritative source for system counts** (agents, spiders, models, tasks, etc.) per `DOC_LIFECYCLE.md` §2c. When any doc disagrees with PLATFORM_INVENTORY on a count, the inventory wins. Run `python manage.py verify_doc_claims --only-drift` to see which claims drift from reality.
 
