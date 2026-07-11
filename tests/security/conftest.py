@@ -10,6 +10,7 @@ from tests.security.fixtures.tenant_boundary import (  # noqa: F401
     tb_agent,
     tb_conversations_a,
     tb_conversations_b,
+    tb_cross_tenant_deliverable,
     tb_deliverables_a,
     tb_deliverables_b,
     tb_documents_a,
