@@ -865,6 +865,17 @@ app.conf.beat_schedule = {
         'schedule': crontab(hour=1, minute=17),
         'options': {'queue': 'default', 'expires': 3600},
     },
+    # S2759 stale-process detection. Fires every 30 min to catch the
+    # 3-incident stale-Daphne class regression (S2755/S2756/S2757 view-layer
+    # merges silently ran pre-merge code for hours). Complements the live
+    # `ops_tool.version` staleness verdict — this is the passive "nobody
+    # remembered to check" defense in depth. Emits an OpsRunEvent with
+    # label='staleness_warning' when verdict != FRESH.
+    'check-process-staleness': {
+        'task': 'check_process_staleness',
+        'schedule': crontab(minute='*/30'),
+        'options': {'queue': 'default', 'expires': 1800},
+    },
 }
 
 # Task routing configuration

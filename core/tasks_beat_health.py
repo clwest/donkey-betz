@@ -103,3 +103,113 @@ def check_beat_health():
             for mb in snapshot.missing
         ],
     }
+
+
+# --------------------------------------------------------------------------
+# S2759: Stale-process detection (Daphne / Celery vs git HEAD commit time)
+# --------------------------------------------------------------------------
+
+
+@shared_task(
+    name='check_process_staleness',
+    queue='default',
+    ignore_result=True,
+    soft_time_limit=30,
+)
+def check_process_staleness():
+    """Detect Daphne / Celery worker processes older than the current git HEAD.
+
+    Beat-scheduled at 30 min per Rigby SIGN F3 QE. Complements the live
+    ``ops_tool.version`` staleness surface — this task is the "nobody
+    remembered to check" defense in depth. If any process is older than
+    the HEAD commit, emits an ``OpsRunEvent`` with ``label='staleness_warning'``
+    carrying the same verdict + process detail returned by
+    ``ops_tool.version``. Never raises; monitor-failure-must-not-crashloop.
+
+    Introduced to codify the 3-incident stale-Daphne class regression
+    that silently affected S2755 / S2756 / S2757 view-layer merges. See
+    ``feedback_local_truth_no_production`` memory rule + S2759 ratification
+    envelope.
+    """
+    try:
+        from core.services.td_handlers_ops import OpsHandlersMixin
+    except ImportError:
+        logger.warning(
+            '[STALENESS] OpsHandlersMixin import failed; skipping tick'
+        )
+        return {'skipped': 'import_failed'}
+
+    try:
+        # Instantiate a lightweight proxy since the helper is a bound
+        # method (needs `self`) but doesn't touch instance state.
+        class _Proxy:
+            _compute_process_staleness = (
+                OpsHandlersMixin._compute_process_staleness
+            )
+            _DAPHNE_PROCESS_PATTERN = (
+                OpsHandlersMixin._DAPHNE_PROCESS_PATTERN
+            )
+            _CELERY_WORKER_PROCESS_PATTERN = (
+                OpsHandlersMixin._CELERY_WORKER_PROCESS_PATTERN
+            )
+        result = _Proxy()._compute_process_staleness()
+    except Exception as e:  # pragma: no cover — defensive
+        logger.warning(
+            '[STALENESS] compute_process_staleness failed (%s: %s); '
+            'skipping this tick',
+            type(e).__name__, e,
+        )
+        return {'skipped': f'compute_error:{type(e).__name__}'}
+
+    verdict = result.get('staleness_verdict', 'UNKNOWN')
+
+    logger.info(
+        '[STALENESS] verdict=%s daphne_pid=%s celery_workers=%d head_commit=%s',
+        verdict,
+        result.get('daphne_pid'),
+        len(result.get('celery_workers_status', [])),
+        result.get('head_commit_sha', 'unknown')[:12],
+    )
+
+    if verdict in ('FRESH', 'UNKNOWN'):
+        return {'verdict': verdict}
+
+    # Stale — emit an OpsRunEvent envelope. Rigby / Chris can query the
+    # accumulated warnings via ops_tool.tenant_boundary_violations pattern
+    # or by direct OpsRunEvent read.
+    try:
+        from core.models_ops_runs import OpsRunEvent
+        from core.security.error_envelope import _get_or_create_rur_failure_run
+
+        run = _get_or_create_rur_failure_run()
+        OpsRunEvent.objects.create(
+            run=run,
+            event_type='step_fail',
+            label='staleness_warning',
+            detail={
+                'source': 'check_process_staleness_beat',
+                'verdict': verdict,
+                'head_commit_sha': result.get('head_commit_sha'),
+                'head_commit_timestamp': result.get('head_commit_timestamp'),
+                'daphne_pid': result.get('daphne_pid'),
+                'daphne_pid_age_seconds': result.get('daphne_pid_age_seconds'),
+                'daphne_started_before_head_commit': result.get(
+                    'daphne_started_before_head_commit',
+                ),
+                'celery_workers_status': result.get('celery_workers_status', []),
+                'fix': result.get('staleness_fix'),
+            },
+        )
+        emitted = True
+    except Exception as e:  # pragma: no cover — defensive
+        logger.warning(
+            '[STALENESS] OpsRunEvent emission failed (%s: %s); logged only',
+            type(e).__name__, e,
+        )
+        emitted = False
+
+    return {
+        'verdict': verdict,
+        'ops_run_event_emitted': emitted,
+        'head_commit_sha': result.get('head_commit_sha'),
+    }
