@@ -5,7 +5,7 @@ authority: phase-4-architecture-signed
 session_added: 2748
 last_updated: 2026-07-10
 arc_id: I-0302
-arc_phase: Phase 4 (Regression Harness) — CLOSED (ratified S2751; see `I-030205_phase4_close.md`)
+arc_phase: Phase 4 (Regression Harness) — CLOSED (ratified S2751; see `I-030205_phase4_close.md`); I-0302 ARC CLOSED S2751 (see `I-030299_i0302_arc_close.md` + `RATIFICATION_2026-07-10_i0302_arc_close.md`)
 parent_scoping_doc: docs/research/implementation/tenant_boundary_lockdown/I-0302_scoping.md
 parent_scoping_ratification: docs/research/implementation/RATIFICATION_2026-07-10_i0302_scoping.md
 phase_1_ledger: docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md
@@ -320,6 +320,7 @@ Phase 4 closes when ALL of the following hold:
 | S2751 | Rigby SIGN-PASS on shipped harness (W1..W5, pin `pa-e71c011bfa3d4124`) | `I-030205_phase4_close.md` §4 |
 | S2751 | Phase 4 close doc drafted (standalone `I-030205_phase4_close.md`; slot `I-030204` was already taken by AST rule spec) | `I-030205_phase4_close.md` |
 | S2751 | **Chris D-verdict "agree all" — Phase 4 CLOSED (ratified)** | [`RATIFICATION_2026-07-10_i0302_phase4_close.md`](../RATIFICATION_2026-07-10_i0302_phase4_close.md) |
+| S2751 | Phase 5 (arc close) drafted → Rigby SIGN-PASS clean (W1..W5) → Chris D-verdict "agree all" — **I-0302 ARC CLOSED** | [`I-030299_i0302_arc_close.md`](I-030299_i0302_arc_close.md) + [`RATIFICATION_2026-07-10_i0302_arc_close.md`](../RATIFICATION_2026-07-10_i0302_arc_close.md) — this is the TERMINAL row on this doc's chain-of-custody. |
 
 ---
 
