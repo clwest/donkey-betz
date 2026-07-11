@@ -243,13 +243,30 @@ def save_deliverable(request, deliverable_id):
 def delete_deliverable(request, deliverable_id):
     """Permanently delete a deliverable."""
     try:
-        deliverable = get_object_or_404(Deliverable, id=deliverable_id)
+        # I-0302 Phase 3 Sub-phase D1 hotfix (2026-07-10, S2748): scope
+        # the source fetch — prior code used `get_object_or_404(Deliverable,
+        # id=deliverable_id)` with no ownership filter, which let any
+        # authenticated caller DELETE any deliverable whose id they knew.
+        # Missed by the original D1 12-site sweep; surfaced during Phase 4
+        # harness endpoint discovery. Mirrors the clone_deliverable
+        # source-fetch pattern from D1 (line 306 in this file).
+        # Ledger amendment: I-030201 §5.1.b.
+        deliverable = get_object_or_404(
+            scope_queryset_deliverable(request.user, Deliverable.objects.all()),
+            id=deliverable_id,
+        )
         title = deliverable.title
         deliverable.delete()
         return JsonResponse({
             'success': True,
             'message': f'Deleted: {title}',
         })
+    except Http404:
+        # Let 404 propagate — bare `except Exception` below would convert
+        # the scoped-source-fetch's 404 into a 500 (mirrors clone_deliverable
+        # D1 pattern; regression discovered by S2748 harness endpoint
+        # discovery, see §5.1.b).
+        raise
     except Exception as e:
         logger.error(f"Error deleting deliverable {deliverable_id}: {e}", exc_info=True)
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
@@ -515,14 +532,31 @@ def link_deliverable_workspace(request, deliverable_id):
     import json
 
     try:
-        deliverable = get_object_or_404(Deliverable, id=deliverable_id)
+        # I-0302 §5.1.b hotfix (2026-07-10, S2748): scope BOTH the source
+        # deliverable fetch AND the target workspace fetch. Pre-hotfix, an
+        # authenticated caller could rewrite the workspace FK of any
+        # deliverable whose id they knew AND link it to any workspace by
+        # id — hijacking unclaimed deliverables into their own workspace
+        # OR dumping their own deliverable into another user's workspace.
+        # Source-fetch: predicate scoping. Target workspace: authoritative
+        # `user_can_access_workspace` primitive.
+        deliverable = get_object_or_404(
+            scope_queryset_deliverable(request.user, Deliverable.objects.all()),
+            id=deliverable_id,
+        )
 
         body = json.loads(request.body) if request.body else {}
         workspace_id = body.get('workspace_id', '')
         if not workspace_id:
             return JsonResponse({'success': False, 'error': 'workspace_id is required'}, status=400)
 
+        from core.security import user_can_access_workspace
         from core.models_skin_layer import ProjectWorkspace
+        if not user_can_access_workspace(request.user, workspace_id):
+            return JsonResponse(
+                {'success': False, 'error': 'Access denied to target workspace'},
+                status=404,
+            )
         workspace = get_object_or_404(ProjectWorkspace, id=workspace_id)
 
         # Don't overwrite if already linked to a different workspace
@@ -542,6 +576,10 @@ def link_deliverable_workspace(request, deliverable_id):
             'workspace_name': workspace.name,
         })
 
+    except Http404:
+        # Let 404 propagate for both the predicate-scoped source-fetch
+        # AND target workspace access denial. See delete_deliverable §5.1.b.
+        raise
     except Exception as e:
         logger.error(f"Error linking deliverable {deliverable_id}: {e}", exc_info=True)
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
@@ -1025,6 +1063,7 @@ def stage3_dashboard(request):
 
 
 @require_POST
+@token_auth_required
 def record_deliverable_event(request, deliverable_id):
     """
     Record a user interaction event on a deliverable.
@@ -1040,7 +1079,16 @@ def record_deliverable_event(request, deliverable_id):
     valid_types = {c[0] for c in DeliverableEvent.EVENT_TYPES}
 
     try:
-        deliverable = get_object_or_404(Deliverable, id=deliverable_id)
+        # I-0302 §5.1.b hotfix (2026-07-10, S2748): (a) added
+        # @token_auth_required decorator — previously anonymous callers
+        # could emit audit events on any deliverable, poisoning the
+        # DeliverableEvent audit log; (b) scoped source-fetch via
+        # scope_queryset_deliverable so authenticated non-owners can't
+        # attribute events (e.g., fake "shared") to another user's row.
+        deliverable = get_object_or_404(
+            scope_queryset_deliverable(request.user, Deliverable.objects.all()),
+            id=deliverable_id,
+        )
 
         try:
             body = json.loads(request.body)
@@ -1062,6 +1110,11 @@ def record_deliverable_event(request, deliverable_id):
 
         return JsonResponse({'success': True, 'event_type': event_type})
 
+    except Http404:
+        # Let 404 propagate — bare `except Exception` below would convert
+        # the scoped-source-fetch's 404 into a 500 (mirrors delete_deliverable
+        # §5.1.b pattern).
+        raise
     except Exception as e:
         logger.error(f"Error recording event for {deliverable_id}: {e}", exc_info=True)
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
