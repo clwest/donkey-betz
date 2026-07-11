@@ -298,6 +298,12 @@ def delete_deliverable(request, deliverable_id):
 - Ratifier: Chris D-verdict "B — hotfix PR first, then Sub-phase 2" 2026-07-10 S2748 + Chris D-verdict "A — expand this PR" for full 3-site scope
 - PR: [#3113](https://github.com/clwest/donkey-betz-platform/pull/3113); Rigby SIGN pin `pa-59d27abadeed4411`
 
+**Sub-phase 2 extension — 2 more `except Exception` swallows Http404 (2026-07-10):**
+
+While writing Sub-phase 2 matrix cells for Deliverable state-toggle mutations (save/unsave/templateize), the harness caught the same pattern that motivated the §5.1.b delete fix. `unsave_deliverable` (`:295`) and `templateize_deliverable` (`:390`) both used a broad `try: ... except Exception as e: return 500` block that swallowed the predicate-filter's Http404 and converted 404 to 500. Both mutations were already correctly scoped by `user=request.user` in the filter (so the mutation was gated — no security-boundary hole), but the HTTP semantic was wrong. Fixed inline in the Sub-phase 2 PR by adding `except Http404: raise` before the broad `except Exception` in both functions. Trivial 2-line fix per site; same class as delete/clone/link/record. Regression coverage lives in `TestMatrixDeliverableUnsave` + `TestMatrixDeliverableTemplateize` in the harness matrix runner.
+
+Guardrail: the §5.1.b codebase-wide grep methodology now includes as an explicit check "search for `except Exception as e:` blocks that catch `Http404` from a nested `get_object_or_404` call." Not yet grep-formalized in this ledger — Sub-phase 3 can codify if a fourth instance surfaces (§14 two-triggers-plus rule).
+
 ### §5.2 Initiative (Q7 per-user) — dominant category: **UNSCOPED (REG RISK)**
 
 **Critical §4 finding: 100% of Initiative rows have `owner=NULL`.** No caller uses `owner=` filter (grep confirmed). Every read currently returns ALL initiatives to ALL users. Backfill is a hard Phase 3 blocker.

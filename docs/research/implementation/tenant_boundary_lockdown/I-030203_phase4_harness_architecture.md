@@ -263,12 +263,26 @@ Sequential per §7 blockedBy dependency chain. Each step has its own PR (or boun
 3. **This architecture doc** — DONE Sub-phase 0; extended Sub-phase 1 §3.5-§3.8 per Rigby Q4 SIGN
 4. **Golden fixture** — DONE Sub-phase 1 (PR #3112)
 5. **Matrix runner** (initial 5 cells) — DONE Sub-phase 1 (PR #3112)
-6. **Fixture cross-membership extension** (per Rigby Sub-phase 1 Q1 SIGN — deferred to Sub-phase 2 open) — cross-workspace edge to stress parent invariant + boundary predicates; needs Sub-phase 2 mutating tests to justify the shape
-7. **Matrix expansion** — Sub-phase 2 — UPDATE / DELETE / EXISTS + AGGREGATE gap-cells + CREATE-parent-binding via per-test builders
-8. **AST scan module** — Sub-phase 3; independent of matrix, blocks endpoint sentinels (sentinel skip decisions rely on AST output)
-9. **Endpoint sentinels** — Sub-phase 3; depends on fixture + AST scan
-10. **Coverage-gap report + posture probes** — Sub-phase 3; depends on fixture
-11. **Rigby SIGN on shipped harness + Chris ratification** — Phase 4 close
+6. **§5.1.b hotfix** — DONE (PR #3113) — 3-site scope: `delete_deliverable`, `link_deliverable_workspace`, `record_deliverable_event`
+7. **Fixture cross-membership extension (F1A)** — DONE Sub-phase 2 (this PR) — cross-tenant Deliverable row (user=user_b + workspace=workspace_a) exposes predicate-scoping mistakes
+8. **Matrix expansion — hybrid B+C** — DONE Sub-phase 2 (this PR) — Deliverable save/unsave/templateize/GET-item + ChatConversation LIST; Initiative + ChatConversation intentional-immutability per Chris D-verdict at S2748 (no UPDATE/DELETE endpoints exist to test)
+9. **§5.1.b extension** — DONE Sub-phase 2 (this PR) — 2 more `except Exception`-swallows-Http404 sites (unsave + templateize) surfaced by harness; fixed inline as trivial extension of §5.1.b guardrail
+10. **AST scan module** — Sub-phase 3; independent of matrix, blocks endpoint sentinels (sentinel skip decisions rely on AST output)
+11. **Endpoint sentinels** — Sub-phase 3; depends on fixture + AST scan
+12. **Coverage-gap report + posture probes** — Sub-phase 3; depends on fixture
+13. **Intentional-immutability contract for Initiative + ChatConversation** — Sub-phase 3 — assert unsafe methods (PUT/PATCH/DELETE) return 405/404 as absence-contract per Chris D-verdict at S2748
+14. **VIP-scope carve-out coverage on `get_deliverable`** — Sub-phase 3 — extend fixture with VIP membership row; test the VIP-workspace read path currently deferred in Sub-phase 2 GET-item cell
+15. **Rigby SIGN on shipped harness + Chris ratification** — Phase 4 close
+
+### §6.a Sub-phase 3 research inputs (per Rigby SIGN F2 2026-07-10)
+
+Before Sub-phase 3 opens, run these research passes (bounded, docs-only outcomes):
+
+- **AgentExecution mutation semantics** — confirm no user-facing UPDATE/DELETE (likely no per S2748 endpoint discovery for Initiative + ChatConversation); if any exist, add absence-contract cells
+- **Document mutation semantics** — user vs owner field question (`views_rag_embeddings.py:470/836` use `Document.objects.get(id=..., user=user)` on a model whose FK is named `owner`; investigate whether this is legacy dual-field, misspelling, or a runtime bug)
+- **CREATE-parent-binding endpoint map** — inventory which endpoints create rows across the 5 canonical models + identify the parent-binding field per endpoint
+- **AGGREGATE endpoint inventory** — enumerate true aggregates vs stats-with-nested-shape endpoints for shape-stable §3.8 table
+- **Non-canonical model follow-on** — `LegalDocument`, `LitigationDocument`, `ReviewDocument` unscoped `.objects.get(id=...)` patterns from §5.1.b sweep; scope decision on whether these fall under I-0302 or a separate arc
 
 ---
 
