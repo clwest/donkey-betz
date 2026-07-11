@@ -536,4 +536,4 @@ export PA_API_TOKEN=8c0f15633e8437621d64388aeb29eb89218882af
 # for the I-0302 Phase 4 (regression harness for RUR-C1 parent
 # invariant) arc. Prior pin `pa-43818ab8ba144a2f` preserved above
 # as comment (rotated from at S2748 open).
-python tools/pa_chat.py "$@" --tools --conversation pa-d2f1f7bd302f47d2
+python tools/pa_chat.py "$@" --tools --conversation pa-3cb29f52e461401a
