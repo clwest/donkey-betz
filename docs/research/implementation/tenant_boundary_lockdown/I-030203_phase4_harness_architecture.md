@@ -155,6 +155,42 @@ The AST scan (Task 7) enforces the substrate; the matrix runner defers to AST sc
 
 For every primitive, anonymous → 401 (not 403, not 200 with empty list). Enforced by F-2 hardening in the predicate module — the harness verifies the boundary held at the request layer.
 
+**AllowAny + predicate-only exception (per Rigby Sub-phase 1 Q4 SIGN 2026-07-10):** `/api/initiatives/` and `/api/deliverables/` are AllowAny with predicate-only boundary — anon → 200 with empty list, NOT 401/403. F-2 hardening in `scope_queryset_*` returns `.none()` for anonymous callers, keeping the payload empty. The harness asserts this "observed surface" — not a policy claim that these endpoints *should* be AllowAny; if a future arc hardens them to `IsAuthenticated`, the assertion flips.
+
+### §3.6 Superuser semantics — permission vs. tenancy (per Rigby Sub-phase 1 Q4 SIGN 2026-07-10)
+
+**Superuser is a permission bypass, not a tenancy bypass, unless explicitly declared via `@ops_aggregate_allowed` (§5.1).**
+
+Concretely:
+- `user_can_access_workspace(superuser, workspace_id)` returns True (documented single-object bypass).
+- `scope_queryset_deliverable(superuser, qs)` filters by `workspace_id__in=<workspaces superuser OWNS>`. It does NOT ambient-bypass into other users' workspaces. Superuser with zero owned workspaces sees zero deliverables — this is the boundary-correct behavior, not a regression.
+- The AGGREGATE primitive (§3.1(e)) inherits the same posture: superuser aggregate is tenant-scoped unless the specific endpoint is decorated with `@ops_aggregate_allowed` + `@superuser_required` (§5.1) AND has a corresponding §11.X F-block ledger amendment justifying the carve-out.
+
+The harness assertion contract MUST NOT interpret "superuser sees fewer rows than user_a" as a regression. That is the invariant holding.
+
+### §3.7 Session 642 null-user carve-out — AgentExecution only (per Rigby Sub-phase 1 Q4 SIGN 2026-07-10)
+
+**`AgentExecution.user = None` rows (system-context Celery executions) are visible to superuser ONLY.** Regular users MUST NEVER see them.
+
+This is a documented legacy carve-out enforced at the predicate layer (`scope_queryset_agent_execution`) as a superuser union with own-owned rows. The harness must:
+- Include one null-user row in the golden fixture (via `tb_execution_null_user`) so the invariant is exercised.
+- Assert that regular user aggregate/list/get does NOT return the null-user row.
+- Assert that superuser aggregate/list DOES include the null-user row.
+
+The carve-out is NOT declared via `@ops_aggregate_allowed` because it predates the substrate. If a similar future carve-out emerges for any other model, use `@ops_aggregate_allowed` with §11.X amendment — do NOT extend the predicate module with implicit unions.
+
+### §3.8 Canonical JSON paths for aggregate endpoints (per Rigby Sub-phase 1 Q4 SIGN 2026-07-10)
+
+Aggregate endpoints ship diverse response shapes. The harness codifies the assertion path per endpoint as a shape-stable contract:
+
+| Endpoint | Canonical assertion path | Model |
+|---|---|---|
+| `/api/analytics/overview/` | `body["total_executions"]` | AgentExecution |
+| `/api/v1/rag/stats/` | `body["embeddings_stats"]["total_documents"]` | Document |
+| `/api/deliverables/stats/` | TBD (Sub-phase 2) | Deliverable |
+
+If a future PR reshapes a response body, the harness assertion is the canonical test that catches the drift — reviewers should update this table AND the harness helper in the same PR to keep the contract explicit.
+
 ---
 
 ## §4. Deferred-Surface Handling — F4 SIGN
@@ -222,15 +258,17 @@ Existing from I-0301. Phase 4 extends the workflow to run the matrix + sentinel 
 
 Sequential per §7 blockedBy dependency chain. Each step has its own PR (or bounded PR series) with Rigby SIGN gate.
 
-1. **§11 ledger amendment** (I-030201) — DONE this session
-2. **`@ops_aggregate_allowed` decorator + smoke test** — DONE this session
-3. **This architecture doc** — DONE this session (self-referential; Chris D-verdict via "agree all + ship bonus tightening" ratification 2026-07-10)
-4. **Golden fixture** — Task 6; blocks 5, 8, 9
-5. **Matrix runner** — Task 5; depends on 4
-6. **AST scan module** — Task 7; independent of 4/5, blocks 8 (sentinel skip decisions rely on AST output)
-7. **Endpoint sentinels** — Task 8; depends on 4, 6
-8. **Coverage-gap report + posture probes** — Task 9; depends on 4
-9. **Rigby SIGN on shipped harness + Chris ratification** — Task 10; depends on 4-9
+1. **§11 ledger amendment** (I-030201) — DONE Sub-phase 0 (PR #3111)
+2. **`@ops_aggregate_allowed` decorator + smoke test** — DONE Sub-phase 0 (PR #3111)
+3. **This architecture doc** — DONE Sub-phase 0; extended Sub-phase 1 §3.5-§3.8 per Rigby Q4 SIGN
+4. **Golden fixture** — DONE Sub-phase 1 (PR #3112)
+5. **Matrix runner** (initial 5 cells) — DONE Sub-phase 1 (PR #3112)
+6. **Fixture cross-membership extension** (per Rigby Sub-phase 1 Q1 SIGN — deferred to Sub-phase 2 open) — cross-workspace edge to stress parent invariant + boundary predicates; needs Sub-phase 2 mutating tests to justify the shape
+7. **Matrix expansion** — Sub-phase 2 — UPDATE / DELETE / EXISTS + AGGREGATE gap-cells + CREATE-parent-binding via per-test builders
+8. **AST scan module** — Sub-phase 3; independent of matrix, blocks endpoint sentinels (sentinel skip decisions rely on AST output)
+9. **Endpoint sentinels** — Sub-phase 3; depends on fixture + AST scan
+10. **Coverage-gap report + posture probes** — Sub-phase 3; depends on fixture
+11. **Rigby SIGN on shipped harness + Chris ratification** — Phase 4 close
 
 ---
 
