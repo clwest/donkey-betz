@@ -50,3 +50,40 @@ def superuser_required(view_func: Callable) -> Callable:
         return view_func(request, *args, **kwargs)
 
     return _wrapped
+
+
+def ops_aggregate_allowed(view_func: Callable) -> Callable:
+    """Declare a view's intent to permit cross-tenant aggregate for privileged ops.
+
+    Request-time no-op marker. The security is enforced by the view code's
+    actual scoping logic; this decorator's role is to declare intent for the
+    Phase 4 regression harness AST scan and to force per-use I-030201 §11.X
+    ledger amendment discipline as a boundary control.
+
+    Contract per I-030201 §11 (2026-07-10 codification):
+    - MUST be paired with @superuser_required on the same callable (harness
+      fails at test-collection time if pair is missing).
+    - MUST be imported from this module ONLY. Any other definition or import
+      path is treated as spoofing by the AST harness and fails collection.
+    - Every use MUST land with a corresponding §11.X F-block ledger amendment
+      capturing view fqn, endpoint, use case, Rigby SIGN, Chris D-verdict.
+
+    Usage::
+
+        @superuser_required
+        @ops_aggregate_allowed
+        def my_ops_aggregate_endpoint(request):
+            ...
+
+    Attribute contract for AST harness:
+    - The wrapped function has attribute `_ops_aggregate_allowed = True`
+      as a defensive belt-and-suspenders marker; the primary detection is
+      still the decorator name in the AST tree, not this runtime attribute.
+    """
+
+    @wraps(view_func)
+    def _wrapped(*args, **kwargs):
+        return view_func(*args, **kwargs)
+
+    _wrapped._ops_aggregate_allowed = True  # type: ignore[attr-defined]
+    return _wrapped

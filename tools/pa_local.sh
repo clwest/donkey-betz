@@ -529,4 +529,11 @@ export PA_API_TOKEN=4b458900136c83dd49b869b80e08b1e5d2967a4c
 # next-campaign starting pin until it too hits a retirement trigger,
 # at which point mint a fresh one via session_tool.create_fresh and
 # update this line.
-python tools/pa_chat.py "$@" --tools --conversation pa-43818ab8ba144a2f
+#
+# S2748 open (2026-07-10): retired S2747 pin `pa-cd35bde16f974843`
+# via session_tool.retire (updated_count=1, previously_active=true).
+# Minted fresh `pa-59d27abadeed4411` label 'ios-arc-open-I0302-P4'
+# for the I-0302 Phase 4 (regression harness for RUR-C1 parent
+# invariant) arc. Prior pin `pa-43818ab8ba144a2f` preserved above
+# as comment (rotated from at S2748 open).
+python tools/pa_chat.py "$@" --tools --conversation pa-59d27abadeed4411
