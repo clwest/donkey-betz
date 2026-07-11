@@ -4,10 +4,11 @@
  * Replaces the generic System tab with actionable ops data.
  */
 
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   AlertTriangle, CheckCircle, XCircle, Loader2, Shield,
-  Clock, Zap, Activity, Ban, TrendingDown,
+  Clock, Zap, Activity, Ban, TrendingDown, Layers, Copy, Check,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { api } from '@/lib/api'
@@ -25,6 +26,21 @@ interface OpsHealthSummary {
     total: number
     by_verdict: Record<string, number>
   }
+}
+
+interface CloseCeremonyItem {
+  session_number: number
+  title: string
+  date: string | null
+  handoff_path: string
+  envelope_path: string | null
+  envelope_exists: boolean
+}
+
+interface CloseCeremonyLedger {
+  items: CloseCeremonyItem[]
+  count: number
+  limit: number
 }
 
 export function OpsConsoleTab() {
@@ -76,6 +92,28 @@ export function OpsConsoleTab() {
     },
     staleTime: 60000,
   })
+
+  // S2763: close-ceremony ledger — last 10 handoffs paired with envelopes.
+  // Filesystem-backed (docs/handoffs/ + docs/research/implementation/), no
+  // data model. Read-only operator surface for fast context re-load.
+  const ledgerQuery = useQuery<CloseCeremonyLedger | null>({
+    queryKey: ['ops-close-ceremony-ledger'],
+    queryFn: async () => {
+      try {
+        const r = await api.get<CloseCeremonyLedger>('/ops/close-ceremony-ledger/?limit=10')
+        return r.data
+      } catch { return null }
+    },
+    staleTime: 60000,
+  })
+  const [copiedPath, setCopiedPath] = useState<string | null>(null)
+  const copyPath = async (path: string) => {
+    try {
+      await navigator.clipboard.writeText(path)
+      setCopiedPath(path)
+      setTimeout(() => setCopiedPath(null), 1500)
+    } catch { /* clipboard unavailable — no-op */ }
+  }
 
   const slos = sloQuery.data?.slos || []
   const breaches = slos.filter((s: Record<string, boolean>) => s.breach)
@@ -271,6 +309,71 @@ export function OpsConsoleTab() {
         <div className="text-center py-12 text-gray-500">
           <CheckCircle size={32} className="mx-auto mb-2 opacity-50" />
           <p className="text-sm">All systems healthy. No breaches, failures, or blocked agents.</p>
+        </div>
+      )}
+
+      {/* S2763: Close-Ceremony Ledger */}
+      {ledgerQuery.data && ledgerQuery.data.items.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
+            <Layers size={14} />
+            Recent Close-Ceremonies (last {ledgerQuery.data.count})
+          </h3>
+          <div className="space-y-2">
+            {ledgerQuery.data.items.map((item) => (
+              <div key={item.session_number} className="p-3 rounded-lg bg-dark-card border border-dark-border">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-mono font-medium text-primary-400 shrink-0">
+                    S{item.session_number}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white truncate">{item.title}</p>
+                    <div className="flex items-center gap-2 mt-0.5 text-xs">
+                      {item.date && <span className="text-gray-500">{item.date}</span>}
+                      <span
+                        className={cn(
+                          'px-1.5 py-0.5 rounded font-medium',
+                          item.envelope_exists
+                            ? 'bg-green-500/10 text-green-400'
+                            : 'bg-gray-500/10 text-gray-400',
+                        )}
+                      >
+                        {item.envelope_exists ? 'envelope' : 'handoff-only'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-2 space-y-1">
+                  <button
+                    onClick={() => copyPath(item.handoff_path)}
+                    className="w-full flex items-center gap-2 text-xs text-left px-2 py-1 rounded bg-dark-bg hover:bg-dark-border transition-colors group"
+                    title="Copy handoff path"
+                  >
+                    {copiedPath === item.handoff_path ? (
+                      <Check size={11} className="text-green-400 shrink-0" />
+                    ) : (
+                      <Copy size={11} className="text-gray-500 shrink-0 group-hover:text-gray-300" />
+                    )}
+                    <code className="text-gray-400 truncate flex-1">{item.handoff_path}</code>
+                  </button>
+                  {item.envelope_path && (
+                    <button
+                      onClick={() => copyPath(item.envelope_path!)}
+                      className="w-full flex items-center gap-2 text-xs text-left px-2 py-1 rounded bg-dark-bg hover:bg-dark-border transition-colors group"
+                      title="Copy envelope path"
+                    >
+                      {copiedPath === item.envelope_path ? (
+                        <Check size={11} className="text-green-400 shrink-0" />
+                      ) : (
+                        <Copy size={11} className="text-gray-500 shrink-0 group-hover:text-gray-300" />
+                      )}
+                      <code className="text-gray-400 truncate flex-1">{item.envelope_path}</code>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
