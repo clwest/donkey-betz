@@ -283,6 +283,61 @@ def tb_cross_tenant_deliverable(tb_user_b, tb_workspace_a):
 
 
 # --------------------------------------------------------------------------
+# VIP scope carve-out (Sub-phase 3 extension, 2026-07-11 S2750)
+#
+# `get_deliverable` at `core/views_deliverables.py:161-228` preserves a
+# Chris-ratified VIP demo-viewer carve-out: an authenticated non-owner
+# non-staff user who has a redeemed VIPInvite bound to the deliverable's
+# workspace is allowed 200 despite not owning the row. See I-030201
+# §5.1.b tail (5th-site fix retained the VIP carve-out on purpose).
+#
+# The VIPScope runtime lookup (core.vip_scope.get_vip_scope) walks
+# VIPInvite.objects.filter(redeemed_by=user).order_by('-redeemed_at')
+# — so a redeemable VIPInvite with `redeemed_at` set is required for
+# the carve-out to fire. Fixture below creates that graph.
+# --------------------------------------------------------------------------
+
+
+@pytest.fixture
+def tb_vip_user(db):
+    return User.objects.create_user(
+        username=f"tb-vip-{uuid.uuid4().hex[:6]}",
+        email=f"tb-vip-{uuid.uuid4().hex[:6]}@example.com",
+        password="pw",
+    )
+
+
+@pytest.fixture
+def tb_vip_invite_in_ws_a(tb_user_a, tb_workspace_a, tb_vip_user):
+    """Redeemed VIPInvite binding tb_vip_user to workspace_a.
+
+    Contract per `core.vip_scope.get_vip_scope`:
+    - `redeemed_by=tb_vip_user` (so scope lookup finds this invite)
+    - `redeemed_at` set (so `.order_by('-redeemed_at').first()` returns it)
+    - `workspace=tb_workspace_a` (so `scope.workspace_id` matches
+      deliverables in workspace_a)
+
+    Under `get_deliverable` at `core/views_deliverables.py:191-208`:
+    - tb_vip_user reading a deliverable in workspace_a → 200 (allow)
+    - tb_vip_user reading a deliverable in workspace_b → 403 (mismatch)
+    - tb_vip_user reading an own-owned row is not exercised — the carve-out
+      only applies when `deliverable.user != request.user`.
+    """
+    from django.utils import timezone
+
+    from core.models_vip_invite import VIPInvite
+
+    return VIPInvite.objects.create(
+        created_by=tb_user_a,
+        workspace=tb_workspace_a,
+        redeemed_by=tb_vip_user,
+        redeemed_at=timezone.now(),
+        recipient_name="tb-vip-recipient",
+        label=f"tb-vip-invite-{uuid.uuid4().hex[:6]}",
+    )
+
+
+# --------------------------------------------------------------------------
 # Document (per-user)
 # --------------------------------------------------------------------------
 
@@ -327,6 +382,7 @@ def tb_golden(
     tb_user_a,
     tb_user_b,
     tb_superuser,
+    tb_vip_user,
     tb_workspace_a,
     tb_workspace_b,
     tb_initiatives_a,
@@ -339,22 +395,26 @@ def tb_golden(
     tb_deliverables_a,
     tb_deliverables_b,
     tb_cross_tenant_deliverable,
+    tb_vip_invite_in_ws_a,
     tb_documents_a,
     tb_documents_b,
 ):
     """One-call bundle of the full 5-model tenant-boundary fixture graph.
 
     Use this fixture in matrix cells that need the complete data shape:
-    two isolated users, one superuser, per-model N=3 owned rows per user,
-    plus one null-user AgentExecution for the Session 642 carve-out probe,
-    plus one adversarial cross-tenant Deliverable (F1A) — user_b owns the
-    row but workspace_a owns the workspace binding. See
-    `tb_cross_tenant_deliverable` docstring for the contract.
+    two isolated users, one superuser, one VIP demo viewer, per-model N=3
+    owned rows per user, plus one null-user AgentExecution for the Session
+    642 carve-out probe, plus one adversarial cross-tenant Deliverable
+    (F1A) — user_b owns the row but workspace_a owns the workspace
+    binding — plus one redeemed VIPInvite binding vip_user to workspace_a.
+    See `tb_cross_tenant_deliverable` and `tb_vip_invite_in_ws_a`
+    docstrings for the respective contracts.
     """
     return {
         "user_a": tb_user_a,
         "user_b": tb_user_b,
         "superuser": tb_superuser,
+        "vip_user": tb_vip_user,
         "workspace_a": tb_workspace_a,
         "workspace_b": tb_workspace_b,
         "initiatives_a": tb_initiatives_a,
@@ -367,6 +427,7 @@ def tb_golden(
         "deliverables_a": tb_deliverables_a,
         "deliverables_b": tb_deliverables_b,
         "cross_tenant_deliverable": tb_cross_tenant_deliverable,
+        "vip_invite_in_ws_a": tb_vip_invite_in_ws_a,
         "documents_a": tb_documents_a,
         "documents_b": tb_documents_b,
     }

@@ -24,6 +24,8 @@ from tests.security.fixtures.tenant_boundary import (  # noqa: F401
     tb_superuser,
     tb_user_a,
     tb_user_b,
+    tb_vip_invite_in_ws_a,
+    tb_vip_user,
     tb_workspace_a,
     tb_workspace_b,
 )
