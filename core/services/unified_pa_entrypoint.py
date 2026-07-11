@@ -1976,6 +1976,57 @@ class UnifiedPAEntrypoint:
                         response_id = None
                         continue
 
+                    # Session 2749: provider fallback on stall — before returning
+                    # the generic error, try one Anthropic Claude call. Root
+                    # cause: gpt-5.2 stalls on multi-fold structural design
+                    # prompts (returns tiny non-actionable text without tool
+                    # calls). Anthropic handles these cleanly. Only fires when
+                    # we would otherwise return the generic error — strictly
+                    # better than the pre-2749 behavior. See memory rule
+                    # `feedback_gpt5_stalls_on_multifold_design_prompts.md`.
+                    try:
+                        logger.info(
+                            f"[{trace_id}] gpt-5.2 stalled after retry — "
+                            f"falling back to anthropic claude"
+                        )
+                        fresh_messages = self._build_messages_array(message, context)
+                        fallback_result = await asyncio.to_thread(
+                            self.llm_enforcer.enforce_real_ai,
+                            prompt=message,
+                            input_messages=fresh_messages,
+                            tools=None,
+                            previous_response_id=None,
+                            task_type='conversation',
+                            max_tokens=2000,
+                            agent_name='PersonalAssistant',
+                            trace_id=trace_id,
+                            use_claude=True,
+                        )
+                        fallback_text = fallback_result.get('response', '') or ''
+                        if (
+                            fallback_text.strip()
+                            and not self._is_degenerate_content(fallback_text)
+                        ):
+                            logger.info(
+                                f"[{trace_id}] anthropic fallback returned "
+                                f"{len(fallback_text)} chars — using it"
+                            )
+                            return (
+                                fallback_text,
+                                tool_runs,
+                                fc_metadata,
+                                fallback_result.get('response_id'),
+                            )
+                        logger.warning(
+                            f"[{trace_id}] anthropic fallback also degenerate "
+                            f"or empty — returning generic error"
+                        )
+                    except Exception as fb_exc:
+                        logger.warning(
+                            f"[{trace_id}] anthropic fallback raised: {fb_exc} — "
+                            f"returning generic error"
+                        )
+
                     return (
                         "I ran into an issue processing that request. Could you try again or rephrase?",
                         tool_runs, fc_metadata, response_id,
