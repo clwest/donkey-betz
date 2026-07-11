@@ -3,7 +3,7 @@
 **Date:** 2026-07-11
 **Predecessor:** S2752 (Playbook v0.5 Stage 1 shape ratified; Q1..Q5 D-verdicts frozen)
 **Successor:** S2754 (P0.5 cost-threshold advance-to-freeze routing + I-0303 open + next engineering candidates)
-**Session pin:** `pa-44541f01cbb14b46` (v0.5 codification scope; carries into S2754 or retire at Chris discretion)
+**Session pin:** `pa-44541f01cbb14b46` (v0.5 codification scope; **retired at S2753 close per Chris directive** — `updated_count=10 previously_active=true retired=true`; wrapper `tools/pa_local.sh:539` still points at retired pin as intended failure mode forcing S2754 first-action fresh mint)
 **HEAD at open:** `ebf69e966` (post-S2752 close bundle #3133 merge)
 **HEAD at close:** filled at merge (S2753 close-bundle PR SHA)
 
@@ -67,9 +67,11 @@ Verbatim: *"Going forward you and Rigby needs to have come to an agreement and t
 
 ## §5 PA Pin Rotation Discipline
 
-Pin `pa-44541f01cbb14b46` (minted S2752 open for v0.5 codification scope) carries through S2753. Natural retire point = v0.5.0 ratification complete (this session). Retire at S2754 open unless Chris directs re-use for a follow-on scope.
+Pin `pa-44541f01cbb14b46` (minted S2752 open for v0.5 codification scope) **retired at S2753 close** per Chris directive. `session_tool.retire` returned `updated_count=10 previously_active=true retired=true`.
 
-If S2754 opens I-0303, mint a fresh pin scoped to I-0303. If S2754 opens something else (P0.5 advance-to-freeze routing, engineering candidate), mint the pin scoped accordingly.
+Wrapper `tools/pa_local.sh` line 539 was **not** updated (still points at the retired pin). This is the intended failure mode: it forces S2754's first action to be a fresh mint scoped to whatever primary work S2754 opens (P0.5 advance-to-freeze routing, I-0303 open, engineering candidate, etc.).
+
+S2754 open sequence: (1) `session_tool.create_fresh label='<scope>'` → new `pa-<xxxx>`; (2) edit `tools/pa_local.sh:539` to the new pin.
 
 ---
 
