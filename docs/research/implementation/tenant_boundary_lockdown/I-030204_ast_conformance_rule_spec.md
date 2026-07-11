@@ -282,7 +282,15 @@ This spec doc is the drafting artifact. Rigby's contribution to Sub-phase 3 shif
 - **Design SIGN** (§14 codification F1/F2/F3): Rigby SIGN-PASS 2026-07-10 S2748 close, pin `pa-59d27abadeed4411` (now retired). All leans matched Claude's; no Chris ratification needed on F1/F2/F3.
 - **Rule proposal** (this doc §3): Claude drafts per path 2 fallback. **Chris D-verdict "ratify all, ship report-only PR, one bundled batch-fix PR" — 2026-07-10 S2749 open.**
 - **Implementation** (`tests/security/test_i0302_p4_ast_conformance.py`): Claude ships first-pass. Rigby light-SIGN post-merge on behavioral verification.
-- **Batch-fix + enforcement flip**: Chris D-verdict "one bundled batch-fix PR" ratified 2026-07-10 S2749 open. Enforcement flip PR sequenced after clean re-run.
+- **Batch-fix + enforcement flip**: Chris D-verdict "one bundled batch-fix PR" ratified 2026-07-10 S2749 open. Report-only PR (#3116) merged 2026-07-11 02:05 UTC; batch-fix PR (#3117) merged 2026-07-11 02:06 UTC; enforcement-flip PR sequenced immediately after harness re-run at merged HEAD confirmed 0 violations.
+
+## §9 Enforcement flip landed — S2749 close
+
+Enforcement flip is a one-line change: `ENFORCE_HTTP404_SWALLOW = False → True` in `tests/security/test_i0302_p4_ast_conformance.py`. Ships in the same session as the batch-fix per Chris D-verdict flow "merge them and prep the enforcement flip." Harness re-run in enforcing mode confirms 3/3 pass at merged HEAD `40f2bffc` — enforcement is a no-op today because violations_total == 0.
+
+**Rollback safety:** if a legit false-positive surfaces post-enforcement, the rollback is a one-line revert to `False`; the report-only mode remains functional. The report JSON is still emitted in enforcing mode, so debugging any future violation is one command away.
+
+**§14 codification substrate is now closed.** Remaining Sub-phase 3 substrates continue independently: intentional-immutability contract (Initiative + ChatConversation 405/404 absence-contract), endpoint sentinels layer, deferred-surface coverage-gap report, VIP-scope carve-out on `get_deliverable`.
 
 ## §8 First run — design validation results
 

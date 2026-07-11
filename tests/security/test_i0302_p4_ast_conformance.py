@@ -53,8 +53,9 @@ EXCLUDED_SUBSTRINGS = (
     "/site-packages/",
 )
 
-# Mode switch — flip to True post batch-fix per I-030204 §5.
-ENFORCE_HTTP404_SWALLOW = False
+# Mode switch — flipped to True at S2749 close after batch-fix PR #3117
+# reached zero-known-violations per I-030204 §5.
+ENFORCE_HTTP404_SWALLOW = True
 
 
 # --------------------------------------------------------------------------
