@@ -116,8 +116,10 @@ def health_summary(request):
     version = _safe_call({'action': 'version'}, 'version')
     tbv = _safe_call({'action': 'tenant_boundary_violations', 'window': '24h', 'limit': 0}, 'tbv')
     stw = _safe_call({'action': 'staleness_warnings', 'window': '24h', 'limit': 0}, 'stw')
+    slo = _safe_call({'action': 'slo_status', 'window': '24h'}, 'slo')
 
     head_sha = (version.get('head_commit_sha') or '')[:12] if isinstance(version, dict) else ''
+    slo_summary = _summarize_slos(slo)
     return JsonResponse({
         'window': '24h',
         'verdict': (version.get('staleness_verdict') if isinstance(version, dict) else None) or 'UNKNOWN',
@@ -131,7 +133,62 @@ def health_summary(request):
             'total': stw.get('total_count', 0) if isinstance(stw, dict) else 0,
             'by_verdict': stw.get('by_verdict', {}) if isinstance(stw, dict) else {},
         },
+        'slo_status': slo_summary,
     })
+
+
+def _summarize_slos(slo_payload) -> dict:
+    """S2764: Reduce slo_status list to a compact tile summary.
+
+    Handles the two SLO polarities cleanly: ``target`` present ⇒ lower-is-worse
+    (breach gap = target - current); ``target_max`` present ⇒ upper-is-worse
+    (breach gap = current - target_max). SLOs missing both directions or
+    lacking a numeric ``current`` are counted but excluded from worst-breach
+    ranking. Errored SLO entries (``error`` key) do not contribute to totals.
+    """
+    default = {'total': 0, 'breach_count': 0, 'healthy_count': 0, 'worst_breach': None}
+    if not isinstance(slo_payload, dict):
+        return default
+    slos = slo_payload.get('slos') or []
+    if not isinstance(slos, list):
+        return default
+
+    total = 0
+    breaches = 0
+    worst = None
+    worst_gap = None
+    for s in slos:
+        if not isinstance(s, dict) or s.get('error'):
+            continue
+        total += 1
+        if not s.get('breach'):
+            continue
+        breaches += 1
+        current = s.get('current')
+        if not isinstance(current, (int, float)):
+            continue
+        if 'target_max' in s and isinstance(s.get('target_max'), (int, float)):
+            gap = current - s['target_max']  # positive when breaching upper bound
+            target_display = s['target_max']
+        elif 'target' in s and isinstance(s.get('target'), (int, float)):
+            gap = s['target'] - current  # positive when below lower bound
+            target_display = s['target']
+        else:
+            continue
+        if worst_gap is None or gap > worst_gap:
+            worst_gap = gap
+            worst = {
+                'key': s.get('key'),
+                'name': s.get('name'),
+                'current': current,
+                'target': target_display,
+            }
+    return {
+        'total': total,
+        'breach_count': breaches,
+        'healthy_count': max(0, total - breaches),
+        'worst_breach': worst,
+    }
 
 
 # S2763: fixed filesystem roots for close_ceremony_ledger. Never
