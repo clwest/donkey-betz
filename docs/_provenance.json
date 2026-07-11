@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-11T21:34:34+00:00",
+    "generated": "2026-07-11T21:50:44+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "7db82c8434bf",
-    "doc_count": 2556,
-    "commit_count": 7886,
+    "git_head": "8785c3125458",
+    "doc_count": 2558,
+    "commit_count": 7888,
     "confidence_breakdown": {
-      "HIGH": 1626,
+      "HIGH": 1627,
       "MEDIUM": 402,
       "LOW": 5,
-      "UNKNOWN": 523
+      "UNKNOWN": 524
     },
     "excludes": [
       "docs/archive/",
@@ -2586,7 +2586,7 @@
         2745,
         2749
       ],
-      "commit_count": 1246,
+      "commit_count": 1248,
       "prs": [
         10,
         11,
@@ -3154,7 +3154,8 @@
         3141,
         3143,
         3144,
-        3150
+        3150,
+        3152
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7496,7 +7497,7 @@
         2745,
         2749
       ],
-      "commit_count": 194,
+      "commit_count": 196,
       "prs": [
         2213,
         2219,
@@ -7667,7 +7668,8 @@
         3134,
         3141,
         3143,
-        3150
+        3150,
+        3152
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19701,6 +19703,21 @@
       "commit_count": 2,
       "prs": [
         3151
+      ]
+    },
+    "docs/handoffs/SESSION_2763_CLOSE_CEREMONY_LEDGER_RATIFIED.md": {
+      "originating_session": 2763,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "8785c312",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ui): S2763 Close-Ceremony Ledger operator surface ratified (#3152)",
+      "sessions_touched": [
+        2763
+      ],
+      "commit_count": 2,
+      "prs": [
+        3152
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -36519,6 +36536,19 @@
       "prs": [
         3134,
         3135
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "8785c312",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ui): S2763 Close-Ceremony Ledger operator surface ratified (#3152)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3152
       ]
     },
     "docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase1_ledger.md": {
