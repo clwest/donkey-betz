@@ -342,6 +342,21 @@ class LLMCallLog(models.Model):
     error_type = models.CharField(max_length=100, blank=True)
     error_message = models.TextField(blank=True)
 
+    # Session 2749: response preview for stall diagnostics.
+    # Populated with the first 500 chars of the LLM's actual response
+    # ONLY when success=True but completion_tokens < 100 — i.e. when the
+    # LLM returned a near-empty response that the agentic loop treats as
+    # a stall. Removes the "success=True + tiny completion + no visible
+    # error" diagnostic blind spot that caused the Rigby jam on the
+    # I-0302 §14 AST-rule ask (S2749 open).
+    response_preview = models.TextField(
+        blank=True,
+        help_text=(
+            "First 500 chars of the LLM response — populated on stall "
+            "(success=True but completion_tokens < 100)"
+        ),
+    )
+
     # Timestamp
     created_at = models.DateTimeField(auto_now_add=True)
 
