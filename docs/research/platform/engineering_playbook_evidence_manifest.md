@@ -532,15 +532,43 @@ Full content authored in v0.2+.
 | C7-8 | E5 | Skill: `context-kit` (session bootstrap orient tool) | Session-open orientation tool |
 | C7-9 | E5 | `docs/canon/INDEX.md` Operational Canon entries | Canonical session anchors |
 | C7-10 | E6 | Multiple SESSION_XXXX handoffs — pattern exemplars | Historical exemplars |
+| C7-11 | E6 | `docs/handoffs/SESSION_2749_I0302_PHASE_4_SUB_PHASE_3_SUBSTRATE_LARGELY_CLOSED.md` | v0.5 §7.5.1 first-trigger three-PR execution (report-only → batch-fix → enforcement-flip on AST conformance harness) |
+| C7-12 | E6 | `docs/handoffs/SESSION_2750_I0302_PHASE_4_SUB_PHASE_3_CLOSED.md` | v0.5 §7.4.2 first-trigger rebase-conflict anti-pattern + §7.4.3 SPLIT cascade cadence + §7.5.1 second-trigger endpoint sentinel three-PR execution |
+| C7-13 | E6 | `docs/handoffs/SESSION_2751_I0302_PHASE_4_CLOSED.md` | v0.5 §7.4.1 phase-close bundle trigger + §7.4.2 second-trigger clean apply + §7.6.1 first watchpoint SIGN cycle in-wild |
+| C7-14 | E6 | `docs/handoffs/SESSION_2751_I0302_ARC_CLOSED.md` | v0.5 §7.4.1 arc-close bundle trigger + §7.4.3 COMBINED cascade trigger + §7.6.1 second watchpoint SIGN cycle in-wild |
+| C7-15 | E4 | commit `f341581a` (PR #3129) | v0.5 §7.4.1 Phase 4 close bundle SHA — close doc + ratification + arch amendments in single PR |
+| C7-16 | E4 | commit `1176b67a` (PR #3131) | v0.5 §7.4.1 Arc close bundle SHA — arc-close doc + ratification + I-030203 §8 append in single PR |
+| C7-17 | E4 | commit `7fe19a1c` (PR #3128) | v0.5 §7.4.3 SPLIT cadence SHA — cascade-only PR following handoff-only PR #3127 |
+| C7-18 | E4 | commit `d5e54777` (PR #3130) | v0.5 §7.4.3 COMBINED cadence SHA — handoff + start-here + cascade in one PR |
+| C7-19 | E4 | commit `f586a2cf` (PR #3116) | v0.5 §7.5.1 REPORT-ONLY SHA — AST conformance harness merged with warning-only outcome |
+| C7-20 | E4 | commit `40f2bffc` (PR #3117) | v0.5 §7.5.1 BATCH-FIX SHA — follow-on PR closing all report-only findings |
+| C7-21 | E4 | commit `f1cf8950` (PR #3118) | v0.5 §7.5.1 ENFORCEMENT-FLIP SHA — third PR turning harness into hard gate |
+| C7-22 | E3 | `docs/research/implementation/tenant_boundary_lockdown/I-030204_ast_conformance_rule_spec.md` §4 + §5 + §9 | v0.5 §7.5.1 rule spec — report-only acceptance criteria + enforcement-mode flip criteria + enforcement-flip landed record |
+| C7-23 | E2 | `docs/research/implementation/RATIFICATION_2026-07-10_i0302_arc_close.md` §5 (§5.1–§5.5 candidacy rows) + §10.1 (retrospective) | v0.5 candidacy ratification for all 5 rules — the workspace ratification envelope authorizing v0.5 codification |
+| C7-24 | E3 | `docs/research/process/RESEARCH_OPERATING_SYSTEM.md` §2.7.1 Operational cadence (Rigby SIGN v2 fold) | v0.5 §7.6.1 parent contract — the ROS SIGN methodology that PLAYBOOK-7.6.1 EXTENDS for the close-cycle scope. Cross-chapter shared per §14.7 peer-OS documents; enumerated explicitly under §10 to reduce audit friction (per S2753 Rigby SIGN W3 non-blocking ask) |
 
 ### 10.2 v0.1 stub-content evidence
 
 - C7-1 (CLAUDE.md)
 - C7-2 (00-START-NEXT-SESSION.md)
 
-### 10.3 Gaps
+### 10.3 v0.5 partial-activation evidence
+
+Added at v0.5.0 (2026-07-11) to support the Chapter 7 partial activation ratifying PLAYBOOK-7.4.1/7.4.2/7.4.3/7.5.1/7.6.1. The manifest freeze semantics of §2.1 authorize post-v0.1 revisions under the same amendment discipline as Playbook amendments; the v0.5.0 amendment carries this manifest revision under a single SIGN per shape doc Q5 D-verdict (mechanical dispatch bundled with v0.5 SIGN).
+
+**Lockbox status of v0.5 additions.** Entries C7-11 through C7-24 are amendment-scoped and FROZEN for v0.5.0 under the same lockbox semantics that govern v0.1 (§2.1 line 19 "meaning of frozen"). Any source not enumerated here or in earlier §3–§14 sections remains OUT for v0.5 rule citations; discovery of additional sources during Stage 2 authoring MUST be documented as an additional manifest revision under a future amendment.
+
+- C7-11 through C7-14 — E6 session handoffs (four close-ceremony triggers)
+- C7-15 through C7-21 — E4 commits (seven SHAs across close-bundle, cascade shape, and three-PR staged codification)
+- C7-22 — E3 rule spec anchoring §7.5.1
+- C7-23 — E2 workspace ratification record authorizing the amendment
+- C7-24 — E3 ROS §2.7.1 (explicit enumeration of the §7.6.1 parent contract)
+
+### 10.4 Gaps
 
 **Blocking for v0.1 STUB:** none.
+
+**Blocking for v0.5 partial activation:** none. All 13 v0.5 sources resolve at HEAD `ebf69e96`.
 
 **Non-blocking:** the 952 handoffs are individually not enumerable in the manifest without exceeding practical length; Chapter 7 full content will need a documented sampling method (e.g., "last 10 handoffs" or "handoffs per cycle-close").
 

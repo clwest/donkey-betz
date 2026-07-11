@@ -1,33 +1,33 @@
 ---
 title: "Donkey Betz Engineering Playbook"
-version: "0.4.1"
+version: "0.5.0"
 version_status: ratified
 scope: platform
-parent_version: "0.4.0"
+parent_version: "0.4.1"
 supersedes: []
-compatible_with: ["0.1.0", "0.2.0", "0.3.0", "0.4.0"]
+compatible_with: ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.4.1"]
 ratifier: chris
-ratified_date: 2026-07-10
+ratified_date: 2026-07-11
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
-  deliverable_id: bb01b377-5953-4cb3-adc5-67135367121c
+  deliverable_id: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
-branch_authored: playbook/v0.4.1-per-chain-refresh-cadence-patch
-commit_sha: 0805a332
-content_hash: sha256:d0f452e7c4e0549ea070fd87402887d0175f102ce078a3447d2f38e845f6598d
-git_tag: playbook-v0.4.1
+branch_authored: playbook/v0.5.0-ch7-partial-activation
+commit_sha: PLACEHOLDER_TO_BE_FILLED_POST_RATIFICATION
+content_hash: sha256:6a3f897aa73c39dc3a14adefc2f7d3811995e71f3d76e8c6348ffdb39a3c46d4
+git_tag: playbook-v0.5.0
 schema_version: 1
 prior_ratification:
-  version: "0.4.0"
+  version: "0.4.1"
   ratified_date: 2026-07-10
-  deliverable_id: 77420585-2bd9-43bb-aa1c-74cae3354754
-  commit_sha: 65441c87
-  content_hash: sha256:009d6c03c492ba6afae5404cfc2848aa0df0343d949c8b01de4be409bb915cf3
-  git_tag: playbook-v0.4.0
-authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740, 2742]
+  deliverable_id: bb01b377-5953-4cb3-adc5-67135367121c
+  commit_sha: 0805a332
+  content_hash: sha256:d0f452e7c4e0549ea070fd87402887d0175f102ce078a3447d2f38e845f6598d
+  git_tag: playbook-v0.4.1
+authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740, 2742, 2752, 2753]
 correction_sessions: [2723, 2725, 2727]
-audit_sessions: [2722, 2724, 2725, 2727, 2738, 2740, 2742]
+audit_sessions: [2722, 2724, 2725, 2727, 2738, 2740, 2742, 2752]
 ratification_package_session: 2726
 ratification_session: 2727
 v0_2_0_authoring_session: 2736
@@ -38,14 +38,18 @@ v0_4_0_authoring_session: 2740
 v0_4_0_ratification_session: 2740
 v0_4_1_authoring_session: 2742
 v0_4_1_ratification_session: 2742
-rule_count: 196
+v0_5_0_shape_session: 2752
+v0_5_0_authoring_session: 2753
+v0_5_0_ratification_session: 2753
+rule_count: 201
 rules_added_v0_2_0: [PLAYBOOK-5.2.2, PLAYBOOK-2.2.2, PLAYBOOK-3.2.2]
 rules_added_v0_3_0: [PLAYBOOK-6.6.14, PLAYBOOK-6.10.5]
 rules_added_v0_4_0: [PLAYBOOK-6.10.6]
+rules_added_v0_5_0: [PLAYBOOK-7.4.1, PLAYBOOK-7.4.2, PLAYBOOK-7.4.3, PLAYBOOK-7.5.1, PLAYBOOK-7.6.1]
 evidence_manifest: docs/research/platform/engineering_playbook_evidence_manifest.md
 ---
 
-# Donkey Betz Engineering Playbook v0.4.1
+# Donkey Betz Engineering Playbook v0.5.0
 
 # Chapter 0 — Preamble and How to Read This Playbook
 
@@ -934,12 +938,12 @@ The following extension points are informative. They identify where a future MIN
 **Chapter ID:** PLAYBOOK-CH-7
 **Purpose:** Establish constitutional scope for session-open and session-close discipline as it applies to Playbook authoring sessions.
 **Scope:** Every Playbook-authoring session; session-open orientation; session-close handoff production; cascade sequencing at session boundaries.
-**Status:** STUB (v0.1). Full content deferred to v0.2+ MINOR amendments.
+**Status:** STUB (v0.1). Partial activation at v0.5.0 (§7.4/§7.5/§7.6 authored); remainder deferred to v0.6+ MINOR amendments.
 **Introduced in:** v0.1.0
-**Last substantive change:** v0.1.0
+**Last substantive change:** v0.5.0
 **Evidence anchor:** `docs/research/platform/engineering_playbook_evidence_manifest.md`
 **Statement classes present:** [EP], [GR]
-**Rule ID range:** PLAYBOOK-7.1.1 through PLAYBOOK-7.3.1
+**Rule ID range:** PLAYBOOK-7.1.1 through PLAYBOOK-7.6.1
 
 ---
 
@@ -955,19 +959,45 @@ The following extension points are informative. They identify where a future MIN
 
 **[EP] PLAYBOOK-7.3.1** Full authoring of Chapter 7's constitutional treatment of session discipline is deferred to a future MINOR amendment. Until then, CLAUDE.md, 00-START-NEXT-SESSION.md, and the handoff corpus remain the authoritative sources for session methodology. [E3: 2712 §16.9 (stub-chapter deferral discipline) — part of the convergent 2708-2714 research chain per manifest §2.3]
 
-## 7.4 Cross-references (informative)
+## 7.4 Close-ceremony delivery discipline
+
+Every phase close and arc close in a research or implementation arc dispatches a canonical delivery bundle: the close doc, the ratification record, and any final chain-of-custody amendments to the arc's architecture doc. Close-ceremony delivery discipline governs how those artifacts are packaged, sequenced with substrate work, and cascaded into the documentation index. §7.4 codifies three rules — bundling (§7.4.1), serialization against substrate (§7.4.2), and the cascade-PR shape (§7.4.3) — first exercised in-wild across the S2750–S2751 I-0302 phase- and arc-close ceremonies.
+
+**[GR] PLAYBOOK-7.4.1** Every phase close or arc close MUST ship as a single PR bundling (a) the close doc, (b) the ratification record, and (c) any final amendments to the phase/arc architecture doc chain-of-custody. Substrate PRs unrelated to the close MUST NOT be interleaved into the close bundle. [E2: RATIFICATION_2026-07-10_i0302_arc_close.md §5.2 (candidacy record); E4: commit `f341581a` (PR #3129 — Phase 4 close bundle: close doc + ratification + arch amendments); E4: commit `1176b67a` (PR #3131 — Arc close bundle: arc-close doc + ratification + I-030203 §8 append); E6: `docs/handoffs/SESSION_2751_I0302_PHASE_4_CLOSED.md` (Phase 4 close ceremony trigger); E6: `docs/handoffs/SESSION_2751_I0302_ARC_CLOSED.md` (Arc close ceremony trigger)]
+
+**[GR] PLAYBOOK-7.4.2** Phase-close doc mutations MUST NOT interleave with substrate PRs on the same arc doc within a single window. Close-doc PRs MUST either ship serially (close first, substrate second) OR consolidate substrate + close changes into a single PR under PLAYBOOK-7.4.1 when the substrate remains compatible with the close bundle. A rebase-conflict on the shared arc doc SIGNALS the anti-pattern and MUST trigger the serialization-or-consolidation choice before the next close-doc mutation is dispatched. [E2: RATIFICATION_2026-07-10_i0302_arc_close.md §5.4 (candidacy record); E6: `docs/handoffs/SESSION_2750_I0302_PHASE_4_SUB_PHASE_3_CLOSED.md` §4 (first-trigger rebase-conflict anti-pattern from interleaved substrate PRs on the shared arc doc); E6: `docs/handoffs/SESSION_2751_I0302_PHASE_4_CLOSED.md` (second trigger — applied cleanly with a single close-doc PR, no conflict)]
+
+**[GR] PLAYBOOK-7.4.3** Every phase-close or arc-close ceremony MUST produce a docs cascade output (INDEX refresh + embed batch) per PLAYBOOK-4.2.1 cascade discipline. The cascade output MUST ship either combined with the close-doc PR (under PLAYBOOK-7.4.1) or as an immediately-following follow-on PR — cascade MUST NOT be deferred across a session boundary. Selection criterion: (a) COMBINED when cascade output changes only `docs/INDEX.md` plus a single embed batch scoped to the close doc; (b) SPLIT when the cascade generates cross-cutting artifacts that risk conflicting with close-doc review. [E2: RATIFICATION_2026-07-10_i0302_arc_close.md §5.5 (candidacy record + shape divergence note); E4: commit `7fe19a1c` (S2750 SPLIT cadence — PR #3128 cascade-only after PR #3127 handoff-only); E4: commit `d5e54777` (S2751 COMBINED cadence — PR #3130 handoff + start-here + cascade in one); E6: `docs/handoffs/SESSION_2750_I0302_PHASE_4_SUB_PHASE_3_CLOSED.md` (SPLIT trigger); E6: `docs/handoffs/SESSION_2751_I0302_ARC_CLOSED.md` (COMBINED trigger)]
+
+## 7.5 Staged codification of anti-pattern substrates
+
+When a codification substrate flags existing anti-pattern sites at HEAD, dispatching the substrate as a single enforce-mode PR risks concurrent introduction of the substrate and rejection of pre-existing sites — the substrate is the correct outcome, but the dispatch shape masks scope, hides sequencing risk, and eliminates staged reviewer attention on the actual anti-pattern population. §7.5 codifies a three-PR staged-codification discipline first executed at S2749 across the AST conformance harness for tenant-boundary lockdown and confirmed at S2750 across endpoint sentinels.
+
+**[GR] PLAYBOOK-7.5.1** When a codification substrate (AST conformance rule, endpoint sentinel, lint gate, migration guard, or comparable per-site enforcer) will flag existing anti-pattern sites at HEAD, the substrate MUST ship in three sequential PRs: (1) REPORT-ONLY — harness merged with warning-only outcome that surfaces every violating site; (2) BATCH-FIX — a follow-on PR closing every report-only finding; (3) ENFORCEMENT-FLIP — a third PR turning the harness into a hard gate that would have failed CI at REPORT-ONLY merge. Each of the three PRs MUST carry its own SIGN cycle. The three PRs MUST NOT be collapsed into fewer PRs. [E2: RATIFICATION_2026-07-10_i0302_arc_close.md §5.1 (candidacy record); E3: `docs/research/implementation/tenant_boundary_lockdown/I-030204_ast_conformance_rule_spec.md` §4 (report-only phase acceptance criteria) + §5 (enforcement-mode flip acceptance criteria) + §9 (enforcement flip landed, S2749 close); E4: commit `f586a2cf` (PR #3116 REPORT-ONLY); E4: commit `40f2bffc` (PR #3117 BATCH-FIX); E4: commit `f1cf8950` (PR #3118 ENFORCEMENT-FLIP); E6: `docs/handoffs/SESSION_2749_I0302_PHASE_4_SUB_PHASE_3_SUBSTRATE_LARGELY_CLOSED.md` (first-trigger three-PR execution); E6: `docs/handoffs/SESSION_2750_I0302_PHASE_4_SUB_PHASE_3_CLOSED.md` (second-trigger endpoint-sentinel three-PR execution)]
+
+## 7.6 Session-close SIGN-cycle discipline
+
+SIGN methodology is inherited from the Research Operating System per PLAYBOOK-6.10.3. §7.6 EXTENDS that inherited methodology with a per-item structured SIGN request shape scoped to phase-close and arc-close ceremonies. §7.6 does NOT supersede the ROS SIGN contract; the ROS remains authoritative for general SIGN methodology outside close cycles. Only close-cycle SIGN requests fall within §7.6's authored scope.
+
+**[GR] PLAYBOOK-7.6.1** For phase-close and arc-close SIGN cycles, the SIGN request MUST be structured as numbered watchpoints (W1..Wn), each attesting a specific verification dimension of the close (for example: ratification record scope; arc-doc chain-of-custody; phase-close doc completeness; cascade output shape). The SIGN reviewer's response MUST return a per-watchpoint PASS or BLOCK verdict, plus any non-blocking asks classified per PLAYBOOK-6.10.3. Per-watchpoint outcomes MUST be recorded into the close-doc SIGN log. This rule EXTENDS PLAYBOOK-6.10.3 for the close-cycle scope; it does NOT supersede the ROS SIGN methodology outside close cycles. [E2: RATIFICATION_2026-07-10_i0302_arc_close.md §5.3 (candidacy record) + §10.1 (retrospective — SIGN cycles that ran cleanly across the arc); E3: `docs/research/process/RESEARCH_OPERATING_SYSTEM.md` §2.7.1 Operational cadence (Rigby SIGN v2 fold) — the parent contract this rule extends; E6: `docs/handoffs/SESSION_2751_I0302_PHASE_4_CLOSED.md` §SIGN (first watchpoint SIGN cycle in-wild); E6: `docs/handoffs/SESSION_2751_I0302_ARC_CLOSED.md` §SIGN (second watchpoint SIGN cycle in-wild)]
+
+## 7.7 Cross-references (informative)
 
 - `CLAUDE.md` — session-open contract at repository root.
 - `00-START-NEXT-SESSION.md` — per-session priorities.
 - `docs/handoffs/` — historical session record.
 - Chapter Evolution and Amendment §The Amendment Lifecycle.
+- Chapter Provenance and Evidence §6.10 (verification protocol) — PLAYBOOK-6.10.3 is the parent contract that §7.6.1 extends for the close-cycle scope.
+- `docs/research/process/RESEARCH_OPERATING_SYSTEM.md` §2.7.1 — the ROS Rigby SIGN v2 fold that PLAYBOOK-6.10.3 inherits and §7.6.1 specializes.
 
-## 7.5 Extension points (informative)
+## 7.8 Extension points (informative)
 
-- Session-close handoff completeness discipline.
-- Session-open orientation extension for cross-repository work.
-- Multi-session amendment coordination.
-- Session-provenance integration with amendment provenance records.
+- Session-close handoff completeness discipline (remaining §7.3 deferral scope).
+- Session-open orientation extension for cross-repository work (remaining §7.3 deferral scope).
+- Multi-session amendment coordination (remaining §7.3 deferral scope).
+- Session-provenance integration with amendment provenance records (remaining §7.3 deferral scope).
+- Automation of watchpoint-SIGN recording — post-ratification, the mapping from watchpoint outcomes into the close-doc SIGN log is a candidate for a scripted verifier under a future MINOR amendment.
+- Non-close-cycle SIGN specialization — should future arcs surface a SIGN shape distinct from watchpoint-attestation (e.g., regression-attestation SIGN for behavioral-verify gates), §7.6 MAY host that specialization under a future MINOR amendment.
 
 ---
 
@@ -1289,3 +1319,4 @@ The Constitutional Debt Register records items intentionally deferred by prior a
 | v0.3.0 | v0.2.0 | [] | 2026-07-10 | playbook-v0.3.0 | MINOR — codify CD-48 (catalog admission) as PLAYBOOK-6.6.14 and CD-49 (SIGN workspace tool provisioning) as PLAYBOOK-6.10.5. Discharges Constitutional Debt CD-48 + CD-49 carried from v0.1.0. |
 | v0.4.0 | v0.3.0 | [] | 2026-07-10 | playbook-v0.4.0 | MINOR — codify CD-50 (verify-substrate-before-implement) as PLAYBOOK-6.10.6. Two-trigger threshold met at S2739 §17 Cost Protection substrate mismatch + S2740 §18 F-D-SIDEBAR-1 already-shipped discovery. Extends §6.10 preamble scope from amendment-dispatch to Cat A research-artifact-derived candidates. |
 | v0.4.1 | v0.4.0 | [] | 2026-07-10 | playbook-v0.4.1 | PATCH — add informative extension-point note in §6.12 recording capability graph refresh cadence as a candidate for future MINOR codification (two-trigger threshold met at S2739 §27 + S2741 §29). Cross-link added at §10.15. No new rules; rule count unchanged at 196. |
+| v0.5.0 | v0.4.1 | [] | 2026-07-11 | playbook-v0.5.0 | MINOR — activate Chapter 7 STUB scope partially with 5 new [GR] rules: PLAYBOOK-7.4.1/7.4.2/7.4.3 (close-ceremony delivery discipline); PLAYBOOK-7.5.1 (staged codification of anti-pattern substrates — three-PR pattern); PLAYBOOK-7.6.1 (session-close SIGN-cycle discipline — watchpoint-attestation shape, EXTENDS PLAYBOOK-6.10.3 for close-cycle scope). Candidacy ratified at RATIFICATION_2026-07-10_i0302_arc_close.md §5 (Chris D-verdict S2751). Stage 1 shape ratified at S2752 (`playbook_v0_5_proposal_shape.md`); Stage 2 codification at S2753. Rule count 196 → 201. Old §7.4/§7.5 renumbered to §7.7/§7.8. |
