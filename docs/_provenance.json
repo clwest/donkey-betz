@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-11T16:24:22+00:00",
+    "generated": "2026-07-11T21:17:23+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "2c5e6eadbb9e",
-    "doc_count": 2540,
-    "commit_count": 7868,
+    "git_head": "70a233baee77",
+    "doc_count": 2552,
+    "commit_count": 7882,
     "confidence_breakdown": {
-      "HIGH": 1618,
+      "HIGH": 1624,
       "MEDIUM": 402,
       "LOW": 5,
-      "UNKNOWN": 515
+      "UNKNOWN": 521
     },
     "excludes": [
       "docs/archive/",
@@ -2586,7 +2586,7 @@
         2745,
         2749
       ],
-      "commit_count": 1240,
+      "commit_count": 1244,
       "prs": [
         10,
         11,
@@ -3151,7 +3151,9 @@
         3132,
         3133,
         3134,
-        3141
+        3141,
+        3143,
+        3144
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7493,7 +7495,7 @@
         2745,
         2749
       ],
-      "commit_count": 190,
+      "commit_count": 192,
       "prs": [
         2213,
         2219,
@@ -7662,7 +7664,8 @@
         3128,
         3133,
         3134,
-        3141
+        3141,
+        3143
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19565,16 +19568,107 @@
       "originating_session": 2754,
       "confidence": "HIGH",
       "match_source": "filename",
-      "first_commit_sha": "2c5e6ead",
+      "first_commit_sha": "de2a270e",
       "first_commit_date": "2026-07-11",
-      "first_commit_subject": "docs(s2754a): content-deliverable gap discovered + fixed; twin-canonical-representations rule codified (#3142)",
+      "first_commit_subject": "docs(s2754a-close): S2754a pin retired; cascade refresh; S2755 fresh-terminal open protocol (#3143)",
       "sessions_touched": [
         2754
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         3141,
-        3142
+        3142,
+        3143
+      ]
+    },
+    "docs/handoffs/SESSION_2755_I0303_PHASE2_TASK_ENFORCEMENT_RATIFIED.md": {
+      "originating_session": 2755,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "387b73ad",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(security): I-0303 Phase 2 task-enforcement module ratified (S2755) (#3144)",
+      "sessions_touched": [
+        2755
+      ],
+      "commit_count": 2,
+      "prs": [
+        3144
+      ]
+    },
+    "docs/handoffs/SESSION_2756_I0303_PHASE3_REPORT_ONLY_RATIFIED.md": {
+      "originating_session": 2756,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "0dd3905e",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(security): I-0303 Phase 3 REPORT-ONLY substrate + REG-RISK wiring ratified (S2756) (#3145)",
+      "sessions_touched": [
+        2756
+      ],
+      "commit_count": 2,
+      "prs": [
+        3145
+      ]
+    },
+    "docs/handoffs/SESSION_2757_I0303_PHASE3_BATCH_FIX_RATIFIED.md": {
+      "originating_session": 2757,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "168b663a",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(security): I-0303 Phase 3 BATCH-FIX first pass ratified (S2757) (#3146)",
+      "sessions_touched": [
+        2757
+      ],
+      "commit_count": 2,
+      "prs": [
+        3146
+      ]
+    },
+    "docs/handoffs/SESSION_2758_OPS_TOOL_TENANT_BOUNDARY_VIOLATIONS_RATIFIED.md": {
+      "originating_session": 2758,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "fd21d4ba",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(pa-tool): ops_tool.tenant_boundary_violations for I-0303 findings (S2758) (#3147)",
+      "sessions_touched": [
+        2758
+      ],
+      "commit_count": 2,
+      "prs": [
+        3147
+      ]
+    },
+    "docs/handoffs/SESSION_2759_STALE_DAPHNE_WARNING_SYSTEM_RATIFIED.md": {
+      "originating_session": 2759,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "1cdcc785",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ops): stale-Daphne / stale-Celery warning system ratified (S2759) (#3148)",
+      "sessions_touched": [
+        2759
+      ],
+      "commit_count": 2,
+      "prs": [
+        3148
+      ]
+    },
+    "docs/handoffs/SESSION_2760_OPS_TOOL_STALENESS_WARNINGS_RATIFIED.md": {
+      "originating_session": 2760,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "70a233ba",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(pa-tool): ops_tool.staleness_warnings \u2014 S2759 warning loop completed (S2760) (#3149)",
+      "sessions_touched": [
+        2760
+      ],
+      "commit_count": 2,
+      "prs": [
+        3149
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -36410,6 +36504,45 @@
         3142
       ]
     },
+    "docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase2_task_enforcement.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "387b73ad",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(security): I-0303 Phase 2 task-enforcement module ratified (S2755) (#3144)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3144
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase3_batch_fix.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "168b663a",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(security): I-0303 Phase 3 BATCH-FIX first pass ratified (S2757) (#3146)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3146
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase3_report_only.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "0dd3905e",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(security): I-0303 Phase 3 REPORT-ONLY substrate + REG-RISK wiring ratified (S2756) (#3145)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3145
+      ]
+    },
     "docs/research/implementation/RATIFICATION_2026-07-11_i0303_scoping.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -36423,6 +36556,45 @@
         3137,
         3138,
         3142
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_staleness_warnings.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "70a233ba",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(pa-tool): ops_tool.staleness_warnings \u2014 S2759 warning loop completed (S2760) (#3149)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3149
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_tenant_boundary_violations.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "fd21d4ba",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(pa-tool): ops_tool.tenant_boundary_violations for I-0303 findings (S2758) (#3147)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3147
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_stale_daphne_warning_system.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "1cdcc785",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ops): stale-Daphne / stale-Celery warning system ratified (S2759) (#3148)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3148
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
@@ -36748,26 +36920,28 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "543ab9ad",
+      "first_commit_sha": "387b73ad",
       "first_commit_date": "2026-07-11",
-      "first_commit_subject": "docs(i0303-phase1): I-0303 Phase 1 Task Boundary Audit Ledger RATIFIED \u2014 Phase 2 authorized (S2754) (#3139)",
+      "first_commit_subject": "feat(security): I-0303 Phase 2 task-enforcement module ratified (S2755) (#3144)",
       "sessions_touched": [],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        3139
+        3139,
+        3144
       ]
     },
     "docs/research/implementation/tenant_boundary_lockdown/I-0303_scoping.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "47cc13dd",
+      "first_commit_sha": "387b73ad",
       "first_commit_date": "2026-07-11",
-      "first_commit_subject": "docs(i0303-scoping): I-0303 Async Tenant-Boundary Enforcement scoping RATIFIED \u2014 RUR-C1 third and final child arc opened (S2754) (#3137)",
+      "first_commit_subject": "feat(security): I-0303 Phase 2 task-enforcement module ratified (S2755) (#3144)",
       "sessions_touched": [],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        3137
+        3137,
+        3144
       ]
     },
     "docs/research/implementation/tenant_boundary_lockdown/failure_data_safety_contract.md": {
