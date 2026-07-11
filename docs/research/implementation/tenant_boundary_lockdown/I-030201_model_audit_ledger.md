@@ -614,4 +614,75 @@ Report back inline (or route via workspace deliverable — your call based on pa
 
 ---
 
-**End of I-0302 Phase 1 Model Audit Ledger scaffold. TBDs to be filled by Rigby before SIGN.**
+## §11. Phase 4 Harness Substrate — `@ops_aggregate_allowed` Decorator (2026-07-10)
+
+> **Codified at Phase 4 open per Rigby ledger-timing SIGN 2026-07-10 (S2748, pin `pa-59d27abadeed4411`). Chris D-verdict "agree all + ship bonus tightening" ratifies this section as the canonical substrate spec BEFORE first use lands. Zero uses at codification (baseline). Every future use requires a new F-block amendment (§11.a, §11.b, ...) hanging under this section.**
+
+### §11.0 Purpose
+
+Phase 4 builds a regression harness for the RUR-C1 parent invariant (cross-tenant boundary enforcement across all 5 canonical models). One SIGN outcome (F3 assertion contract): the harness assertion "aggregate excludes other-user rows" has a legitimate carve-out for privileged ops surfaces. `@ops_aggregate_allowed` is the canonical mechanism that (a) declares that carve-out intent explicitly on the exact view, (b) is grep/AST-verifiable from the codebase without runtime state, and (c) forces per-use ledger amendment discipline as a boundary control.
+
+### §11.1 Decorator specification
+
+- **Name:** `ops_aggregate_allowed`
+- **Canonical import path:** `core.security.decorators` (module already exists — created S2747 PR #3104 for `superuser_required`)
+- **Semantics:** request-time no-op marker. The security is enforced by the view code's actual scoping logic; the decorator's role is to declare intent for the harness AST scan and for future reviewers to grep against.
+- **Attaches to:** function-based Django views AND `View.<method>` on class-based views. Both flavors supported.
+- **Required pairing:** `@superuser_required` MUST also be present on the same callable. Rigby SIGN F3.2 rationale: matches F-2 anonymous-user hardening explicit-over-implicit posture from Phase 3; avoids magic auto-stacking that drifts silently under refactor.
+- **Ordering:** decorator ordering (which is outer/inner) is NOT semantically significant — both are markers that the AST harness recognizes independently. Convention: place `@superuser_required` outer (closest to the view) and `@ops_aggregate_allowed` inner (below), matching the "auth gate first, semantic marker second" reading order.
+
+### §11.2 AST harness recognition rule
+
+Harness rejects any of the following at test-collection time (fails with view fqn + file + line):
+
+1. **View decorated with `@ops_aggregate_allowed` but NOT `@superuser_required`** — violates §11.1 required pairing.
+2. **View decorated with `@ops_aggregate_allowed` imported from any path other than `core.security.decorators`** — spoofing prevention (Rigby bonus tightening). If a same-named decorator is defined or imported elsewhere in the codebase (e.g., `apps/foo/utils.ops_aggregate_allowed`), the AST harness must fail. Enforced by a codebase-wide AST scan asserting exactly ONE definition site of the symbol and that all `from ... import ops_aggregate_allowed` statements point at `core.security.decorators`.
+3. **View decorated with `@ops_aggregate_allowed` but no corresponding §11.X F-block amendment in this ledger** — every use MUST land with a ledger amendment capturing the use case, decision rationale, and reviewer SIGN, per §11.5.
+
+### §11.3 Registry mechanism — Rigby SIGN F3.1 = B (AST scan)
+
+Confidence 0.72. Rationale: AST scan over `core/` + `apps/` Python files at test-collection time is import-order-proof (a runtime `_OPS_AGGREGATE_ALLOWED` module-level set would silently omit views whose modules weren't imported during test collection — a real bypass risk given Django's lazy import behavior). Slightly slower test setup accepted as trade-off for a canonical, import-order-proof allowlist.
+
+Implementation notes:
+- Bounded to `.py` files under `core/` and any Django apps root (currently `apps/` if present)
+- AST parse (not regex/grep) — gives exact decorator name, exact function/class attachment, exact fqn derivation
+- Cache the scan result within a single test run to avoid re-parsing
+
+### §11.4 Composition with `@superuser_required` — Rigby SIGN F3.2 = B (both explicit)
+
+Confidence 0.79. Harness error message must be maximally specific — view fqn, file, line, and the missing decorator name. Drift-cost mitigation: the specificity of the error message makes the "two decorators to remember" cost effectively zero at PR review time.
+
+### §11.5 Fail-safe posture — Rigby SIGN F3.3 = A (code-only key)
+
+Confidence 0.74. Phase 4 uses code-only as the single gate. No DB-backed second key (e.g., `SystemConfiguration.ops_aggregate_allowlist`) at this time. Revisit only if the decorator spreads to >20 sites OR if we observe repeated near-misses in review. If (B) two-key posture is later adopted, it must be implemented as request-time deny with structured log + admin UX to list pending allowlist mismatches, otherwise it becomes pure ops pain.
+
+Every use of `@ops_aggregate_allowed` requires a corresponding F-block amendment as a sub-section under this §11 (§11.a first use, §11.b second use, ...). The amendment must capture:
+- View fqn + file + line
+- Endpoint route(s) served
+- Use case rationale (why cross-tenant aggregate is required for this ops surface)
+- Reviewer SIGN (Rigby confidence + reasoning)
+- Chris D-verdict on the amendment
+- Session + PR + commit reference
+
+### §11.6 Provenance
+
+| Item | Source |
+|---|---|
+| F1 (runner shape) SIGN — hybrid matrix + endpoint sentinels | Rigby confidence 0.80, S2748 pin `pa-59d27abadeed4411` |
+| F2 (fixture strategy) SIGN — golden fixture + layered per-test builders | Rigby confidence 0.75 |
+| F3 (assertion contract) SIGN — (a)-(e) baseline + UPDATE/PATCH + CREATE parent-binding + ops carve-out | Rigby confidence 0.85 — Chris ratification narrowly required on ops carve-out policy |
+| F3.1 (registry mechanism) SIGN — B AST scan | Rigby confidence 0.72 |
+| F3.2 (composition) SIGN — B both explicit | Rigby confidence 0.79 |
+| F3.3 (fail-safe) SIGN — A code-only Phase 4 | Rigby confidence 0.74 |
+| F4 (deferred-surface handling) SIGN — skip + coverage-gap + posture probe | Rigby confidence 0.90 |
+| Ledger amendment timing — codify at Phase 4 open (not deferred to first use) | Rigby confidence 0.70 |
+| Bonus tightening — single canonical import path enforced by AST harness | Rigby SIGN 2026-07-10 |
+| Chris D-verdict resolving F3 + F3.1-F3.3 + bonus tightening — "agree all + ship bonus tightening" | 2026-07-10 S2748 (this codification) |
+
+### §11.7 Uses (zero at codification)
+
+None yet. First use will land as §11.a under this section per §11.5.
+
+---
+
+**End of I-0302 Phase 1 Model Audit Ledger scaffold. TBDs filled by Rigby before Phase 1 SIGN 2026-07-10. Phase 3 wiring amendments appended under §5.X.a (2026-07-10). Phase 4 harness substrate appended as §11 (2026-07-10).**
