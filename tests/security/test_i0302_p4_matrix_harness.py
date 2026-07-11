@@ -353,17 +353,24 @@ class TestMatrixDeliverableSave:
         # request.user`. Superuser is not the owner of deliverables_a[0]
         # so gets 403. NOT a boundary bug — this is the intentional
         # posture (permission ≠ tenancy).
+        #
+        # Rigby Sub-phase 2 Q2 Edit 1 (2026-07-10): tightened from
+        # (403, 404, 200) to (403, 404) — allowing 200 would silently
+        # permit a future superuser cross-tenant mutation bypass. If
+        # Chris ratifies a bypass, the change lands with an explicit
+        # assertion revision.
         client.force_login(tb_golden["superuser"])
         d = tb_golden["deliverables_a"][0]
         pre_saved = d.is_saved
         resp = client.post(self._url(d.id))
-        assert resp.status_code in (403, 404, 200), (
-            f"Superuser save on non-own deliverable: got {resp.status_code}"
+        assert resp.status_code in (403, 404), (
+            f"Superuser save on non-own deliverable must be denied "
+            f"(permission != tenancy bypass); got {resp.status_code}"
         )
-        # Documentation of current behavior: superuser passes the
-        # post-fetch check ONLY if the deliverable has no user assignment
-        # or matches request.user. For deliverables_a[0] (user=user_a),
-        # response is 403.
+        d.refresh_from_db()
+        assert d.is_saved == pre_saved, (
+            "Superuser save attempt on non-own must not mutate is_saved"
+        )
 
 
 class TestMatrixDeliverableUnsave:
@@ -484,19 +491,16 @@ class TestMatrixDeliverableGetItem:
         assert resp.status_code in (403, 404)
 
     def test_anonymous_blocked_or_scoped(self, tb_golden):
-        # get_deliverable is @require_GET only (no @token_auth_required).
-        # Anonymous MAY reach the endpoint but the post-fetch check
-        # branch on `deliverable.user and request.user.is_authenticated`
-        # gates content. Assert not 200 with user_a's content leaking.
+        # Post §5.1.b hotfix extension (5th site, Sub-phase 2):
+        # @token_auth_required added to get_deliverable. Anonymous now
+        # → 401 (previously reached the endpoint and returned 200 +
+        # full content due to the `and request.user.is_authenticated`
+        # guard skipping the access check for anonymous callers).
         d = tb_golden["deliverables_a"][0]
         resp = Client().get(self._url(d.id))
-        # Current implementation: anon reaches endpoint, post-fetch check
-        # requires request.user.is_authenticated to compare users —
-        # anonymous branches into the "public" fallback. Assert the
-        # behavior is not a hard content leak of user-owned data.
-        # Sub-phase 3 will tighten this contract if needed.
-        assert resp.status_code in (200, 401, 403, 404), (
-            f"Anonymous get on user-owned deliverable: got {resp.status_code}"
+        assert resp.status_code in (401, 403), (
+            f"Anonymous get on user-owned deliverable must be blocked "
+            f"by @token_auth_required; got {resp.status_code}"
         )
 
     def test_cross_tenant_row_visible_to_workspace_owner(
