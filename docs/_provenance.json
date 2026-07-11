@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-11T22:43:03+00:00",
+    "generated": "2026-07-11T23:08:31+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "f2cba2917922",
-    "doc_count": 2563,
-    "commit_count": 7892,
+    "git_head": "caa98579a2ae",
+    "doc_count": 2566,
+    "commit_count": 7896,
     "confidence_breakdown": {
-      "HIGH": 1629,
+      "HIGH": 1631,
       "MEDIUM": 402,
-      "LOW": 6,
-      "UNKNOWN": 526
+      "LOW": 5,
+      "UNKNOWN": 528
     },
     "excludes": [
       "docs/archive/",
@@ -2003,7 +2003,7 @@
         2740,
         2742
       ],
-      "commit_count": 14,
+      "commit_count": 16,
       "prs": [
         3048,
         3058,
@@ -2013,7 +2013,8 @@
         3066,
         3067,
         3134,
-        3135
+        3135,
+        3155
       ]
     },
     "docs/EOS_RULES.md": {
@@ -2586,7 +2587,7 @@
         2745,
         2749
       ],
-      "commit_count": 1252,
+      "commit_count": 1254,
       "prs": [
         10,
         11,
@@ -3157,7 +3158,8 @@
         3150,
         3152,
         3153,
-        3154
+        3154,
+        3155
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7499,7 +7501,7 @@
         2745,
         2749
       ],
-      "commit_count": 200,
+      "commit_count": 202,
       "prs": [
         2213,
         2219,
@@ -7673,7 +7675,8 @@
         3150,
         3152,
         3153,
-        3154
+        3154,
+        3155
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19756,16 +19759,33 @@
     },
     "docs/handoffs/SESSION_2766_PLAYBOOK_V0_6_0_RATIFIED.md": {
       "originating_session": 2766,
-      "confidence": "LOW",
-      "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "be898add",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(playbook): S2766 Engineering Playbook v0.6.0 MINOR ratified \u2014 PLAYBOOK-7.4.4 recycle-after-merge (#3155)",
       "sessions_touched": [
         2766
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3155
+      ]
+    },
+    "docs/handoffs/SESSION_2767_CLOSE_CEREMONY_LEDGER_V2_RATIFIED.md": {
+      "originating_session": 2767,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "caa98579",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ui): S2767 Close-Ceremony Ledger v2 hover-preview + docs viewer navigation ratified (#3156)",
+      "sessions_touched": [
+        2767
+      ],
+      "commit_count": 2,
+      "prs": [
+        3156
+      ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
       "originating_session": 280,
@@ -36585,6 +36605,19 @@
         3135
       ]
     },
+    "docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_6_0.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "be898add",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(playbook): S2766 Engineering Playbook v0.6.0 MINOR ratified \u2014 PLAYBOOK-7.4.4 recycle-after-merge (#3155)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3155
+      ]
+    },
     "docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -36596,6 +36629,19 @@
       "commit_count": 2,
       "prs": [
         3152
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger_v2.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "caa98579",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ui): S2767 Close-Ceremony Ledger v2 hover-preview + docs viewer navigation ratified (#3156)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3156
       ]
     },
     "docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase1_ledger.md": {
