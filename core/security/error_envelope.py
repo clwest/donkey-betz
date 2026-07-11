@@ -56,6 +56,7 @@ _REASON_TO_COMPONENT = {
     "cancelled": "CANCEL",
     "internal_error": "INTERNAL",
     "unavailable": "INTERNAL",
+    "tenant_boundary_violation": "TENANT",
 }
 
 # Long-lived parent OpsRun title used by every safety-contract emission.

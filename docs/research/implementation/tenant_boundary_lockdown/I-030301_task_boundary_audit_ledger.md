@@ -15,7 +15,7 @@ parent_scoping_ratification: docs/research/implementation/RATIFICATION_2026-07-1
 parent_campaign: RUR-C1 (Tenant Boundary Lockdown)
 parent_program: RUR (Real User Readiness)
 sibling_predecessor: I-030201 (I-0302 Phase 1 Model Audit Ledger — closed ratified S2742)
-predicate_module_dependency: core/tenant_boundary_lockdown/predicates.py (I-0302 Phase 2, ratified 2026-07-10)
+predicate_module_dependency: core/security/object_authz.py (I-0302 Phase 2, ratified 2026-07-10; scoping-time path reference amended S2755)
 harness_dependency: tests/security/ (I-0302 Phase 4, ratified 2026-07-10)
 head_at_audit: 47cc13dd
 ratification_record: docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase1_ledger.md
@@ -318,7 +318,7 @@ Phase 2 (decorator + base-class implementation) opens after Rigby SIGN + Chris r
 5. **§7 system-scope classification** — 4-6 confirmed system-scope files; opt-in discipline agreed
 6. **Interim nullable-identity policy** (§8) — matches scoping doc §6.2
 7. **Phase 2 sampling depth extension** (§5.1 note) — at least 20 additional task exemplars classified during Phase 2 authoring; discipline agreed
-8. **Predicate module import strategy** (from scoping §3.5) — Phase 2 imports `core/tenant_boundary_lockdown/predicates.py` per I-0302 layering constraint; leaf-module import-layering verified
+8. **Predicate module import strategy** (from scoping §3.5) — Phase 2 imports `core/security/object_authz.py` per I-0302 layering constraint; leaf-module import-layering verified (S2755 path amendment — see scoping §3.5 note)
 
 ---
 
@@ -343,7 +343,7 @@ Same discipline as I-030201 §9. Identified during Phase 1:
 
 **Phase 2 authors:**
 
-- `core/tenant_boundary_lockdown/task_enforcement.py` with `@enforce_tenant_boundary` decorator + `TenantScopedTask` base class + `@system_scope` marker
+- `core/security/task_enforcement.py` with `@enforce_tenant_boundary` decorator + `TenantScopedTask` base class + `@system_scope` marker (path amended S2755 — see scoping §3.5 note)
 - Unit tests: 4 primary paths (happy path + user-A-attempts-user-B-row + system-task-passthrough + missing-identity-rejection)
 - Uniform failure envelope enforcement (§4 scoping mandate)
 - Uniform trusted-source resolution contract (§4 scoping mandate)
