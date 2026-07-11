@@ -343,6 +343,20 @@ Five independent instances of the same anti-pattern in a single view file crosse
 
 Rigby SIGN pin `pa-59d27abadeed4411`; Chris D-verdict path for the codification itself follows normal §14 process (draft → Rigby SIGN → Chris ratify).
 
+**§14 codification execution — S2749 Sub-phase 3 open:**
+
+- Report-only AST harness landed at PR #3116 (spec: `I-030204_ast_conformance_rule_spec.md`; test: `tests/security/test_i0302_p4_ast_conformance.py`). First run scanned 212 view files across the §3.4 allowlist.
+- **9 additional Http404-swallow sites discovered outside the §5.1.b 5-site scope:**
+  - `core/views_deliverables.py:save_deliverable:235` (7th distinct §5.1.b-class site — missed by S2748 grep sweep)
+  - `core/views_deliverables.py:export_deliverable:440` (8th — predicted at Sub-phase 3 open before the harness ran; harness confirmed)
+  - `core/views_agent_tracking.py` × 4: `project_agents:64` / `agent_timeline:130` / `rate_contribution:179` / `mark_contribution_selected:246`
+  - `core/views_projects_api.py` × 3: `toggle_project_learning:2213` / `get_project_learning_status:2294` / `trigger_project_learning:2346`
+- **Bundled batch-fix PR** (this PR) applies the same 2-line `except Http404: raise` guard to all 9 sites + adds `from django.http import Http404` to `views_agent_tracking.py` and `views_projects_api.py`. Harness re-run confirms 0 violations post-fix.
+- **Fixed §5.1.b 5-site set** (get_deliverable / delete_deliverable / link_deliverable_workspace / record_deliverable_event / unsave_deliverable / templateize_deliverable) correctly NOT flagged by the harness — `test_no_false_positive_on_fixed_deliverable_sites` passes, confirming guard-detection works.
+- **Enforcement flip PR** follows in a one-line change from `ENFORCE_HTTP404_SWALLOW = False → True` — sequenced after this batch-fix merges + clean re-run.
+
+Chris D-verdict "ratify all, ship report-only PR, one bundled batch-fix PR" 2026-07-10 S2749 open. Rigby SIGN unavailable at S2749 (LLM-boundary jam on this content across 2 pins per `feedback_rigby_sign_worker_instability_recovery.md`); design ratification arrived via Claude drafts + Chris D-verdict (path 2 fallback). Rigby to light-SIGN shipped harness post-merge on behavioral verification.
+
 ### §5.2 Initiative (Q7 per-user) — dominant category: **UNSCOPED (REG RISK)**
 
 **Critical §4 finding: 100% of Initiative rows have `owner=NULL`.** No caller uses `owner=` filter (grep confirmed). Every read currently returns ALL initiatives to ALL users. Backfill is a hard Phase 3 blocker.
