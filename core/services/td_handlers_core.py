@@ -2108,9 +2108,19 @@ RESEARCH DATA:
                 return {'error': 'conversation_id required for summary action'}
 
             from core.tasks import summarize_conversation_task
-            task = summarize_conversation_task.delay(
-                conversation_id=cid,
-                user_id=user_id,
+            from core.security.task_enforcement import apply_async_with_actor
+            from django.contrib.auth import get_user_model
+
+            # S2757 B2 — dispatch via apply_async_with_actor. user_id kwarg
+            # dropped from summarize task (B1 stripping); acting-user identity
+            # now flows via header only. If user_id lookup misses, helper
+            # omits header and substrate emits missing_acting_identity.
+            User = get_user_model()
+            acting_user = User.objects.filter(pk=user_id).first() if user_id else None
+            task = apply_async_with_actor(
+                summarize_conversation_task,
+                acting_user,
+                kwargs=dict(conversation_id=cid),
             )
             return {
                 'action': 'summary',

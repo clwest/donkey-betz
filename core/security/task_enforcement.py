@@ -727,6 +727,14 @@ def apply_async_with_actor(
     All other correlation headers (``x-request-id``, ``x-trace-id``, etc.)
     are preserved unchanged.
 
+    ``user=None`` is accepted — the helper OMITS the ``x-acting-user-id``
+    header entirely and dispatches with only the caller-provided headers.
+    Substrate enforcement then emits ``missing_acting_identity`` at the
+    task boundary, which is the correct report-only outcome for anonymous
+    dispatches (S2757 BATCH-FIX watchpoint 1). Callers MUST NOT pass
+    ``user=<falsy-non-None>`` (e.g., anonymous ``AnonymousUser``); pass
+    ``user=None`` explicitly to signal "no acting identity available".
+
     Usage::
 
         from core.security.task_enforcement import apply_async_with_actor
@@ -746,9 +754,20 @@ def apply_async_with_actor(
     Phase 3 BATCH-FIX PR converts HTTP dispatch sites to this helper. The
     helper ships in the REPORT-ONLY substrate PR so BATCH-FIX has a stable
     call target already in place.
+
+    **Dual-source identity note (Rigby SIGN F4, S2757 BATCH-FIX):** some
+    tasks accept a ``user_id`` payload kwarg for *bootstrap* purposes only —
+    e.g., ``process_pa_chat_task`` needs ``user_id`` to create the
+    ChatConversation row when ``conversation_id`` is not yet materialized.
+    In those cases, the payload ``user_id`` is intentionally NOT stripped:
+    the authorization identity is the ``x-acting-user-id`` header (set by
+    this helper); the payload is bootstrap input, never the trust boundary.
+    A future cleanup pass MUST NOT strip such payload kwargs without first
+    refactoring the bootstrap flow.
     """
     merged_headers: dict = dict(headers) if headers else {}
-    merged_headers.setdefault(ACTING_USER_HEADER, str(user.pk))
+    if user is not None:
+        merged_headers.setdefault(ACTING_USER_HEADER, str(user.pk))
     return task.apply_async(
         args=args,
         kwargs=kwargs or {},
