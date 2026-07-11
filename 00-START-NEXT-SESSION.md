@@ -2,25 +2,24 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2749 CLOSED — SUB-PHASE 3 CONTINUES FOR S2750
+## READ THIS FIRST — SESSION 2750 CLOSED — SUB-PHASE 3 CLOSED (all 6 substrates done); PHASE 4 CLOSE OPENS FOR S2751
 
-**Refreshed 2026-07-10 (SESSION 2749 CLOSED. 8 PRs merged across a continuous Sub-phase 3 arc: §14 AST codification substrate landed report-only → batch-fix → enforce (#3116/#3117/#3118); endpoint sentinels substrate landed same three-PR arc (#3120/#3121/#3122); Rigby gpt-5.2 stall post-mortem fix landed (#3119) with provider fallback + response body capture; intentional-immutability contract shipped 48 new matrix cells for Initiative + ChatConversation (#3123). 4 of 6 Sub-phase 3 substrates CLOSED; 2 remain OPEN (deferred-surface coverage-gap report, VIP-scope carve-out on get_deliverable). Full session substance in `docs/handoffs/SESSION_2749_I0302_PHASE_4_SUB_PHASE_3_SUBSTRATE_LARGELY_CLOSED.md`.**
+**Refreshed 2026-07-10 (SESSION 2750 CLOSED. 2 PRs merged closing out Phase 4 Sub-phase 3: deferred-surface coverage-gap report (#3125) + VIP-scope carve-out coverage on `get_deliverable` (#3126). All 6 Sub-phase 3 substrates now CLOSED. New workflow rule: `gh pr merge --admin` until CI billing is fixed. Phase 4 close blockers remain (CI wiring verify, Rigby SIGN on shipped harness, Chris D-verdict, close-doc write). Full session substance in `docs/handoffs/SESSION_2750_I0302_PHASE_4_SUB_PHASE_3_CLOSED.md`.**
 
 Session anchors (read in order):
 
-1. [`docs/handoffs/SESSION_2749_I0302_PHASE_4_SUB_PHASE_3_SUBSTRATE_LARGELY_CLOSED.md`](docs/handoffs/SESSION_2749_I0302_PHASE_4_SUB_PHASE_3_SUBSTRATE_LARGELY_CLOSED.md) — S2749 delivery ledger, 3 substrate arc closes, Rigby stall diagnosis + fix, open items
-2. [`docs/research/implementation/tenant_boundary_lockdown/I-030203_phase4_harness_architecture.md`](docs/research/implementation/tenant_boundary_lockdown/I-030203_phase4_harness_architecture.md) — Phase 4 architecture doc; §7 close criteria updated with S2749 PR refs
-3. [`docs/research/implementation/tenant_boundary_lockdown/I-030204_ast_conformance_rule_spec.md`](docs/research/implementation/tenant_boundary_lockdown/I-030204_ast_conformance_rule_spec.md) — AST rule spec (path 2 Claude drafts) — §14 codification design contract
-4. [`docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md`](docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md) — §5.1.b + §14 tally amendments
-5. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.4.1 body (196 rules)
+1. [`docs/handoffs/SESSION_2750_I0302_PHASE_4_SUB_PHASE_3_CLOSED.md`](docs/handoffs/SESSION_2750_I0302_PHASE_4_SUB_PHASE_3_CLOSED.md) — S2750 delivery ledger, 2 substrate closes, `--admin` rule, Phase 4 close blockers, S2751 open protocol
+2. [`docs/research/implementation/tenant_boundary_lockdown/I-030203_phase4_harness_architecture.md`](docs/research/implementation/tenant_boundary_lockdown/I-030203_phase4_harness_architecture.md) — Phase 4 architecture doc; §6 steps 12+14 marked DONE, §7 close criterion #4 marked DONE, §8 chain-of-custody rows added
+3. [`docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md`](docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md) — Phase 1 ledger with all Sub-phase 3 amendments
+4. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.4.1 body (196 rules)
 
-**Prior sessions (background context):** S2748 (Phase 4 Sub-phases 0/1/2 COMPLETE — 4 PRs, §5.1.b 5-site hotfix, §14 threshold codification); S2747 (Phase 3 wiring COMPLETE — 10 PRs, 144 sites); S2746 (Phase 2 predicate module RATIFIED); S2745 (engineering-pivot directive + cost threshold observation opened); S2742 (Playbook v0.4.1 + RUR CAMPAIGN parent doc + I-0301 CLOSED).
+**Prior sessions (background context):** S2749 (Phase 4 Sub-phase 3 — 4 of 6 substrates CLOSED, 8 PRs); S2748 (Phase 4 Sub-phases 0/1/2 COMPLETE); S2747 (Phase 3 wiring COMPLETE); S2746 (Phase 2 predicate module RATIFIED); S2745 (engineering-pivot directive + cost threshold observation opened); S2742 (Playbook v0.4.1 + RUR CAMPAIGN parent doc + I-0301 CLOSED).
 
 ---
 
 ## P0 — COST THRESHOLD OBSERVATION CHECK-IN (actionable 2026-07-11+)
 
-**Do this FIRST before candidate selection.** Deferred at S2746, S2747, S2748, S2749 per memory rule `project_p0_cost_threshold_check_deferred_to_20260711.md` — **actionable on 2026-07-11 sessions onward.** If S2750 opens on 2026-07-11 or later, run the check-in.
+**Do this FIRST before candidate selection.** Deferred at S2746 → S2750 per memory rule `project_p0_cost_threshold_check_deferred_to_20260711.md` — **actionable on 2026-07-11 sessions onward.** If S2751 opens on 2026-07-11 or later, run the check-in.
 
 **State at open:**
 - `month: $500.00` (~2× the $246/mo baseline from S2743)
@@ -41,65 +40,55 @@ Cross-visibility: Rigby workspace deliverable `06f04b41-91e1-4a00-8b8e-0905502e7
 
 ---
 
-## OPEN RUNTIME ITEMS (from S2749 close)
+## P0.5 — CI BILLING STATUS CHECK
 
-1. **PA celery worker bounce.** PR #3119 landed the Rigby gpt-5.2 stall fix (provider fallback + response body capture) but the running PA celery worker still has old code loaded. To activate the fix, bounce the worker: `pkill -f celery && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES make celery`. Deferred to Chris; not urgent — pre-2749 behavior remains functional.
-2. **P0 observation check-in** — see above; deferred until 2026-07-11+.
+**Do this SECOND, right after the cost check-in.** Confirmed at S2750 close: all GitHub Actions checks are failing with "job did not start — billing" annotation. Every merge now uses `--admin` per `feedback_gh_pr_merge_admin_until_billing_fixed.md`.
+
+**Report to Chris at session open:**
+
+1. **Fresh CI run** — trigger any recent PR's CI or check `gh api /repos/clwest/donkey-betz-platform/actions/runs -q '.workflow_runs[0]'` to see the latest run's `conclusion` + annotations. If billing is fixed, `conclusion: success` will surface on a new run.
+2. **Flag state** — if CI is green again: drop the `--admin` flag from `gh pr merge` calls this session, delete the memory file `feedback_gh_pr_merge_admin_until_billing_fixed.md`, and remove the corresponding line from `MEMORY.md`.
+3. **If still billing-blocked:** continue `--admin` merges; every PR body includes a "Local verification limits" section stating what was verified locally as the fallback quality gate.
 
 ---
 
-## PRIMARY WORK — I-0302 Phase 4 Sub-phase 3 (2 substrates remaining)
+## OPEN RUNTIME ITEMS (from S2750 close)
 
-**Sub-phase 3 status after S2749 close:**
+1. **PA celery worker bounce.** PR #3119 landed the Rigby gpt-5.2 stall fix (S2749) but the running PA celery worker still has old code loaded. To activate: `pkill -f celery && OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES make celery`. Deferred to Chris; not urgent — pre-#3119 behavior remains functional.
+2. **P0 observation check-in** — see above; actionable 2026-07-11+.
+3. **P0.5 CI billing status** — see above; blocks lint-enforcement flips + `--admin` flag posture.
+4. **Docs cascade for S2750 shipped docs** — this handoff + 00-START-NEXT-SESSION.md have not yet been run through the 4-step docs cascade. Run at S2751 open if not already done in a follow-on cascade PR.
 
-| Substrate | State | PRs |
-|---|---|---|
-| §14 AST codification | CLOSED | #3116 / #3117 / #3118 |
-| Endpoint sentinels | CLOSED | #3120 / #3121 / #3122 |
-| Intentional-immutability contract | CLOSED | #3123 |
-| Rigby gpt-5.2 stall fix (bonus find) | CLOSED | #3119 |
-| Deferred-surface coverage-gap report | **OPEN** | — |
-| VIP-scope carve-out on `get_deliverable` | **OPEN** | — |
+---
 
-### Sub-phase 3 remaining opening moves
+## PRIMARY WORK CANDIDATES — S2751
 
-Per I-030203 §6 steps 10-15 (2 remaining):
+### CANDIDATE A — I-0302 Phase 4 CLOSE (4 blockers remaining)
 
-1. **Deferred-surface coverage-gap report** (I-030203 §4.2):
-   - JSON emit at `test_reports/i0302_p4_coverage_gaps.json`
-   - Coverage classes: §5.3.b (C2 ~126 sites) + §5.1.a (D non-view) + §5.5.a (Document WebSocket)
-   - Cheap posture probes (HEAD/OPTIONS or minimal auth check) where feasible
-   - Format: enumerate skipped surfaces with ledger refs; not test-fail-on-gap — informational
-   - Ship pattern: single PR (unless discovery reveals actual security gaps warranting a batch-fix follow-on, in which case the three-PR arc pattern from §14 + sentinels applies)
+Per I-030203 §7, Phase 4 closes when all of:
 
-2. **VIP-scope carve-out coverage extension on `get_deliverable`**:
-   - Extend `tests/security/fixtures/tenant_boundary.py` with a VIP membership row (`VIPScope` or equivalent)
-   - Add matrix cell for the VIP-workspace read path currently deferred in Sub-phase 2 GET-item cell
-   - Chris-ratified VIP feature preservation from §5.1.b 5th-site fix (see `views_deliverables.py:191-206`)
-   - Ship pattern: single PR (feature-preservation coverage, no batch-fix expected)
+1. **CI wiring verify** — `security-conformance.yml` runs the Phase 4 harness on every relevant PR. Workflow already picks up `tests/security/*.py`; verify explicit run-through once CI billing resumes.
+2. **Rigby SIGN-PASS on shipped harness** — Rigby runs the full matrix + sentinels + AST + coverage-gap + VIP-carve-out through her tool surface and confirms SIGN-PASS. Post-merge behavioral verification loop.
+3. **Chris D-verdict ratifying Phase 4 close.**
+4. **Phase 4 close doc** — either amend I-030203 §8 with close statement OR create `I-030204_phase4_close.md`. Content: chain-of-custody roll-up (S2748→S2750), Rigby SIGN log, Chris D-verdict record, links to all 10 S2749+S2750 PRs, delta from architecture doc.
 
-### Sub-phase 3 remaining research inputs (bounded docs-only passes; per I-030203 §6.a)
+Ship pattern: single close-doc PR (blocker #4) that references verifications done for blockers #1-#3 in the PR body. **Do NOT interleave close-doc PRs with substrate PRs** — S2750's shared-doc rebase-conflict signals the anti-pattern.
 
-Still open — not yet run in S2749:
+### CANDIDATE B — NET-NEW ENGINEERING (per S2745 engineering-bias rule)
 
-- **AgentExecution mutation semantics** — confirm no user-facing UPDATE/DELETE (likely per S2748 finding); if any exist, add absence-contract cells
-- **Document `user` vs `owner` field question** — investigate `views_rag_embeddings.py:470/836` uses `Document.objects.get(id=..., user=user)` on a model whose canonical FK is named `owner`; dual-field, legacy alias, or runtime bug?
-- **CREATE-parent-binding endpoint map** — inventory which endpoints create rows across the 5 canonical models + identify the parent-binding field per endpoint
-- **AGGREGATE endpoint inventory** — enumerate true aggregates vs stats-with-nested-shape endpoints (extend §3.8 canonical JSON path table)
-- **Non-canonical model follow-on** — scope decision on `LegalDocument` / `LitigationDocument` / `ReviewDocument` unscoped `.objects.get(id=...)` findings from §5.1.b sweep (in I-0302 scope or separate arc?)
+Always propose 1-3 net-new candidates every session:
 
-### Phase 4 close criteria (unchanged from I-030203 §7 — three now marked DONE after S2749)
+1. **New Employee OS employee (4th)** — vertical slice: new `AIEmployee` + `JobContract` + MissionRunner steps + admin visibility. Chris to name the role.
+2. **New spider on Chris-named data gap** — spider class + fixture + test + registry entry + signal wiring.
+3. **New Command Center / Workspace UI page** — 61 routes; requires Chris naming the workflow.
+4. **Discord bot new command** — bounded Cog + slash-command slice.
+5. **Betting dashboard new tab / feature** — 9-tab dashboard, Chris names the gap.
 
-Phase 4 closes when ALL of:
+### CANDIDATE C — META-METHODOLOGY (only if Chris explicitly asks)
 
-1. Matrix runner exists + passes for 5 × 7 cells + intentional-immutability cells (48 shipped S2749) ✅ (partial — full matrix still needs deferred cells)
-2. Endpoint sentinels (10+ hand-picked risk endpoints, 4 roles each) ✅ (28 shipped S2749)
-3. AST scan module wired; harness fails collection on contract violation ✅ (S2749 §14 codification)
-4. Deferred-surface coverage-gap report emits structured JSON — OPEN
-5. `security-conformance.yml` runs the harness on every relevant PR — OPEN (verify wiring)
-6. Rigby SIGN-PASS on shipped harness — OPEN (post-merge behavioral-verification loop pending)
-7. Chris D-verdict ratifying Phase 4 close — OPEN
-8. Phase 4 close doc appended (amend I-030203 §8 close statement OR create `I-030204_phase4_close.md`) — OPEN
+- **"Interleaved substrate PRs on shared arc doc = rebase-conflict pattern"** — S2750's shared-doc rebase-conflict. Watch for 2nd instance before codifying as a playbook rule (e.g., "arc-close doc changes must be serialized").
+- **"Discovery-first-then-batch-fix three-PR arc pattern"** — applied twice cleanly in S2749 (§14 codification + endpoint sentinels). NOT repeated in S2750 (both S2750 substrates were single-PR ships). If it repeats a third time in a future arc, codify as a Sub-phase close playbook rule.
+- **"CI-billing-blocked → local verification fallback"** — established as workflow rule in S2750. If the fallback pattern (AST parse + Django-loaded import probes + fixture-wiring checks + prior-CI-green-on-identical-shape rationale) repeats across multiple PRs while billing remains blocked, could codify as a playbook §11.x subsection.
 
 ---
 
@@ -108,79 +97,42 @@ Phase 4 closes when ALL of:
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | `ae1321ba` (PR #3123 merged; intentional-immutability contract; S2749 close) |
+| HEAD | `ad3721db` (PR #3126 merged; VIP-scope carve-out coverage; S2750 close) |
 | Playbook version | v0.4.1 (unchanged since S2742) |
 | Playbook rule count | 196 |
 | Constitutional Debt | Zero outstanding |
-| Session pin | `pa-e71c011bfa3d4124` (active — carry-forward from S2749) |
-| Wrapper default pin | `tools/pa_local.sh` — `pa-e71c011bfa3d4124` (rotated at S2749 open after retiring `pa-59d27abadeed4411`) |
-| Live infra state | Same as S2748 close — cost threshold monitor mode $500/mo, observation period accumulating; PA celery worker running pre-#3119 code (bounce needed to activate stall fix) |
-| RUR arc state | I-0301 CLOSED · I-0302 Phases 1-3 CLOSED · Phase 4 Sub-phases 0/1/2 CLOSED · Phase 4 Sub-phase 3 — 4 of 6 substrates CLOSED; 2 remain OPEN · Phase 4 close pending · Phase 5 (arc close) not yet opened · I-0303 not yet opened · RUR-C1 parent OPEN |
+| Session pin | `pa-e71c011bfa3d4124` (active — carry-forward from S2749; retire at Phase 4 close) |
+| Wrapper default pin | `tools/pa_local.sh` — `pa-e71c011bfa3d4124` |
+| Live infra state | Cost threshold monitor mode $500/mo, observation period accumulating; PA celery worker running pre-#3119 code (bounce needed to activate stall fix); CI billing-blocked (`--admin` flag on merges per memory rule) |
+| RUR arc state | I-0301 CLOSED · I-0302 Phases 1-3 CLOSED · Phase 4 Sub-phases 0/1/2/3 CLOSED · Phase 4 close — 4 blockers OPEN · Phase 5 (arc close) not yet opened · I-0303 not yet opened · RUR-C1 parent OPEN |
 
 ---
 
-## What S2749 shipped (8 PRs)
+## What S2750 shipped (2 PRs)
 
-Full delivery ledger in `docs/handoffs/SESSION_2749_I0302_PHASE_4_SUB_PHASE_3_SUBSTRATE_LARGELY_CLOSED.md` §1. Compressed:
+Full delivery ledger in `docs/handoffs/SESSION_2750_I0302_PHASE_4_SUB_PHASE_3_CLOSED.md` §1. Compressed:
 
 | PR | Substrate | HEAD |
 |---|---|---|
-| #3116 | §14 AST conformance harness (report-only) + I-030204 spec doc | `f586a2cf` |
-| #3117 | §14 batch-fix — 9 Http404-swallow sites across 3 view files | `40f2bffc` |
-| #3118 | §14 enforcement flip | `f1cf8950` |
-| #3119 | Rigby gpt-5.2 stall fix — provider fallback + response body capture | `b91c10d1` |
-| #3120 | Endpoint sentinels (report-only) — 28 sentinels, 23 posture failures | `5f789519` |
-| #3121 | Sentinel batch-fix — 23 `@superuser_required` additions | `3eeac558` |
-| #3122 | Sentinel enforcement flip | `1a3456bd` |
-| #3123 | Intentional-immutability contract — 48 new matrix cells | `ae1321ba` |
+| #3125 | Deferred-surface coverage-gap report | `4bd511d0` |
+| #3126 | VIP-scope carve-out coverage on `get_deliverable` | `ad3721db` |
 
-**Cumulative site-level guardrails shipped this session: 32 code fixes + 48 immutability cells + 2 test harnesses (report + enforce for both) + 1 design spec + 1 memory rule.**
+**Cumulative site-level guardrails shipped this session: 1 new test module + 1 new report artifact + 2 new fixtures + 1 new matrix cell + 1 new memory rule.**
 
 ---
 
-## Candidate queue for S2750 — Sub-phase 3 is still primary
-
-Per Chris close directive S2749, Sub-phase 3 continues with 2 open substrates.
-
-### PRIMARY — I-0302 Phase 4 Sub-phase 3 (2 substrates remaining)
-
-Coverage-gap report and VIP-scope carve-out (see "Sub-phase 3 remaining opening moves" above). Either can go first — coverage-gap is discovery-heavy (matches sentinel arc shape), VIP-scope is single-PR feature-preservation.
-
-### CLASS 1 — NET-NEW ENGINEERING (secondary options)
-
-Per S2745 engineering-bias rule, always propose 1-3 net-new candidates every session:
-
-1. **New Employee OS employee (4th)** — vertical slice: new `AIEmployee` + `JobContract` + MissionRunner steps + admin visibility
-2. **Betting dashboard new feature** — 9-tab dashboard needs Chris to name the gap
-3. **New spider on Chris-named data gap** — spider class + fixture + test + registry entry + signal wiring
-4. **New UI page on Command Center** — 61 routes; requires Chris naming the workflow
-5. **Discord bot new command** — bounded Cog + slash-command slice
-
-### CLASS 4 — Meta-methodology / Codification candidates
-
-**Per pivot rule: propose only if Chris explicitly asks for methodology work.**
-
-- **"Documentation invariants without test enforcement rot silently"** — S2749's #3121 batch-fix landed 23 `@superuser_required` gaps in a file whose docstring explicitly claimed uniform gating. Watch for a 2nd instance before codifying as a playbook rule.
-- **"Discovery-first-then-batch-fix three-PR arc pattern"** — applied twice cleanly in S2749 (§14 codification + endpoint sentinels). If it repeats a third time in coverage-gap report, codify as a Sub-phase 3 close playbook rule.
-- **"Rigby stall = model choice signal"** — #3119 makes Anthropic the fallback for multi-fold structural asks. Watch for future stalls even with the fallback active — if seen, escalate to fully model-swap on task_type='design'.
-
-### External signal-driven
-
-- **Production observation** — `would_freeze` shadow live from S2739; `[COST_MONITOR] startup:` line live from S2743; CLI live from S2744; observation period live from S2745. P0 check-in remains the current forward motion.
-
----
-
-## Recommended session-open protocol (S2750)
+## Recommended session-open protocol (S2751)
 
 1. `context-kit orient`
-2. Read `docs/handoffs/SESSION_2749_I0302_PHASE_4_SUB_PHASE_3_SUBSTRATE_LARGELY_CLOSED.md` in full — §1 delivery ledger + §2 substrate arc closes + §3 Rigby stall diagnosis + §5 open items
+2. Read `docs/handoffs/SESSION_2750_I0302_PHASE_4_SUB_PHASE_3_CLOSED.md` in full — §1 delivery ledger + §5 `--admin` rule + §6 Phase 4 close blockers + §7 open runtime items + §10 what this session taught us
 3. Verify runtime state: `git log --oneline -5`, `celery inspect ping`
-4. **P0 check** (per top-of-file callout, if 2026-07-11+): run the observation check-in; report accumulation, anomalies, advance recommendation to Chris
-5. **Runtime items** — flag the PA celery worker bounce need to activate #3119 (see "Open runtime items" above)
+4. **P0 check** (per callout above, if 2026-07-11+): run the observation check-in
+5. **P0.5 CI billing status** — check + flag drop if resumed
 6. `pa_local.sh` pin carry-forward at `pa-e71c011bfa3d4124` — verify with `python tools/pa_chat.py "ping — verify pin active" --tools`
-7. **Confirm Sub-phase 3 continuation as primary work** with Chris; propose coverage-gap report OR VIP-scope carve-out as opening move
-8. **On acceptance:** for coverage-gap, start with §5.3.b + §5.1.a + §5.5.a discovery; for VIP-scope, start with fixture extension
-9. **Alternative:** if Chris wants to interleave a Class 1 net-new build, pause Sub-phase 3 explicitly. Do NOT default to Sub-phase 3 without confirmation.
+7. **Primary work decision** — propose Candidate A (Phase 4 close, 4 blockers) OR Candidate B (net-new engineering, per S2745 pivot rule). Recommend surfacing both to Chris + letting him choose. Bias toward net-new per the pivot rule unless Chris explicitly wants to close Phase 4 first.
+8. **On acceptance of Phase 4 close:** ship a single close-doc PR (blocker #4) referencing verifications done for blockers #1-#3. Do NOT interleave with substrate PRs.
+9. **On acceptance of net-new:** Chris names the specific slice; scope + Rigby SIGN before code.
+10. **Docs cascade** — if not already run, execute the 4-step cascade for S2750 shipped docs (this file + SESSION_2750 handoff). Report chunk count in a follow-on PR.
 
 ---
 
@@ -191,7 +143,7 @@ Ordered by frequency of use:
 1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (L7 anchor v0.4.1)
 2. [`docs/EOS_RULES.md`](docs/EOS_RULES.md) — R1/R2/R3
 3. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — ratified v0.4.1 body (196 rules)
-4. [`docs/research/implementation/tenant_boundary_lockdown/I-030203_phase4_harness_architecture.md`](docs/research/implementation/tenant_boundary_lockdown/I-030203_phase4_harness_architecture.md) — Phase 4 architecture (§6 + §6.a + §7 + §8 all updated at S2749 close)
+4. [`docs/research/implementation/tenant_boundary_lockdown/I-030203_phase4_harness_architecture.md`](docs/research/implementation/tenant_boundary_lockdown/I-030203_phase4_harness_architecture.md) — Phase 4 architecture (§6 steps 12+14 DONE, §7 criterion #4 DONE, §8 chain-of-custody with S2750 rows)
 5. [`docs/research/implementation/tenant_boundary_lockdown/I-030204_ast_conformance_rule_spec.md`](docs/research/implementation/tenant_boundary_lockdown/I-030204_ast_conformance_rule_spec.md) — AST rule spec (path 2 fallback design)
 6. [`docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md`](docs/research/implementation/tenant_boundary_lockdown/I-030201_model_audit_ledger.md) — Phase 1 ledger with §5.1.b + §14 tally amendments
 7. [`docs/research/platform/platform_capability_graph.md`](docs/research/platform/platform_capability_graph.md) — capability chains + append-only refreshes
