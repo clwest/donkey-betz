@@ -4,6 +4,34 @@ Session 1077: Ops Console REST endpoints.
 Exposes SLO status, failure signatures, and blocked agents as REST
 endpoints for the frontend OpsConsoleTab. These were previously only
 available through PA tool gateway (ops_tool).
+
+────────────────────────────────────────────────────────────────────────
+S2772 N16 Ops-Endpoint Scope Policy (ratified by Chris; Rigby Q3 #1)
+
+Every view in this module SHALL:
+
+  1. Be aggregate / read-only. No mutation endpoints; no side effects
+     beyond logging and cache reads. Never accept POST/PUT/PATCH/DELETE.
+  2. Return no raw DB dumps, no secrets, no user content (chat bodies,
+     PA conversation payloads, deliverable bodies except those already
+     public per auth_middleware.py:436 registration).
+  3. Reject unknown query parameters or ignore them safely — never
+     evaluate arbitrary strings, never accept parameters that alter
+     query plan beyond documented allowlisted knobs.
+  4. Require both `@login_required` AND `@user_passes_test(is_staff)`.
+     Anon → 302 (redirect to login). Authenticated-non-staff → 403.
+     Authenticated-staff → 200. Auth-regression tests in
+     `core/tests/test_ops_auth_regression_2772.py` lock this contract.
+  5. Fail soft on downstream error — degrade the response, do not 500.
+     Upstream health tile survival takes priority over precise fidelity.
+  6. If composing sub-calls (e.g. health_summary), call the underlying
+     handler FUNCTIONS directly, never HTTP-loop through the URL router.
+
+Adding a new /api/ops/* endpoint? MUST also add matching
+`test_<name>_blocks_anonymous` + `test_<name>_blocks_non_staff` methods
+to the auth-regression test file. The inventory guard test in that
+file will fail loudly if you forget.
+────────────────────────────────────────────────────────────────────────
 """
 
 import logging
@@ -13,13 +41,25 @@ from typing import Any, Dict
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
+
+# S2772 N16 (Chris-ratified per Rigby Q3 #2): staff-only gate for ops
+# endpoints. Layered with @login_required so both anon and non-staff
+# users get redirected to LOGIN_URL (302). The auth-regression test
+# suite (`core/tests/test_ops_auth_regression_2772.py`) accepts any of
+# {302, 401, 403} as blocking evidence, so both fail-paths are correctly
+# guarded. Order matters — @login_required MUST be the outer decorator
+# so anon short-circuits at the auth check before this test runs.
+_ops_staff_only = user_passes_test(
+    lambda u: u.is_authenticated and u.is_staff,
+)
 
 logger = logging.getLogger(__name__)
 
 
 @require_GET
 @login_required
+@_ops_staff_only
 def slo_status(request):
     """GET /api/ops/slo-status/ — SLO dashboard data."""
     try:
@@ -43,6 +83,7 @@ def slo_status(request):
 
 @require_GET
 @login_required
+@_ops_staff_only
 def failure_signatures(request):
     """GET /api/ops/failure-signatures/ — Recent failure patterns."""
     try:
@@ -68,6 +109,7 @@ def failure_signatures(request):
 
 @require_GET
 @login_required
+@_ops_staff_only
 def blocked_agents(request):
     """GET /api/ops/blocked-agents/ — Currently blocked agents."""
     try:
@@ -90,6 +132,7 @@ def blocked_agents(request):
 
 @require_GET
 @login_required
+@_ops_staff_only
 def health_summary(request):
     """GET /api/ops/health-summary/ — S2761 Command Center Ops Health tile.
 
@@ -300,6 +343,7 @@ def _parse_date_param(raw: str | None) -> str | None:
 
 @require_GET
 @login_required
+@_ops_staff_only
 def close_ceremony_ledger(request):
     """GET /api/ops/close-ceremony-ledger/ — S2763 close-ceremony ledger + S2769 filters + S2771 text search.
 
@@ -470,6 +514,7 @@ def close_ceremony_ledger(request):
 
 @require_GET
 @login_required
+@_ops_staff_only
 def recent_recycles(request):
     """GET /api/ops/recent-recycles/?limit=<N> — S2765 recycle events timeline.
 

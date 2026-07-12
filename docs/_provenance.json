@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-12T04:27:43+00:00",
+    "generated": "2026-07-12T04:46:35+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "a6c4a47c437b",
-    "doc_count": 2572,
-    "commit_count": 7902,
+    "git_head": "aecb4e59b266",
+    "doc_count": 2574,
+    "commit_count": 7904,
     "confidence_breakdown": {
-      "HIGH": 1634,
+      "HIGH": 1635,
       "MEDIUM": 402,
       "LOW": 5,
-      "UNKNOWN": 531
+      "UNKNOWN": 532
     },
     "excludes": [
       "docs/archive/",
@@ -2587,7 +2587,7 @@
         2745,
         2749
       ],
-      "commit_count": 1260,
+      "commit_count": 1262,
       "prs": [
         10,
         11,
@@ -3162,7 +3162,8 @@
         3155,
         3157,
         3158,
-        3159
+        3159,
+        3160
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7504,7 +7505,7 @@
         2745,
         2749
       ],
-      "commit_count": 208,
+      "commit_count": 210,
       "prs": [
         2213,
         2219,
@@ -7682,7 +7683,8 @@
         3155,
         3157,
         3158,
-        3159
+        3159,
+        3160
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19836,6 +19838,21 @@
       "commit_count": 2,
       "prs": [
         3159
+      ]
+    },
+    "docs/handoffs/SESSION_2771_CCL_V2_FULL_TEXT_SEARCH_RATIFIED.md": {
+      "originating_session": 2771,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "aecb4e59",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ops): S2771 CCL v2 full-text search + Rigby-follow-up guardrails ratified (#3160)",
+      "sessions_touched": [
+        2771
+      ],
+      "commit_count": 2,
+      "prs": [
+        3160
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -36667,6 +36684,19 @@
       "commit_count": 2,
       "prs": [
         3155
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_ccl_v2_full_text_search.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "aecb4e59",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ops): S2771 CCL v2 full-text search + Rigby-follow-up guardrails ratified (#3160)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3160
       ]
     },
     "docs/research/implementation/RATIFICATION_2026-07-11_ccl_v2_search_filter.md": {
