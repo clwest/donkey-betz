@@ -4,7 +4,7 @@
  * Replaces the generic System tab with actionable ops data.
  */
 
-import { useRef, useState, Suspense, lazy } from 'react'
+import { useEffect, useRef, useState, Suspense, lazy } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
   AlertTriangle, CheckCircle, XCircle, Loader2, Shield,
@@ -79,6 +79,9 @@ interface CloseCeremonyItem {
   handoff_path: string
   envelope_path: string | null
   envelope_exists: boolean
+  // S2771 N14: present only when the ledger query included a text search;
+  // number of times the term appears in the handoff body.
+  text_match_count?: number
 }
 
 interface CloseCeremonyLedger {
@@ -93,16 +96,22 @@ interface CloseCeremonyLedger {
 // S2769 N8: ledger filter state — all fields optional; empty string means
 // "no filter for this dimension." Session inputs are string-typed so an empty
 // input is representable; parsed to int server-side.
+// S2771 N14: `text` full-body substring search added to same interface.
 interface LedgerFilters {
   sessionMin: string
   sessionMax: string
   envelopeOnly: boolean
   dateFrom: string
   dateTo: string
+  text: string
 }
 
 const LEDGER_LIMIT_DEFAULT = 10
 const LEDGER_LIMIT_EXPANDED = 50
+// S2771 N14: keystroke storm shield — text state updates every keypress
+// but the query fires only after this quiet period. 200ms is Rigby-signed
+// (Q3 discussion) — long enough to skip typos, short enough to feel live.
+const TEXT_SEARCH_DEBOUNCE_MS = 200
 
 function hasActiveFilters(f: LedgerFilters): boolean {
   return (
@@ -110,7 +119,8 @@ function hasActiveFilters(f: LedgerFilters): boolean {
     f.sessionMax !== '' ||
     f.envelopeOnly ||
     f.dateFrom !== '' ||
-    f.dateTo !== ''
+    f.dateTo !== '' ||
+    f.text !== ''
   )
 }
 
@@ -121,6 +131,7 @@ function buildLedgerQueryString(f: LedgerFilters, limit: number): string {
   if (f.envelopeOnly) parts.push('envelope_only=true')
   if (f.dateFrom) parts.push(`date_from=${encodeURIComponent(f.dateFrom)}`)
   if (f.dateTo) parts.push(`date_to=${encodeURIComponent(f.dateTo)}`)
+  if (f.text) parts.push(`text=${encodeURIComponent(f.text)}`)
   return parts.join('&')
 }
 
@@ -225,6 +236,12 @@ function LedgerRow({ item, onOpen, onCopy, copiedPath }: LedgerRowProps) {
               >
                 {item.envelope_exists ? 'envelope' : 'handoff-only'}
               </span>
+              {/* S2771 N14: match-count badge — only present when text search is active. */}
+              {typeof item.text_match_count === 'number' && (
+                <span className="px-1.5 py-0.5 rounded font-medium bg-primary-500/10 text-primary-300">
+                  {item.text_match_count} {item.text_match_count === 1 ? 'match' : 'matches'}
+                </span>
+              )}
             </div>
           </div>
           <FileText size={13} className="text-gray-500 shrink-0" aria-hidden />
@@ -370,10 +387,22 @@ export function OpsConsoleTab() {
     envelopeOnly: false,
     dateFrom: '',
     dateTo: '',
+    text: '',
   })
+  // S2771 N14: text is debounced separately from the other filters so
+  // rapid typing doesn't spam the backend text-scan (~30ms per char is
+  // fine; ~5ms full-scan per keystroke on the 961-handoff corpus is not).
+  // The text input updates ledgerFilters.text every keypress for UX
+  // responsiveness; debouncedText syncs 200ms later and feeds the query.
+  const [debouncedText, setDebouncedText] = useState<string>('')
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedText(ledgerFilters.text), TEXT_SEARCH_DEBOUNCE_MS)
+    return () => window.clearTimeout(t)
+  }, [ledgerFilters.text])
+  const debouncedFilters = { ...ledgerFilters, text: debouncedText }
   const [ledgerLimit, setLedgerLimit] = useState<number>(LEDGER_LIMIT_DEFAULT)
-  const ledgerQueryString = buildLedgerQueryString(ledgerFilters, ledgerLimit)
-  const ledgerFiltersActive = hasActiveFilters(ledgerFilters)
+  const ledgerQueryString = buildLedgerQueryString(debouncedFilters, ledgerLimit)
+  const ledgerFiltersActive = hasActiveFilters(debouncedFilters)
   const ledgerQuery = useQuery<CloseCeremonyLedger | null>({
     queryKey: ['ops-close-ceremony-ledger', ledgerQueryString],
     queryFn: async () => {
@@ -385,7 +414,7 @@ export function OpsConsoleTab() {
     staleTime: 60000,
   })
   const resetLedgerFilters = () => {
-    setLedgerFilters({ sessionMin: '', sessionMax: '', envelopeOnly: false, dateFrom: '', dateTo: '' })
+    setLedgerFilters({ sessionMin: '', sessionMax: '', envelopeOnly: false, dateFrom: '', dateTo: '', text: '' })
     setLedgerLimit(LEDGER_LIMIT_DEFAULT)
   }
 
@@ -779,6 +808,16 @@ export function OpsConsoleTab() {
               onChange={(e) => setLedgerFilters((f) => ({ ...f, dateTo: e.target.value }))}
               className="px-2 py-1 bg-dark-bg border border-dark-border rounded text-gray-300 focus:outline-none focus:border-primary-500/40"
               aria-label="Date to"
+            />
+            {/* S2771 N14: text search input — debounced 200ms; case-insensitive
+                substring match against the full handoff body server-side. */}
+            <input
+              type="search"
+              placeholder="search text…"
+              value={ledgerFilters.text}
+              onChange={(e) => setLedgerFilters((f) => ({ ...f, text: e.target.value }))}
+              className="ml-2 flex-1 min-w-[8rem] max-w-[18rem] px-2 py-1 bg-dark-bg border border-dark-border rounded text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-primary-500/40"
+              aria-label="Search handoff body text"
             />
             {ledgerFiltersActive && (
               <button

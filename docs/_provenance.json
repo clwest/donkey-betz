@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-12T04:11:18+00:00",
+    "generated": "2026-07-12T04:27:43+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "7013f9893878",
-    "doc_count": 2570,
-    "commit_count": 7900,
+    "git_head": "a6c4a47c437b",
+    "doc_count": 2572,
+    "commit_count": 7902,
     "confidence_breakdown": {
-      "HIGH": 1633,
+      "HIGH": 1634,
       "MEDIUM": 402,
       "LOW": 5,
-      "UNKNOWN": 530
+      "UNKNOWN": 531
     },
     "excludes": [
       "docs/archive/",
@@ -2587,7 +2587,7 @@
         2745,
         2749
       ],
-      "commit_count": 1258,
+      "commit_count": 1260,
       "prs": [
         10,
         11,
@@ -3161,7 +3161,8 @@
         3154,
         3155,
         3157,
-        3158
+        3158,
+        3159
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7503,7 +7504,7 @@
         2745,
         2749
       ],
-      "commit_count": 206,
+      "commit_count": 208,
       "prs": [
         2213,
         2219,
@@ -7680,7 +7681,8 @@
         3154,
         3155,
         3157,
-        3158
+        3158,
+        3159
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19819,6 +19821,21 @@
       "commit_count": 2,
       "prs": [
         3158
+      ]
+    },
+    "docs/handoffs/SESSION_2770_HEALTH_SUMMARY_PARTIAL_RECYCLE_RATIFIED.md": {
+      "originating_session": 2770,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "a6c4a47c",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ops): S2770 health_summary PARTIAL_RECYCLE verdict ratified \u2014 evidence-to-alert loop closed (#3159)",
+      "sessions_touched": [
+        2770
+      ],
+      "commit_count": 2,
+      "prs": [
+        3159
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -36689,6 +36706,19 @@
       "commit_count": 2,
       "prs": [
         3156
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_health_summary_partial_recycle.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "a6c4a47c",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ops): S2770 health_summary PARTIAL_RECYCLE verdict ratified \u2014 evidence-to-alert loop closed (#3159)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3159
       ]
     },
     "docs/research/implementation/RATIFICATION_2026-07-11_i0303_phase1_ledger.md": {
