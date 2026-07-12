@@ -402,16 +402,28 @@ def _parse_int_param(raw: str | None) -> int | None:
 
 
 def _parse_date_param(raw: str | None) -> str | None:
-    """Return raw string if it matches YYYY-MM-DD; else None."""
+    """Return raw YYYY-MM-DD string if it is a valid calendar date; else None.
+
+    S2773 N18v2 (Rigby Q3 #4 correctness fix): the previous digit-only
+    check accepted invalid calendar dates like ``2026-99-99``. Those
+    then flowed downstream into ``parsed_date < date_from`` string
+    comparisons — technically "filter applied," but on a garbage value.
+    ``datetime.date.fromisoformat`` performs full calendar validation
+    (correct month range, month-appropriate day, no leap-year fantasies).
+
+    Behavior change (documented per Rigby Q3 MODIFY): calendar-invalid
+    strings previously slipped through as "valid" and altered the
+    result; they now correctly drop the filter (return None). No
+    callers relied on the old permissive behavior.
+    """
+    from datetime import date
     if raw is None or raw == '':
         return None
-    if len(raw) == 10 and raw[4] == '-' and raw[7] == '-':
-        try:
-            int(raw[:4]); int(raw[5:7]); int(raw[8:10])
-            return raw
-        except ValueError:
-            return None
-    return None
+    try:
+        date.fromisoformat(raw)
+    except (TypeError, ValueError):
+        return None
+    return raw
 
 
 @require_GET
