@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-11T23:08:31+00:00",
+    "generated": "2026-07-11T23:46:06+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "caa98579a2ae",
-    "doc_count": 2566,
-    "commit_count": 7896,
+    "git_head": "c46d19ef6d6f",
+    "doc_count": 2568,
+    "commit_count": 7898,
     "confidence_breakdown": {
-      "HIGH": 1631,
+      "HIGH": 1632,
       "MEDIUM": 402,
       "LOW": 5,
-      "UNKNOWN": 528
+      "UNKNOWN": 529
     },
     "excludes": [
       "docs/archive/",
@@ -2587,7 +2587,7 @@
         2745,
         2749
       ],
-      "commit_count": 1254,
+      "commit_count": 1256,
       "prs": [
         10,
         11,
@@ -3159,7 +3159,8 @@
         3152,
         3153,
         3154,
-        3155
+        3155,
+        3157
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7501,7 +7502,7 @@
         2745,
         2749
       ],
-      "commit_count": 202,
+      "commit_count": 204,
       "prs": [
         2213,
         2219,
@@ -7676,7 +7677,8 @@
         3152,
         3153,
         3154,
-        3155
+        3155,
+        3157
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19785,6 +19787,21 @@
       "commit_count": 2,
       "prs": [
         3156
+      ]
+    },
+    "docs/handoffs/SESSION_2768_RECYCLE_EMITTER_WORKER_PIDS_RATIFIED.md": {
+      "originating_session": 2768,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "c46d19ef",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ops): S2768 recycle-all emitter enriched with worker PIDs before/after ratified (#3157)",
+      "sessions_touched": [
+        2768
+      ],
+      "commit_count": 2,
+      "prs": [
+        3157
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -36789,6 +36806,19 @@
       "commit_count": 2,
       "prs": [
         3147
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-11_recycle_emitter_worker_pids.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "c46d19ef",
+      "first_commit_date": "2026-07-11",
+      "first_commit_subject": "feat(ops): S2768 recycle-all emitter enriched with worker PIDs before/after ratified (#3157)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3157
       ]
     },
     "docs/research/implementation/RATIFICATION_2026-07-11_stale_daphne_warning_system.md": {

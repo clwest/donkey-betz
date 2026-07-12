@@ -77,6 +77,43 @@ interface CloseCeremonyLedger {
   items: CloseCeremonyItem[]
   count: number
   limit: number
+  // S2769 N8: pre-limit filter-matching count. Optional for backward-compat
+  // if the client hits an older backend, but the S2769 view always returns it.
+  total_available?: number
+}
+
+// S2769 N8: ledger filter state — all fields optional; empty string means
+// "no filter for this dimension." Session inputs are string-typed so an empty
+// input is representable; parsed to int server-side.
+interface LedgerFilters {
+  sessionMin: string
+  sessionMax: string
+  envelopeOnly: boolean
+  dateFrom: string
+  dateTo: string
+}
+
+const LEDGER_LIMIT_DEFAULT = 10
+const LEDGER_LIMIT_EXPANDED = 50
+
+function hasActiveFilters(f: LedgerFilters): boolean {
+  return (
+    f.sessionMin !== '' ||
+    f.sessionMax !== '' ||
+    f.envelopeOnly ||
+    f.dateFrom !== '' ||
+    f.dateTo !== ''
+  )
+}
+
+function buildLedgerQueryString(f: LedgerFilters, limit: number): string {
+  const parts: string[] = [`limit=${limit}`]
+  if (f.sessionMin) parts.push(`session_min=${encodeURIComponent(f.sessionMin)}`)
+  if (f.sessionMax) parts.push(`session_max=${encodeURIComponent(f.sessionMax)}`)
+  if (f.envelopeOnly) parts.push('envelope_only=true')
+  if (f.dateFrom) parts.push(`date_from=${encodeURIComponent(f.dateFrom)}`)
+  if (f.dateTo) parts.push(`date_to=${encodeURIComponent(f.dateTo)}`)
+  return parts.join('&')
 }
 
 interface RecycleEvent {
@@ -316,16 +353,33 @@ export function OpsConsoleTab() {
   // S2763: close-ceremony ledger — last 10 handoffs paired with envelopes.
   // Filesystem-backed (docs/handoffs/ + docs/research/implementation/), no
   // data model. Read-only operator surface for fast context re-load.
+  // S2769 N8: filters (session range / envelope-only / date range) applied
+  // server-side; total_available surfaces the pre-limit matching count so
+  // the operator can expand to the S2769 hard cap of 50.
+  const [ledgerFilters, setLedgerFilters] = useState<LedgerFilters>({
+    sessionMin: '',
+    sessionMax: '',
+    envelopeOnly: false,
+    dateFrom: '',
+    dateTo: '',
+  })
+  const [ledgerLimit, setLedgerLimit] = useState<number>(LEDGER_LIMIT_DEFAULT)
+  const ledgerQueryString = buildLedgerQueryString(ledgerFilters, ledgerLimit)
+  const ledgerFiltersActive = hasActiveFilters(ledgerFilters)
   const ledgerQuery = useQuery<CloseCeremonyLedger | null>({
-    queryKey: ['ops-close-ceremony-ledger'],
+    queryKey: ['ops-close-ceremony-ledger', ledgerQueryString],
     queryFn: async () => {
       try {
-        const r = await api.get<CloseCeremonyLedger>('/ops/close-ceremony-ledger/?limit=10')
+        const r = await api.get<CloseCeremonyLedger>(`/ops/close-ceremony-ledger/?${ledgerQueryString}`)
         return r.data
       } catch { return null }
     },
     staleTime: 60000,
   })
+  const resetLedgerFilters = () => {
+    setLedgerFilters({ sessionMin: '', sessionMax: '', envelopeOnly: false, dateFrom: '', dateTo: '' })
+    setLedgerLimit(LEDGER_LIMIT_DEFAULT)
+  }
 
   // S2765: recent recycle events — JSONL-backed (logs/recycle_events.jsonl,
   // emitted by `make recycle-all` post-restart). Answers "when did we last
@@ -624,23 +678,110 @@ export function OpsConsoleTab() {
       )}
 
       {/* S2763: Close-Ceremony Ledger */}
-      {ledgerQuery.data && ledgerQuery.data.items.length > 0 && (
+      {ledgerQuery.data && (
         <div>
           <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
             <Layers size={14} />
-            Recent Close-Ceremonies (last {ledgerQuery.data.count})
+            Recent Close-Ceremonies
+            {ledgerFiltersActive && ledgerQuery.data.total_available !== undefined ? (
+              <span className="text-xs text-gray-500">
+                (showing {ledgerQuery.data.count} of {ledgerQuery.data.total_available} matches)
+              </span>
+            ) : (
+              <span className="text-xs text-gray-500">
+                (last {ledgerQuery.data.count})
+              </span>
+            )}
           </h3>
-          <div className="space-y-2">
-            {ledgerQuery.data.items.map((item) => (
-              <LedgerRow
-                key={item.session_number}
-                item={item}
-                onOpen={openViewer}
-                onCopy={copyPath}
-                copiedPath={copiedPath}
+
+          {/* S2769 N8: compact filter row — session range + envelope-only + date range */}
+          <div className="mb-3 p-2 rounded-lg bg-dark-card/50 border border-dark-border flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-gray-500">Session</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              placeholder="min"
+              value={ledgerFilters.sessionMin}
+              onChange={(e) => setLedgerFilters((f) => ({ ...f, sessionMin: e.target.value }))}
+              className="w-16 px-2 py-1 bg-dark-bg border border-dark-border rounded text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-primary-500/40"
+              aria-label="Minimum session number"
+            />
+            <span className="text-gray-600">–</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              placeholder="max"
+              value={ledgerFilters.sessionMax}
+              onChange={(e) => setLedgerFilters((f) => ({ ...f, sessionMax: e.target.value }))}
+              className="w-16 px-2 py-1 bg-dark-bg border border-dark-border rounded text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-primary-500/40"
+              aria-label="Maximum session number"
+            />
+            <label className="flex items-center gap-1.5 ml-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={ledgerFilters.envelopeOnly}
+                onChange={(e) => setLedgerFilters((f) => ({ ...f, envelopeOnly: e.target.checked }))}
+                className="accent-primary-500"
               />
-            ))}
+              <span className="text-gray-400">envelope only</span>
+            </label>
+            <span className="text-gray-500 ml-2">Date</span>
+            <input
+              type="date"
+              value={ledgerFilters.dateFrom}
+              onChange={(e) => setLedgerFilters((f) => ({ ...f, dateFrom: e.target.value }))}
+              className="px-2 py-1 bg-dark-bg border border-dark-border rounded text-gray-300 focus:outline-none focus:border-primary-500/40"
+              aria-label="Date from"
+            />
+            <span className="text-gray-600">–</span>
+            <input
+              type="date"
+              value={ledgerFilters.dateTo}
+              onChange={(e) => setLedgerFilters((f) => ({ ...f, dateTo: e.target.value }))}
+              className="px-2 py-1 bg-dark-bg border border-dark-border rounded text-gray-300 focus:outline-none focus:border-primary-500/40"
+              aria-label="Date to"
+            />
+            {ledgerFiltersActive && (
+              <button
+                type="button"
+                onClick={resetLedgerFilters}
+                className="ml-auto px-2 py-1 rounded text-gray-500 hover:text-gray-300 hover:bg-dark-border transition-colors"
+              >
+                clear
+              </button>
+            )}
           </div>
+
+          {ledgerQuery.data.items.length > 0 ? (
+            <>
+              <div className="space-y-2">
+                {ledgerQuery.data.items.map((item) => (
+                  <LedgerRow
+                    key={item.session_number}
+                    item={item}
+                    onOpen={openViewer}
+                    onCopy={copyPath}
+                    copiedPath={copiedPath}
+                  />
+                ))}
+              </div>
+              {ledgerQuery.data.total_available !== undefined &&
+                ledgerQuery.data.total_available > ledgerQuery.data.count &&
+                ledgerLimit < LEDGER_LIMIT_EXPANDED && (
+                  <button
+                    type="button"
+                    onClick={() => setLedgerLimit(LEDGER_LIMIT_EXPANDED)}
+                    className="mt-2 w-full py-2 text-xs text-primary-400 hover:text-primary-300 rounded-lg border border-dark-border hover:border-primary-500/40 transition-colors"
+                  >
+                    Show up to {LEDGER_LIMIT_EXPANDED} (currently {ledgerQuery.data.count} of {ledgerQuery.data.total_available})
+                  </button>
+                )}
+            </>
+          ) : (
+            <div className="p-4 text-center text-xs text-gray-500 border border-dashed border-dark-border rounded-lg">
+              No close-ceremonies match the current filters.
+            </div>
+          )}
         </div>
       )}
 
