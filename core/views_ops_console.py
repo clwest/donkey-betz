@@ -301,7 +301,7 @@ def _parse_date_param(raw: str | None) -> str | None:
 @require_GET
 @login_required
 def close_ceremony_ledger(request):
-    """GET /api/ops/close-ceremony-ledger/ — S2763 close-ceremony ledger + S2769 filters.
+    """GET /api/ops/close-ceremony-ledger/ — S2763 close-ceremony ledger + S2769 filters + S2771 text search.
 
     Query params (all optional):
 
@@ -313,6 +313,10 @@ def close_ceremony_ledger(request):
     - ``date_from`` / ``date_to`` (YYYY-MM-DD): filter by the parsed
       ``**Date:**`` line in the handoff body. Undated entries are excluded
       when either date filter is set.
+    - ``text`` (str, S2771 N14): include only entries whose handoff body
+      contains the case-insensitive substring. Each returned item gains a
+      ``text_match_count`` field. Applied AFTER cheap filters so full-body
+      reads only happen for already-narrowed entries.
 
     Returns items sorted by session number descending, each optionally
     paired with its ratification envelope (matched via the envelope's
@@ -336,6 +340,10 @@ def close_ceremony_ledger(request):
     date_from = _parse_date_param(request.GET.get('date_from'))
     date_to = _parse_date_param(request.GET.get('date_to'))
     date_filter_active = date_from is not None or date_to is not None
+    # S2771 N14 text search — case-insensitive; applied AFTER cheap filters.
+    # Blank string means "no filter" (same as absent param).
+    text_raw = (request.GET.get('text') or '').strip()
+    text_needle = text_raw.lower() if text_raw else None
 
     if not _HANDOFFS_ROOT.exists():
         return JsonResponse({
@@ -398,17 +406,66 @@ def close_ceremony_ledger(request):
             'handoff_path': rel,
             'envelope_path': envelope_rel,
             'envelope_exists': envelope_exists,
+            '_path': path,  # internal only — stripped before response
         })
+
+    # S2771 N14 text-search phase — runs only when text is set. Reads the
+    # full body of each already-narrowed entry (cheap filters have done
+    # their job), does case-insensitive substring count, drops zeros,
+    # adds text_match_count. Fail-soft on unopenable files; skipped_count
+    # tracks silent IO failures so partial results are traceable
+    # (Rigby S2771 meta-critique addressed).
+    text_skipped_count = 0
+    if text_needle is not None:
+        text_matched: list[dict] = []
+        for entry in matched:
+            path: Path = entry['_path']
+            try:
+                body = path.read_text(errors='replace')
+            except OSError:
+                text_skipped_count += 1
+                continue
+            count = body.lower().count(text_needle)
+            if count > 0:
+                entry['text_match_count'] = count
+                text_matched.append(entry)
+        matched = text_matched
+
+    # Strip internal _path key before returning.
+    for entry in matched:
+        entry.pop('_path', None)
 
     total_available = len(matched)
     items = matched[:limit]
 
-    return JsonResponse({
+    # S2771 N14 (Rigby meta-critique): echo applied filters so operators
+    # and UI can see exactly what fired without re-parsing the query
+    # string. Also surface skipped_count when text scan hit unopenable
+    # files — silent partial results become traceable.
+    applied_filters: Dict[str, Any] = {}
+    if session_min is not None:
+        applied_filters['session_min'] = session_min
+    if session_max is not None:
+        applied_filters['session_max'] = session_max
+    if envelope_only:
+        applied_filters['envelope_only'] = True
+    if date_from is not None:
+        applied_filters['date_from'] = date_from
+    if date_to is not None:
+        applied_filters['date_to'] = date_to
+    if text_needle is not None:
+        applied_filters['text'] = text_raw
+
+    response_payload: Dict[str, Any] = {
         'items': items,
         'count': len(items),
         'total_available': total_available,
         'limit': limit,
-    })
+        'applied_filters': applied_filters,
+    }
+    if text_needle is not None:
+        response_payload['skipped_count'] = text_skipped_count
+    return JsonResponse(response_payload)
 
 
 @require_GET
