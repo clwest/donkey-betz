@@ -15,9 +15,13 @@ Every view in this module SHALL:
   2. Return no raw DB dumps, no secrets, no user content (chat bodies,
      PA conversation payloads, deliverable bodies except those already
      public per auth_middleware.py:436 registration).
-  3. Reject unknown query parameters or ignore them safely — never
-     evaluate arbitrary strings, never accept parameters that alter
-     query plan beyond documented allowlisted knobs.
+  3. Reject unknown query parameters via `_reject_unknown_query_params`
+     with the endpoint's `_OPS_ALLOWED_PARAMS__<NAME>` frozenset (S2773
+     N18v2). Every endpoint that accepts query params declares an
+     allowlist constant; endpoints that accept none declare an empty
+     frozenset. Unknown params → 400 with `code='unknown_query_params'`
+     and machine-readable `{unknown, allowed}` body. Never evaluate
+     arbitrary strings.
   4. Require both `@login_required` AND `@user_passes_test(is_staff)`.
      Anon → 302 (redirect to login). Authenticated-non-staff → 403.
      Authenticated-staff → 200. Auth-regression tests in
@@ -53,6 +57,61 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 _ops_staff_only = user_passes_test(
     lambda u: u.is_authenticated and u.is_staff,
 )
+
+
+# S2773 N18v2 (Rigby Q3 #2): per-endpoint query-param allowlists.
+# Every ops endpoint declares its accepted query params as a frozenset
+# constant with the `_OPS_ALLOWED_PARAMS__<ENDPOINT>` prefix — the
+# shared naming convention lets meta-tests enumerate + validate them
+# in bulk (Rigby Q2 nudge). Endpoints that accept no params declare
+# an empty frozenset — they'll still reject arbitrary keys via
+# `_reject_unknown_query_params`.
+_OPS_ALLOWED_PARAMS__SLO_STATUS: frozenset[str] = frozenset()
+_OPS_ALLOWED_PARAMS__FAILURE_SIGNATURES: frozenset[str] = frozenset({'window', 'limit'})
+_OPS_ALLOWED_PARAMS__BLOCKED_AGENTS: frozenset[str] = frozenset()
+_OPS_ALLOWED_PARAMS__HEALTH_SUMMARY: frozenset[str] = frozenset()
+_OPS_ALLOWED_PARAMS__CLOSE_CEREMONY_LEDGER: frozenset[str] = frozenset({
+    'limit',
+    'session_min',
+    'session_max',
+    'envelope_only',
+    'date_from',
+    'date_to',
+    'text',
+})
+_OPS_ALLOWED_PARAMS__RECENT_RECYCLES: frozenset[str] = frozenset({'limit'})
+
+
+def _reject_unknown_query_params(
+    request,
+    allowed: frozenset[str],
+) -> JsonResponse | None:
+    """S2773 N18v2 (Rigby Q3 #2 mitigation): reject unknown ?params with 400.
+
+    Returns a JsonResponse to short-circuit the view on drift, or None
+    if all query params are recognized. Response body carries a machine-
+    stable `code` field so downstream test/UI code doesn't couple to the
+    English error string (Rigby Q1 MODIFY).
+
+    Silently ignoring unknown params (the pre-S2773 default) makes it
+    too easy for a debugging shortcut like ?raw=1 or ?include_body=1 to
+    leak into production and become an exfiltration vector. Mechanical
+    enforcement in the helper means the policy in the module docstring
+    stops being "on paper only."
+    """
+    supplied = set(request.GET.keys())
+    unknown = supplied - allowed
+    if not unknown:
+        return None
+    return JsonResponse(
+        {
+            'error': 'Unknown query parameter(s)',
+            'code': 'unknown_query_params',
+            'unknown': sorted(unknown),
+            'allowed': sorted(allowed),
+        },
+        status=400,
+    )
 
 
 def _call_ops_tool(
@@ -91,6 +150,9 @@ logger = logging.getLogger(__name__)
 @_ops_staff_only
 def slo_status(request):
     """GET /api/ops/slo-status/ — SLO dashboard data."""
+    reject = _reject_unknown_query_params(request, _OPS_ALLOWED_PARAMS__SLO_STATUS)
+    if reject is not None:
+        return reject
     try:
         result = _call_ops_tool(request, {'action': 'slo_status', 'window': '24h'})
         return JsonResponse(result)
@@ -104,6 +166,9 @@ def slo_status(request):
 @_ops_staff_only
 def failure_signatures(request):
     """GET /api/ops/failure-signatures/ — Recent failure patterns."""
+    reject = _reject_unknown_query_params(request, _OPS_ALLOWED_PARAMS__FAILURE_SIGNATURES)
+    if reject is not None:
+        return reject
     try:
         window = request.GET.get('window', '24h')
         limit = int(request.GET.get('limit', 10))
@@ -122,6 +187,9 @@ def failure_signatures(request):
 @_ops_staff_only
 def blocked_agents(request):
     """GET /api/ops/blocked-agents/ — Currently blocked agents."""
+    reject = _reject_unknown_query_params(request, _OPS_ALLOWED_PARAMS__BLOCKED_AGENTS)
+    if reject is not None:
+        return reject
     try:
         from core.models_unified_system import AgentControlEntry
         entries = AgentControlEntry.objects.filter(status='blocked').order_by('-blocked_at')
@@ -151,6 +219,10 @@ def health_summary(request):
     tenant-boundary violations (I-0303) + accumulated staleness warnings
     (S2759). Window fixed at 24h to match the Rigby round-trip protocol.
     """
+    reject = _reject_unknown_query_params(request, _OPS_ALLOWED_PARAMS__HEALTH_SUMMARY)
+    if reject is not None:
+        return reject
+
     def _safe_call(payload, error_key):
         try:
             return _call_ops_tool(request, payload, trace_id='ops-console-health')
@@ -372,6 +444,9 @@ def close_ceremony_ledger(request):
     ``docs/research/implementation/``. No caller-controlled paths; all
     emitted paths are validated to resolve inside ``BASE_DIR``.
     """
+    reject = _reject_unknown_query_params(request, _OPS_ALLOWED_PARAMS__CLOSE_CEREMONY_LEDGER)
+    if reject is not None:
+        return reject
     try:
         limit = int(request.GET.get('limit', 10))
     except (TypeError, ValueError):
@@ -524,6 +599,9 @@ def recent_recycles(request):
     same fixed-root safety (handler resolves ``logs/recycle_events.jsonl``
     against ``BASE_DIR``).
     """
+    reject = _reject_unknown_query_params(request, _OPS_ALLOWED_PARAMS__RECENT_RECYCLES)
+    if reject is not None:
+        return reject
     try:
         limit = int(request.GET.get('limit', 10))
         result = _call_ops_tool(request, {'action': 'recent_recycles', 'limit': limit})
