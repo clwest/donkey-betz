@@ -9,6 +9,7 @@ available through PA tool gateway (ops_tool).
 import logging
 import re
 from pathlib import Path
+from typing import Any, Dict
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_GET
@@ -117,12 +118,36 @@ def health_summary(request):
     tbv = _safe_call({'action': 'tenant_boundary_violations', 'window': '24h', 'limit': 0}, 'tbv')
     stw = _safe_call({'action': 'staleness_warnings', 'window': '24h', 'limit': 0}, 'stw')
     slo = _safe_call({'action': 'slo_status', 'window': '24h'}, 'slo')
+    # S2770 N11: fetch newest recycle event so we can override verdict to
+    # PARTIAL_RECYCLE when the operator's most recent recycle was partial
+    # (some role's PID survived) AND base verdict is currently stale.
+    recycles = _safe_call({'action': 'recent_recycles', 'limit': 1}, 'recycles')
 
     head_sha = (version.get('head_commit_sha') or '')[:12] if isinstance(version, dict) else ''
     slo_summary = _summarize_slos(slo)
-    return JsonResponse({
+    base_verdict = (version.get('staleness_verdict') if isinstance(version, dict) else None) or 'UNKNOWN'
+
+    # S2770 N11: PARTIAL_RECYCLE override.
+    # Fires only when:
+    #   - base verdict is a STALE_* variant (real operator pain right now)
+    #   - AND newest recycle event has partial_recycle=true (N7 evidence)
+    # Legacy pre-N7 rows lack the field; treated as False via .get() default
+    # so pre-N7 history doesn't falsely alarm.
+    verdict = base_verdict
+    partial_details: Dict[str, Any] | None = None
+    if base_verdict in ('STALE_DAPHNE', 'STALE_CELERY', 'STALE_BOTH') and isinstance(recycles, dict):
+        items = recycles.get('items') or []
+        newest = items[0] if items else None
+        if isinstance(newest, dict) and newest.get('partial_recycle') is True:
+            verdict = 'PARTIAL_RECYCLE'
+            partial_details = {
+                'surviving_processes': newest.get('surviving_processes') or [],
+                'recycle_sha_short': newest.get('sha_short') or '',
+            }
+
+    payload: Dict[str, Any] = {
         'window': '24h',
-        'verdict': (version.get('staleness_verdict') if isinstance(version, dict) else None) or 'UNKNOWN',
+        'verdict': verdict,
         'head_commit_sha_short': head_sha,
         'tenant_boundary_violations': {
             'total': tbv.get('total_count', 0) if isinstance(tbv, dict) else 0,
@@ -134,7 +159,10 @@ def health_summary(request):
             'by_verdict': stw.get('by_verdict', {}) if isinstance(stw, dict) else {},
         },
         'slo_status': slo_summary,
-    })
+    }
+    if partial_details is not None:
+        payload['partial_recycle_details'] = partial_details
+    return JsonResponse(payload)
 
 
 def _summarize_slos(slo_payload) -> dict:
