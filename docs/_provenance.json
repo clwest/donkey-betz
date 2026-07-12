@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-12T04:46:35+00:00",
+    "generated": "2026-07-12T05:23:25+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "aecb4e59b266",
-    "doc_count": 2574,
-    "commit_count": 7904,
+    "git_head": "e1e9514ac958",
+    "doc_count": 2576,
+    "commit_count": 7906,
     "confidence_breakdown": {
-      "HIGH": 1635,
+      "HIGH": 1636,
       "MEDIUM": 402,
       "LOW": 5,
-      "UNKNOWN": 532
+      "UNKNOWN": 533
     },
     "excludes": [
       "docs/archive/",
@@ -2587,7 +2587,7 @@
         2745,
         2749
       ],
-      "commit_count": 1262,
+      "commit_count": 1264,
       "prs": [
         10,
         11,
@@ -3163,7 +3163,8 @@
         3157,
         3158,
         3159,
-        3160
+        3160,
+        3161
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7505,7 +7506,7 @@
         2745,
         2749
       ],
-      "commit_count": 210,
+      "commit_count": 212,
       "prs": [
         2213,
         2219,
@@ -7684,7 +7685,8 @@
         3157,
         3158,
         3159,
-        3160
+        3160,
+        3161
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19853,6 +19855,21 @@
       "commit_count": 2,
       "prs": [
         3160
+      ]
+    },
+    "docs/handoffs/SESSION_2772_OPS_AUTH_REGRESSION_SMOKE_SUITE_RATIFIED.md": {
+      "originating_session": 2772,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "e1e9514a",
+      "first_commit_date": "2026-07-12",
+      "first_commit_subject": "feat(ops): S2772 ops-endpoint auth-regression suite + staff gate ratified (#3161)",
+      "sessions_touched": [
+        2772
+      ],
+      "commit_count": 2,
+      "prs": [
+        3161
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -36922,6 +36939,19 @@
       "commit_count": 2,
       "prs": [
         3148
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-12_ops_auth_regression_smoke_suite.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "e1e9514a",
+      "first_commit_date": "2026-07-12",
+      "first_commit_subject": "feat(ops): S2772 ops-endpoint auth-regression suite + staff gate ratified (#3161)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3161
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
