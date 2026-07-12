@@ -40,7 +40,10 @@ const PREVIEW_STALE_TIME_MS = 5 * 60 * 1000
 
 interface OpsHealthSummary {
   window: string
-  verdict: 'FRESH' | 'STALE_DAPHNE' | 'STALE_CELERY' | 'STALE_BOTH' | 'UNKNOWN'
+  // S2770 N11: new PARTIAL_RECYCLE verdict fires when base is STALE_* AND
+  // the newest recycle event has partial_recycle=true (N7 evidence). Amber
+  // in the UI — between green FRESH and red STALE.
+  verdict: 'FRESH' | 'STALE_DAPHNE' | 'STALE_CELERY' | 'STALE_BOTH' | 'PARTIAL_RECYCLE' | 'UNKNOWN'
   head_commit_sha_short: string
   tenant_boundary_violations: {
     total: number
@@ -61,6 +64,11 @@ interface OpsHealthSummary {
       current: number
       target: number
     } | null
+  }
+  // S2770 N11: populated only when verdict === 'PARTIAL_RECYCLE'.
+  partial_recycle_details?: {
+    surviving_processes: string[]
+    recycle_sha_short: string
   }
 }
 
@@ -430,18 +438,49 @@ export function OpsConsoleTab() {
                 'ml-2 h-1.5 w-1.5 rounded-full',
                 opsHealth.verdict === 'FRESH' && 'bg-green-400',
                 opsHealth.verdict === 'UNKNOWN' && 'bg-gray-500',
-                opsHealth.verdict !== 'FRESH' && opsHealth.verdict !== 'UNKNOWN' && 'bg-red-400',
+                // S2770 N11: PARTIAL_RECYCLE lands amber — distinct from FRESH green and STALE red.
+                opsHealth.verdict === 'PARTIAL_RECYCLE' && 'bg-amber-400',
+                opsHealth.verdict !== 'FRESH' &&
+                  opsHealth.verdict !== 'UNKNOWN' &&
+                  opsHealth.verdict !== 'PARTIAL_RECYCLE' &&
+                  'bg-red-400',
               )}
             />
             <span className={cn(
               'text-xs font-medium',
               opsHealth.verdict === 'FRESH' ? 'text-green-400' :
-              opsHealth.verdict === 'UNKNOWN' ? 'text-gray-400' : 'text-red-400'
+              opsHealth.verdict === 'UNKNOWN' ? 'text-gray-400' :
+              opsHealth.verdict === 'PARTIAL_RECYCLE' ? 'text-amber-400' :
+              'text-red-400'
             )}>{opsHealth.verdict}</span>
             {opsHealth.head_commit_sha_short && (
               <code className="text-xs text-gray-500 ml-1">{opsHealth.head_commit_sha_short.slice(0, 7)}</code>
             )}
           </h3>
+          {/* S2770 N11: surviving-processes row appears only on PARTIAL_RECYCLE verdict.
+              Names come from the newest recycle event's surviving_processes list. */}
+          {opsHealth.verdict === 'PARTIAL_RECYCLE' && opsHealth.partial_recycle_details && (
+            <div className="mb-3 -mt-1 p-2 rounded-lg border border-amber-500/30 bg-amber-500/5 text-xs">
+              <span className="text-amber-400 font-medium">Partial recycle detected</span>
+              <span className="text-gray-400"> · surviving:</span>{' '}
+              {opsHealth.partial_recycle_details.surviving_processes.length > 0 ? (
+                <span className="text-amber-300 font-mono">
+                  {opsHealth.partial_recycle_details.surviving_processes.join(', ')}
+                </span>
+              ) : (
+                <span className="text-gray-500 italic">none listed</span>
+              )}
+              {opsHealth.partial_recycle_details.recycle_sha_short && (
+                <>
+                  <span className="text-gray-500"> · recycle sha </span>
+                  <code className="text-gray-400">{opsHealth.partial_recycle_details.recycle_sha_short.slice(0, 7)}</code>
+                </>
+              )}
+              <span className="text-gray-500"> · run </span>
+              <code className="text-gray-400">make recycle-all</code>
+              <span className="text-gray-500"> to fix.</span>
+            </div>
+          )}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className={cn(
               'p-3 rounded-lg border',
