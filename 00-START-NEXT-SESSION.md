@@ -2,52 +2,51 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2772 CLOSED — OPS AUTH-REGRESSION SUITE + STAFF GATE RATIFIED
+## READ THIS FIRST — SESSION 2773 CLOSED — OPS QUERY-PARAM ALLOWLIST + REFACTOR + DATE FIX RATIFIED
 
-**Refreshed 2026-07-12 (SESSION 2772 CLOSED — N16 shipped. `/api/ops/*` endpoints now require `is_staff` alongside `@login_required`; module policy docstring codifies 6-rule ops-endpoint scope; 15 Django tests lock the contract. Rigby's Q3 open-ended zoom-out — first application of S2771 workflow rule — produced 7 substantive concerns; 3 shipped same-PR (docstring policy + staff gate + inventory guard), 4 forward-carry with explicit triggers. Seventh close-cycle post-PLAYBOOK-7.4.4-codification.)**
+**Refreshed 2026-07-12 (SESSION 2773 CLOSED — N18v2 shipped (Chris-approved scope expansion from N18). `close_ceremony_ledger` + 5 sibling ops endpoints now enforce query-param allowlist with 400 + `code='unknown_query_params'` body. `_call_ops_tool` helper replaces 4-copy `_Proxy` boilerplate. `_parse_date_param` uses `datetime.date.fromisoformat` (fixes silent bug that accepted `2026-99-99`). 22 new tests + 15 S2772 tests = 37/37 PASS. Rigby zoom-out (third application of S2771 rule) surfaced 5 concerns; 3 shipped same-PR. Eighth close-cycle post-PLAYBOOK-7.4.4-codification.)**
 
-**S2772 shipped in 1-PR close-ceremony bundle (per PLAYBOOK-7.4.1):**
+**S2773 shipped in 1-PR close-ceremony bundle (per PLAYBOOK-7.4.1), 4 clean commits on branch (per Rigby Q4), squash-merged:**
 
-- **`core/views_ops_console.py`** — module-level ops-endpoint scope policy docstring (Rigby Q3 #1); new `_ops_staff_only` decorator (Rigby Q3 #2, Chris-approved); `@_ops_staff_only` added on all 6 endpoints.
-- **`core/tests/test_ops_auth_regression_2772.py`** (new) — 15 tests: 6 anon-blocks + 6 non-staff-blocks + 1 staff-happy-path canary + 2 route-inventory guards (Rigby Q3 #7). All pass in 0.581s.
-- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-12_ops_auth_regression_smoke_suite.md`
-- **Handoff:** `docs/handoffs/SESSION_2772_OPS_AUTH_REGRESSION_SMOKE_SUITE_RATIFIED.md`
-- **CLAUDE.md L3 anchor:** refreshed to S2772; L7 unchanged
-- **New memory:** `feedback_zoom_out_ask_per_rigby_sign.md` — validated on first use
+- **Commit 1:** extract `_call_ops_tool` helper (Rigby Q3 #1, zero behavior change)
+- **Commit 2:** allowlist constants + `_reject_unknown_query_params` helper wired into all 6 endpoints (Rigby Q3 #2 + Q1 MODIFY body shape)
+- **Commit 3:** `_parse_date_param` calendar validation via `fromisoformat` (Rigby Q3 #4 correctness fix)
+- **Commit 4:** new test file `test_ops_query_param_allowlist_2773.py` (22 tests, Rigby Q2 MODIFY charter separation)
+
+- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-12_ops_query_param_allowlist.md`
+- **Handoff:** `docs/handoffs/SESSION_2773_OPS_QUERY_PARAM_ALLOWLIST_RATIFIED.md`
+- **CLAUDE.md L3 anchor:** refreshed to S2773; L7 unchanged
 - **Docs cascade:** 4-step + provenance rebuild
-- **Post-merge:** `make recycle-all` invoked per PLAYBOOK-7.4.4 (seventh cycle)
+- **Post-merge:** `make recycle-all` invoked per PLAYBOOK-7.4.4 (eighth cycle)
 
 ---
 
 ## THE PIVOT — WHY THIS SHIP MATTERS
 
-Two intertwined ships:
+Substrate hardening arc continues. S2772 shipped auth-regression tests + staff gate on the auth boundary. S2773 ships the query-param boundary: every `/api/ops/*` endpoint now rejects unknown query params with a machine-stable `code`. The debug shortcut `?raw=1` that Rigby warned about in S2771 meta-critique is now impossible without a code change + test update.
 
-**Primary — substrate hardening.** Rigby's S2771 meta-critique #4 flagged that `/api/ops/*` endpoints accumulate visibility and drift into "debug everything." N16 ships the concrete mitigation: staff gate on all 6 endpoints + policy docstring + 15 auth-regression tests. Test-shipping session breaks the S2755→S2771 operator-surface streak. Non-admin users (when they arrive) will no longer see ops data.
+Simultaneously: `_call_ops_tool` cleans up 4x-duplicated `_Proxy` boilerplate (Rigby zoom-out #1), and `_parse_date_param` gets real calendar validation (Rigby zoom-out #4 — real bug that had lived from S2769 through S2772). These weren't in the original N18 scope; they landed because Chris D-verdict'd on Rigby's zoom-out.
 
-**Meta — S2771 workflow rule validated on first use.** The "open-ended zoom-out ask per Rigby SIGN" discipline (introduced at S2771 close after Chris observed drift) produced 7 substantive concerns on the Q3 fold — the largest single SIGN response of the arc. 2 shipped same-PR (docstring + inventory guard), 1 escalated to Chris same-turn (staff gate — approved), 4 recorded as forward-carry with EXPLICIT trigger criteria (not "someday"). Rule saved as `feedback_zoom_out_ask_per_rigby_sign.md`.
-
-**Live ledger:** three observability layers + one constitutional rule + one context-reload surface (CCL v2 hover/drawer/filter/search) + one evidence-to-alert loop (N7 → N11 tile alert) + **one hardened auth boundary (N16 staff gate + inventory guard tests)**.
+**Meta:** third consecutive application of the S2771 workflow rule. Rigby's SIGN keeps producing 5-7 substantive concerns per session when I include an open-ended zoom-out ask. The pattern is stable: ~3 concerns ship same-PR, remainder forward-carry with explicit trigger criteria. No sign of the rule aging into ritual.
 
 ---
 
-## S2773 CANDIDATES (Chris selects at open)
+## S2774 CANDIDATES (Chris selects at open)
 
-### Net-new engineering (⭐ recommended per `feedback_engineering_bias_over_audit`; Workspace-scoped per `feedback_workspace_over_command_center_for_new_ui`)
+### Net-new engineering (⭐ recommended per `feedback_engineering_bias_over_audit`)
 
-- **N9** — dedicated `/api/ops/doc-preview/` endpoint (Phase 2 upgrade of CCL v2 hover)
-- **N15** — session-open freshness verdicts persisted to JSONL (like `recycle_events.jsonl`) — meta-observability for PLAYBOOK-7.4.4 trend detection
-- **N17** — session_number pill in the search chip when text is set — small UX polish for N14
-- **N18 (new — Rigby Q3 #4 addressable)** — explicit query-param allowlist for `close_ceremony_ledger`; reject unknown params with 400. Companion to N16's staff gate — closes another exfiltration vector.
+- **N9** — dedicated `/api/ops/doc-preview/` endpoint (upgrade CCL v2 hover) — still no measured bandwidth signal
+- **N15** — session-open freshness verdicts persisted to JSONL — meta-observability for PLAYBOOK-7.4.4 trend detection
+- **N17** — session_number pill in the search chip when text is set — small UX polish
+- **N19 (new)** — URLConf lambda `__import__` cleanup for `/api/ops/*` routes (Rigby S2773 zoom-out #3 forward-carry). Refactor 6 lambda-imports to direct imports. **Trigger already met** — natural pairing with next arc touching `core/urls.py` for ops.
+- **N20 (new)** — access-logging enrichment for ops endpoints (Rigby S2772 meta-critique #4 refinement — never got its own N number). Would surface `user_id + query_params + duration + status` per ops call. **Trigger deferred** — auth_middleware already logs at INFO; not urgent while single-user.
 
 ### Deferred (waiting on triggers, not just calendar)
 
-- **N10** — partial-recycle UI badge on Recent Recycles rows (gated on observing at least one real partial-recycle event in `logs/recycle_events.jsonl`)
-- **First real N11 PARTIAL_RECYCLE tile fire** (watching)
-- **Q3 #3 (health-summary sub-call composition)** — trigger: future ops endpoint that composes another's REST route rather than handler function
-- **Q3 #4 (query-param allowlist)** — trigger: 2nd endpoint reaching ≥4 optional params. `close_ceremony_ledger` already has 7 — reconsider addressing now via N18.
-- **Q3 #5 (search DoS/injection limits)** — trigger: first observed high-freq operator search OR 2nd search endpoint
-- **Q3 #6 (access logging)** — trigger: 2nd staff user grant
+- **N10** — partial-recycle UI badge on Recent Recycles rows (gated on observing at least one real partial-recycle event)
+- **First real N11 PARTIAL_RECYCLE tile fire** (watching — 6 clean N7 entries in a row)
+- **Q3 #3 (URLConf lambda tech debt)** — trigger: next arc touching `core/urls.py` for ops registration → now N19 above
+- **Q3 #5 (health_summary/ops_tool.overview overlap)** — trigger: first bug where UI tile and `ops_tool.overview` diverge on a factual claim
 
 ### Housekeeping
 
@@ -72,34 +71,34 @@ Two intertwined ships:
 
 ---
 
-## SESSION PIN — S2772 RETIRED (fresh mint required at S2773 open)
+## SESSION PIN — S2773 RETIRED (fresh mint required at S2774 open)
 
-**Pin history (S2772):**
+**Pin history (S2773):**
 
-- `pa-6ca91be75701425f` (label `s2772-ops-auth-regression-smoke`) minted S2772 open; **retired at S2772 close (force=true required per S2770+ pattern)**
+- `pa-c15a7532e20b4fee` (label `s2773-ccl-query-param-allowlist`) minted S2773 open; **retired at S2773 close (force=true, fourth consecutive per S2770+ pattern)**
 
-**Wrapper `tools/pa_local.sh` still points at `pa-6ca91be75701425f` (retired)** — intended failure mode forces S2773 first-action fresh mint.
+**Wrapper `tools/pa_local.sh` still points at `pa-c15a7532e20b4fee` (retired)** — intended failure mode forces S2774 first-action fresh mint.
 
-**S2773 open sequence:**
+**S2774 open sequence:**
 
 ```
 context-kit orient
 
 # Read this file end-to-end
-# Read S2772 envelope §4 (Rigby SIGN summary — note the zoom-out fold pattern) + §7 (forward-carry with explicit triggers)
-# Skim the module policy docstring + _ops_staff_only decorator in views_ops_console.py
+# Read S2773 envelope §4 (three-round SIGN pattern — design + zoom-out + implementation) + §7 (forward-carry with triggers)
+# Skim the four commits on the merged branch — cleanest S2xxx close-ceremony structure to date
 
-# Freshness check. Should be FRESH · SHA-match at S2772 close SHA — this is the TENTH close-cycle since recycle-after-merge adopted and the SEVENTH cycle AFTER PLAYBOOK-7.4.4 codification.
-bash tools/pa_local.sh "S2773 open — freshness check: ops_tool.version verdict + head_commit_sha; ops_tool.recent_recycles limit=5 (should show S2772 close at top; all N7-enriched)"
+# Freshness check. Should be FRESH · SHA-match at S2773 close SHA — ELEVENTH close-cycle since recycle-after-merge adopted; EIGHTH cycle after PLAYBOOK-7.4.4 codification.
+bash tools/pa_local.sh "S2774 open — freshness check: ops_tool.version verdict + head_commit_sha; ops_tool.recent_recycles limit=5 (should show S2773 close at top; all N7-enriched)"
 
-# Regression check: run the N16 test suite locally to confirm no drift
-python manage.py test core.tests.test_ops_auth_regression_2772 -v 2
+# Regression check: run BOTH ops test suites locally
+python manage.py test core.tests.test_ops_auth_regression_2772 core.tests.test_ops_query_param_allowlist_2773
 
 # Browser eyeball: hard-refresh localhost:8000/workspace?tab=system&sub=ops
-#   - You (Chris, is_staff=True) should still see everything normally
-#   - If you happen to be logged out or in a different profile, ops calls return 401 (auth_middleware) or 302 (redirect)
+#   - Everything renders normally for you (staff)
+#   - Curl an ops endpoint with ?debug=1 to see the 400 unknown_query_params response
 
-# Mint fresh pin scoped to selected S2773 candidate
+# Mint fresh pin scoped to selected S2774 candidate
 python manage.py session_lifecycle open --label <candidate-scoped-label>
 
 grep '^python tools/pa_chat.py' tools/pa_local.sh
@@ -107,11 +106,9 @@ grep '^python tools/pa_chat.py' tools/pa_local.sh
 
 Rigby will not dispatch until wrapper is repointed.
 
-**Rigby retire pattern:** third consecutive `force=true` required (S2770/S2771/S2772). Rule is stable — see `feedback_session_tool_retire_needs_force_true`. Continue to phrase retire dispatches with `force=true` explicit.
-
 ---
 
-## OPEN RUNTIME ITEMS (from S2772 close)
+## OPEN RUNTIME ITEMS (from S2773 close)
 
 1. **S2761 smoke test** — Candidate 1
 2. **S2758 D2 canonical decision** — Candidate 2
@@ -124,29 +121,29 @@ Rigby will not dispatch until wrapper is repointed.
 9. **S2758 D1 process_pa_chat_task payload strip**
 10. **S2758 D5 local shim retirement**
 11. **HMAC signing of `x-acting-user-id`**
-12. **N9 / N15 / N17 / N18 net-new engineering** — see Candidates above
+12. **N9 / N15 / N17 / N19 / N20 net-new engineering** — see Candidates above
 13. **Memory rule promotion audit**
 14. **First observed partial-recycle event** — trigger for N10 UI badge + first N11 tile fire
-15. **Rigby S2772 Q3 #3-#6 forward-carry** — see Deferred (waiting on triggers)
+15. **Rigby S2773 forward-carry #3 (URLConf lambdas)** — now N19; **#5 (health_summary overlap)** — trigger set
 
 ---
 
 ## Twin-pointer card
 
-📁 **Repo `/docs/` + `/core/` — S2772 artifacts:**
+📁 **Repo `/docs/` + `/core/` — S2773 artifacts:**
 
-- **Amended backend module:** `core/views_ops_console.py` (policy docstring + `_ops_staff_only` + 6 decorated endpoints)
-- **New test file:** `core/tests/test_ops_auth_regression_2772.py` (15 tests)
-- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-12_ops_auth_regression_smoke_suite.md`
-- **Handoff:** `docs/handoffs/SESSION_2772_OPS_AUTH_REGRESSION_SMOKE_SUITE_RATIFIED.md`
-- **Trigger context (S2771 meta-critique):** `docs/research/implementation/RATIFICATION_2026-07-11_ccl_v2_full_text_search.md`
+- **Amended backend module:** `core/views_ops_console.py` (helper + allowlists + reject helper + date fix + policy docstring refresh)
+- **New test file:** `core/tests/test_ops_query_param_allowlist_2773.py` (22 tests)
+- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-12_ops_query_param_allowlist.md`
+- **Handoff:** `docs/handoffs/SESSION_2773_OPS_QUERY_PARAM_ALLOWLIST_RATIFIED.md`
+- **Predecessor envelopes:** S2769 (CCL v2 filters), S2771 (text search + meta-critique origin), S2772 (auth-regression + zoom-out validated first time)
 - **Constitutional context:** `docs/ENGINEERING_PLAYBOOK.md` §7.4.4 (v0.6.0, S2766)
 
 🖥️ **Workspace UI — `/workspaces` surface:**
 
-- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — governance + content mirrors for S2772
+- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — governance + content mirrors for S2773
 - **Real User Readiness Campaign** (`638e9e90-47b4-4bd4-a872-bf16181cf3b5`) — parent program
-- **Live surface:** ops-console tab unchanged in appearance for Chris (staff); non-staff users would now hit login-redirect.
+- **Live surface:** ops-console tab unchanged for staff; 400 on unknown params for anyone probing.
 
 ---
 
@@ -155,28 +152,28 @@ Rigby will not dispatch until wrapper is repointed.
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | (filled at merge — post-S2772 merge) |
+| HEAD | (filled at merge — post-S2773 merge) |
 | Playbook version | v0.6.0 (RATIFIED S2766) |
 | Playbook rule count | 202 |
-| RUR-C1 state | S2755→S2771 diagnostic infra + operator surfaces + governance CLOSED · **S2772 ops-auth regression + staff gate CLOSED** · RUR-C1 parent OPEN |
-| Session pin | `pa-6ca91be75701425f` (retired at S2772 close, force=true) |
-| Wrapper default pin | `tools/pa_local.sh` — `pa-6ca91be75701425f` (retired; forces fresh mint at S2773 open) |
-| Live infra state | S2755→S2771 diagnostic infra + Playbook v0.6.0 + CCL v2 hover/drawer/filter/search + N7 recycle emitter enriched + N11 PARTIAL_RECYCLE tile + **N16 auth-regression suite + staff gate** operational |
-| Next move | Chris selects at S2773 open |
+| RUR-C1 state | S2755→S2772 CLOSED · **S2773 ops query-param allowlist + refactor + date fix CLOSED** · RUR-C1 parent OPEN |
+| Session pin | `pa-c15a7532e20b4fee` (retired at S2773 close, force=true) |
+| Wrapper default pin | `tools/pa_local.sh` — `pa-c15a7532e20b4fee` (retired; forces fresh mint at S2774 open) |
+| Live infra state | S2755→S2772 diagnostic infra + Playbook v0.6.0 + CCL v2 hover/drawer/filter/search + N7 recycle emitter + N11 PARTIAL_RECYCLE tile + N16 auth-regression suite + staff gate + **N18v2 allowlist + helper refactor + date fix** operational |
+| Next move | Chris selects at S2774 open |
 
 ---
 
-## Recommended session-open protocol (S2773)
+## Recommended session-open protocol (S2774)
 
 1. `context-kit orient`
 2. Read this file end-to-end
-3. Read S2772 envelope §4 (Rigby SIGN — note the Q3 zoom-out fold pattern; this is the S2771 workflow rule in practice) + §7 (forward-carry with explicit triggers)
-4. Skim the module policy docstring + `_ops_staff_only` decorator
-5. **Freshness + tile eyeball + N16 test regression check** — see S2773 open sequence in §SESSION PIN above
-6. If `staleness_verdict != FRESH` → escalate to Chris (seventh-cycle PLAYBOOK-7.4.4 violation OR possible first genuine PARTIAL_RECYCLE)
+3. Read S2773 envelope §4 (three-round SIGN pattern) + §7 (forward-carry with explicit triggers)
+4. Skim the 4-commit history on the S2773 branch — cleanest close-ceremony structure to date
+5. **Freshness + tile eyeball + BOTH ops test suites** — see S2774 open sequence in §SESSION PIN above
+6. If `staleness_verdict != FRESH` → escalate to Chris (eighth-cycle PLAYBOOK-7.4.4 violation OR possible first genuine PARTIAL_RECYCLE)
 7. Verify runtime state: `git log --oneline -5`; confirm wrapper at retired pin
-8. Present candidate menu with **at least one open-ended zoom-out ask in the Rigby SIGN** (per S2771 rule, S2772-validated)
-9. Chris directs S2773 P0 selection
+8. Present candidate menu with **at least one open-ended zoom-out ask in the Rigby SIGN** (per S2771 rule, validated 3 sessions in a row)
+9. Chris directs S2774 P0 selection
 10. Mint fresh pin with candidate-scoped label
 11. Route work through Rigby joint agreement before coding
 
@@ -184,12 +181,12 @@ Rigby will not dispatch until wrapper is repointed.
 
 ## Reference documents
 
-Ordered by frequency of use at S2773:
+Ordered by frequency of use at S2774:
 
-1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (L3 refreshed to S2772; L7 unchanged)
+1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (L3 refreshed to S2773; L7 unchanged)
 2. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.6.0 (latest ratified)
-3. [`docs/research/implementation/RATIFICATION_2026-07-12_ops_auth_regression_smoke_suite.md`](docs/research/implementation/RATIFICATION_2026-07-12_ops_auth_regression_smoke_suite.md) — S2772 envelope
-4. [`docs/handoffs/SESSION_2772_OPS_AUTH_REGRESSION_SMOKE_SUITE_RATIFIED.md`](docs/handoffs/SESSION_2772_OPS_AUTH_REGRESSION_SMOKE_SUITE_RATIFIED.md) — S2772 handoff
-5. [`docs/research/implementation/RATIFICATION_2026-07-11_ccl_v2_full_text_search.md`](docs/research/implementation/RATIFICATION_2026-07-11_ccl_v2_full_text_search.md) — S2771 (trigger for N16)
-6. `core/views_ops_console.py` (module policy docstring + `_ops_staff_only`) — amended this session
-7. `core/tests/test_ops_auth_regression_2772.py` — new this session (regression check pattern)
+3. [`docs/research/implementation/RATIFICATION_2026-07-12_ops_query_param_allowlist.md`](docs/research/implementation/RATIFICATION_2026-07-12_ops_query_param_allowlist.md) — S2773 envelope
+4. [`docs/handoffs/SESSION_2773_OPS_QUERY_PARAM_ALLOWLIST_RATIFIED.md`](docs/handoffs/SESSION_2773_OPS_QUERY_PARAM_ALLOWLIST_RATIFIED.md) — S2773 handoff
+5. [`docs/research/implementation/RATIFICATION_2026-07-12_ops_auth_regression_smoke_suite.md`](docs/research/implementation/RATIFICATION_2026-07-12_ops_auth_regression_smoke_suite.md) — S2772 predecessor
+6. `core/views_ops_console.py` — amended this session (helper + allowlists + reject helper + date fix + policy docstring)
+7. `core/tests/test_ops_query_param_allowlist_2773.py` — new this session
