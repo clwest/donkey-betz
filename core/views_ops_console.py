@@ -199,7 +199,12 @@ _HANDOFFS_ROOT = Path(settings.BASE_DIR) / 'docs' / 'handoffs'
 _ENVELOPES_ROOT = Path(settings.BASE_DIR) / 'docs' / 'research' / 'implementation'
 _SESSION_FILENAME_RE = re.compile(r'^SESSION_(\d+)_')
 _H1_TITLE_RE = re.compile(r'^#\s+Session\s+\d+\s+[—-]\s+(.+?)\s*$', re.MULTILINE)
-_DATE_LINE_RE = re.compile(r'^\*\*Date:\*\*\s+(\d{4}-\d{2}-\d{2})', re.MULTILINE)
+# S2769 N8: match both `**Date:** YYYY-MM-DD` markdown (older handoffs)
+# and `date: YYYY-MM-DD` YAML frontmatter (S2767+ handoffs).
+_DATE_LINE_RE = re.compile(
+    r'^(?:\*\*Date:\*\*\s+|date:\s+)(\d{4}-\d{2}-\d{2})',
+    re.MULTILINE,
+)
 _ENVELOPE_SESSION_RE = re.compile(r'^session_added:\s*(\d+)\s*$', re.MULTILINE)
 
 
@@ -242,14 +247,49 @@ def _index_envelopes_by_session() -> dict[int, str]:
     return idx
 
 
+def _parse_int_param(raw: str | None) -> int | None:
+    """Parse a query-string int; return None on missing/blank/invalid."""
+    if raw is None or raw == '':
+        return None
+    try:
+        return int(raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _parse_date_param(raw: str | None) -> str | None:
+    """Return raw string if it matches YYYY-MM-DD; else None."""
+    if raw is None or raw == '':
+        return None
+    if len(raw) == 10 and raw[4] == '-' and raw[7] == '-':
+        try:
+            int(raw[:4]); int(raw[5:7]); int(raw[8:10])
+            return raw
+        except ValueError:
+            return None
+    return None
+
+
 @require_GET
 @login_required
 def close_ceremony_ledger(request):
-    """GET /api/ops/close-ceremony-ledger/?limit=10 — S2763 close-ceremony ledger.
+    """GET /api/ops/close-ceremony-ledger/ — S2763 close-ceremony ledger + S2769 filters.
 
-    Returns the last N session handoffs in descending session order, each
-    optionally paired with its ratification envelope (matched via the
-    envelope's ``session_added:`` frontmatter field).
+    Query params (all optional):
+
+    - ``limit`` (int, 1..50, default 10): max items returned after filtering.
+    - ``session_min`` (int): include only sessions with number >= this.
+    - ``session_max`` (int): include only sessions with number <= this.
+    - ``envelope_only`` (bool, default false): include only entries whose
+      envelope exists.
+    - ``date_from`` / ``date_to`` (YYYY-MM-DD): filter by the parsed
+      ``**Date:**`` line in the handoff body. Undated entries are excluded
+      when either date filter is set.
+
+    Returns items sorted by session number descending, each optionally
+    paired with its ratification envelope (matched via the envelope's
+    ``session_added:`` frontmatter field). Includes ``total_available``
+    (pre-limit filter-matching count) so the UI can offer "showing X of Y".
 
     Reads filesystem only from fixed roots ``docs/handoffs/`` and
     ``docs/research/implementation/``. No caller-controlled paths; all
@@ -261,8 +301,19 @@ def close_ceremony_ledger(request):
         limit = 10
     limit = max(1, min(limit, 50))
 
+    # S2769 N8 filter params — all optional; None means "no filter"
+    session_min = _parse_int_param(request.GET.get('session_min'))
+    session_max = _parse_int_param(request.GET.get('session_max'))
+    envelope_only = request.GET.get('envelope_only', '').lower() in ('true', '1', 'yes')
+    date_from = _parse_date_param(request.GET.get('date_from'))
+    date_to = _parse_date_param(request.GET.get('date_to'))
+    date_filter_active = date_from is not None or date_to is not None
+
     if not _HANDOFFS_ROOT.exists():
-        return JsonResponse({'items': [], 'count': 0, 'error': 'handoffs root missing'})
+        return JsonResponse({
+            'items': [], 'count': 0, 'total_available': 0, 'limit': limit,
+            'error': 'handoffs root missing',
+        })
 
     entries: list[tuple[int, Path]] = []
     for f in _HANDOFFS_ROOT.glob('SESSION_*.md'):
@@ -274,11 +325,24 @@ def close_ceremony_ledger(request):
         except ValueError:
             continue
     entries.sort(key=lambda t: t[0], reverse=True)
-    entries = entries[:limit]
 
     envelope_idx = _index_envelopes_by_session()
-    items = []
+
+    # S2769 N8: two-pass — build full filtered set (for total_available),
+    # then slice by limit. Reading handoff bodies for title+date is done
+    # only for entries that pass session_number + envelope filters, so
+    # cheap filters short-circuit the expensive body read.
+    matched: list[dict] = []
     for session_n, path in entries:
+        if session_min is not None and session_n < session_min:
+            continue
+        if session_max is not None and session_n > session_max:
+            continue
+        envelope_rel = envelope_idx.get(session_n)
+        envelope_exists = envelope_rel is not None
+        if envelope_only and not envelope_exists:
+            continue
+
         rel = _safe_relpath(path)
         if rel is None:
             continue
@@ -288,19 +352,33 @@ def close_ceremony_ledger(request):
             continue
         title_m = _H1_TITLE_RE.search(head)
         date_m = _DATE_LINE_RE.search(head)
-        envelope_rel = envelope_idx.get(session_n)
-        items.append({
+        parsed_date = date_m.group(1) if date_m else None
+
+        if date_filter_active:
+            if parsed_date is None:
+                # exclude undated entries when a date filter is set
+                continue
+            if date_from is not None and parsed_date < date_from:
+                continue
+            if date_to is not None and parsed_date > date_to:
+                continue
+
+        matched.append({
             'session_number': session_n,
             'title': title_m.group(1) if title_m else path.stem.replace('_', ' '),
-            'date': date_m.group(1) if date_m else None,
+            'date': parsed_date,
             'handoff_path': rel,
             'envelope_path': envelope_rel,
-            'envelope_exists': envelope_rel is not None,
+            'envelope_exists': envelope_exists,
         })
+
+    total_available = len(matched)
+    items = matched[:limit]
 
     return JsonResponse({
         'items': items,
         'count': len(items),
+        'total_available': total_available,
         'limit': limit,
     })
 
