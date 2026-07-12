@@ -2,41 +2,41 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2768 CLOSED — RECYCLE-ALL EMITTER ENRICHED WITH WORKER PIDS
+## READ THIS FIRST — SESSION 2769 CLOSED — CCL v2 SEARCH + FILTER RATIFIED
 
-**Refreshed 2026-07-11 (SESSION 2768 CLOSED — N7 shipped. New `scripts/emit_recycle_event.py` stdlib helper snapshots the 7 canonical worker pidfiles BEFORE and AFTER `make restart`, computes `partial_recycle` + `surviving_processes`, appends enriched JSONL to `logs/recycle_events.jsonl`. Reader handler `_ops_recent_recycles` passes new fields through when present; old rows still parse. Backward-compatible additive schema. Third close-cycle post-PLAYBOOK-7.4.4-codification.)**
+**Refreshed 2026-07-11 (SESSION 2769 CLOSED — N8 shipped. `close_ceremony_ledger` view extended with 5 filter params + `total_available`; frontend gains compact filter row + "Show up to 50" expand button + empty-state card. Opportunistic fix: `_DATE_LINE_RE` broadened to accept YAML `date:` frontmatter (S2767+) alongside `**Date:**` markdown (older) — 3 recent sessions previously invisible to date filters. Fourth close-cycle post-PLAYBOOK-7.4.4-codification.)**
 
-**S2768 shipped in 1-PR close-ceremony bundle (per PLAYBOOK-7.4.1):**
+**S2769 shipped in 1-PR close-ceremony bundle (per PLAYBOOK-7.4.1):**
 
-- **`scripts/emit_recycle_event.py`** (new, +190 lines) — stdlib-only, two subcommands: `snapshot` prints per-role pidfile PIDs to stdout; `emit --before <path>` snapshots after, computes partial + surviving, appends enriched JSONL. Includes defensive newline-prepend against truncated prior lines.
-- **`Makefile`** (amended) — `recycle-all` drops the `restart` dependency; becomes sequential: `snapshot → $(MAKE) restart → emit`. Falls back to legacy S2765 printf shape if the Python script is missing.
-- **`core/services/td_handlers_ops.py`** (amended, +12 lines in `_ops_recent_recycles`) — copies `pids_before / pids_after / partial_recycle / surviving_processes` from parsed events into the returned per-item dict when present.
-- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-11_recycle_emitter_worker_pids.md`
-- **Handoff:** `docs/handoffs/SESSION_2768_RECYCLE_EMITTER_WORKER_PIDS_RATIFIED.md`
-- **CLAUDE.md L3 anchor:** refreshed to reference S2768; L7 constitutional anchor unchanged
-- **Docs cascade:** 4-step complete (index → corpus → sync → embed) + provenance rebuild
-- **Post-merge:** `make recycle-all` invoked per PLAYBOOK-7.4.4 (third cycle) — first post-N7-merge recycle emits enriched entry into the log
+- **`core/views_ops_console.py`** — `close_ceremony_ledger` accepts `session_min / session_max / envelope_only / date_from / date_to`; returns new `total_available`. `_parse_int_param` + `_parse_date_param` helpers extracted. `_DATE_LINE_RE` broadened.
+- **`frontend/src/pages/workspace/tabs/OpsConsoleTab.tsx`** — new `LedgerFilters` state; compact filter row above Recent Close-Ceremonies; "showing X of Y matches" header; "Show up to 50" expand button; empty-state card. LedgerRow behavior unchanged (hover-preview + click-to-open drawer preserved).
+- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-11_ccl_v2_search_filter.md`
+- **Handoff:** `docs/handoffs/SESSION_2769_CCL_V2_SEARCH_FILTER_RATIFIED.md`
+- **CLAUDE.md L3 anchor:** refreshed to S2769; L7 constitutional anchor unchanged (Playbook v0.6.0 still latest)
+- **Docs cascade:** 4-step complete + provenance rebuild
+- **Post-merge:** `make recycle-all` invoked per PLAYBOOK-7.4.4 (fourth cycle)
 
 ---
 
 ## THE PIVOT — WHY THIS SHIP MATTERS
 
-PLAYBOOK-7.4.4 requires post-merge recycle so workers match HEAD SHA. Before N7, the JSONL log recorded "recycle happened" but not "recycle succeeded per-role." A silently-failed worker restart would pass PLAYBOOK-7.4.4's evidence check while leaving a real stale process behind. N7 closes that gap — partial recycles become first-class facts in the log the constitutional rule uses as evidence.
+The S2767 v2 ledger was capped at 10 rows. At 961 total handoffs on disk and growing ~1/session, every session past S2758 was invisible unless the operator hand-crafted a URL. N8 makes the surface durable — filter by session range or date, tick envelope-only, expand to 50 on demand.
 
-The seven canonical roles (`daphne` + 5 celery workers + `celery_beat`) are the full local recycle set. Any role's PID matching before/after → surviving process → `partial_recycle: true`. Waivers still waive the rule; they don't redefine the invariant.
+Rigby verified the same 5 GET variants that Django shell smoke covered — count + `total_available` match on every one. The `total_available` field is the durable UX handle: any capped list surface should return both the returned count AND the pre-limit matching size so the UI can distinguish "you hit the exact set" from "there are more you can't see."
 
-**Live ledger:** three observability layers (Ops Health tile + Staleness Warnings + Recent Recycles) + one constitutional rule (PLAYBOOK-7.4.4) + one operator surface for context re-load (Close-Ceremony Ledger v2) + **one machine-observable per-role recycle diff** (S2768 N7).
+**Live ledger:** three observability layers (Ops Health tile + Staleness Warnings + Recent Recycles) + one constitutional rule (PLAYBOOK-7.4.4) + one operator surface for context re-load (CCL v2 with hover-preview + drawer + **now filter/search**) + one machine-observable per-role recycle diff (N7).
 
 ---
 
-## S2769 CANDIDATES (Chris selects at open)
+## S2770 CANDIDATES (Chris selects at open)
 
-### Net-new engineering (⭐ recommended first per `feedback_engineering_bias_over_audit`; Workspace-scoped per `feedback_workspace_over_command_center_for_new_ui`)
+### Net-new engineering (⭐ recommended per `feedback_engineering_bias_over_audit`; Workspace-scoped per `feedback_workspace_over_command_center_for_new_ui`)
 
-- **N8** — CCL v2 row search / filter (session-range, envelope-only, date-range) — scales the ledger past 10 entries
-- **N9** — Phase 2 dedicated `/api/ops/doc-preview/` endpoint (upgrade CCL v2 Option A → Option B once hover-storm bandwidth measurable)
-- **N10 (new — first partial-recycle badge trigger)** — extend Ops Console Recent Recycles render with 🟡 badge on `partial_recycle=true` rows + hover-tooltip listing `surviving_processes`. Note: needs at least one observed partial-recycle entry in the log before shipping (two-trigger threshold for a UI change on a real signal). Watch for one across S2769–S2775 arc.
-- **N11 (new)** — `ops_tool.health_summary` cross-reference: if the newest recycle has `partial_recycle=true` AND any process reports `started_before_head_commit=true`, surface as a distinct `PARTIAL_RECYCLE` verdict on the health tile (currently maps to `STALE_CELERY`/`STALE_DAPHNE`).
+- **N9** — Phase 2 dedicated `/api/ops/doc-preview/` endpoint (upgrade CCL v2 from full-doc-fetch to first-N-lines) — still no bandwidth signal from CCL v2 hover; N8 filter may now drive more traffic worth measuring
+- **N11** — `ops_tool.health_summary` cross-reference: if newest recycle has `partial_recycle=true` AND any process is stale, verdict = `PARTIAL_RECYCLE` (new tile state) — codes a branch for a not-yet-observed condition
+- **N12 (new)** — CCL v2 filter presets dropdown ("last 20", "this arc", "envelope-having only") — depends on watching whether operator clicks "Show up to 50" then "clear" repeatedly (two-trigger threshold not met yet)
+- **N13 (new)** — repo-wide handoff-date-format normalizer (`**Date:**` → YAML `date:`) as a one-off pass so future date-filter regexes stay simple — nice-to-have hygiene
+- **N10 (deferred)** — partial-recycle UI badge — gated on observing at least one real partial-recycle event in the log
 
 ### Housekeeping
 
@@ -56,35 +56,37 @@ The seven canonical roles (`daphne` + 5 celery workers + `celery_beat`) are the 
 
 ### Post-S2766 owed
 
-- **Memory rule promotion audit** — sweep MEMORY.md for other operator memories that have hit the two-triggers threshold and could be candidates for future MINOR amendments.
+- **Memory rule promotion audit** — sweep MEMORY.md for two-trigger candidates for future MINOR amendments
 
 ---
 
-## SESSION PIN — S2768 RETIRED (fresh mint required at S2769 open)
+## SESSION PIN — S2769 RETIRED (fresh mint required at S2770 open)
 
-**Pin history (S2768):**
+**Pin history (S2769):**
 
-- `pa-3cb29f52e461401a` (label `s2768-recycle-emitter-worker-pids`) minted S2768 open; **retired at S2768 close**
+- `pa-465ff14a830f49f9` (label `s2769-ccl-v2-search-filter`) minted S2769 open; **retired at S2769 close**
 
-**Wrapper `tools/pa_local.sh` still points at `pa-3cb29f52e461401a` (retired)** — intended failure mode forces S2769 first-action fresh mint.
+**Wrapper `tools/pa_local.sh` still points at `pa-465ff14a830f49f9` (retired)** — intended failure mode forces S2770 first-action fresh mint.
 
-**S2769 open sequence:**
+**S2770 open sequence:**
 
 ```
 context-kit orient
 
 # Read this file end-to-end
-# Read the S2768 envelope §4 (Rigby SIGN) + §5 (smoke tests) — pay attention to §4.4 post-smoke verify
-# Skim scripts/emit_recycle_event.py + the amended Makefile recycle-all body
+# Read the S2769 envelope §4 (Rigby SIGN summary) + §5 (empirical smoke tests) — the 5-variant HTTP smoke pattern is worth studying
+# Skim the amended close_ceremony_ledger view + the new filter row in OpsConsoleTab.tsx
 
-# Freshness check + tile eyeball. Should be FRESH · SHA-match at S2768 close SHA — this is the SIXTH close-cycle since the recycle-after-merge convention adopted (THIRD cycle AFTER codification).
-bash tools/pa_local.sh "S2769 open — freshness check: ops_tool.version verdict + head_commit_sha; ops_tool.recent_recycles limit=5 (should show S2768 close at top with new N7 fields, then S2767/S2766/S2765 in legacy shape)"
+# Freshness check. Should be FRESH · SHA-match at S2769 close SHA — this is the SEVENTH close-cycle since recycle-after-merge adopted and the FOURTH cycle AFTER PLAYBOOK-7.4.4 codification.
+bash tools/pa_local.sh "S2770 open — freshness check: ops_tool.version verdict + head_commit_sha; ops_tool.recent_recycles limit=5 (should show S2769 close at top with N7 fields intact)"
 
 # Browser eyeball: hard-refresh localhost:8000/workspace?tab=system&sub=ops
-#   - all existing sections still render (Ops Health tile, SLO, Signatures, Blocked, Recent Recycles, Recent Close-Ceremonies)
-#   - Recent Recycles for the S2768 close entry should carry pids_before/pids_after/partial_recycle/surviving_processes in the JSON response (no UI badge yet — deferred per Q3)
+#   - filter row above Recent Close-Ceremonies renders
+#   - type 2765 in session-min → "showing X of Y matches" appears
+#   - tick envelope-only → intersection with any other active filter
+#   - clear → returns to "last 10"
 
-# Mint fresh pin scoped to selected S2769 candidate
+# Mint fresh pin scoped to selected S2770 candidate
 python manage.py session_lifecycle open --label <candidate-scoped-label>
 
 grep '^python tools/pa_chat.py' tools/pa_local.sh
@@ -94,7 +96,7 @@ Rigby will not dispatch until wrapper is repointed.
 
 ---
 
-## OPEN RUNTIME ITEMS (from S2768 close)
+## OPEN RUNTIME ITEMS (from S2769 close)
 
 1. **S2761 smoke test** — Candidate 1
 2. **S2758 D2 canonical decision** — Candidate 2
@@ -106,29 +108,28 @@ Rigby will not dispatch until wrapper is repointed.
 8. **S2758 D1 process_pa_chat_task payload strip**
 9. **S2758 D5 local shim retirement**
 10. **HMAC signing of `x-acting-user-id`**
-11. **N8 / N9 / N10 / N11 net-new engineering** — see Candidates above
+11. **N9 / N11 / N12 / N13 net-new engineering** — see Candidates above
 12. **Memory rule promotion audit**
-13. **NEW (post-S2768) — first observed partial-recycle event** — trigger for N10 UI badge; watch the log across upcoming close-cycles
+13. **First observed partial-recycle event** — trigger for N10 UI badge
 
 ---
 
 ## Twin-pointer card
 
-📁 **Repo `/docs/` + `/scripts/` + `/core/` + `Makefile` — S2768 artifacts:**
+📁 **Repo `/docs/` + `/core/` + `/frontend/` — S2769 artifacts:**
 
-- **New helper script:** `scripts/emit_recycle_event.py`
-- **Amended Makefile target:** `Makefile::recycle-all`
-- **Amended reader handler:** `core/services/td_handlers_ops.py::_ops_recent_recycles`
-- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-11_recycle_emitter_worker_pids.md`
-- **Handoff:** `docs/handoffs/SESSION_2768_RECYCLE_EMITTER_WORKER_PIDS_RATIFIED.md`
-- **Predecessor envelope (JSONL emitter):** `docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_recent_recycles.md` (S2765)
+- **Amended backend view:** `core/views_ops_console.py::close_ceremony_ledger`
+- **Amended frontend surface:** `frontend/src/pages/workspace/tabs/OpsConsoleTab.tsx`
+- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-11_ccl_v2_search_filter.md`
+- **Handoff:** `docs/handoffs/SESSION_2769_CCL_V2_SEARCH_FILTER_RATIFIED.md`
+- **Predecessor envelopes:** S2763 v1 + S2767 v2 in the same folder
 - **Constitutional context:** `docs/ENGINEERING_PLAYBOOK.md` §7.4.4 (v0.6.0, S2766)
 
 🖥️ **Workspace UI — `/workspaces` surface:**
 
-- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — governance + content mirrors for S2768
+- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — governance + content mirrors for S2769
 - **Real User Readiness Campaign** (`638e9e90-47b4-4bd4-a872-bf16181cf3b5`) — parent program
-- **Live surface:** `localhost:8000/workspace?tab=system&sub=ops` — Recent Recycles section will surface new fields in the API response once the S2768-close row lands (no UI badge yet)
+- **Live surface:** `localhost:8000/workspace?tab=system&sub=ops` — Recent Close-Ceremonies section now has filter row + "Show up to 50" expand
 
 ---
 
@@ -137,28 +138,28 @@ Rigby will not dispatch until wrapper is repointed.
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | (filled at merge — post-S2768 merge) |
+| HEAD | (filled at merge — post-S2769 merge) |
 | Playbook version | v0.6.0 (RATIFIED S2766) |
 | Playbook rule count | 202 |
-| RUR-C1 state | I-0301 CLOSED · I-0302 CLOSED · I-0303 Phase 3 stage 2 first pass CLOSED · S2755→S2767 diagnostic infra + operator surfaces + governance + CCL v2 CLOSED · **S2768 recycle emitter enriched CLOSED** · RUR-C1 parent OPEN |
-| Session pin | `pa-3cb29f52e461401a` (retired at S2768 close) |
-| Wrapper default pin | `tools/pa_local.sh` — `pa-3cb29f52e461401a` (retired; forces fresh mint at S2769 open) |
-| Live infra state | S2755→S2767 diagnostic infra + operator surfaces + Playbook v0.6.0 + CCL v2 + **S2768 recycle emitter per-role PID diff** operational |
-| Next move | Chris selects at S2769 open |
+| RUR-C1 state | I-0301 CLOSED · I-0302 CLOSED · I-0303 Phase 3 stage 2 first pass CLOSED · S2755→S2768 diagnostic infra + operator surfaces + governance CLOSED · **S2769 CCL v2 search+filter CLOSED** · RUR-C1 parent OPEN |
+| Session pin | `pa-465ff14a830f49f9` (retired at S2769 close) |
+| Wrapper default pin | `tools/pa_local.sh` — `pa-465ff14a830f49f9` (retired; forces fresh mint at S2770 open) |
+| Live infra state | S2755→S2768 diagnostic infra + operator surfaces + Playbook v0.6.0 + CCL v2 hover-preview/drawer + N7 recycle emitter enriched + **CCL v2 search+filter** operational |
+| Next move | Chris selects at S2770 open |
 
 ---
 
-## Recommended session-open protocol (S2769)
+## Recommended session-open protocol (S2770)
 
 1. `context-kit orient`
 2. Read this file end-to-end
-3. Read S2768 envelope `RATIFICATION_2026-07-11_recycle_emitter_worker_pids.md` §4 (Rigby SIGN) + §5 (smoke tests)
-4. Skim `scripts/emit_recycle_event.py` + the amended Makefile `recycle-all`
-5. **Freshness + findings + tile eyeball (single-round-trip)** — see S2769 open sequence in §SESSION PIN above
-6. If `staleness_verdict != FRESH` → escalate to Chris (third-cycle PLAYBOOK-7.4.4 violation)
+3. Read S2769 envelope `RATIFICATION_2026-07-11_ccl_v2_search_filter.md` §4 (Rigby SIGN) + §5 (smoke tests) — the 5-variant HTTP smoke pattern is worth studying
+4. Skim the amended `close_ceremony_ledger` view + new filter row in `OpsConsoleTab.tsx`
+5. **Freshness + tile eyeball (single-round-trip)** — see S2770 open sequence in §SESSION PIN above
+6. If `staleness_verdict != FRESH` → escalate to Chris (fourth-cycle PLAYBOOK-7.4.4 violation)
 7. Verify runtime state: `git log --oneline -5`; confirm wrapper at retired pin
-8. Present candidate menu to Chris (highlight N8/N9/N10/N11 net-new leans)
-9. Chris directs S2769 P0 selection
+8. Present candidate menu to Chris (highlight N9/N11/N12/N13 net-new leans)
+9. Chris directs S2770 P0 selection
 10. Mint fresh pin with candidate-scoped label
 11. Route work through Rigby joint agreement before coding
 
@@ -166,14 +167,13 @@ Rigby will not dispatch until wrapper is repointed.
 
 ## Reference documents
 
-Ordered by frequency of use at S2769:
+Ordered by frequency of use at S2770:
 
-1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (L3 refreshed to S2768; L7 constitutional anchor unchanged at Playbook v0.6.0)
+1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (L3 refreshed to S2769; L7 constitutional anchor unchanged)
 2. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.6.0 (latest ratified)
-3. [`docs/research/implementation/RATIFICATION_2026-07-11_recycle_emitter_worker_pids.md`](docs/research/implementation/RATIFICATION_2026-07-11_recycle_emitter_worker_pids.md) — S2768 envelope (this session)
-4. [`docs/handoffs/SESSION_2768_RECYCLE_EMITTER_WORKER_PIDS_RATIFIED.md`](docs/handoffs/SESSION_2768_RECYCLE_EMITTER_WORKER_PIDS_RATIFIED.md) — S2768 handoff
-5. [`docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_recent_recycles.md`](docs/research/implementation/RATIFICATION_2026-07-11_ops_tool_recent_recycles.md) — S2765 predecessor envelope
-6. [`docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_6_0.md`](docs/research/implementation/RATIFICATION_2026-07-11_PLAYBOOK_V0_6_0.md) — Playbook v0.6.0 envelope (constitutional context)
-7. `scripts/emit_recycle_event.py` — new helper (this session)
-8. `Makefile` (recycle-all target) — amended this session
-9. `core/services/td_handlers_ops.py::_ops_recent_recycles` — amended this session
+3. [`docs/research/implementation/RATIFICATION_2026-07-11_ccl_v2_search_filter.md`](docs/research/implementation/RATIFICATION_2026-07-11_ccl_v2_search_filter.md) — S2769 envelope (this session)
+4. [`docs/handoffs/SESSION_2769_CCL_V2_SEARCH_FILTER_RATIFIED.md`](docs/handoffs/SESSION_2769_CCL_V2_SEARCH_FILTER_RATIFIED.md) — S2769 handoff
+5. [`docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger_v2.md`](docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger_v2.md) — S2767 v2 predecessor
+6. [`docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger.md`](docs/research/implementation/RATIFICATION_2026-07-11_close_ceremony_ledger.md) — S2763 v1 predecessor
+7. `core/views_ops_console.py::close_ceremony_ledger` — amended this session
+8. `frontend/src/pages/workspace/tabs/OpsConsoleTab.tsx` — amended this session
