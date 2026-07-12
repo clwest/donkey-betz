@@ -54,6 +54,35 @@ _ops_staff_only = user_passes_test(
     lambda u: u.is_authenticated and u.is_staff,
 )
 
+
+def _call_ops_tool(
+    request,
+    payload: Dict[str, Any],
+    trace_id: str = 'ops-console',
+) -> Dict[str, Any]:
+    """S2773 N18v2 (Rigby Q3 #1): shared ops_tool dispatch helper.
+
+    Replaces the four-copy `_Proxy(OpsHandlersMixin)` boilerplate that
+    slo_status / failure_signatures / health_summary / recent_recycles
+    each carried. Callers pass the full payload dict (Rigby Q1 PASS —
+    keeps the helper dumb and free of a mini-DSL). Returns the raw dict
+    from `_handle_ops`, coerced to `{}` if the handler produced a
+    non-dict (defensive; upstream contract is dict-valued).
+    """
+    from core.services.td_handlers_ops import OpsHandlersMixin
+
+    class _Proxy(OpsHandlersMixin):
+        pass
+
+    proxy = _Proxy()
+    result = proxy._handle_ops(
+        'ops_tool',
+        payload,
+        user_id=request.user.id,
+        trace_id=trace_id,
+    )
+    return result if isinstance(result, dict) else {}
+
 logger = logging.getLogger(__name__)
 
 
@@ -63,18 +92,7 @@ logger = logging.getLogger(__name__)
 def slo_status(request):
     """GET /api/ops/slo-status/ — SLO dashboard data."""
     try:
-        from core.services.td_handlers_ops import OpsHandlersMixin
-
-        class _Proxy(OpsHandlersMixin):
-            pass
-
-        proxy = _Proxy()
-        result = proxy._handle_ops(
-            'ops_tool',
-            {'action': 'slo_status', 'window': '24h'},
-            user_id=request.user.id,
-            trace_id='ops-console',
-        )
+        result = _call_ops_tool(request, {'action': 'slo_status', 'window': '24h'})
         return JsonResponse(result)
     except Exception as e:
         logger.error(f"SLO status error: {e}")
@@ -87,19 +105,11 @@ def slo_status(request):
 def failure_signatures(request):
     """GET /api/ops/failure-signatures/ — Recent failure patterns."""
     try:
-        from core.services.td_handlers_ops import OpsHandlersMixin
-
-        class _Proxy(OpsHandlersMixin):
-            pass
-
-        proxy = _Proxy()
         window = request.GET.get('window', '24h')
         limit = int(request.GET.get('limit', 10))
-        result = proxy._handle_ops(
-            'ops_tool',
+        result = _call_ops_tool(
+            request,
             {'action': 'failure_signatures', 'window': window, 'limit': limit},
-            user_id=request.user.id,
-            trace_id='ops-console',
         )
         return JsonResponse(result)
     except Exception as e:
@@ -141,18 +151,9 @@ def health_summary(request):
     tenant-boundary violations (I-0303) + accumulated staleness warnings
     (S2759). Window fixed at 24h to match the Rigby round-trip protocol.
     """
-    from core.services.td_handlers_ops import OpsHandlersMixin
-
-    class _Proxy(OpsHandlersMixin):
-        pass
-
-    proxy = _Proxy()
-    user_id = request.user.id
-    trace_id = 'ops-console-health'
-
     def _safe_call(payload, error_key):
         try:
-            return proxy._handle_ops('ops_tool', payload, user_id=user_id, trace_id=trace_id)
+            return _call_ops_tool(request, payload, trace_id='ops-console-health')
         except Exception as e:  # noqa: BLE001 — surface degradation, not 500
             logger.warning(f"health_summary {payload.get('action')} failed: {e}")
             return {'error': str(e), '_source': error_key}
@@ -524,19 +525,8 @@ def recent_recycles(request):
     against ``BASE_DIR``).
     """
     try:
-        from core.services.td_handlers_ops import OpsHandlersMixin
-
-        class _Proxy(OpsHandlersMixin):
-            pass
-
-        proxy = _Proxy()
         limit = int(request.GET.get('limit', 10))
-        result = proxy._handle_ops(
-            'ops_tool',
-            {'action': 'recent_recycles', 'limit': limit},
-            user_id=request.user.id,
-            trace_id='ops-console',
-        )
+        result = _call_ops_tool(request, {'action': 'recent_recycles', 'limit': limit})
         return JsonResponse(result)
     except Exception as e:
         logger.error(f"Recent recycles error: {e}")
