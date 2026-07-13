@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-13T21:43:35+00:00",
+    "generated": "2026-07-13T22:27:18+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "13b5d101f32f",
-    "doc_count": 2579,
-    "commit_count": 7912,
+    "git_head": "b3139325831a",
+    "doc_count": 2581,
+    "commit_count": 7914,
     "confidence_breakdown": {
-      "HIGH": 1637,
+      "HIGH": 1638,
       "MEDIUM": 402,
       "LOW": 6,
-      "UNKNOWN": 534
+      "UNKNOWN": 535
     },
     "excludes": [
       "docs/archive/",
@@ -2587,7 +2587,7 @@
         2745,
         2749
       ],
-      "commit_count": 1266,
+      "commit_count": 1268,
       "prs": [
         10,
         11,
@@ -3165,7 +3165,8 @@
         3159,
         3160,
         3161,
-        3162
+        3162,
+        3163
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7507,7 +7508,7 @@
         2745,
         2749
       ],
-      "commit_count": 214,
+      "commit_count": 216,
       "prs": [
         2213,
         2219,
@@ -7688,7 +7689,8 @@
         3159,
         3160,
         3161,
-        3162
+        3162,
+        3163
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19891,13 +19893,28 @@
     },
     "docs/handoffs/SESSION_2774_OPS_URLCONF_LAMBDA_CLEANUP_RATIFIED.md": {
       "originating_session": 2774,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "b3139325",
+      "first_commit_date": "2026-07-13",
+      "first_commit_subject": "feat(ops): S2774 N19 URLConf lambda cleanup + same-PR capstone ratified (#3163)",
+      "sessions_touched": [
+        2774
+      ],
+      "commit_count": 2,
+      "prs": [
+        3163
+      ]
+    },
+    "docs/handoffs/SESSION_2775_SESSION_FRESHNESS_VERDICTS_JSONL_RATIFIED.md": {
+      "originating_session": 2775,
       "confidence": "LOW",
       "match_source": "frontmatter",
       "first_commit_sha": null,
       "first_commit_date": null,
       "first_commit_subject": null,
       "sessions_touched": [
-        2774
+        2775
       ],
       "commit_count": 0,
       "prs": []
@@ -36995,6 +37012,19 @@
       "commit_count": 2,
       "prs": [
         3162
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-13_ops_urlconf_lambda_cleanup.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "b3139325",
+      "first_commit_date": "2026-07-13",
+      "first_commit_subject": "feat(ops): S2774 N19 URLConf lambda cleanup + same-PR capstone ratified (#3163)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3163
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
