@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-13T22:27:18+00:00",
+    "generated": "2026-07-13T23:20:27+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "b3139325831a",
-    "doc_count": 2581,
-    "commit_count": 7914,
+    "git_head": "aa3dccc509b6",
+    "doc_count": 2583,
+    "commit_count": 7916,
     "confidence_breakdown": {
-      "HIGH": 1638,
+      "HIGH": 1639,
       "MEDIUM": 402,
       "LOW": 6,
-      "UNKNOWN": 535
+      "UNKNOWN": 536
     },
     "excludes": [
       "docs/archive/",
@@ -2587,7 +2587,7 @@
         2745,
         2749
       ],
-      "commit_count": 1268,
+      "commit_count": 1270,
       "prs": [
         10,
         11,
@@ -3166,7 +3166,8 @@
         3160,
         3161,
         3162,
-        3163
+        3163,
+        3164
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7508,7 +7509,7 @@
         2745,
         2749
       ],
-      "commit_count": 216,
+      "commit_count": 218,
       "prs": [
         2213,
         2219,
@@ -7690,7 +7691,8 @@
         3160,
         3161,
         3162,
-        3163
+        3163,
+        3164
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19908,13 +19910,28 @@
     },
     "docs/handoffs/SESSION_2775_SESSION_FRESHNESS_VERDICTS_JSONL_RATIFIED.md": {
       "originating_session": 2775,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "aa3dccc5",
+      "first_commit_date": "2026-07-13",
+      "first_commit_subject": "feat(ops): S2775 N15 session-open freshness verdicts persisted to JSONL (#3164)",
+      "sessions_touched": [
+        2775
+      ],
+      "commit_count": 2,
+      "prs": [
+        3164
+      ]
+    },
+    "docs/handoffs/SESSION_2776_PA_WRAPPER_OWNERSHIP_CHECK_RATIFIED.md": {
+      "originating_session": 2776,
       "confidence": "LOW",
       "match_source": "frontmatter",
       "first_commit_sha": null,
       "first_commit_date": null,
       "first_commit_subject": null,
       "sessions_touched": [
-        2775
+        2776
       ],
       "commit_count": 0,
       "prs": []
@@ -37025,6 +37042,19 @@
       "commit_count": 2,
       "prs": [
         3163
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-13_session_freshness_verdicts_jsonl.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "aa3dccc5",
+      "first_commit_date": "2026-07-13",
+      "first_commit_subject": "feat(ops): S2775 N15 session-open freshness verdicts persisted to JSONL (#3164)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3164
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {

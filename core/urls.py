@@ -108,6 +108,8 @@ from core.views_ops_console import (
     recent_recycles,
 )
 
+from core.views_pa_whoami import pa_whoami
+
 from core.views_ats_optimization import (
     ATSAnalyzeView,
     ATSExtractKeywordsView,
@@ -2515,6 +2517,12 @@ urlpatterns = [
     # Session 932: Unified attention aggregator (combines system + human attention)
     path('api/assistant/attention/unified/', get_unified_attention, name='assistant-attention-unified'),
     path('api/assistant/attention/stats/', get_attention_stats, name='assistant-attention-stats'),
+    # S2776 N21: PA wrapper ownership verification probe. Read-only,
+    # deterministic, no side effects, bounded output, needed for
+    # tools/pa_local.sh toolchain correctness. Canonical exemplar of the
+    # sharp 5-point test that keeps /api/pa/* from becoming a second
+    # /api/ops/* surface (Rigby S2776 zoom-out mitigation).
+    path('api/pa/whoami/', pa_whoami, name='pa-whoami'),
     # Session 932: Unified PA REST endpoints (same behavior as WebSocket)
     path('api/pa/chat/', unified_pa_chat, name='unified-pa-chat'),
     path('api/pa/chat/status/<str:task_id>/', pa_chat_status, name='pa-chat-status'),
