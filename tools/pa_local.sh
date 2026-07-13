@@ -536,4 +536,28 @@ export PA_API_TOKEN=[REDACTED - HISTORICAL SECRET]
 # for the I-0302 Phase 4 (regression harness for RUR-C1 parent
 # invariant) arc. Prior pin `pa-43818ab8ba144a2f` preserved above
 # as comment (rotated from at S2748 open).
-python tools/pa_chat.py "$@" --tools --conversation pa-77bdf04032204741
+
+# ── S2776 N21: wrapper token/pin ownership check ──
+# First invocation per pin verifies PA_API_TOKEN + wrapper pin resolve
+# to the same user. Cache at ~/.claude-pa-verified/<pin>.json marks the
+# pin as verified so subsequent invocations skip the check.
+# Escape hatch: PA_LOCAL_ALLOW_MISMATCH=1 → warn but continue (for
+# emergency close-ceremony continuity when a mismatch is expected).
+# Exit codes: 0 verified · 2 mismatch · 3 token invalid · 4 orphan pin.
+_pa_cache_dir="${HOME}/.claude-pa-verified"
+_pa_pin=$(grep -oE 'conversation pa-[a-f0-9]{16}' "$0" 2>/dev/null | head -1 | awk '{print $2}')
+if [ -n "$_pa_pin" ]; then
+  mkdir -p "$_pa_cache_dir"
+  if [ ! -f "$_pa_cache_dir/${_pa_pin}.json" ]; then
+    if ! python manage.py verify_pa_wrapper_ownership --pin "$_pa_pin"; then
+      _pa_ec=$?
+      if [ "${PA_LOCAL_ALLOW_MISMATCH:-0}" = "1" ]; then
+        echo "[pa_local] ⚠ ownership verify failed (exit $_pa_ec) — PA_LOCAL_ALLOW_MISMATCH=1 override in effect, continuing" >&2
+      else
+        exit $_pa_ec
+      fi
+    fi
+  fi
+fi
+
+python tools/pa_chat.py "$@" --tools --conversation pa-bc40ba1f5dd343f4
