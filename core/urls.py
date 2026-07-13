@@ -99,6 +99,15 @@ from core.views_fleet_signals import fleet_signals_clusters_replay
 # Session 1138 — Decision 13: fleet paid-interest submission
 from core.views_fleet_paid_interest import fleet_paid_interest_submit
 
+from core.views_ops_console import (
+    slo_status,
+    failure_signatures,
+    blocked_agents,
+    health_summary,
+    close_ceremony_ledger,
+    recent_recycles,
+)
+
 from core.views_ats_optimization import (
     ATSAnalyzeView,
     ATSExtractKeywordsView,
@@ -2389,12 +2398,13 @@ urlpatterns = [
     path('api/proposals/<str:proposal_id>/execute/', lambda r, proposal_id: __import__('core.views_proposals', fromlist=['execute_proposal']).execute_proposal(r), name='execute-proposal'),
 
     # Session 1077: Ops Console REST endpoints
-    path('api/ops/slo-status/', lambda r: __import__('core.views_ops_console', fromlist=['slo_status']).slo_status(r), name='ops-slo-status'),
-    path('api/ops/failure-signatures/', lambda r: __import__('core.views_ops_console', fromlist=['failure_signatures']).failure_signatures(r), name='ops-failure-signatures'),
-    path('api/ops/blocked-agents/', lambda r: __import__('core.views_ops_console', fromlist=['blocked_agents']).blocked_agents(r), name='ops-blocked-agents'),
-    path('api/ops/health-summary/', lambda r: __import__('core.views_ops_console', fromlist=['health_summary']).health_summary(r), name='ops-health-summary'),
-    path('api/ops/close-ceremony-ledger/', lambda r: __import__('core.views_ops_console', fromlist=['close_ceremony_ledger']).close_ceremony_ledger(r), name='ops-close-ceremony-ledger'),
-    path('api/ops/recent-recycles/', lambda r: __import__('core.views_ops_console', fromlist=['recent_recycles']).recent_recycles(r), name='ops-recent-recycles'),
+    # S2774 N19: direct import (was `lambda r: __import__(...)` per-request lazy).
+    path('api/ops/slo-status/', slo_status, name='ops-slo-status'),
+    path('api/ops/failure-signatures/', failure_signatures, name='ops-failure-signatures'),
+    path('api/ops/blocked-agents/', blocked_agents, name='ops-blocked-agents'),
+    path('api/ops/health-summary/', health_summary, name='ops-health-summary'),
+    path('api/ops/close-ceremony-ledger/', close_ceremony_ledger, name='ops-close-ceremony-ledger'),
+    path('api/ops/recent-recycles/', recent_recycles, name='ops-recent-recycles'),
 
     # Spider Dashboard API endpoints
     path('api/spider/stats/', lambda r: __import__('ai_core.api.spider_api', fromlist=['SpiderStatsAPI']).SpiderStatsAPI.as_view()(r), name='spider_stats'),
