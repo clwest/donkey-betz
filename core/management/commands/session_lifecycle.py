@@ -61,10 +61,13 @@ Exit codes:
 """
 from __future__ import annotations
 
+import json
+import logging
 import re
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -72,8 +75,11 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.db.models import Count, Max
 
+logger = logging.getLogger(__name__)
+
 
 WRAPPER_PATH = Path("tools/pa_local.sh")
+FRESHNESS_LOG_PATH = Path("logs/session_freshness.jsonl")
 
 _PIN_RE = re.compile(r"^pa-[0-9a-f]{16}$")
 
@@ -155,6 +161,26 @@ class Command(BaseCommand):
             help="Override wrapper file path (tests / unusual layouts only).",
         )
 
+        # ── history ──
+        history_p = subparsers.add_parser(
+            "history",
+            help=(
+                "Print recent session-open freshness verdicts from "
+                f"{FRESHNESS_LOG_PATH} (JSONL). No writes."
+            ),
+        )
+        history_p.add_argument(
+            "--limit",
+            type=int,
+            default=10,
+            help="Number of most-recent rows to print (default: 10).",
+        )
+        history_p.add_argument(
+            "--log-path",
+            default=None,
+            help="Override log path (tests / unusual layouts only).",
+        )
+
         # ── close ──
         close_p = subparsers.add_parser(
             "close",
@@ -193,6 +219,12 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         subcommand = options["subcommand"]
+
+        if subcommand == "history":
+            log_path = Path(options.get("log_path") or FRESHNESS_LOG_PATH)
+            self._handle_history(log_path, int(options.get("limit") or 10))
+            return
+
         wrapper_path = Path(options.get("wrapper_path") or WRAPPER_PATH)
         user = self._resolve_user(options["user"])
 
@@ -500,6 +532,21 @@ class Command(BaseCommand):
         self.stdout.write(f"  carry_forward source: {derived_source}, "
                           f"{len(carry_forward)} chars")
 
+        # S2775 N15: freshness verdict telemetry. Fail-soft — a diagnostic
+        # capture must never break the pin mint that already succeeded.
+        row = self._record_session_freshness(
+            new_pin=new_pin,
+            label=label,
+            context="session_open",
+        )
+        if row:
+            self.stdout.write(
+                f"  freshness: {row.get('verdict')} · "
+                f"head={row.get('head_sha_short')} · "
+                f"celery_stale={row.get('celery_stale_count')}/"
+                f"{row.get('celery_worker_count')}"
+            )
+
     def _handle_close(
         self,
         wrapper_path: Path,
@@ -592,6 +639,116 @@ class Command(BaseCommand):
             self.stdout.write(
                 "  mode: retire-only — wrapper still points to retired pin. "
                 "Run: python manage.py session_lifecycle open --label X"
+            )
+
+
+    # ─────────────────────────── freshness telemetry (N15) ────────── #
+
+    def _record_session_freshness(
+        self,
+        new_pin: str,
+        label: str,
+        context: str,
+        log_path: Optional[Path] = None,
+    ) -> Dict[str, Any]:
+        """Capture the current freshness verdict + append one JSONL row.
+
+        Fail-soft: any exception is logged as a warning and an empty dict
+        is returned. This function must never break the caller (a pin
+        mint that already committed successfully).
+
+        Row shape (kept lean per S2775 N15 Rigby SIGN):
+          ts, session_label, pin, context, verdict, head_sha_short,
+          head_commit_age_seconds, daphne_pid_age_seconds,
+          celery_worker_count, celery_stale_count
+        """
+        try:
+            from core.services.process_freshness import compute_process_staleness
+
+            verdict_payload = compute_process_staleness()
+            head_sha = (verdict_payload.get('head_commit_sha') or '')[:12]
+            head_ts_iso = verdict_payload.get('head_commit_timestamp')
+            head_age_seconds: Optional[int] = None
+            if head_ts_iso:
+                try:
+                    head_dt = datetime.fromisoformat(head_ts_iso)
+                    head_age_seconds = int(
+                        (datetime.now(tz=timezone.utc) - head_dt).total_seconds()
+                    )
+                except (TypeError, ValueError):
+                    head_age_seconds = None
+
+            workers = verdict_payload.get('celery_workers_status') or []
+            celery_worker_count = len(workers)
+            celery_stale_count = sum(
+                1 for w in workers
+                if isinstance(w, dict) and w.get('started_before_head_commit')
+            )
+
+            row: Dict[str, Any] = {
+                'ts': datetime.now(tz=timezone.utc).isoformat(),
+                'session_label': label,
+                'pin': new_pin,
+                'context': context,
+                'verdict': verdict_payload.get('staleness_verdict', 'UNKNOWN'),
+                'head_sha_short': head_sha,
+                'head_commit_age_seconds': head_age_seconds,
+                'daphne_pid_age_seconds': verdict_payload.get('daphne_pid_age_seconds'),
+                'celery_worker_count': celery_worker_count,
+                'celery_stale_count': celery_stale_count,
+            }
+
+            target = Path(log_path) if log_path else FRESHNESS_LOG_PATH
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with target.open('a', encoding='utf-8') as f:
+                f.write(json.dumps(row, ensure_ascii=False) + '\n')
+            return row
+        except Exception as exc:  # noqa: BLE001 — telemetry, not control plane
+            logger.warning(
+                "[session_lifecycle] freshness capture failed (swallowed): "
+                "%s: %s",
+                type(exc).__name__,
+                exc,
+            )
+            self.stderr.write(
+                f"[SESSION_LIFECYCLE] freshness telemetry capture failed: "
+                f"{type(exc).__name__}: {exc} (swallowed — pin mint still succeeded)"
+            )
+            return {}
+
+    def _handle_history(self, log_path: Path, limit: int):
+        if not log_path.exists():
+            self.stdout.write(
+                f"[SESSION_LIFECYCLE] no freshness log at {log_path} yet. "
+                f"Run `python manage.py session_lifecycle open --label X` to "
+                f"generate one."
+            )
+            return
+
+        rows = []
+        with log_path.open('r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rows.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+
+        recent = rows[-limit:] if limit > 0 else rows
+        self.stdout.write(
+            f"[SESSION_LIFECYCLE] freshness history "
+            f"({len(recent)} of {len(rows)} rows shown):"
+        )
+        for row in recent:
+            self.stdout.write(
+                f"  {row.get('ts')}  "
+                f"{row.get('verdict','?'):<14}  "
+                f"head={row.get('head_sha_short','?')}  "
+                f"celery_stale={row.get('celery_stale_count','?')}/"
+                f"{row.get('celery_worker_count','?')}  "
+                f"label={row.get('session_label','?')}"
             )
 
 

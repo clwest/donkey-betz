@@ -442,159 +442,16 @@ class OpsHandlersMixin:
     _CELERY_WORKER_PROCESS_PATTERN = 'celery.*worker'
 
     def _compute_process_staleness(self) -> Dict[str, Any]:
-        """Compare Daphne + Celery worker start times against git HEAD commit.
+        """Delegates to ``core.services.process_freshness.compute_process_staleness``.
 
-        Returns a dict keyed for embedding into ``_ops_version`` response:
-
-          - ``daphne_pid``, ``daphne_pid_age_seconds``,
-            ``daphne_started_before_head_commit``
-          - ``celery_workers_status``: list of dicts (per running worker)
-          - ``staleness_verdict``: one of ``FRESH`` / ``STALE_DAPHNE`` /
-            ``STALE_CELERY`` / ``STALE_BOTH`` / ``UNKNOWN``
-          - ``head_commit_sha``, ``head_commit_timestamp``
-
-        Threshold rule (Rigby SIGN F2 refinement): a process is stale iff its
-        start time is BEFORE the current HEAD commit time. No arbitrary
-        "older than N hours" heuristic — the HEAD-commit-time comparison is
-        deterministic and directly connects "did this process load the code
-        I just merged?" to the verdict.
+        S2775 N15 extracted the body to a module-level function so
+        callers outside the tool-dispatch lifecycle (specifically
+        ``session_lifecycle`` for freshness telemetry) can invoke the
+        same computation without instantiating this handler. Return
+        shape is byte-identical to pre-extraction.
         """
-        import os
-        import subprocess
-        from datetime import datetime, timezone as dt_timezone
-
-        # --- HEAD commit metadata ---
-        try:
-            head_sha = subprocess.check_output(
-                ['git', 'rev-parse', 'HEAD'],
-                cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-                stderr=subprocess.DEVNULL,
-                timeout=5,
-            ).decode().strip()
-            head_commit_ts_raw = subprocess.check_output(
-                ['git', 'log', '-1', '--format=%ct', 'HEAD'],
-                cwd=os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
-                stderr=subprocess.DEVNULL,
-                timeout=5,
-            ).decode().strip()
-            head_commit_timestamp = int(head_commit_ts_raw)
-            head_commit_iso = datetime.fromtimestamp(
-                head_commit_timestamp, tz=dt_timezone.utc,
-            ).isoformat()
-        except (subprocess.SubprocessError, ValueError, FileNotFoundError):
-            # No git available or non-git working tree — staleness verdict
-            # unavailable but everything else still returns.
-            return {
-                'staleness_verdict': 'UNKNOWN',
-                'staleness_error': 'git HEAD metadata unavailable',
-            }
-
-        # --- Process discovery via psutil (cross-platform) ---
-        # psutil handles macOS + Linux uniformly and provides
-        # create_time() as a Unix timestamp — direct comparison with the
-        # git HEAD commit timestamp with no format-string parsing.
-        import re
-        try:
-            import psutil
-        except ImportError:
-            return {
-                'staleness_verdict': 'UNKNOWN',
-                'staleness_error': 'psutil not available',
-            }
-
-        daphne_row = None
-        celery_worker_rows: list[Dict[str, Any]] = []
-        now_seconds = int(datetime.now(tz=dt_timezone.utc).timestamp())
-
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline', 'create_time']):
-            try:
-                info = proc.info
-                cmdline = info.get('cmdline') or []
-                cmd = ' '.join(cmdline) if cmdline else (info.get('name') or '')
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                continue
-            if not cmd:
-                continue
-
-            proc_start_ts = int(info.get('create_time') or 0)
-            if proc_start_ts == 0:
-                continue
-
-            pid_age_seconds = max(0, now_seconds - proc_start_ts)
-            is_daphne = self._DAPHNE_PROCESS_PATTERN in cmd
-            is_celery_worker = (
-                'celery' in cmd
-                and 'worker' in cmd
-                and 'grep' not in cmd
-            )
-
-            if is_daphne and daphne_row is None:
-                daphne_row = {
-                    'pid': info.get('pid'),
-                    'pid_age_seconds': pid_age_seconds,
-                    'started_at_ts': proc_start_ts,
-                    'started_before_head_commit':
-                        proc_start_ts < head_commit_timestamp,
-                }
-            elif is_celery_worker:
-                hostname_match = re.search(r'hostname=([^\s]+)', cmd)
-                hostname = (
-                    hostname_match.group(1) if hostname_match else 'unknown'
-                )
-                celery_worker_rows.append({
-                    'hostname': hostname,
-                    'pid': info.get('pid'),
-                    'pid_age_seconds': pid_age_seconds,
-                    'started_before_head_commit':
-                        proc_start_ts < head_commit_timestamp,
-                })
-
-        # --- Verdict resolution ---
-        daphne_stale = (
-            daphne_row is not None
-            and daphne_row['started_before_head_commit']
-        )
-        celery_stale = any(
-            w['started_before_head_commit'] for w in celery_worker_rows
-        )
-
-        if daphne_row is None and not celery_worker_rows:
-            verdict = 'UNKNOWN'
-        elif daphne_stale and celery_stale:
-            verdict = 'STALE_BOTH'
-        elif daphne_stale:
-            verdict = 'STALE_DAPHNE'
-        elif celery_stale:
-            verdict = 'STALE_CELERY'
-        else:
-            verdict = 'FRESH'
-
-        result: Dict[str, Any] = {
-            'staleness_verdict': verdict,
-            'head_commit_sha': head_sha,
-            'head_commit_timestamp': head_commit_iso,
-            'celery_workers_status': celery_worker_rows,
-        }
-        if daphne_row is not None:
-            result['daphne_pid'] = daphne_row['pid']
-            result['daphne_pid_age_seconds'] = daphne_row['pid_age_seconds']
-            result['daphne_started_before_head_commit'] = (
-                daphne_row['started_before_head_commit']
-            )
-        else:
-            result['daphne_pid'] = None
-            result['daphne_pid_age_seconds'] = None
-            result['daphne_started_before_head_commit'] = None
-
-        # Helpful hint for the FIX PATH when verdict != FRESH
-        if verdict in ('STALE_DAPHNE', 'STALE_CELERY', 'STALE_BOTH'):
-            result['staleness_fix'] = (
-                'Run `make recycle-all` to bring all local processes to '
-                'HEAD-commit-fresh state. `make celery-recycle` alone will '
-                'NOT bounce Daphne.'
-            )
-
-        return result
+        from core.services.process_freshness import compute_process_staleness
+        return compute_process_staleness()
 
     def _ops_slo_status(self, window: str, include_breakdowns: bool, trace_id: str, since: str = None) -> Dict[str, Any]:
         """Compute 8 SLOs for the given time window."""
