@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-14T03:27:32+00:00",
+    "generated": "2026-07-14T04:01:07+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "eaccf3acfb02",
-    "doc_count": 2585,
-    "commit_count": 7918,
+    "git_head": "78c33ba3984f",
+    "doc_count": 2588,
+    "commit_count": 7922,
     "confidence_breakdown": {
-      "HIGH": 1640,
+      "HIGH": 1642,
       "MEDIUM": 402,
-      "LOW": 6,
-      "UNKNOWN": 537
+      "LOW": 5,
+      "UNKNOWN": 539
     },
     "excludes": [
       "docs/archive/",
@@ -2003,7 +2003,7 @@
         2740,
         2742
       ],
-      "commit_count": 16,
+      "commit_count": 18,
       "prs": [
         3048,
         3058,
@@ -2014,7 +2014,8 @@
         3067,
         3134,
         3135,
-        3155
+        3155,
+        3167
       ]
     },
     "docs/EOS_RULES.md": {
@@ -2587,7 +2588,7 @@
         2745,
         2749
       ],
-      "commit_count": 1272,
+      "commit_count": 1274,
       "prs": [
         10,
         11,
@@ -3168,7 +3169,8 @@
         3162,
         3163,
         3164,
-        3165
+        3165,
+        3166
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7510,7 +7512,7 @@
         2745,
         2749
       ],
-      "commit_count": 220,
+      "commit_count": 222,
       "prs": [
         2213,
         2219,
@@ -7694,7 +7696,8 @@
         3162,
         3163,
         3164,
-        3165
+        3165,
+        3166
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19942,16 +19945,33 @@
     },
     "docs/handoffs/SESSION_2777_ZOOM_OUT_CLASSIFICATIONS_HELPER_RATIFIED.md": {
       "originating_session": 2777,
-      "confidence": "LOW",
-      "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "59db8626",
+      "first_commit_date": "2026-07-13",
+      "first_commit_subject": "feat(sign): S2777 N22 Rigby SIGN zoom-out classification ledger ratified (#3166)",
       "sessions_touched": [
         2777
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3166
+      ]
+    },
+    "docs/handoffs/SESSION_2778_PLAYBOOK_V0_7_0_RATIFIED.md": {
+      "originating_session": 2778,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "78c33ba3",
+      "first_commit_date": "2026-07-13",
+      "first_commit_subject": "feat(playbook): v0.7.0 MINOR \u2014 zoom-out SIGN discipline (#S2778 N23) (#3167)",
+      "sessions_touched": [
+        2778
+      ],
+      "commit_count": 2,
+      "prs": [
+        3167
+      ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
       "originating_session": 280,
@@ -37048,6 +37068,19 @@
         3162
       ]
     },
+    "docs/research/implementation/RATIFICATION_2026-07-13_PLAYBOOK_V0_7_0.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "78c33ba3",
+      "first_commit_date": "2026-07-13",
+      "first_commit_subject": "feat(playbook): v0.7.0 MINOR \u2014 zoom-out SIGN discipline (#S2778 N23) (#3167)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3167
+      ]
+    },
     "docs/research/implementation/RATIFICATION_2026-07-13_ops_urlconf_lambda_cleanup.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -37085,6 +37118,19 @@
       "commit_count": 2,
       "prs": [
         3164
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-13_zoom_out_classifications_helper.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "59db8626",
+      "first_commit_date": "2026-07-13",
+      "first_commit_subject": "feat(sign): S2777 N22 Rigby SIGN zoom-out classification ledger ratified (#3166)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3166
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
