@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-14T17:23:22+00:00",
+    "generated": "2026-07-14T17:58:23+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "b2595ee7b538",
-    "doc_count": 2592,
-    "commit_count": 7942,
+    "git_head": "515d9c136711",
+    "doc_count": 2593,
+    "commit_count": 7946,
     "confidence_breakdown": {
-      "HIGH": 1645,
+      "HIGH": 1646,
       "MEDIUM": 402,
       "LOW": 6,
       "UNKNOWN": 539
@@ -2589,7 +2589,7 @@
         2745,
         2749
       ],
-      "commit_count": 1282,
+      "commit_count": 1284,
       "prs": [
         10,
         11,
@@ -3175,7 +3175,8 @@
         3168,
         3171,
         3173,
-        3175
+        3175,
+        3178
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7517,7 +7518,7 @@
         2745,
         2749
       ],
-      "commit_count": 230,
+      "commit_count": 232,
       "prs": [
         2213,
         2219,
@@ -7706,7 +7707,8 @@
         3168,
         3171,
         3173,
-        3175
+        3175,
+        3178
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20029,13 +20031,28 @@
     },
     "docs/handoffs/SESSION_2782_SUBSTRATE_FIX_PLUS_C1_OBSERVABILITY.md": {
       "originating_session": 2782,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "698f4fca",
+      "first_commit_date": "2026-07-14",
+      "first_commit_subject": "docs(cascade): S2782 close cascade \u2014 handoff + start-here + INDEX + provenance (#3178)",
+      "sessions_touched": [
+        2782
+      ],
+      "commit_count": 2,
+      "prs": [
+        3178
+      ]
+    },
+    "docs/handoffs/SESSION_2783_WIRE_GOVERNANCE_TAB.md": {
+      "originating_session": 2783,
       "confidence": "LOW",
       "match_source": "frontmatter",
       "first_commit_sha": null,
       "first_commit_date": null,
       "first_commit_subject": null,
       "sessions_touched": [
-        2782
+        2783
       ],
       "commit_count": 0,
       "prs": []
