@@ -2,59 +2,66 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2776 CLOSED — PA WRAPPER OWNERSHIP CHECK RATIFIED
+## READ THIS FIRST — SESSION 2777 CLOSED — ZOOM-OUT CLASSIFICATION LEDGER RATIFIED
 
-**Refreshed 2026-07-13 (SESSION 2776 CLOSED — N21 shipped. `/api/pa/whoami/` bounded 3-field GET view + sharp 5-point test docstring. Dedicated `verify_pa_wrapper_ownership` management command (single-concern per Rigby Q1 DISAGREE fold). `tools/pa_local.sh` bash prelude with per-pin cache + `PA_LOCAL_ALLOW_MISMATCH=1` escape hatch. Exit codes 0/2/3/4. 9-test suite, 56/56 full 4-suite regression. Live E2E: cold cache → verify → cache · warm cache → silent skip. Rigby capstone 7/7 PASS on `/api/ops/*` + `/api/pa/whoami/`. Second consecutive non-ops-surface arc. **FIRST F-BLOCKING DISAGREE in the S2771-rule streak.** Chris explicit alignment with Rigby's substrate-simplicity concern. Eleventh close-cycle post-PLAYBOOK-7.4.4-codification (first double-cycle same calendar day). N15 shipped first natural payoff at S2776 mint.)**
+**Refreshed 2026-07-13 (SESSION 2777 CLOSED — N22 shipped. `logs/zoom_out_classifications.jsonl` seeded to 13 rows (12 backfilled from S2774+S2775+S2776 envelope §4 SIGN Summary + envelope frontmatter + 1 live S2777). NEW `core/management/commands/record_zoom_out_concern.py` (147-line JSONL writer, 7-field schema, enum-validated classification). NEW `core/management/commands/zoom_out_streak_report.py` (128-line CLI reader with advisory-only report language, `--as-json` for downstream consumption). 10-test suite covering both commands; 10/10 PASS in 0.008s. Full 5-suite regression 66/66 PASS in 0.916s. Third consecutive non-ops-surface arc. Ledger state at close: 5 same_pr_actionable · 7 same_pr_mitigatable · 1 future_trigger. **SECOND F-BLOCKING DISAGREE of the S2771-rule streak** — this one on Claude's *claim* rather than design lean: original N22 rationale referenced "PLAYBOOK-6.10 two-triggers threshold" as if it were a codified rule; Rigby's turn-2 tool-grounded verification refuted with citations; framing corrected before ship. **First mid-arc rubber-stamp catch:** Rigby's turn-1 SIGN was AGREE x4 with 0 tool_runs; Chris pressure-tested at decision time; tool-grounded re-route recovered in one turn. Twelfth close-cycle post-PLAYBOOK-7.4.4-codification.)**
 
-**S2776 shipped as 1-PR close-ceremony bundle (per PLAYBOOK-7.4.1):**
+**S2777 shipped as 1-PR close-ceremony bundle (per PLAYBOOK-7.4.1):**
 
-- **Code:** `core/views_pa_whoami.py` NEW (54 lines) · `core/urls.py` amended (import + path) · `core/management/commands/verify_pa_wrapper_ownership.py` NEW (190 lines) · `tools/pa_local.sh` bash prelude (~20 lines)
-- **Tests:** `core/tests/test_pa_wrapper_ownership_2776.py` NEW (9 tests, 9/9 PASS in 0.38s)
-- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-13_pa_wrapper_ownership_check.md`
-- **Handoff:** `docs/handoffs/SESSION_2776_PA_WRAPPER_OWNERSHIP_CHECK_RATIFIED.md`
-- **CLAUDE.md L3 anchor:** refreshed to S2776; L7 unchanged
+- **Code:** `core/management/commands/record_zoom_out_concern.py` NEW (147 lines) · `core/management/commands/zoom_out_streak_report.py` NEW (128 lines) · `logs/zoom_out_classifications.jsonl` NEW (13 seed rows)
+- **Tests:** `core/tests/test_zoom_out_classifications_2777.py` NEW (10 tests, 10/10 PASS in 0.008s)
+- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-13_zoom_out_classifications_helper.md`
+- **Handoff:** `docs/handoffs/SESSION_2777_ZOOM_OUT_CLASSIFICATIONS_HELPER_RATIFIED.md`
+- **CLAUDE.md L3 anchor:** refreshed to S2777; L7 unchanged
 - **Docs cascade:** 4-step + provenance rebuild
-- **Post-merge:** `make recycle-all` invoked per PLAYBOOK-7.4.4 (eleventh cycle)
+- **Post-merge:** `make recycle-all` invoked per PLAYBOOK-7.4.4 (twelfth cycle)
 
 ---
 
-## SESSION-OPEN INFRA STORY (S2776)
+## SESSION-OPEN INFRA STORY (S2777)
 
-S2776 opened in-session as a continuation of the S2775 close-ceremony flow (Chris's explicit directive: "ship s2775 then start n21"). Post-S2775-merge recycle produced first natural N15 hook fire at S2776 pin mint — verdict FRESH · SHA aa3dccc509b6 · 5/5 celery fresh. Trend surface at `logs/session_freshness.jsonl` now has 2 rows (1 shell-invoke test at S2775 + 1 natural at S2776).
+S2777 opened in-session as a continuation of the S2776 close-ceremony flow. Post-S2776-merge recycle produced second natural N15 hook fire at S2777 pin mint — verdict FRESH · SHA `eaccf3acfb02` · 5/5 celery fresh. Trend surface at `logs/session_freshness.jsonl` now has 3 rows (1 shell-invoke test at S2775 + 2 natural at S2776 and S2777).
 
-Fresh pin `pa-bc40ba1f5dd343f4` minted for N21 arc. Rigby joint SIGN produced the FIRST F-BLOCKING DISAGREE of the S2771-rule streak — Rigby pushed back on Claude's Q1 lean (extend `session_lifecycle status`) with substrate-simplicity argument. Chris explicit alignment: "agree with Rigby on trying to prevent swiss army knife effects." Validates the rule genuinely surfaces substantive folds vs devolving into all-PASS.
+Fresh pin `pa-f19df7828f2843e5` minted for N22 arc.
 
-Local recycle required mid-session to load N21 URL for live E2E verify. Post-recycle E2E confirmed both cold-cache and warm-cache paths work.
+**Turn 1 rubber-stamp catch.** Rigby's initial joint SIGN was AGREE x4 with pushback text but ZERO `tool_runs` and `intent: general`. No `search_docs` invocations. No citations to prior envelopes or Playbook §s. Chris flagged at decision time before proceeding: "make sure Rigby is not just rubber stamping what you suggest, and that she's using tools when needed and not just guess."
 
-**Lesson for S2777 open:** the N21 wrapper prelude fires automatically before Rigby dispatch. If the freshness verdict or capstone comes back with unexpected state, first-check `~/.claude-pa-verified/<pin>.json` presence + contents — a missing or stale cache means the prelude either just fired (should have printed a `[pa_local]` line) or errored (check stderr).
+**Turn 2 substantive DISAGREE.** Re-routed with 5 explicit tool-use directives (targeted `search_docs` queries against S2774/S2775/S2776 envelopes + Playbook §6.10 + `session_lifecycle` source). Rigby executed 6+ `search_docs` calls with narrowing queries. Produced substantive DISAGREE on Claude's "PLAYBOOK-6.10 two-triggers threshold" rationale (surfaced §6.10 has rules 6.10.1–6.10.6 for provenance verification; two-triggers convention appears as informative note language + methodology record, NOT as a codified normative rule). Claude verified independently via direct file read — DISAGREE correct. Two clean FOLDs (S2776 a/b/c/d mapping missed by RAG chunking; `session_lifecycle --help` output not in corpus).
+
+**Turn 3 folds closed.** Claude fed verbatim ground-truth (envelope frontmatter §sign_sessions for a/b/c/d + `python manage.py session_lifecycle --help` for the 4 subcommands: status/open/history/close). Framing corrected: N22 rationale rewritten to "evidence substrate for a future rule that does not exist yet." Rigby re-rendered clean AGREE Q1-Q4 with citations + reiterated §6.10 DISAGREE + direct zoom-out answer + 1 new same-PR-mitigatable concern (schema ossification) folded in.
+
+**Chris D-verdict yes** at turn 3 synthesis: "yes ship it."
+
+**Lesson for S2778 open:** the anti-rubber-stamp discipline paid off — one prior claim would have shipped wrong without Chris's pressure test. Consider always checking `tool_runs` non-empty when a SIGN routing expected substantive verification of prior claims. Codification candidate (memory rule / Playbook amendment) once second trigger surfaces.
 
 ---
 
 ## THE PIVOT — WHY THIS SHIP MATTERS
 
-Two novel-precedent moments this session:
+Three novel-precedent moments this session:
 
-1. **First F-BLOCKING DISAGREE from Rigby in the S2771-rule streak** (six consecutive applications). Chris aligned with the disagreement, folding dedicated command over session_lifecycle extension. This IS the pressure-test for whether the S2771 rule produces substantive folds or drifts into ritual — and it just proved productive. Six sessions in, four with same-PR-mitigatable/actionable material changes, one with a live disagreement Chris ratified. No sign of drift.
+1. **First mid-arc rubber-stamp SIGN detection.** Chris's pressure test at decision time ("make sure Rigby is not just rubber stamping") caught a text-only SIGN with 0 tool_runs before it shipped. Recovery: 1 additional turn with explicit tool-grounded verification directives. Prior sessions relied on retrospective observation that outputs *looked* substantive; S2777 established a decision-time check pattern.
 
-2. **First natural N15 payoff.** S2775's mechanism-now/value-later class of substrate delivered its first real data point at S2776 pin mint automatically. `logs/session_freshness.jsonl` now has row #2 — natural, not shell-invoke test. Trend surface working as designed.
+2. **Second F-BLOCKING DISAGREE of the S2771-rule streak.** First (S2776 Q1) was on Claude's design *lean*. This one (S2777 §6.10) was on Claude's *claim*. Both would have shipped wrong artifacts. Different axes of failure, same defense: tool-grounded verification.
 
-Meta-discipline observation: **N21 ships a well-tested, single-concern piece of substrate that was named as a target in a memory rule (`feedback_post_travel_port_collision_triage`) two sessions ago.** Memory-rule-to-code-ship latency: 1 calendar day, 2 sessions. This is a healthy sign of feedback-loop tightness.
+3. **Substrate is self-hosting.** N22's own S2777 turn-3 zoom-out concern (schema ossification) is row 13 of the seed ledger. The classification pattern documents itself from ship-day.
 
-Also: **zoom-out classification pattern now has three triggers of `same-PR-actionable` + three of `same-PR-mitigatable` + two of `future-trigger`.** Two-triggers threshold satisfied for two classes independently per PLAYBOOK-6.10. Codification candidate for Playbook v0.7.0 MINOR (new rule) OR v0.6.1 PATCH (informative-only classification note).
+Meta-discipline observation: **the S2771 rule keeps producing substantive folds SEVEN sessions in.** Streak table now covers S2771-S2777. Two independent F-BLOCKING DISAGREEs. Three independent classification categories. No drift into ritual. If a session ever produces AGREE x4 + generic zoom-out with 0 tool_runs, the next session should treat it as a rubber-stamp signal and re-route.
 
 ---
 
-## S2777 CANDIDATES (Chris selects at open)
+## S2778 CANDIDATES (Chris selects at open)
 
 ### Net-new engineering (⭐ recommended per `feedback_engineering_bias_over_audit`)
 
 **Note discipline:** ops-surface PRs paused per S2774 forward-carry. Unblock triggers: real incident on any `/api/ops/*` endpoint; new user-visible feature request touching ops; substrate concern from Rigby SIGN on a non-ops-adjacent arc.
 
 - **N17** — `session_number` pill in the search chip when text is set — small UX polish. **Non-ops-surface — not gated.**
-- **N22** — Persist zoom-out concern classification (`same-PR-actionable` / `same-PR-mitigatable` / `future-trigger`) as a small helper that catalogs the three known cases and computes streak length per category. Accelerates two-triggers threshold detection per PLAYBOOK-6.10. Preferable substrate for future zoom-out rule codification.
-- **N23 (new candidate)** — Codify zoom-out classification pattern as Playbook v0.6.1 PATCH (informative-only note in §11.3 or §6.10) OR v0.7.0 MINOR (new [GR] rule). Would move the emerging pattern from "informal streak observation" into constitutional substrate. Ratification cycle required (Playbook amendment).
-- **N15 v2 candidates** — close-time freshness capture (`context='session_close'`); PA-tool read action for Rigby SIGN queries; UI tile after ~30-50 natural rows accumulate. Trigger for the first: any evidence that close-time is a load-bearing observability moment. Trigger for the tile: sustained accumulation with a Chris "let me eyeball this" ask.
-- **N21 v2 candidates** — wrapper-side user_id cache compare (0-API-cost invalidation on token swap); TTL on cache; sibling `logs/wrapper_ownership.jsonl` trend log. All gated on trigger.
+- **N23** — Codify zoom-out classification pattern as Playbook v0.6.1 PATCH (informative note in §11.3 template or §6.10 extension-point) OR v0.7.0 MINOR (new [GR] rule). N22 ledger provides evidence substrate (13 rows: 5+7+1). Amendment cycle required (own SIGN + D-verdict).
+- **N24 (new candidate)** — Anti-rubber-stamp SIGN workflow codification. One trigger observed at S2777 turn 1. Two-trigger threshold not yet met — first candidate for memory rule ("check tool_runs before proceeding when SIGN expected substantive verification of prior claims"). If second trigger surfaces, promote to Playbook amendment (STUB-appropriate for Ch 7 SIGN methodology). Not proposed as immediate action; watch-and-wait.
+- **N22 v2 candidates** — Django model migration; PA-tool read surface for live SIGN queries; JSONL rotation/archival (~500 rows). All gated on trigger.
+- **N15 v2 candidates** — close-time freshness capture (`context='session_close'`); PA-tool read; UI tile after ~30-50 natural rows. Freshness log at 3 rows now — trigger for tile still far off.
+- **N21 v2 candidates** — wrapper-side user_id cache compare; TTL; sibling `logs/wrapper_ownership.jsonl`.
 
 **Gated by ops-surface pause** (need incident / user-visible feature / non-ops SIGN concern to unblock): N9, N20, Candidate 1 (S2761 smoke), 30+ lambda-`__import__` sites in `core/urls.py`
 
@@ -65,50 +72,51 @@ Also: **zoom-out classification pattern now has three triggers of `same-PR-actio
 ### Deferred (waiting on triggers, not just calendar)
 
 - **N10** — partial-recycle UI badge on Recent Recycles rows (gated on observing at least one real partial-recycle event)
-- **First real N11 PARTIAL_RECYCLE tile fire** (watching — clean N7 entries streak continues through S2776)
+- **First real N11 PARTIAL_RECYCLE tile fire** (watching — clean N7 entries streak continues through S2777)
 - **Q3 #5 (health_summary/ops_tool.overview overlap)** — trigger unchanged
 - **30+ other lambda-`__import__` sites in `core/urls.py`** — no trigger yet
-- **First `same-PR-mitigatable` case validation** — reached three-triggers this session (S2775 all-4 + S2776 c + S2776 d)
 
 ### Post-S2766 owed
 
-- **Memory rule promotion audit** — sweep MEMORY.md for two-trigger candidates for future MINOR amendments. **N23 (zoom-out classification codification) is a natural addition to this audit's output.**
+- **Memory rule promotion audit** — sweep MEMORY.md for two-trigger candidates for future MINOR amendments. **N23 (zoom-out classification codification)** now has strongest evidence substrate (13 rows). **N24 (anti-rubber-stamp)** waiting on second trigger.
 
 ---
 
-## SESSION PIN — S2776 RETIRED (fresh mint required at S2777 open)
+## SESSION PIN — S2777 RETIRED (fresh mint required at S2778 open)
 
-**Pin history (S2776):**
+**Pin history (S2777):**
 
-- `pa-bc40ba1f5dd343f4` (label `s2776-n21-pa-local-user-check`) minted S2776 open via same-session flow from S2775 close; **retired at S2776 close (force=true, SEVENTH consecutive per S2770+ pattern)**
+- `pa-f19df7828f2843e5` (label `s2777-n22-zoom-out-classification-persist`) minted S2777 open via same-session flow from S2776 close; **retired at S2777 close (force=true, EIGHTH consecutive per S2770+ pattern)**
 
-**Wrapper `tools/pa_local.sh` still points at `pa-bc40ba1f5dd343f4` (retired)** — intended failure mode forces S2777 first-action fresh mint. N21 cache file `~/.claude-pa-verified/pa-bc40ba1f5dd343f4.json` will be orphaned (harmless — new pin creates new cache entry on first invocation).
+**Wrapper `tools/pa_local.sh` still points at `pa-f19df7828f2843e5` (retired)** — intended failure mode forces S2778 first-action fresh mint. N21 cache file `~/.claude-pa-verified/pa-f19df7828f2843e5.json` will be orphaned (harmless).
 
-**S2777 open sequence:**
+**S2778 open sequence:**
 
 ```
 context-kit orient
 
 # Read this file end-to-end
-# Read S2776 envelope §4 (Rigby SIGN summary with FIRST F-BLOCKING DISAGREE + Chris explicit alignment)
-# Read S2776 envelope §8 (Meta-observation — zoom-out classification pattern now at three-triggers threshold)
+# Read S2777 envelope §4 (Rigby SIGN 3-turn loop with rubber-stamp catch + §6.10 DISAGREE)
+# Read S2777 envelope §8 (Meta-observation — streak table update with SECOND F-BLOCKING DISAGREE)
 
-# Freshness check. Should be FRESH · SHA-match at S2776 close SHA — ELEVENTH close-cycle after PLAYBOOK-7.4.4 codification.
+# Freshness check. Should be FRESH · SHA-match at S2777 close SHA — TWELFTH close-cycle after PLAYBOOK-7.4.4.
 # N15 hook fires automatically at open — inspect the row landing in logs/session_freshness.jsonl.
-bash tools/pa_local.sh "S2777 open — freshness check: ops_tool.version verdict + head_commit_sha; ops_tool.recent_recycles limit=5 (should show S2776 close at top; all N7-enriched)"
+bash tools/pa_local.sh "S2778 open — freshness check: ops_tool.version verdict + head_commit_sha; ops_tool.recent_recycles limit=5 (should show S2777 close at top; all N7-enriched)"
 
-# N21 prelude fires on first bash invocation of S2777 pin (cold cache after pin rotation)
+# N21 prelude fires on first bash invocation of S2778 pin (cold cache after pin rotation)
 # Expected: [pa_local] ✓ token=chris · pin=pa-<new> · pin_owner=chris
 
-# Regression check: run 4-suite ops+substrate stack
-python manage.py test core.tests.test_ops_auth_regression_2772 core.tests.test_ops_query_param_allowlist_2773 core.tests.test_session_freshness_2775 core.tests.test_pa_wrapper_ownership_2776 --noinput
+# Regression check: run 5-suite ops+substrate stack
+python manage.py test core.tests.test_ops_auth_regression_2772 core.tests.test_ops_query_param_allowlist_2773 core.tests.test_session_freshness_2775 core.tests.test_pa_wrapper_ownership_2776 core.tests.test_zoom_out_classifications_2777 --noinput
+
+# Ledger check: confirm 13-row baseline survived merge
+python manage.py zoom_out_streak_report --as-json | python -c "import json, sys; d=json.load(sys.stdin); assert d['total_rows']==13, d; print('OK — 13 rows, counts:', d['counts_by_classification'])"
 
 # Browser eyeball: hard-refresh localhost:8000/workspace?tab=system&sub=ops
-#   - Everything renders normally for you (staff)
 #   - All 6 ops endpoints still return same shapes
-#   - /api/pa/whoami/ returns {username, user_id, is_staff} when authenticated
+#   - /api/pa/whoami/ still returns {username, user_id, is_staff} when authenticated
 
-# Mint fresh pin scoped to selected S2777 candidate. Second natural N15 row lands here.
+# Mint fresh pin scoped to selected S2778 candidate. Third natural N15 row lands here.
 python manage.py session_lifecycle open --label <candidate-scoped-label>
 python manage.py session_lifecycle history --limit 5
 
@@ -117,11 +125,13 @@ grep '^python tools/pa_chat.py' tools/pa_local.sh
 
 Rigby will not dispatch until wrapper is repointed. N21 prelude will fire on first invocation of the new pin.
 
+**Anti-rubber-stamp check (S2778 first Rigby SIGN):** verify `tool_runs` non-empty in the task result before treating any SIGN verdict as substantive. If the first SIGN comes back with `intent: general` + `tool_runs: []` when substrate claims were being verified, re-route with explicit tool-grounded directives before proceeding.
+
 ---
 
-## OPEN RUNTIME ITEMS (from S2776 close)
+## OPEN RUNTIME ITEMS (from S2777 close)
 
-1. **N17 / N22 / N23 net-new engineering** — see Candidates above
+1. **N17 / N23 / N24 net-new engineering** — see Candidates above
 2. **S2761 smoke test** — ops-surface (gated)
 3. **S2758 D2 canonical decision** — needs Rigby joint SIGN
 4. **S2758 D4 HIGH-RISK wiring extension** — REPORT-ONLY
@@ -133,17 +143,18 @@ Rigby will not dispatch until wrapper is repointed. N21 prelude will fire on fir
 10. **S2758 D1 process_pa_chat_task payload strip**
 11. **S2758 D5 local shim retirement**
 12. **HMAC signing of `x-acting-user-id`**
-13. **Memory rule promotion audit** — includes N23 zoom-out classification codification candidate
+13. **Memory rule promotion audit** — includes N23 zoom-out classification codification + N24 anti-rubber-stamp candidates
 14. **First observed partial-recycle event** — trigger for N10 UI badge + first N11 tile fire
 15. **Rigby S2774 forward-carry: pause ops-surface PRs** — still held; unblock triggers unchanged
 16. **30+ other lambda-`__import__` sites** — refactor when future arc naturally touches
 17. **Rigby S2773 forward-carry #5 (health_summary overlap)** — trigger unchanged
-18. **N15 v2 candidates** (close-time freshness capture / PA-tool read / UI tile) — deferred pending trigger
-19. **N21 v2 candidates** (wrapper-side user_id compare / TTL / sibling log) — deferred pending trigger
-20. **`session_lifecycle` refactor trigger** — codified in `verify_pa_wrapper_ownership` docstring; if third flag hits API or wrapper cache, split into `session_lifecycle` + `toolchain_doctor`
-21. **`/api/pa/*` future-endpoint audit trigger** — every proposal must satisfy the sharp 5-point test in `views_pa_whoami.py` docstring
-22. **Zoom-out classification codification** — three triggers now for two classes; Playbook v0.7.0 MINOR or v0.6.1 PATCH candidate
-23. **Postgres cleanup follow-ups (S2774 carryover):**
+18. **N15 v2 candidates** — deferred pending row accumulation + user-visible ask
+19. **N21 v2 candidates** — deferred pending trigger
+20. **`session_lifecycle` refactor trigger** — still armed (4 subcommands; trigger at 3rd API/cache flag)
+21. **`/api/pa/*` future-endpoint audit trigger** — every proposal must satisfy the sharp 5-point test
+22. **N22 v2 candidates** — Django model, PA-tool read, JSONL rotation
+23. **Anti-rubber-stamp SIGN workflow** — one trigger observed; wait for second trigger before codifying
+24. **Postgres cleanup follow-ups (S2774 carryover):**
     - Decide whether to `brew uninstall postgresql@16` (data preserved as archive)
     - Decide whether to drop pg15's `test_unified_donkey_betz` DB or leave for future test runs
 
@@ -151,26 +162,28 @@ Rigby will not dispatch until wrapper is repointed. N21 prelude will fire on fir
 
 ## Twin-pointer card
 
-📁 **Repo `/docs/` + `/core/` — S2776 artifacts:**
+📁 **Repo `/docs/` + `/core/` — S2777 artifacts:**
 
-- **New backend view:** `core/views_pa_whoami.py` (54 lines, `pa_whoami` + sharp 5-point test docstring)
-- **New management command:** `core/management/commands/verify_pa_wrapper_ownership.py` (190 lines)
-- **New test file:** `core/tests/test_pa_wrapper_ownership_2776.py` (9 tests)
-- **Amended:** `core/urls.py` (grouped import + path entry with 5-point test comment); `tools/pa_local.sh` (bash prelude + escape hatch)
-- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-13_pa_wrapper_ownership_check.md`
-- **Handoff:** `docs/handoffs/SESSION_2776_PA_WRAPPER_OWNERSHIP_CHECK_RATIFIED.md`
-- **Predecessor envelopes:** S2775 (freshness verdicts JSONL), S2774 (URLConf lambda cleanup + same-PR capstone), S2773 (query-param allowlist), S2772 (auth-regression + staff gate)
+- **New backend commands:**
+  - `core/management/commands/record_zoom_out_concern.py` (147 lines, JSONL writer)
+  - `core/management/commands/zoom_out_streak_report.py` (128 lines, CLI reader)
+- **New seed data:** `logs/zoom_out_classifications.jsonl` (13 rows)
+- **New test file:** `core/tests/test_zoom_out_classifications_2777.py` (10 tests)
+- **Ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-13_zoom_out_classifications_helper.md`
+- **Handoff:** `docs/handoffs/SESSION_2777_ZOOM_OUT_CLASSIFICATIONS_HELPER_RATIFIED.md`
+- **Predecessor envelopes:** S2776 (PA wrapper ownership), S2775 (freshness verdicts JSONL), S2774 (URLConf lambda cleanup), S2773 (query-param allowlist), S2772 (auth-regression + staff gate)
 - **Constitutional context:** `docs/ENGINEERING_PLAYBOOK.md` §7.4.4 (v0.6.0, S2766)
 
 🖥️ **Workspace UI — `/workspaces` surface:**
 
-- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — governance + content mirrors for S2776
+- **RUR-C1 Tenant Boundary Lockdown** (`fcd7e683-3bfe-4d35-9704-0e54dd587ea1`) — governance + content mirrors for S2777
 - **Real User Readiness Campaign** (`638e9e90-47b4-4bd4-a872-bf16181cf3b5`) — parent program
 - **Live surfaces:**
-  - `/api/pa/whoami/` returns `{username, user_id, is_staff}` when authenticated (403/redirect otherwise)
-  - `/api/ops/*` endpoints unchanged
-  - `logs/session_freshness.jsonl` has 2 rows (1 shell test + 1 natural at S2776); grows one per session_lifecycle open going forward
+  - `logs/zoom_out_classifications.jsonl` grows +N per session on Rigby SIGN zoom-out concerns (manual capture via `record_zoom_out_concern`)
+  - `logs/session_freshness.jsonl` has 3 rows (1 shell + 2 natural); grows +1 per session_lifecycle open
   - `~/.claude-pa-verified/<pin>.json` cache dir populates on first bash wrapper invocation per pin
+  - `/api/pa/whoami/` returns `{username, user_id, is_staff}` when authenticated
+  - `/api/ops/*` endpoints unchanged
 
 ---
 
@@ -179,47 +192,50 @@ Rigby will not dispatch until wrapper is repointed. N21 prelude will fire on fir
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | (filled at merge — post-S2776 merge) |
+| HEAD | (filled at merge — post-S2777 merge) |
 | Playbook version | v0.6.0 (RATIFIED S2766) |
 | Playbook rule count | 202 |
-| RUR-C1 state | S2755→S2775 CLOSED · **S2776 N21 wrapper ownership check CLOSED** · RUR-C1 parent OPEN |
-| Session pin | `pa-bc40ba1f5dd343f4` (retired at S2776 close, force=true, seventh consecutive) |
-| Wrapper default pin | `tools/pa_local.sh` — `pa-bc40ba1f5dd343f4` (retired; forces fresh mint at S2777 open) |
-| Live infra state | S2755→S2775 diagnostic infra + Playbook v0.6.0 + N19 URLConf cleanup + N15 freshness telemetry + **N21 wrapper ownership check** operational |
-| Postgres :5432 | pg15 (July DB, 382 migrations, S2776 state) — brew launchd `started`, survives reboot |
+| RUR-C1 state | S2755→S2776 CLOSED · **S2777 N22 zoom-out ledger CLOSED** · RUR-C1 parent OPEN |
+| Session pin | `pa-f19df7828f2843e5` (retired at S2777 close, force=true, eighth consecutive) |
+| Wrapper default pin | `tools/pa_local.sh` — `pa-f19df7828f2843e5` (retired; forces fresh mint at S2778 open) |
+| Live infra state | S2755→S2776 diagnostic infra + Playbook v0.6.0 + N15 freshness + N19 URLConf cleanup + N21 wrapper ownership + **N22 zoom-out ledger** operational |
+| Postgres :5432 | pg15 (July DB, S2777 state) — brew launchd `started`, survives reboot |
 | Postgres pg16 | Parked (April fossil, data preserved on disk, plist unloaded) |
-| Freshness log | `logs/session_freshness.jsonl` — 2 rows (streak begins here). Grows +1 per `session_lifecycle open` |
+| Freshness log | `logs/session_freshness.jsonl` — 3 rows |
+| Zoom-out ledger | `logs/zoom_out_classifications.jsonl` — 13 rows (5 actionable / 7 mitigatable / 1 future-trigger) |
 | Wrapper ownership cache | `~/.claude-pa-verified/<pin>.json` — populates on first bash invocation per pin |
-| Next move | Chris selects at S2777 open |
+| Next move | Chris selects at S2778 open |
 
 ---
 
-## Recommended session-open protocol (S2777)
+## Recommended session-open protocol (S2778)
 
 1. `context-kit orient`
 2. Read this file end-to-end
-3. Read S2776 envelope §4 (Rigby SIGN summary with FIRST F-BLOCKING DISAGREE) + §8 (Meta-observation — three-triggers threshold on zoom-out classification)
-4. Skim the S2776 close-ceremony bundle — second consecutive non-ops-surface arc; substrate maturity compounding
-5. **Freshness + regression + browser eyeball** — see S2777 open sequence in §SESSION PIN above
-6. **Watch for** the N15 second natural row landing at S2777 pin mint + N21 prelude firing at first bash invocation of the new pin
-7. If `staleness_verdict != FRESH` → escalate to Chris (eleventh-cycle PLAYBOOK-7.4.4 violation OR possible PARTIAL_RECYCLE)
+3. Read S2777 envelope §4 (3-turn Rigby SIGN loop with rubber-stamp catch + §6.10 DISAGREE) + §8 (updated streak table with SECOND F-BLOCKING DISAGREE + novel signals)
+4. Skim the S2777 close-ceremony bundle — third consecutive non-ops-surface arc; substrate maturity compounding
+5. **Freshness + regression + ledger + browser eyeball** — see S2778 open sequence in §SESSION PIN above
+6. **Watch for** the N15 third natural row landing at S2778 pin mint + N21 prelude firing at first bash invocation of the new pin + ledger 13-row baseline surviving merge
+7. If `staleness_verdict != FRESH` → escalate to Chris (twelfth-cycle PLAYBOOK-7.4.4 violation OR possible PARTIAL_RECYCLE)
 8. **Check `brew services list | grep postgres` FIRST** if freshness fails in unusual pattern (missing roles / stale conversations) — port-collision root cause is the fast path
 9. Verify runtime state: `git log --oneline -5`; confirm wrapper at retired pin
-10. Present candidate menu with **at least one open-ended zoom-out ask in the Rigby SIGN** (per S2771 rule, validated 6 sessions in a row with first F-BLOCKING DISAGREE at S2776)
-11. Chris directs S2777 P0 selection
-12. Mint fresh pin with candidate-scoped label
-13. Route work through Rigby joint agreement before coding
+10. Present candidate menu with **at least one open-ended zoom-out ask in the Rigby SIGN** (per S2771 rule, validated 7 sessions with 2 F-BLOCKING DISAGREEs)
+11. **Anti-rubber-stamp check on first SIGN**: verify `tool_runs` non-empty before treating verdicts as substantive when substrate claims were expected to be verified
+12. Chris directs S2778 P0 selection
+13. Mint fresh pin with candidate-scoped label
+14. Route work through Rigby joint agreement before coding
 
 ---
 
 ## Reference documents
 
-Ordered by frequency of use at S2777:
+Ordered by frequency of use at S2778:
 
-1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (L3 refreshed to S2776; L7 unchanged)
+1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (L3 refreshed to S2777; L7 unchanged)
 2. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.6.0 (latest ratified)
-3. [`docs/research/implementation/RATIFICATION_2026-07-13_pa_wrapper_ownership_check.md`](docs/research/implementation/RATIFICATION_2026-07-13_pa_wrapper_ownership_check.md) — S2776 envelope
-4. [`docs/handoffs/SESSION_2776_PA_WRAPPER_OWNERSHIP_CHECK_RATIFIED.md`](docs/handoffs/SESSION_2776_PA_WRAPPER_OWNERSHIP_CHECK_RATIFIED.md) — S2776 handoff
-5. [`docs/research/implementation/RATIFICATION_2026-07-13_session_freshness_verdicts_jsonl.md`](docs/research/implementation/RATIFICATION_2026-07-13_session_freshness_verdicts_jsonl.md) — S2775 predecessor
-6. `core/views_pa_whoami.py` — new this session (sharp 5-point test in docstring)
-7. `core/management/commands/verify_pa_wrapper_ownership.py` — new this session (single-concern command; refactor trigger codified)
+3. [`docs/research/implementation/RATIFICATION_2026-07-13_zoom_out_classifications_helper.md`](docs/research/implementation/RATIFICATION_2026-07-13_zoom_out_classifications_helper.md) — S2777 envelope
+4. [`docs/handoffs/SESSION_2777_ZOOM_OUT_CLASSIFICATIONS_HELPER_RATIFIED.md`](docs/handoffs/SESSION_2777_ZOOM_OUT_CLASSIFICATIONS_HELPER_RATIFIED.md) — S2777 handoff
+5. [`docs/research/implementation/RATIFICATION_2026-07-13_pa_wrapper_ownership_check.md`](docs/research/implementation/RATIFICATION_2026-07-13_pa_wrapper_ownership_check.md) — S2776 predecessor
+6. `core/management/commands/record_zoom_out_concern.py` — new this session (JSONL writer)
+7. `core/management/commands/zoom_out_streak_report.py` — new this session (CLI reader)
+8. `logs/zoom_out_classifications.jsonl` — new this session (13 seed rows)
