@@ -45,6 +45,7 @@ import {
   ScrollText,
   Bot,
   Inbox,
+  Wrench,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
@@ -92,6 +93,7 @@ import {
   AppTab,
   hasApp,
   OutreachInboxTab,
+  GovernanceTab,
 } from './workspace/tabs'
 import { ZoomOutLedgerSection } from './workspace/tabs/ZoomOutLedgerSection'
 import { Toast } from './workspace/components'
@@ -139,6 +141,7 @@ const primaryTabs: PrimaryTab[] = [
       { id: 'alerts', label: 'Alerts', icon: Bell },
       { id: 'boardroom', label: 'Governance', icon: ClipboardList },
       { id: 'sign-ledger', label: 'SIGN Ledger', icon: ScrollText },
+      { id: 'self-healing', label: 'Self-Healing', icon: Wrench },
       { id: 'autopilot', label: 'Autopilot', icon: Bot },
       { id: 'cost', label: 'Cost', icon: DollarSign },
       { id: 'queues', label: 'Queues', icon: Layers },
@@ -1186,6 +1189,10 @@ export default function WorkspacePage() {
           {/* S2780 N22 v3: SIGN Ledger — Chris-facing zoom-out concern ledger. */}
           {activePrimary === 'system' && activeSub === 'sign-ledger' && (
             <ZoomOutLedgerSection />
+          )}
+          {/* S2783: Self-Healing — Emergency controls + remediation/audit runners. */}
+          {activePrimary === 'system' && activeSub === 'self-healing' && (
+            <GovernanceTab />
           )}
           {/* Cockpit migrations — Phase 2 */}
           {activePrimary === 'system' && activeSub === 'incidents' && (
