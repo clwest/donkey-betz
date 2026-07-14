@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-14T05:19:43+00:00",
+    "generated": "2026-07-14T05:37:23+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "b16b3b981d2e",
-    "doc_count": 2590,
-    "commit_count": 7932,
+    "git_head": "2fc68b79dae6",
+    "doc_count": 2591,
+    "commit_count": 7936,
     "confidence_breakdown": {
-      "HIGH": 1643,
+      "HIGH": 1644,
       "MEDIUM": 402,
       "LOW": 6,
       "UNKNOWN": 539
@@ -2588,7 +2588,7 @@
         2745,
         2749
       ],
-      "commit_count": 1278,
+      "commit_count": 1280,
       "prs": [
         10,
         11,
@@ -3172,7 +3172,8 @@
         3165,
         3166,
         3168,
-        3171
+        3171,
+        3173
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7514,7 +7515,7 @@
         2745,
         2749
       ],
-      "commit_count": 226,
+      "commit_count": 228,
       "prs": [
         2213,
         2219,
@@ -7701,7 +7702,8 @@
         3165,
         3166,
         3168,
-        3171
+        3171,
+        3173
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19994,13 +19996,28 @@
     },
     "docs/handoffs/SESSION_2780_N22V3_ZOOM_OUT_TOOL_FACTOR_OUT_GOVERNANCE_UI.md": {
       "originating_session": 2780,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "7656fd0b",
+      "first_commit_date": "2026-07-13",
+      "first_commit_subject": "docs(cascade): S2780 close cascade \u2014 N22 v3 handoff + INDEX + provenance",
+      "sessions_touched": [
+        2780
+      ],
+      "commit_count": 2,
+      "prs": [
+        3173
+      ]
+    },
+    "docs/handoffs/SESSION_2781_N17_SESSION_NUMBER_PILL_SEARCH_CHIP.md": {
+      "originating_session": 2781,
       "confidence": "LOW",
       "match_source": "frontmatter",
       "first_commit_sha": null,
       "first_commit_date": null,
       "first_commit_subject": null,
       "sessions_touched": [
-        2780
+        2781
       ],
       "commit_count": 0,
       "prs": []
