@@ -93,6 +93,7 @@ import {
   hasApp,
   OutreachInboxTab,
 } from './workspace/tabs'
+import { ZoomOutLedgerSection } from './workspace/tabs/ZoomOutLedgerSection'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
 // PLATFORM_TABS/LEGACY_TO_PLATFORM no longer needed — platform merged into workspace
@@ -137,6 +138,7 @@ const primaryTabs: PrimaryTab[] = [
       { id: 'incidents', label: 'Incidents', icon: ShieldAlert },
       { id: 'alerts', label: 'Alerts', icon: Bell },
       { id: 'boardroom', label: 'Governance', icon: ClipboardList },
+      { id: 'sign-ledger', label: 'SIGN Ledger', icon: ScrollText },
       { id: 'autopilot', label: 'Autopilot', icon: Bot },
       { id: 'cost', label: 'Cost', icon: DollarSign },
       { id: 'queues', label: 'Queues', icon: Layers },
@@ -1180,6 +1182,10 @@ export default function WorkspacePage() {
           )}
           {activePrimary === 'system' && activeSub === 'boardroom' && (
             <BoardroomTab />
+          )}
+          {/* S2780 N22 v3: SIGN Ledger — Chris-facing zoom-out concern ledger. */}
+          {activePrimary === 'system' && activeSub === 'sign-ledger' && (
+            <ZoomOutLedgerSection />
           )}
           {/* Cockpit migrations — Phase 2 */}
           {activePrimary === 'system' && activeSub === 'incidents' && (
