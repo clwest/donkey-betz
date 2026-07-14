@@ -88,12 +88,22 @@ restart: stop celery-stop start celery ## Full restart of Daphne + Celery (use t
 # OR Celery-served code (core/tasks*, Celery config). Stale processes silently
 # serve pre-merge code and were the root cause of the S2755→S2757 latent
 # regression class — see `feedback_local_truth_no_production` memory rule.
-recycle-all: ## S2759/S2768: full local "deploy" step — snapshots PIDs, bounces Daphne+Celery+beat, emits enriched JSONL. Use post-merge.
+recycle-all: ## S2759/S2768/S2782: full local "deploy" step — bounces Daphne+Celery+beat; ALSO rebuilds frontend when frontend/ paths changed in HEAD range. Use post-merge.
 	@mkdir -p logs
 	@# S2768 N7: snapshot PIDs BEFORE restart so the emitter can detect
 	@# partial recycles (roles whose PID survived the bounce). Falls back
 	@# to legacy shape if the script is absent.
 	@python scripts/emit_recycle_event.py snapshot > /tmp/recycle_pids_before.json 2>/dev/null || echo '{}' > /tmp/recycle_pids_before.json
+	@# S2782 served-artifact freshness: if the last commit range touched
+	@# frontend sources or build config, rebuild the bundle + collectstatic
+	@# BEFORE `restart` so the daphne bounce in `restart` re-reads the fresh
+	@# frontend/dist/index.html template. Backend-only ranges skip this
+	@# (no npm churn). See PLAYBOOK §7.4.4 served-artifact note.
+	@if git diff --name-only HEAD~1..HEAD 2>/dev/null | grep -qE '^frontend/(src/|package(-lock)?\.json|vite\.config|tsconfig|index\.html)'; then \
+		echo "→ frontend/ paths changed in HEAD~1..HEAD range — rebuilding bundle + collectstatic."; \
+		$(MAKE) frontend-build; \
+		.venv/bin/python manage.py collectstatic --noinput || python manage.py collectstatic --noinput; \
+	fi
 	@$(MAKE) restart
 	@python scripts/emit_recycle_event.py emit --before /tmp/recycle_pids_before.json 2>/dev/null || \
 		printf '{"ts":"%s","sha":"%s","label":"recycle-all"}\n' "$$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$(git rev-parse HEAD 2>/dev/null || echo unknown)" >> logs/recycle_events.jsonl
