@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-14T20:47:07+00:00",
+    "generated": "2026-07-14T21:14:17+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "814c2452d154",
-    "doc_count": 2594,
-    "commit_count": 7950,
+    "git_head": "130955ec07ea",
+    "doc_count": 2595,
+    "commit_count": 7954,
     "confidence_breakdown": {
-      "HIGH": 1647,
+      "HIGH": 1648,
       "MEDIUM": 402,
       "LOW": 6,
       "UNKNOWN": 539
@@ -2589,7 +2589,7 @@
         2745,
         2749
       ],
-      "commit_count": 1286,
+      "commit_count": 1288,
       "prs": [
         10,
         11,
@@ -3177,7 +3177,8 @@
         3173,
         3175,
         3178,
-        3180
+        3180,
+        3182
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7519,7 +7520,7 @@
         2745,
         2749
       ],
-      "commit_count": 234,
+      "commit_count": 236,
       "prs": [
         2213,
         2219,
@@ -7710,7 +7711,8 @@
         3173,
         3175,
         3178,
-        3180
+        3180,
+        3182
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20063,13 +20065,28 @@
     },
     "docs/handoffs/SESSION_2784_FOLD4_PLATFORM_STAFF_ONLY.md": {
       "originating_session": 2784,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "30db1746",
+      "first_commit_date": "2026-07-14",
+      "first_commit_subject": "docs(cascade): S2784 close cascade \u2014 handoff + start-here + INDEX + provenance (#3182)",
+      "sessions_touched": [
+        2784
+      ],
+      "commit_count": 2,
+      "prs": [
+        3182
+      ]
+    },
+    "docs/handoffs/SESSION_2785_DECISION_APPROVE_AUTH_AUDIT.md": {
+      "originating_session": 2785,
       "confidence": "LOW",
       "match_source": "frontmatter",
       "first_commit_sha": null,
       "first_commit_date": null,
       "first_commit_subject": null,
       "sessions_touched": [
-        2784
+        2785
       ],
       "commit_count": 0,
       "prs": []
