@@ -850,7 +850,6 @@ def decision_summary_detail_view(request, decision_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@csrf_exempt
 @require_POST
 @login_required
 @_platform_staff_only
@@ -921,7 +920,6 @@ def create_initiative_from_decision_view(request, decision_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@csrf_exempt
 @require_POST
 @login_required
 @_platform_staff_only
@@ -1172,7 +1170,6 @@ def audits_view(request):
 # Session 818: Document Content API
 # =============================================================================
 
-@csrf_exempt
 @require_POST
 @login_required
 @_platform_staff_only
@@ -1314,7 +1311,6 @@ def doc_content_view(request):
 # Session 819: Canon Promotion API
 # =============================================================================
 
-@csrf_exempt
 @require_POST
 @login_required
 @_platform_staff_only
@@ -1449,7 +1445,6 @@ def canon_promote_view(request):
 # Session 819: System Audit Trigger API
 # =============================================================================
 
-@csrf_exempt
 @require_POST
 @login_required
 @_platform_staff_only
@@ -1909,7 +1904,6 @@ def triggers_list_view(request):
         }, status=500)
 
 
-@csrf_exempt
 @require_POST
 @login_required
 @_platform_staff_only
@@ -1958,7 +1952,6 @@ def trigger_toggle_view(request, rule_name: str):
         }, status=500)
 
 
-@csrf_exempt
 @require_POST
 @login_required
 @_platform_staff_only
@@ -1995,7 +1988,6 @@ def trigger_run_now_view(request):
 # Session 824: Manual Actions API
 # =============================================================================
 
-@csrf_exempt
 @require_POST
 @login_required
 @_platform_staff_only
@@ -2034,7 +2026,6 @@ def action_run_spiders_view(request):
         }, status=500)
 
 
-@csrf_exempt
 @require_POST
 @login_required
 @_platform_staff_only
@@ -2157,7 +2148,6 @@ def action_run_remediation_view(request):
         }, status=500)
 
 
-@csrf_exempt
 @require_POST
 @login_required
 @_platform_staff_only
@@ -2187,7 +2177,6 @@ def action_agent_health_check_view(request):
         }, status=500)
 
 
-@csrf_exempt
 @require_POST
 @login_required
 @_platform_staff_only
@@ -2241,7 +2230,6 @@ def action_agent_category_rotation_view(request):
         }, status=500)
 
 
-@csrf_exempt
 @require_POST
 @login_required
 @_platform_staff_only
