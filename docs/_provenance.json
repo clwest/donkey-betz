@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-14T04:01:07+00:00",
+    "generated": "2026-07-14T04:37:22+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "78c33ba3984f",
-    "doc_count": 2588,
-    "commit_count": 7922,
+    "git_head": "c4a5f4766914",
+    "doc_count": 2589,
+    "commit_count": 7928,
     "confidence_breakdown": {
       "HIGH": 1642,
       "MEDIUM": 402,
-      "LOW": 5,
+      "LOW": 6,
       "UNKNOWN": 539
     },
     "excludes": [
@@ -2588,7 +2588,7 @@
         2745,
         2749
       ],
-      "commit_count": 1274,
+      "commit_count": 1276,
       "prs": [
         10,
         11,
@@ -3170,7 +3170,8 @@
         3163,
         3164,
         3165,
-        3166
+        3166,
+        3168
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7512,7 +7513,7 @@
         2745,
         2749
       ],
-      "commit_count": 222,
+      "commit_count": 224,
       "prs": [
         2213,
         2219,
@@ -7697,7 +7698,8 @@
         3163,
         3164,
         3165,
-        3166
+        3166,
+        3168
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19972,6 +19974,19 @@
       "prs": [
         3167
       ]
+    },
+    "docs/handoffs/SESSION_2779_N22V2_ZOOM_OUT_LEDGER_READ_SURFACE.md": {
+      "originating_session": 2779,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2779
+      ],
+      "commit_count": 0,
+      "prs": []
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
       "originating_session": 280,
@@ -37072,13 +37087,14 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "78c33ba3",
+      "first_commit_sha": "9f6a8472",
       "first_commit_date": "2026-07-13",
-      "first_commit_subject": "feat(playbook): v0.7.0 MINOR \u2014 zoom-out SIGN discipline (#S2778 N23) (#3167)",
+      "first_commit_subject": "docs(playbook): fill v0.7.0 envelope merge-SHA placeholders (S2778 close) (#3169)",
       "sessions_touched": [],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        3167
+        3167,
+        3169
       ]
     },
     "docs/research/implementation/RATIFICATION_2026-07-13_ops_urlconf_lambda_cleanup.md": {
