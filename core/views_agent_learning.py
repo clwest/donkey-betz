@@ -2136,7 +2136,6 @@ def _require_boardroom_staff(request):
     return None
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def promote_decision(request, decision_id):
     """
@@ -2146,7 +2145,8 @@ def promote_decision(request, decision_id):
     POST /api/boardroom/decisions/{decision_id}/promote/
 
     Session 887: Removed @token_auth_required to support Token auth (same as reject_decision).
-    Added @csrf_exempt for API calls.
+    Token/Bearer callers skip CSRF via DisableCSRFForAuthEndpoints middleware;
+    session-cookie callers must send X-CSRFToken.
     """
     # S2785: staff-only gate (preserves S887 Token auth via _require_boardroom_staff)
     err = _require_boardroom_staff(request)
@@ -2225,7 +2225,6 @@ def promote_decision(request, decision_id):
         }, status=500)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def reject_decision(request, decision_id):
     """
@@ -2235,7 +2234,9 @@ def reject_decision(request, decision_id):
 
     Session 887: Removed @token_auth_required to support Token auth.
     Since /api/boardroom/ is in PUBLIC_PATHS, middleware doesn't authenticate.
-    We check auth manually here. Added @csrf_exempt for API calls.
+    We check auth manually here. Token/Bearer callers skip CSRF via
+    DisableCSRFForAuthEndpoints middleware; session-cookie callers must send
+    X-CSRFToken.
     """
     # S2785: staff-only gate (preserves S887 Token auth via _require_boardroom_staff)
     err = _require_boardroom_staff(request)
@@ -2274,7 +2275,6 @@ def reject_decision(request, decision_id):
 # Session 942: Bulk Decision Actions
 # =============================================================================
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def bulk_promote_decisions(request):
     """
@@ -2337,7 +2337,6 @@ def bulk_promote_decisions(request):
     })
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
 def bulk_reject_decisions(request):
     """

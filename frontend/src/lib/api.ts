@@ -23,7 +23,20 @@ export const api = axios.create({
   withCredentials: true,
 })
 
-// Request interceptor to add auth token
+// S2787: CSRF interceptor — for session-cookie callers, read csrftoken cookie
+// (Django CSRF_COOKIE_NAME, HttpOnly=False in dev/prod so JS can read it) and
+// set the X-CSRFToken header on unsafe methods. Token/Bearer/X-API-Key callers
+// are unaffected — DisableCSRFForAuthEndpoints middleware (core/middleware.py)
+// runs before CsrfViewMiddleware and short-circuits CSRF for them.
+// Shared axios instance covers cockpitApi.ts (imports { api } from '@/lib/api').
+const UNSAFE_METHODS = new Set(['post', 'put', 'patch', 'delete'])
+
+function readCsrfCookie(): string | null {
+  const match = document.cookie.match(/(?:^|; )csrftoken=([^;]*)/)
+  return match ? decodeURIComponent(match[1]) : null
+}
+
+// Request interceptor to add auth token + CSRF header
 api.interceptors.request.use(
   (config) => {
     const token = useAuthStore.getState().token
@@ -33,6 +46,13 @@ api.interceptors.request.use(
     }
     if (token) {
       config.headers.Authorization = `Token ${token}`
+    }
+    const method = (config.method || 'get').toLowerCase()
+    if (UNSAFE_METHODS.has(method) && !config.headers['X-CSRFToken']) {
+      const csrf = readCsrfCookie()
+      if (csrf) {
+        config.headers['X-CSRFToken'] = csrf
+      }
     }
     return config
   },
