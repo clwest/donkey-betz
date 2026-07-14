@@ -33,6 +33,9 @@ export type WorkspaceTab =
   | 'operations'
   | 'git'
   | 'triggers'
+  // S2780 N22 v3: SIGN Ledger — Chris-facing zoom-out concern ledger
+  // (per PLAYBOOK-6.10.8). Renders ZoomOutLedgerSection.
+  | 'sign-ledger'
 
 // Session 1240: PlatformTab, PLATFORM_TABS, LEGACY_TO_PLATFORM, normalizePlatformTab,
 // legacyTabToSubTab, PlatformTabConfig removed alongside PlatformPage delete cascade.

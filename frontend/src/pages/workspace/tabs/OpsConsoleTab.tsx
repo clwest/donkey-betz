@@ -5,11 +5,12 @@
  */
 
 import { useEffect, useRef, useState, Suspense, lazy } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   AlertTriangle, CheckCircle, XCircle, Loader2, Shield,
   Clock, Zap, Activity, Ban, TrendingDown, Layers, Copy, Check, RotateCw,
-  FileText,
+  FileText, ScrollText, ChevronRight,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { api } from '@/lib/api'
@@ -431,6 +432,33 @@ export function OpsConsoleTab() {
     },
     staleTime: 60000,
   })
+
+  // S2780 N22 v3: lightweight preview of the zoom-out ledger for
+  // discoverability. Canonical home is system.sign-ledger (dedicated
+  // sub-tab per Rigby S2780 V3 fold — semantic boundary preserved).
+  // Fetches limit=1 to keep the payload small; we only need the counts.
+  const zoomOutPreviewQuery = useQuery<{
+    total_rows: number
+    counts_by_classification: Record<string, number>
+    log_exists: boolean
+  } | null>({
+    queryKey: ['governance-zoom-out-preview'],
+    queryFn: async () => {
+      try {
+        const r = await api.get<{
+          total_rows: number
+          counts_by_classification: Record<string, number>
+          log_exists: boolean
+        }>('/governance/zoom-out-ledger/?limit=1')
+        return r.data
+      } catch { return null }
+    },
+    staleTime: 120_000,
+  })
+  const [, setSearchParams] = useSearchParams()
+  const goToSignLedger = () => {
+    setSearchParams({ tab: 'system', sub: 'sign-ledger' }, { replace: false })
+  }
   const [copiedPath, setCopiedPath] = useState<string | null>(null)
   const copyPath = async (path: string) => {
     try {
@@ -743,6 +771,37 @@ export function OpsConsoleTab() {
             ))}
           </div>
         </div>
+      )}
+
+      {/* S2780 N22 v3: Zoom-Out Ledger preview — discoverability card
+          pointing at the canonical home under system.sign-ledger. Full
+          filtering, help, and content live on the dedicated sub-tab per
+          Rigby S2780 V3 fold (semantic boundary — governance ledger
+          does not co-locate with ops observability). */}
+      {zoomOutPreviewQuery.data && zoomOutPreviewQuery.data.log_exists && (
+        <button
+          type="button"
+          onClick={goToSignLedger}
+          className="w-full text-left p-3 rounded-lg bg-dark-card border border-dark-border hover:border-primary-500/40 transition-colors flex items-center gap-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500/40"
+          aria-label="Open SIGN Ledger sub-tab"
+        >
+          <ScrollText size={14} className="text-primary-400 shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="text-sm text-gray-200">
+              SIGN Ledger — {zoomOutPreviewQuery.data.total_rows} zoom-out{' '}
+              {zoomOutPreviewQuery.data.total_rows === 1 ? 'fold' : 'folds'} on record
+            </div>
+            <div className="text-xs text-gray-500 mt-0.5 flex flex-wrap gap-x-2">
+              <span>Advisory pattern evidence — not gates.</span>
+              {Object.entries(zoomOutPreviewQuery.data.counts_by_classification).map(([k, v]) => (
+                <span key={k} className="font-mono">
+                  {k}: {v}
+                </span>
+              ))}
+            </div>
+          </div>
+          <ChevronRight size={14} className="text-gray-500 shrink-0" aria-hidden />
+        </button>
       )}
 
       {/* S2763: Close-Ceremony Ledger */}

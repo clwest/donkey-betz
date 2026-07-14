@@ -2459,7 +2459,6 @@ PA_TOOL_SCHEMAS = [
                         "tenant_boundary_violations",
                         "staleness_warnings",
                         "recent_recycles",
-                        "zoom_out_ledger",
                     ],
                     "description": (
                         "overview: one-shot ops snapshot — version + slo_status + top failure_signatures "
@@ -2538,19 +2537,7 @@ PA_TOOL_SCHEMAS = [
                         "'when did we last recycle?', 'which SHAs was the stack bounced at?', "
                         "or to trace a stale-Daphne diagnosis back to a specific merge. "
                         "Limit param (default 10, max 50). Fail-soft: returns empty list with "
-                        "diagnostic note when the log file is missing. "
-                        "zoom_out_ledger: read tail of logs/zoom_out_classifications.jsonl — "
-                        "the Rigby SIGN zoom-out concern ledger (per PLAYBOOK-6.10.8, "
-                        "constitutional at Playbook v0.7.0). Returns advisory pattern "
-                        "evidence — NOT gates — with an explicit `is_gate: false` field "
-                        "in the response to prevent advisory→gate drift. Filters: session "
-                        "(int, exact match), classification (enum: same_pr_actionable / "
-                        "same_pr_mitigatable / future_trigger), arc (substring match), "
-                        "limit (default 20, max 100). Response carries `advisory` header, "
-                        "`total_rows`, `counts_by_classification` aggregates + filtered "
-                        "`items` tail-window. Use during SIGN loops to consult prior "
-                        "zoom-out folds before repeating them. Fail-soft: returns empty "
-                        "list with diagnostic note when the log file is missing."
+                        "diagnostic note when the log file is missing."
                     ),
                 },
                 "window": {
@@ -2568,24 +2555,7 @@ PA_TOOL_SCHEMAS = [
                 },
                 "limit": {
                     "type": "integer",
-                    "description": "For failure_signatures (max 25), celery_task_history (max 100), execution_search (max 50), zoom_out_ledger (max 100): max results to return.",
-                },
-                "classification": {
-                    "type": "string",
-                    "enum": [
-                        "same_pr_actionable",
-                        "same_pr_mitigatable",
-                        "future_trigger",
-                    ],
-                    "description": "For zoom_out_ledger: filter by fold classification enum (one of the 3 PLAYBOOK-6.10.8 categories). Omit for all classifications.",
-                },
-                "session": {
-                    "type": "integer",
-                    "description": "For zoom_out_ledger: filter by originating session number (exact match, e.g. 2778). Omit for all sessions.",
-                },
-                "arc": {
-                    "type": "string",
-                    "description": "For zoom_out_ledger: filter by arc slug (substring match, e.g. 'ops_urlconf' matches 'ops_urlconf_lambda_cleanup'). Omit for all arcs.",
+                    "description": "For failure_signatures (max 25), celery_task_history (max 100), execution_search (max 50): max results to return.",
                 },
                 "task_name": {
                     "type": "string",
@@ -2630,6 +2600,66 @@ PA_TOOL_SCHEMAS = [
                         "max_total_conversations_per_hour (int), "
                         "require_north_star_for_autonomous (bool)."
                     ),
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
+    # ── S2780 N22 v3: Zoom-Out Tool — governance ledger read surface ─────────
+    # Factored out from ops_tool per S2779 V6 fold (scope creep) after S2780
+    # V7 Fold B firing (first non-Rigby consumer). Dedicated home for the
+    # PLAYBOOK-6.10.8 zoom-out concern ledger, keeping ops_tool focused on
+    # runtime ops signal.
+    {
+        "type": "function",
+        "name": "zoom_out_tool",
+        "description": (
+            "Read the Rigby SIGN zoom-out concern ledger — "
+            "logs/zoom_out_classifications.jsonl. Advisory pattern evidence "
+            "(NOT gates) per PLAYBOOK-6.10.8, constitutional at Playbook v0.7.0. "
+            "Response embeds `advisory` header + `is_gate: false` + `semantics: "
+            "\"advisory_pattern_evidence\"` to prevent advisory→gate drift. "
+            "Use during joint SIGN loops to consult prior zoom-out folds before "
+            "repeating them, or to answer 'what did we surface last time on this arc?'."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list"],
+                    "description": (
+                        "list: read tail of logs/zoom_out_classifications.jsonl. "
+                        "Filters: session (int, exact match), classification "
+                        "(same_pr_actionable / same_pr_mitigatable / future_trigger), "
+                        "arc (substring), limit (default 20, max 100). Response "
+                        "includes `total_rows` + `counts_by_classification` "
+                        "aggregates over the FULL ledger, plus filtered `items` "
+                        "tail-window. Fail-soft: returns empty list with diagnostic "
+                        "note when the log file is missing."
+                    ),
+                },
+                "session": {
+                    "type": "integer",
+                    "description": "Filter by originating session number (exact match, e.g. 2778). Omit for all sessions.",
+                },
+                "classification": {
+                    "type": "string",
+                    "enum": [
+                        "same_pr_actionable",
+                        "same_pr_mitigatable",
+                        "future_trigger",
+                    ],
+                    "description": "Filter by fold classification enum (one of the 3 PLAYBOOK-6.10.8 categories). Omit for all classifications.",
+                },
+                "arc": {
+                    "type": "string",
+                    "description": "Filter by arc slug (substring match, e.g. 'ops_urlconf' matches 'ops_urlconf_lambda_cleanup'). Omit for all arcs.",
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results (default 20, max 100).",
                 },
             },
             "required": ["action"],
