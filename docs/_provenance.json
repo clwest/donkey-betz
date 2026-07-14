@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-14T17:58:23+00:00",
+    "generated": "2026-07-14T20:47:07+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "515d9c136711",
-    "doc_count": 2593,
-    "commit_count": 7946,
+    "git_head": "814c2452d154",
+    "doc_count": 2594,
+    "commit_count": 7950,
     "confidence_breakdown": {
-      "HIGH": 1646,
+      "HIGH": 1647,
       "MEDIUM": 402,
       "LOW": 6,
       "UNKNOWN": 539
@@ -2589,7 +2589,7 @@
         2745,
         2749
       ],
-      "commit_count": 1284,
+      "commit_count": 1286,
       "prs": [
         10,
         11,
@@ -3176,7 +3176,8 @@
         3171,
         3173,
         3175,
-        3178
+        3178,
+        3180
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7518,7 +7519,7 @@
         2745,
         2749
       ],
-      "commit_count": 232,
+      "commit_count": 234,
       "prs": [
         2213,
         2219,
@@ -7708,7 +7709,8 @@
         3171,
         3173,
         3175,
-        3178
+        3178,
+        3180
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20046,13 +20048,28 @@
     },
     "docs/handoffs/SESSION_2783_WIRE_GOVERNANCE_TAB.md": {
       "originating_session": 2783,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "92f67e65",
+      "first_commit_date": "2026-07-14",
+      "first_commit_subject": "docs(cascade): S2783 close cascade \u2014 handoff + start-here + INDEX + provenance (#3180)",
+      "sessions_touched": [
+        2783
+      ],
+      "commit_count": 2,
+      "prs": [
+        3180
+      ]
+    },
+    "docs/handoffs/SESSION_2784_FOLD4_PLATFORM_STAFF_ONLY.md": {
+      "originating_session": 2784,
       "confidence": "LOW",
       "match_source": "frontmatter",
       "first_commit_sha": null,
       "first_commit_date": null,
       "first_commit_subject": null,
       "sessions_touched": [
-        2783
+        2784
       ],
       "commit_count": 0,
       "prs": []
