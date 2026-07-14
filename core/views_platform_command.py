@@ -37,9 +37,18 @@ from django.db.models import Sum, Count
 from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 logger = logging.getLogger(__name__)
+
+# S2784 Fold 4 — staff-only gate for platform mutation endpoints. Mirrors
+# _governance_staff_only at core/views_governance.py:26. Enforces S2772 N16
+# Rigby-ratified contract: every governance/platform-mutation endpoint MUST
+# be both @login_required AND staff-only.
+_platform_staff_only = user_passes_test(
+    lambda u: u.is_authenticated and u.is_staff,
+)
 
 
 def _get_docs_dir() -> Path:
@@ -843,6 +852,8 @@ def decision_summary_detail_view(request, decision_id):
 
 @csrf_exempt
 @require_POST
+@login_required
+@_platform_staff_only
 def create_initiative_from_decision_view(request, decision_id):
     """
     POST /api/platform/decision-summary/<uuid:decision_id>/create-initiative/
@@ -855,10 +866,6 @@ def create_initiative_from_decision_view(request, decision_id):
     import logging
 
     logger = logging.getLogger(__name__)
-
-    # Verify authentication
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
 
     try:
         decision = AgentDecisionSummary.objects.get(id=decision_id)
@@ -916,6 +923,8 @@ def create_initiative_from_decision_view(request, decision_id):
 
 @csrf_exempt
 @require_POST
+@login_required
+@_platform_staff_only
 def emergency_halt_view(request):
     """
     POST /api/platform/emergency-halt/
@@ -929,10 +938,6 @@ def emergency_halt_view(request):
     For now, this is a placeholder that creates an attention item.
     """
     from core.models_human_interface import HumanAttentionItem
-
-    # Verify authentication (in production, add proper auth)
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
 
     try:
         # Create critical attention item
@@ -1169,6 +1174,8 @@ def audits_view(request):
 
 @csrf_exempt
 @require_POST
+@login_required
+@_platform_staff_only
 def skin_lock_toggle_view(request):
     """
     POST /api/platform/skin-lock/
@@ -1178,9 +1185,6 @@ def skin_lock_toggle_view(request):
     Session 818: Real emergency control for SKIN layer.
     """
     from core.models_skin import SkinStatus
-
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
 
     try:
         import json
@@ -1312,6 +1316,8 @@ def doc_content_view(request):
 
 @csrf_exempt
 @require_POST
+@login_required
+@_platform_staff_only
 def canon_promote_view(request):
     """
     POST /api/platform/canon/promote/
@@ -1340,9 +1346,6 @@ def canon_promote_view(request):
     import json
     import re
     from slugify import slugify
-
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
 
     try:
         body = json.loads(request.body) if request.body else {}
@@ -1448,6 +1451,8 @@ def canon_promote_view(request):
 
 @csrf_exempt
 @require_POST
+@login_required
+@_platform_staff_only
 def audit_run_view(request):
     """
     POST /api/platform/audits/run/
@@ -1466,9 +1471,6 @@ def audit_run_view(request):
     """
     import subprocess
     import os
-
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
 
     try:
         # Run the comprehensive system audit
@@ -1909,6 +1911,8 @@ def triggers_list_view(request):
 
 @csrf_exempt
 @require_POST
+@login_required
+@_platform_staff_only
 def trigger_toggle_view(request, rule_name: str):
     """
     POST /api/platform/triggers/<name>/toggle/
@@ -1918,9 +1922,6 @@ def trigger_toggle_view(request, rule_name: str):
     Note: Currently rules are in-memory, so this toggle is session-scoped.
     For persistence, would need to store enabled state in database.
     """
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
-
     try:
         from core.services.metrics_action_trigger import MetricsActionTrigger
 
@@ -1959,6 +1960,8 @@ def trigger_toggle_view(request, rule_name: str):
 
 @csrf_exempt
 @require_POST
+@login_required
+@_platform_staff_only
 def trigger_run_now_view(request):
     """
     POST /api/platform/triggers/run-now/
@@ -1967,9 +1970,6 @@ def trigger_run_now_view(request):
 
     Session 824: Allows on-demand self-execution from the UI.
     """
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
-
     try:
         from core.tasks import run_metrics_action_check
 
@@ -1997,15 +1997,14 @@ def trigger_run_now_view(request):
 
 @csrf_exempt
 @require_POST
+@login_required
+@_platform_staff_only
 def action_run_spiders_view(request):
     """
     POST /api/platform/actions/run-spiders/
 
     Trigger spider network to collect fresh data.
     """
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
-
     try:
         import json
         body = json.loads(request.body) if request.body else {}
@@ -2037,6 +2036,8 @@ def action_run_spiders_view(request):
 
 @csrf_exempt
 @require_POST
+@login_required
+@_platform_staff_only
 def action_run_remediation_view(request):
     """
     POST /api/platform/actions/run-remediation/
@@ -2053,9 +2054,6 @@ def action_run_remediation_view(request):
         write_files: Whether to write generated files to workspace (default: true)
         assign_first: If true, assign open findings before executing (default: auto)
     """
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
-
     try:
         import json
         from django.db.models import Count
@@ -2161,15 +2159,14 @@ def action_run_remediation_view(request):
 
 @csrf_exempt
 @require_POST
+@login_required
+@_platform_staff_only
 def action_agent_health_check_view(request):
     """
     POST /api/platform/actions/agent-health-check/
 
     Trigger agent health rotation check.
     """
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
-
     try:
         from core.tasks import run_agent_health_rotation
 
@@ -2192,6 +2189,8 @@ def action_agent_health_check_view(request):
 
 @csrf_exempt
 @require_POST
+@login_required
+@_platform_staff_only
 def action_agent_category_rotation_view(request):
     """
     POST /api/platform/actions/agent-category-rotation/
@@ -2202,9 +2201,6 @@ def action_agent_category_rotation_view(request):
         category: str - The category to rotate (content, research, system, financial, etc.)
                        Defaults to 'content' if not specified.
     """
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
-
     try:
         import json
         from core.tasks import agent_category_rotation
@@ -2247,6 +2243,8 @@ def action_agent_category_rotation_view(request):
 
 @csrf_exempt
 @require_POST
+@login_required
+@_platform_staff_only
 def action_run_self_audit_view(request):
     """
     POST /api/platform/actions/run-self-audit/
@@ -2255,9 +2253,6 @@ def action_run_self_audit_view(request):
 
     Session 824: Uses the enhanced self-audit from Session 823.
     """
-    if not request.user.is_authenticated:
-        return JsonResponse({'error': 'Authentication required'}, status=401)
-
     try:
         from core.tasks import run_system_self_audit
 
