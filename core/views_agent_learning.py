@@ -2102,19 +2102,12 @@ def get_system_health(request):
         }, status=500)
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
-def promote_decision(request, decision_id):
-    """
-    Promote a decision to canonical policy status.
-    Session 657: Also creates a learning record and feeds to collective intelligence.
-
-    POST /api/boardroom/decisions/{decision_id}/promote/
-
-    Session 887: Removed @token_auth_required to support Token auth (same as reject_decision).
-    Added @csrf_exempt for API calls.
-    """
-    # Session 887: Manual auth check to support both session and Token auth
+# S2785 Fold 4 decision-approve audit — staff-only helper for /api/boardroom/*
+# endpoints. Preserves the S887 Token auth codepath (session + Token both
+# supported) while adding the S2772 N16 staff-only gate. Returns None when
+# the request is authenticated + staff, otherwise a JsonResponse to return.
+def _require_boardroom_staff(request):
+    """Boardroom mutation authZ gate: authN (session or Token) + is_staff."""
     from rest_framework.authtoken.models import Token
 
     if not request.user.is_authenticated:
@@ -2131,8 +2124,34 @@ def promote_decision(request, decision_id):
     if not request.user.is_authenticated:
         return JsonResponse({
             'success': False,
-            'error': 'Authentication required'
+            'error': 'Authentication required',
         }, status=401)
+
+    if not request.user.is_staff:
+        return JsonResponse({
+            'success': False,
+            'error': 'Staff-only endpoint',
+        }, status=403)
+
+    return None
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def promote_decision(request, decision_id):
+    """
+    Promote a decision to canonical policy status.
+    Session 657: Also creates a learning record and feeds to collective intelligence.
+
+    POST /api/boardroom/decisions/{decision_id}/promote/
+
+    Session 887: Removed @token_auth_required to support Token auth (same as reject_decision).
+    Added @csrf_exempt for API calls.
+    """
+    # S2785: staff-only gate (preserves S887 Token auth via _require_boardroom_staff)
+    err = _require_boardroom_staff(request)
+    if err is not None:
+        return err
 
     try:
         from core.models_unified_system import AgentDecisionSummary
@@ -2218,26 +2237,10 @@ def reject_decision(request, decision_id):
     Since /api/boardroom/ is in PUBLIC_PATHS, middleware doesn't authenticate.
     We check auth manually here. Added @csrf_exempt for API calls.
     """
-    # Session 887: Manual auth check to support both session and Token auth
-    from rest_framework.authtoken.models import Token
-
-    if not request.user.is_authenticated:
-        # Try to authenticate via Token header
-        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
-        if auth_header.startswith('Token '):
-            token_key = auth_header.split(' ', 1)[1]
-            try:
-                token = Token.objects.select_related('user').get(key=token_key)
-                if token.user.is_active:
-                    request.user = token.user
-            except Token.DoesNotExist:
-                pass
-
-    if not request.user.is_authenticated:
-        return JsonResponse({
-            'success': False,
-            'error': 'Authentication required'
-        }, status=401)
+    # S2785: staff-only gate (preserves S887 Token auth via _require_boardroom_staff)
+    err = _require_boardroom_staff(request)
+    if err is not None:
+        return err
 
     try:
         from core.models_unified_system import AgentDecisionSummary
@@ -2284,23 +2287,12 @@ def bulk_promote_decisions(request):
         OR
         decision_type: Filter by type (product, experiment, etc)
     """
-    from rest_framework.authtoken.models import Token
     from core.models_unified_system import AgentDecisionSummary
 
-    # Auth check
-    if not request.user.is_authenticated:
-        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
-        if auth_header.startswith('Token '):
-            token_key = auth_header.split(' ', 1)[1]
-            try:
-                token = Token.objects.select_related('user').get(key=token_key)
-                if token.user.is_active:
-                    request.user = token.user
-            except Token.DoesNotExist:
-                pass
-
-    if not request.user.is_authenticated:
-        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    # S2785: staff-only gate (preserves S887 Token auth via _require_boardroom_staff)
+    err = _require_boardroom_staff(request)
+    if err is not None:
+        return err
 
     try:
         data = json.loads(request.body)
@@ -2358,23 +2350,12 @@ def bulk_reject_decisions(request):
         OR
         decision_type: Filter by type (product, experiment, etc)
     """
-    from rest_framework.authtoken.models import Token
     from core.models_unified_system import AgentDecisionSummary
 
-    # Auth check
-    if not request.user.is_authenticated:
-        auth_header = request.META.get('HTTP_AUTHORIZATION', '')
-        if auth_header.startswith('Token '):
-            token_key = auth_header.split(' ', 1)[1]
-            try:
-                token = Token.objects.select_related('user').get(key=token_key)
-                if token.user.is_active:
-                    request.user = token.user
-            except Token.DoesNotExist:
-                pass
-
-    if not request.user.is_authenticated:
-        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    # S2785: staff-only gate (preserves S887 Token auth via _require_boardroom_staff)
+    err = _require_boardroom_staff(request)
+    if err is not None:
+        return err
 
     try:
         data = json.loads(request.body)
