@@ -28,7 +28,7 @@ from django.http import JsonResponse
 from django.views import View
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.utils import timezone
 from dateutil.parser import parse as parse_datetime
 
@@ -36,8 +36,16 @@ from core.services.human_interface_service import get_human_interface_service
 
 logger = logging.getLogger(__name__)
 
+# S2785 Fold 4 decision-approve audit — staff-only gate for /api/human/*
+# endpoints. Mirrors _platform_staff_only (S2784) + _governance_staff_only
+# (S2780) per S2772 N16 Rigby-ratified contract: every governance endpoint
+# MUST be @login_required AND staff-only.
+_human_staff_only = user_passes_test(
+    lambda u: u.is_authenticated and u.is_staff,
+)
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class AttentionStreamView(View):
     """Get the prioritized attention stream."""
 
@@ -80,7 +88,7 @@ class AttentionStreamView(View):
         return JsonResponse({'success': True})
 
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class AttentionDetailView(View):
     """
     Session 843: Get detail for a single attention item.
@@ -135,7 +143,7 @@ class AttentionDetailView(View):
         })
 
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class AttentionStatsView(View):
     """Get attention statistics."""
 
@@ -150,7 +158,7 @@ class AttentionStatsView(View):
         })
 
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class AttentionDecideView(View):
     """Record a decision on an attention item."""
 
@@ -181,7 +189,7 @@ class AttentionDecideView(View):
         return JsonResponse(result, status=status_code)
 
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class AttentionDeferView(View):
     """Defer an attention item."""
 
@@ -209,7 +217,7 @@ class AttentionDeferView(View):
         return JsonResponse(result, status=status_code)
 
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class AttentionVerifyView(View):
     """Record verification outcome for a watched attention item (Session 746)."""
 
@@ -257,7 +265,7 @@ class AttentionVerifyView(View):
         })
 
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class AttentionExecuteActionView(View):
     """
     Session 763: Execute an action from Mission Control.
@@ -307,7 +315,7 @@ class AttentionExecuteActionView(View):
         })
 
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class SystemControlView(View):
     """Get and manage system control state."""
 
@@ -322,7 +330,7 @@ class SystemControlView(View):
         })
 
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class PauseAgentView(View):
     """Pause a specific agent."""
 
@@ -345,7 +353,7 @@ class PauseAgentView(View):
         return JsonResponse(result)
 
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class ResumeAgentView(View):
     """Resume a specific agent."""
 
@@ -368,7 +376,7 @@ class ResumeAgentView(View):
         return JsonResponse(result)
 
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class QuietModeView(View):
     """Set quiet mode."""
 
@@ -389,7 +397,7 @@ class QuietModeView(View):
         return JsonResponse(result)
 
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class ReviewModeView(View):
     """Set review mode."""
 
@@ -408,7 +416,7 @@ class ReviewModeView(View):
         return JsonResponse(result)
 
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class MLThresholdView(View):
     """Adjust ML confidence threshold."""
 
@@ -431,7 +439,7 @@ class MLThresholdView(View):
         return JsonResponse(result, status=status_code)
 
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class PreferencesView(View):
     """Get and update user preferences."""
 
@@ -459,7 +467,7 @@ class PreferencesView(View):
         return JsonResponse(result)
 
 
-@method_decorator([csrf_exempt, login_required], name='dispatch')
+@method_decorator([csrf_exempt, login_required, _human_staff_only], name='dispatch')
 class BulkAttentionDecideView(View):
     """
     Session 942: Bulk decide multiple attention items at once.
