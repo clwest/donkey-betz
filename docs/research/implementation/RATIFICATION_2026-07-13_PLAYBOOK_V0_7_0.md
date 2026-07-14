@@ -11,14 +11,16 @@ amendment_scope: playbook-minor-v0.7.0
 amendment_class: MINOR (per PLAYBOOK-10.5.1 — 2 additions, 0 modifications, 0 removals)
 parent_version: v0.6.0
 parent_version_git_tag: playbook-v0.6.0
-parent_version_commit_sha: PLACEHOLDER_FILLED_AT_MERGE
+parent_version_commit_sha: PLACEHOLDER_FILLED_AT_MERGE  # v0.6.0 merge SHA — filled by v0.6.0 close per its own envelope contract
 parent_version_ratification: RATIFICATION_2026-07-11_PLAYBOOK_V0_6_0
 proposed_version: v0.7.0
 proposed_git_tag: playbook-v0.7.0
 predecessor_candidacy: MEMORY.md `feedback_zoom_out_ask_per_rigby_sign.md` (S2771 close) + RATIFICATION_2026-07-13_zoom_out_classifications_helper.md (S2777 N22 substrate ship with 13-row seed ledger)
 head_at_amendment_draft: 59db8626324d
-head_at_ratification: PLACEHOLDER_FILLED_AT_MERGE
-close_pr: PLACEHOLDER_FILLED_AT_MERGE
+head_at_ratification: 78c33ba39
+close_pr: 3167
+cascade_pr: 3168
+cascade_pr_merge_sha: 6bff5d9fc
 sign_sessions:
   - S2778 turn 1 — Rigby V1..V6 tool-grounded verification (6+ real search_docs invocations; anti-rubber-stamp gate PASS); V1 F-BLOCKING DISAGREE on rule-ID collision (I-0302 candidate pre-allocated 6.10.7); V2/V3/V4 PASS on site scope and classification
   - S2778 turn 2 — Rigby V5 PASS (no existing rule mandates persistence) + V6 zoom-out ask produced 4 same_pr_actionable folds (V6a sequencing, V6b graceful-degradation, V6c definition inlining, V6d no-folds carve-out); overall verdict truncated by token cap
