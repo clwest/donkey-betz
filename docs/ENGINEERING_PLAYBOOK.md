@@ -1,31 +1,31 @@
 ---
 title: "Donkey Betz Engineering Playbook"
-version: "0.6.0"
+version: "0.7.0"
 version_status: ratified
 scope: platform
-parent_version: "0.5.0"
+parent_version: "0.6.0"
 supersedes: []
-compatible_with: ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.4.1", "0.5.0"]
+compatible_with: ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.4.1", "0.5.0", "0.6.0"]
 ratifier: chris
-ratified_date: 2026-07-11
+ratified_date: 2026-07-13
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
   deliverable_id: PLACEHOLDER_FILLED_AT_RATIFICATION
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
-branch_authored: playbook/v0.6.0-recycle-after-merge
+branch_authored: playbook/v0.7.0-zoom-out-sign-discipline
 commit_sha: PLACEHOLDER_FILLED_AT_MERGE
 content_hash: PLACEHOLDER_FILLED_AT_MERGE
-git_tag: playbook-v0.6.0
+git_tag: playbook-v0.7.0
 schema_version: 1
 prior_ratification:
-  version: "0.5.0"
+  version: "0.6.0"
   ratified_date: 2026-07-11
-  deliverable_id: 4c322f48-3d0b-4e32-8a30-15a08400f887
-  commit_sha: f7e40ddb
-  content_hash: sha256:6a3f897aa73c39dc3a14adefc2f7d3811995e71f3d76e8c6348ffdb39a3c46d4
-  git_tag: playbook-v0.5.0
-authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740, 2742, 2752, 2753, 2766]
+  deliverable_id: PLACEHOLDER_FILLED_AT_RATIFICATION
+  commit_sha: PLACEHOLDER_FILLED_AT_MERGE
+  content_hash: PLACEHOLDER_FILLED_AT_MERGE
+  git_tag: playbook-v0.6.0
+authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740, 2742, 2752, 2753, 2766, 2778]
 correction_sessions: [2723, 2725, 2727]
 audit_sessions: [2722, 2724, 2725, 2727, 2738, 2740, 2742, 2752]
 ratification_package_session: 2726
@@ -43,16 +43,19 @@ v0_5_0_authoring_session: 2753
 v0_5_0_ratification_session: 2753
 v0_6_0_authoring_session: 2766
 v0_6_0_ratification_session: 2766
-rule_count: 202
+v0_7_0_authoring_session: 2778
+v0_7_0_ratification_session: 2778
+rule_count: 204
 rules_added_v0_2_0: [PLAYBOOK-5.2.2, PLAYBOOK-2.2.2, PLAYBOOK-3.2.2]
 rules_added_v0_3_0: [PLAYBOOK-6.6.14, PLAYBOOK-6.10.5]
 rules_added_v0_4_0: [PLAYBOOK-6.10.6]
 rules_added_v0_5_0: [PLAYBOOK-7.4.1, PLAYBOOK-7.4.2, PLAYBOOK-7.4.3, PLAYBOOK-7.5.1, PLAYBOOK-7.6.1]
 rules_added_v0_6_0: [PLAYBOOK-7.4.4]
+rules_added_v0_7_0: [PLAYBOOK-6.10.7, PLAYBOOK-6.10.8]
 evidence_manifest: docs/research/platform/engineering_playbook_evidence_manifest.md
 ---
 
-# Donkey Betz Engineering Playbook v0.6.0
+# Donkey Betz Engineering Playbook v0.7.0
 
 # Chapter 0 — Preamble and How to Read This Playbook
 
@@ -664,10 +667,10 @@ The Engineering Playbook does not create rules. It records rules whose existence
 **Purpose:** Codify the provenance classification standard (PIC-10) that governs how evidence is classified, how normative statements are typed, and what evidence admission thresholds apply to each statement class.
 **Scope:** Every citation in the Playbook body, every rule in the Playbook body, and every amendment that adds, modifies, or retires rules.
 **Introduced in:** v0.1.0
-**Last substantive change:** v0.1.0
+**Last substantive change:** v0.7.0
 **Evidence anchor:** `docs/research/platform/engineering_playbook_evidence_manifest.md`
 **Statement classes present:** [EP], [GR]
-**Rule ID range:** PLAYBOOK-6.1.1 through PLAYBOOK-6.10.4
+**Rule ID range:** PLAYBOOK-6.1.1 through PLAYBOOK-6.10.8
 
 ---
 
@@ -874,7 +877,7 @@ The platform hosts a corpus-tracking system at `docs/_provenance.json` that clas
 
 ## 6.10 Verification of provenance
 
-Verification is the discipline of establishing, before an amendment is dispatched to SIGN, that every rule in the amendment satisfies its evidence admission threshold, that every citation resolves, and that the amendment's provenance is coherent. Verification is a joint responsibility split between the author and the SIGN reviewer. From v0.4.0 forward, §6.10 also covers the verification an implementation session performs before Category A work begins on a candidate whose admission ticket is a research-authored gap claim; the same "verify-before-you-act" discipline extends from amendment dispatch to implementation start.
+Verification is the discipline of establishing, before an amendment is dispatched to SIGN, that every rule in the amendment satisfies its evidence admission threshold, that every citation resolves, and that the amendment's provenance is coherent. Verification is a joint responsibility split between the author and the SIGN reviewer. From v0.4.0 forward, §6.10 also covers the verification an implementation session performs before Category A work begins on a candidate whose admission ticket is a research-authored gap claim; the same "verify-before-you-act" discipline extends from amendment dispatch to implementation start. From v0.7.0 forward, §6.10 also codifies the zoom-out ask + fold-classification discipline that governs joint SIGN routings — an extension exercised in-wild across S2771–S2777 (7-session streak, 2 F-BLOCKING DISAGREEs that prevented ship-time incorrect artifacts) with a 13-row classification substrate (`logs/zoom_out_classifications.jsonl`) shipped at S2777 (N22).
 
 **[GR] PLAYBOOK-6.10.1** Before an amendment to the Playbook is dispatched to SIGN, the author MUST run the eight-check verification protocol enumerated below. The verification result MUST be recorded in the amendment provenance. [E2: RATIFICATION_20260708_0199_CYCLE_1_CLOSEOUT §Ratification ledger summary (verification recorded as part of the ratification act); E6: `docs/handoffs/SESSION_2707_0199_RATIFICATION_HANDOFF.md` §6 (correction passes 1 and 2 applied following verification-driven findings)]
 
@@ -901,7 +904,11 @@ The eight verifications are the following:
 
 **[GR] PLAYBOOK-6.10.6** Before an implementation session begins Category A work where the admission ticket for the work is a research-authored gap claim — specifically a capability graph missing-link entry, a cross-domain integration audit gap-list row, an integration readiness matrix cell, a Capability Discovery Record (CDR) derived roadmap entry, or an `OPEN_ARCS.md`-derived candidate list item — the author MUST independently verify at HEAD that (a) the substrate the artifact names for the candidate's fix path is still the substrate in production, and (b) the fix itself has not already been shipped. Verification MUST cite the HEAD state (via `git rev-parse HEAD` output OR an equivalent commit SHA / tag reference) alongside file-and-line evidence resolving to exactly one of three outcomes: (i) substrate unchanged AND fix unshipped — proceed to Cat A; (ii) substrate has changed since the artifact was authored — rescope to the actual substrate before Cat A begins; (iii) fix has already been shipped — the candidate is closed; the session MUST either select an alternative candidate OR refresh the research artifact before further Cat A work. Verification results MUST be recorded in the Cat A brief before Rigby SIGN dispatch. [E2: v0.3.0 ratification record body §6 (deliverable `548d4aab-88bf-470f-9dea-b3b7400ce36e`) — precedent that a MINOR amendment discharges a Constitutional Debt; E3: `docs/research/platform/platform_capability_graph.md` §27 (Trigger 1 — §17 Cost Protection substrate mismatch: `LLMCallEvent` named in graph vs `CostTracking` shipped in production per `core/services/cost_threshold_monitor.py:18-30`); E4: commit `86152f9f` (Trigger 2 — F-D-SIDEBAR-1 already-shipped: `frontend/src/components/layout/Sidebar.tsx:370` invokes `await authApi.logout()` despite graph §18 line 498 listing it as a missing link); E6: `docs/handoffs/SESSION_2700_CYCLE_1A_IMPLEMENTATION_HANDOFF.md` §2.1 (five-dimensional verify-before-build methodology — the in-wild practice this rule codifies constitutionally); E6: `docs/handoffs/SESSION_2739_COST_PROTECTION_P2_OBSERVATION.md` §4 + §10.4 (Trigger 1 methodology callout, first-trigger threshold record)]
 
-> **Commentary:** The eight-check protocol is a discipline, not a bureaucracy. Its cost is proportional to the amendment's scope. A PATCH amendment (typo fix, broken-link repair) that touches one rule may complete all six author verifications in minutes. A MAJOR amendment (rule removal, chapter restructuring) that touches many rules requires proportional verification effort. The discipline scales with the amendment; the amendment does not scale with the discipline. The same proportionality applies to §6.10.6 verification: a small candidate whose substrate is trivially at HEAD may complete verification in one grep; a large candidate whose substrate spans multiple files requires a proportional sweep. What §6.10.6 forbids is skipping the verification because the artifact "looks authoritative" — research artifacts drift; HEAD does not lie.
+**[GR] PLAYBOOK-6.10.7** Every joint SIGN routing MUST include at least one open-ended zoom-out ask that steps back from the immediate change to surface framing risk, coupling accretion, or dropped-context signals. A *joint SIGN routing* is any SIGN dispatch in which the reviewer is asked both (a) to verify a design-lean or claim on its own terms AND (b) to render an independent zoom-out ("what would you push back on if I asked fresh?" / "what risk / coupling is this accreting?" / "what am I not seeing?"), whether the joint shape is invoked by explicit operator routing text or by session-open convention. The zoom-out ask MUST be phrased so it can produce a substantive fold; a rhetorical or leading formulation that permits only assent does NOT satisfy this rule. [E2: RATIFICATION_2026-07-13_zoom_out_classifications_helper.md §4 (13-row seed ledger enumerating S2774–S2777 SIGN folds); E5: `MEMORY.md` — `feedback_zoom_out_ask_per_rigby_sign.md` (originating memory rule authored S2771 close, corroborated across S2772–S2777); E6: `docs/handoffs/SESSION_2772_OPS_AUTH_REGRESSION_SMOKE_SUITE_RATIFIED.md` (first application after codification — 7 substantive folds); E6: `docs/handoffs/SESSION_2776_PA_WRAPPER_OWNERSHIP_CHECK_RATIFIED.md` (first F-BLOCKING DISAGREE of the streak, Q1 design lean); E6: `docs/handoffs/SESSION_2777_ZOOM_OUT_CLASSIFICATIONS_HELPER_RATIFIED.md` (second F-BLOCKING DISAGREE, PLAYBOOK-6.10 claim correctness)]
+
+**[GR] PLAYBOOK-6.10.8** If a joint SIGN routing produces one or more folds or concerns from the zoom-out ask required by PLAYBOOK-6.10.7, each fold MUST be classified into exactly one of the enumerated categories {`same_pr_actionable`, `same_pr_mitigatable`, `future_trigger`} AND persisted to `logs/zoom_out_classifications.jsonl` via the `record_zoom_out_concern` management command before the ratifier's D-verdict is requested. The three categories are: `same_pr_actionable` — the fold identifies a change that MUST be incorporated into the same PR before ship; `same_pr_mitigatable` — the fold identifies a risk that CAN be mitigated in the same PR (via rule-text refinement, added carve-out, or scope narrowing) without expanding scope; `future_trigger` — the fold identifies a concern whose amendment is deferred to a named trigger condition. If a zoom-out ask produces zero folds, no ledger write is required. If the `record_zoom_out_concern` command fails due to tooling or runtime error, the reviewer MAY proceed to D-verdict ONLY after (i) pasting the classified fold verbatim inline in the SIGN attestation, (ii) tagging the entry `ledger-write deferred`, AND (iii) opening a follow-up action item in the close doc or handoff to backfill the ledger. The graceful-degradation clause does NOT waive classification; it defers only the persistence write. [E2: RATIFICATION_2026-07-13_zoom_out_classifications_helper.md §2 (schema definition + enum contract) + §5 (10-test suite covering both write-path and read-path); E4: `core/management/commands/record_zoom_out_concern.py` (147-line JSONL writer with schema_version=1 + enum-validated classification); E4: `logs/zoom_out_classifications.jsonl` (persistence target — 17 rows at v0.7.0 ratification: 13 backfilled S2774–S2777 + 4 dogfooded S2778 from this amendment's own SIGN); E6: `docs/handoffs/SESSION_2777_ZOOM_OUT_CLASSIFICATIONS_HELPER_RATIFIED.md` §4 (SIGN Summary enumerating the 4-fold classification pattern in-wild)]
+
+> **Commentary:** The eight-check protocol is a discipline, not a bureaucracy. Its cost is proportional to the amendment's scope. A PATCH amendment (typo fix, broken-link repair) that touches one rule may complete all six author verifications in minutes. A MAJOR amendment (rule removal, chapter restructuring) that touches many rules requires proportional verification effort. The discipline scales with the amendment; the amendment does not scale with the discipline. The same proportionality applies to §6.10.6 verification: a small candidate whose substrate is trivially at HEAD may complete verification in one grep; a large candidate whose substrate spans multiple files requires a proportional sweep. What §6.10.6 forbids is skipping the verification because the artifact "looks authoritative" — research artifacts drift; HEAD does not lie. The same proportionality principle governs §6.10.7 and §6.10.8: a trivial single-line docs edit whose joint SIGN produces zero folds satisfies the discipline with only the zoom-out ask itself (no ledger write); a substantive amendment whose zoom-out surfaces multiple folds carries proportionally more classification cost. The intent is neither ceremony nor bureaucracy — it is the preservation of substantive review pressure whose in-wild absence produced 2 F-BLOCKING near-misses in a 7-session window (S2776 Q1, S2777 §6.10 claim).
 
 ## 6.11 Cross-references
 
@@ -931,6 +938,8 @@ The following extension points are informative. They identify where a future MIN
 - Tenant-scope reconciliation — should the platform activate multi-tenant governance in a future cycle, §6.9 MAY be extended with tenant-scope provenance classification per a MAJOR amendment.
 - Automation of verification — verifications 1 through 6 (§6.10) are candidates for continuous-integration automation. Automation is not codified by Chapter 6; the checks remain author responsibility until the Playbook explicitly ratifies automated substitution.
 - Capability graph refresh cadence — Per-chain freshness verdicts (append-only refreshes like `platform_capability_graph.md` §27 single-chain or §29 full sweep) MAY be formalized as a cadence discipline in a future MINOR amendment; two-trigger threshold met at S2739 (§27) + S2741 (§29). PLAYBOOK-6.10.6 already forbids acting on stale artifacts; a cadence rule would additionally require periodic refresh even absent imminent Cat A use.
+- Zoom-out ledger evolution — `logs/zoom_out_classifications.jsonl` is a first-cut JSONL substrate; migrating to a Django model with query surface, exposing a PA-tool read handler for live SIGN queries, or introducing rotation/archival at ~500 rows are all candidate MINOR amendments once the ledger accretes enough rows or a real query-load trigger surfaces.
+- Anti-rubber-stamp SIGN discipline — S2777 turn 1 surfaced a mid-arc AGREE x4 SIGN with zero `tool_runs` that would have shipped an incorrect claim; Chris's pressure test caught it and a tool-grounded re-route recovered in one turn. If a second independent trigger surfaces, formalizing a "verify tool_runs non-empty when substrate claims are being verified" check MAY be codified via a future MINOR amendment extending §6.10.7 or §6.10.8.
 
 ---
 
@@ -1326,3 +1335,4 @@ The Constitutional Debt Register records items intentionally deferred by prior a
 | v0.4.1 | v0.4.0 | [] | 2026-07-10 | playbook-v0.4.1 | PATCH — add informative extension-point note in §6.12 recording capability graph refresh cadence as a candidate for future MINOR codification (two-trigger threshold met at S2739 §27 + S2741 §29). Cross-link added at §10.15. No new rules; rule count unchanged at 196. |
 | v0.5.0 | v0.4.1 | [] | 2026-07-11 | playbook-v0.5.0 | MINOR — activate Chapter 7 STUB scope partially with 5 new [GR] rules: PLAYBOOK-7.4.1/7.4.2/7.4.3 (close-ceremony delivery discipline); PLAYBOOK-7.5.1 (staged codification of anti-pattern substrates — three-PR pattern); PLAYBOOK-7.6.1 (session-close SIGN-cycle discipline — watchpoint-attestation shape, EXTENDS PLAYBOOK-6.10.3 for close-cycle scope). Candidacy ratified at RATIFICATION_2026-07-10_i0302_arc_close.md §5 (Chris D-verdict S2751). Stage 1 shape ratified at S2752 (`playbook_v0_5_proposal_shape.md`); Stage 2 codification + ratification at S2753 (merge SHA `f7e40ddb`, PR #3134, workspace deliverable `4c322f48-3d0b-4e32-8a30-15a08400f887`). Rule count 196 → 201. Old §7.4/§7.5 renumbered to §7.7/§7.8. |
 | v0.6.0 | v0.5.0 | [] | 2026-07-11 | playbook-v0.6.0 | MINOR — codify recycle-after-merge as PLAYBOOK-7.4.4 (new [GR] rule under §7.4 Close-ceremony delivery discipline). Corroboration ladder: 4 negative signals (S2758/S2759/S2760/S2761 STALE_BOTH next-session-opens under pre-convention) + 3 positive signals (S2763/S2764/S2765 FRESH · SHA-match under post-convention). Chris D-verdict at S2766. Rule count 201 → 202. Reclassified from Chris's originally-labeled "v0.5.1 PATCH" framing to MINOR per PLAYBOOK-10.4.1 constitutional constraint (PATCH cannot introduce rules) — joint Claude+Rigby W1 finding at S2766 SIGN batch. |
+| v0.7.0 | v0.6.0 | [] | 2026-07-13 | playbook-v0.7.0 | MINOR — codify zoom-out ask + fold-classification SIGN discipline as PLAYBOOK-6.10.7 (zoom-out ask mandate for joint SIGN routings) + PLAYBOOK-6.10.8 (classify {`same_pr_actionable` / `same_pr_mitigatable` / `future_trigger`} + persist to `logs/zoom_out_classifications.jsonl` via `record_zoom_out_concern` before D-verdict; no-folds carve-out; graceful-degradation clause for command failure). Evidence: 7-session S2771–S2777 corroboration streak (2 F-BLOCKING DISAGREEs that prevented ship-time incorrect artifacts) + N22 classification substrate shipped S2777 (13-row seed ledger). Chris D-verdict at S2778. Rule count 202 → 204. Author-side sequencing note: I-0302 three-PR pattern candidacy (previously proposed for PLAYBOOK-6.10.7 in RATIFICATION_2026-07-10_i0302_arc_close.md §11) re-slotted to PLAYBOOK-6.10.9 per PLAYBOOK-10.7.5 next-integer rule — pre-allocation in a candidate document does not constitute ratified reservation. Rules dogfooded at authoring: 4 same_pr_actionable folds from this amendment's own SIGN incorporated pre-D-verdict; ledger grew 13 → 17 rows during S2778. |
