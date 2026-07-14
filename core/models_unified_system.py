@@ -978,6 +978,16 @@ class AgentExecution(models.Model):
         max_length=64, null=True, blank=True, db_index=True,
     )
 
+    # Session 2782 C1: Celery task ID linkage — auto-populated via pre_save signal
+    # (below) when this row is created inside a Celery task context. Enables cross-
+    # referencing SLO breaches (e.g., Agent wall-clock timeout rate) back to
+    # CeleryTaskEvent for root-cause diagnosis of ambiguous timeouts. NULL for
+    # non-Celery creation paths (management commands, tests, direct API calls).
+    celery_task_id = models.CharField(
+        max_length=64, null=True, blank=True, db_index=True,
+        help_text="Session 2782: request.id of the enclosing Celery task, if any.",
+    )
+
     class Meta:
         app_label = 'core'
 
@@ -989,6 +999,39 @@ class AgentExecution(models.Model):
 
     def __str__(self):
         return f"{self.agent.name} - {self.task[:50]}"
+
+
+# Session 2782 C1: auto-stamp `AgentExecution.celery_task_id` on create when
+# saving inside a Celery task context. Bypassed by `bulk_create` by design; no
+# bulk_create sites for AgentExecution exist as of S2782. Never raises — failure
+# to capture is silently swallowed so instrumentation cannot break a save.
+from django.db.models.signals import pre_save as _pre_save_signal
+from django.dispatch import receiver as _pre_save_receiver
+
+
+@_pre_save_receiver(_pre_save_signal, sender=AgentExecution)
+def _stamp_agent_execution_celery_task_id(sender, instance, **kwargs):
+    # AgentExecution uses a UUID default for its primary key, so `instance.pk`
+    # is populated at Python instantiation — not a reliable "is-create" signal.
+    # `_state.adding` stays True until the row is inserted, which is the
+    # correct discriminator here.
+    if not instance._state.adding:
+        return
+    if instance.celery_task_id:
+        return
+    try:
+        from celery import current_task
+        task = current_task
+        if task is None:
+            return
+        request = getattr(task, 'request', None)
+        if request is None:
+            return
+        task_id = getattr(request, 'id', None)
+        if task_id:
+            instance.celery_task_id = task_id
+    except Exception:
+        return
 
     # Session 1084: Retired misleading deprecation warning.
     #
