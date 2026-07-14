@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-14T21:14:17+00:00",
+    "generated": "2026-07-14T22:02:27+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "130955ec07ea",
-    "doc_count": 2595,
-    "commit_count": 7954,
+    "git_head": "d6859acfab07",
+    "doc_count": 2597,
+    "commit_count": 7958,
     "confidence_breakdown": {
-      "HIGH": 1648,
+      "HIGH": 1649,
       "MEDIUM": 402,
       "LOW": 6,
-      "UNKNOWN": 539
+      "UNKNOWN": 540
     },
     "excludes": [
       "docs/archive/",
@@ -2003,7 +2003,7 @@
         2740,
         2742
       ],
-      "commit_count": 20,
+      "commit_count": 22,
       "prs": [
         3048,
         3058,
@@ -2016,7 +2016,8 @@
         3135,
         3155,
         3167,
-        3176
+        3176,
+        3185
       ]
     },
     "docs/EOS_RULES.md": {
@@ -2589,7 +2590,7 @@
         2745,
         2749
       ],
-      "commit_count": 1288,
+      "commit_count": 1290,
       "prs": [
         10,
         11,
@@ -3178,7 +3179,8 @@
         3175,
         3178,
         3180,
-        3182
+        3182,
+        3184
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7520,7 +7522,7 @@
         2745,
         2749
       ],
-      "commit_count": 236,
+      "commit_count": 238,
       "prs": [
         2213,
         2219,
@@ -7712,7 +7714,8 @@
         3175,
         3178,
         3180,
-        3182
+        3182,
+        3184
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20080,13 +20083,28 @@
     },
     "docs/handoffs/SESSION_2785_DECISION_APPROVE_AUTH_AUDIT.md": {
       "originating_session": 2785,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "0b11bc07",
+      "first_commit_date": "2026-07-14",
+      "first_commit_subject": "docs(cascade): S2785 close cascade \u2014 handoff + start-here + INDEX + provenance (#3184)",
+      "sessions_touched": [
+        2785
+      ],
+      "commit_count": 2,
+      "prs": [
+        3184
+      ]
+    },
+    "docs/handoffs/SESSION_2786_PLAYBOOK_V0_8_0_RATIFIED.md": {
+      "originating_session": 2786,
       "confidence": "LOW",
       "match_source": "frontmatter",
       "first_commit_sha": null,
       "first_commit_date": null,
       "first_commit_subject": null,
       "sessions_touched": [
-        2785
+        2786
       ],
       "commit_count": 0,
       "prs": []
@@ -37250,6 +37268,19 @@
       "commit_count": 2,
       "prs": [
         3166
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-14_PLAYBOOK_V0_8_0.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "d6859acf",
+      "first_commit_date": "2026-07-14",
+      "first_commit_subject": "feat(playbook): v0.8.0 MINOR \u2014 codify PLAYBOOK-6.10.9 fold-authoring evidence admission (#3185)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3185
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
