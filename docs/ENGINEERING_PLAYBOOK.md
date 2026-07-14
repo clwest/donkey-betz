@@ -1,31 +1,31 @@
 ---
 title: "Donkey Betz Engineering Playbook"
-version: "0.7.0"
+version: "0.8.0"
 version_status: ratified
 scope: platform
-parent_version: "0.6.0"
+parent_version: "0.7.0"
 supersedes: []
-compatible_with: ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.4.1", "0.5.0", "0.6.0"]
+compatible_with: ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.4.1", "0.5.0", "0.6.0", "0.7.0"]
 ratifier: chris
-ratified_date: 2026-07-13
+ratified_date: 2026-07-14
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
   deliverable_id: PLACEHOLDER_FILLED_AT_RATIFICATION
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
-branch_authored: playbook/v0.7.0-zoom-out-sign-discipline
+branch_authored: playbook/v0.8.0-evidence-admission-fold-authoring
 commit_sha: PLACEHOLDER_FILLED_AT_MERGE
 content_hash: PLACEHOLDER_FILLED_AT_MERGE
-git_tag: playbook-v0.7.0
+git_tag: playbook-v0.8.0
 schema_version: 1
 prior_ratification:
-  version: "0.6.0"
-  ratified_date: 2026-07-11
+  version: "0.7.0"
+  ratified_date: 2026-07-13
   deliverable_id: PLACEHOLDER_FILLED_AT_RATIFICATION
   commit_sha: PLACEHOLDER_FILLED_AT_MERGE
   content_hash: PLACEHOLDER_FILLED_AT_MERGE
-  git_tag: playbook-v0.6.0
-authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740, 2742, 2752, 2753, 2766, 2778]
+  git_tag: playbook-v0.7.0
+authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740, 2742, 2752, 2753, 2766, 2778, 2786]
 correction_sessions: [2723, 2725, 2727]
 audit_sessions: [2722, 2724, 2725, 2727, 2738, 2740, 2742, 2752]
 ratification_package_session: 2726
@@ -45,17 +45,20 @@ v0_6_0_authoring_session: 2766
 v0_6_0_ratification_session: 2766
 v0_7_0_authoring_session: 2778
 v0_7_0_ratification_session: 2778
-rule_count: 204
+v0_8_0_authoring_session: 2786
+v0_8_0_ratification_session: 2786
+rule_count: 205
 rules_added_v0_2_0: [PLAYBOOK-5.2.2, PLAYBOOK-2.2.2, PLAYBOOK-3.2.2]
 rules_added_v0_3_0: [PLAYBOOK-6.6.14, PLAYBOOK-6.10.5]
 rules_added_v0_4_0: [PLAYBOOK-6.10.6]
 rules_added_v0_5_0: [PLAYBOOK-7.4.1, PLAYBOOK-7.4.2, PLAYBOOK-7.4.3, PLAYBOOK-7.5.1, PLAYBOOK-7.6.1]
 rules_added_v0_6_0: [PLAYBOOK-7.4.4]
 rules_added_v0_7_0: [PLAYBOOK-6.10.7, PLAYBOOK-6.10.8]
+rules_added_v0_8_0: [PLAYBOOK-6.10.9]
 evidence_manifest: docs/research/platform/engineering_playbook_evidence_manifest.md
 ---
 
-# Donkey Betz Engineering Playbook v0.7.0
+# Donkey Betz Engineering Playbook v0.8.0
 
 # Chapter 0 — Preamble and How to Read This Playbook
 
@@ -670,7 +673,7 @@ The Engineering Playbook does not create rules. It records rules whose existence
 **Last substantive change:** v0.7.0
 **Evidence anchor:** `docs/research/platform/engineering_playbook_evidence_manifest.md`
 **Statement classes present:** [EP], [GR]
-**Rule ID range:** PLAYBOOK-6.1.1 through PLAYBOOK-6.10.8
+**Rule ID range:** PLAYBOOK-6.1.1 through PLAYBOOK-6.10.9
 
 ---
 
@@ -908,7 +911,9 @@ The eight verifications are the following:
 
 **[GR] PLAYBOOK-6.10.8** If a joint SIGN routing produces one or more folds or concerns from the zoom-out ask required by PLAYBOOK-6.10.7, each fold MUST be classified into exactly one of the enumerated categories {`same_pr_actionable`, `same_pr_mitigatable`, `future_trigger`} AND persisted to `logs/zoom_out_classifications.jsonl` via the `record_zoom_out_concern` management command before the ratifier's D-verdict is requested. The three categories are: `same_pr_actionable` — the fold identifies a change that MUST be incorporated into the same PR before ship; `same_pr_mitigatable` — the fold identifies a risk that CAN be mitigated in the same PR (via rule-text refinement, added carve-out, or scope narrowing) without expanding scope; `future_trigger` — the fold identifies a concern whose amendment is deferred to a named trigger condition. If a zoom-out ask produces zero folds, no ledger write is required. If the `record_zoom_out_concern` command fails due to tooling or runtime error, the reviewer MAY proceed to D-verdict ONLY after (i) pasting the classified fold verbatim inline in the SIGN attestation, (ii) tagging the entry `ledger-write deferred`, AND (iii) opening a follow-up action item in the close doc or handoff to backfill the ledger. The graceful-degradation clause does NOT waive classification; it defers only the persistence write. [E2: RATIFICATION_2026-07-13_zoom_out_classifications_helper.md §2 (schema definition + enum contract) + §5 (10-test suite covering both write-path and read-path); E4: `core/management/commands/record_zoom_out_concern.py` (147-line JSONL writer with schema_version=1 + enum-validated classification); E4: `logs/zoom_out_classifications.jsonl` (persistence target — 17 rows at v0.7.0 ratification: 13 backfilled S2774–S2777 + 4 dogfooded S2778 from this amendment's own SIGN); E6: `docs/handoffs/SESSION_2777_ZOOM_OUT_CLASSIFICATIONS_HELPER_RATIFIED.md` §4 (SIGN Summary enumerating the 4-fold classification pattern in-wild)]
 
-> **Commentary:** The eight-check protocol is a discipline, not a bureaucracy. Its cost is proportional to the amendment's scope. A PATCH amendment (typo fix, broken-link repair) that touches one rule may complete all six author verifications in minutes. A MAJOR amendment (rule removal, chapter restructuring) that touches many rules requires proportional verification effort. The discipline scales with the amendment; the amendment does not scale with the discipline. The same proportionality applies to §6.10.6 verification: a small candidate whose substrate is trivially at HEAD may complete verification in one grep; a large candidate whose substrate spans multiple files requires a proportional sweep. What §6.10.6 forbids is skipping the verification because the artifact "looks authoritative" — research artifacts drift; HEAD does not lie. The same proportionality principle governs §6.10.7 and §6.10.8: a trivial single-line docs edit whose joint SIGN produces zero folds satisfies the discipline with only the zoom-out ask itself (no ledger write); a substantive amendment whose zoom-out surfaces multiple folds carries proportionally more classification cost. The intent is neither ceremony nor bureaucracy — it is the preservation of substantive review pressure whose in-wild absence produced 2 F-BLOCKING near-misses in a 7-session window (S2776 Q1, S2777 §6.10 claim).
+**[GR] PLAYBOOK-6.10.9** When authoring a zoom-out fold whose concern text asserts a specific code-state fact that, if wrong, would materially change the fold's classification or action path — for example naming an authZ gap, an error-handling gap, an endpoint's gating state, a substrate location, or the presence/absence of a specific block of code — the fold-authoring turn MUST admit evidence for that assertion before classifying and persisting the fold. Evidence admission MUST cite (a) a stable state pointer (a commit SHA from `git rev-parse HEAD`; if a PR or branch reference is used, it MUST include the commit SHA under review) AND (b) file-and-line evidence resolving to exactly one of: (i) the assertion is accurate as authored — proceed to classify + persist the fold as written; (ii) the assertion is narrower or wider than the actual code state (e.g., decorator present but staff gate absent, or inline authN present but authZ absent) — rewrite the concern text to match the verified state before classify + persist; (iii) the assertion no longer holds because the underlying code has changed — the fold is void; do not persist. The evidence admission (stable state pointer + file+line citations + the (i)/(ii)/(iii) outcome) MUST be captured inline in the SIGN attestation immediately above the fold's classify + persist call. This rule EXTENDS PLAYBOOK-6.10.8 for the fold-authoring-turn scope; it does NOT waive the classification or persistence contract, and it complements PLAYBOOK-6.10.6 (which requires verify-before-implement for Cat A candidates) by requiring verify-before-persist for zoom-out folds. [E2: RATIFICATION_2026-07-14_PLAYBOOK_V0_8_0.md §5 (dogfooded folds from this amendment's own SIGN — Fold A `same_pr_mitigatable` driving the evidence-admission reframe of the rule text, Fold B `future_trigger` for a helper-tooling extension point); E4: `logs/zoom_out_classifications.jsonl` row 31 (S2784 T2 SIGN Fold 4 at 2026-07-14T18:06:59Z — "no auth gating" overstated actual authN-present/authZ-absent state on `core/views_platform_command.py`) + row 32 (S2785 T1 SIGN Fold 1 at 2026-07-14T20:55:21Z — "completely ungated" overstated actual inline-authN-with-Token-fallback state on `core/views_agent_learning.py:2105-2195`); E6: `docs/handoffs/SESSION_2784_FOLD4_PLATFORM_STAFF_ONLY.md` §5 (first-trigger record); E6: `docs/handoffs/SESSION_2785_DECISION_APPROVE_AUTH_AUDIT.md` §2 + §5 (second-trigger record + Playbook amendment candidate flag); E6: `docs/handoffs/SESSION_2786_PLAYBOOK_V0_8_0_RATIFIED.md` §5 (this amendment's SIGN — Rigby T2 F-BLOCKING catch on "at HEAD" underspecification drove the evidence-admission reframe from the initial "fold-authoring hygiene" framing)]
+
+> **Commentary:** The eight-check protocol is a discipline, not a bureaucracy. Its cost is proportional to the amendment's scope. A PATCH amendment (typo fix, broken-link repair) that touches one rule may complete all six author verifications in minutes. A MAJOR amendment (rule removal, chapter restructuring) that touches many rules requires proportional verification effort. The discipline scales with the amendment; the amendment does not scale with the discipline. The same proportionality applies to §6.10.6 verification: a small candidate whose substrate is trivially at HEAD may complete verification in one grep; a large candidate whose substrate spans multiple files requires a proportional sweep. What §6.10.6 forbids is skipping the verification because the artifact "looks authoritative" — research artifacts drift; HEAD does not lie. The same proportionality principle governs §6.10.7 and §6.10.8: a trivial single-line docs edit whose joint SIGN produces zero folds satisfies the discipline with only the zoom-out ask itself (no ledger write); a substantive amendment whose zoom-out surfaces multiple folds carries proportionally more classification cost. The intent is neither ceremony nor bureaucracy — it is the preservation of substantive review pressure whose in-wild absence produced 2 F-BLOCKING near-misses in a 7-session window (S2776 Q1, S2777 §6.10 claim). §6.10.9 extends the same proportionality: a fold that asserts no concrete code-state fact (e.g., "the design should consider X in future work") requires no evidence admission; a fold that asserts a specific gap ("no auth gating on endpoint Y") whose classification hinges on the assertion being accurate MUST admit evidence, because misclassification drives wrong-scoped mitigation work — the exact failure mode observed in the two triggers that motivated the rule (S2784 Fold 4 + S2785 Fold 1).
 
 ## 6.11 Cross-references
 
@@ -940,6 +945,7 @@ The following extension points are informative. They identify where a future MIN
 - Capability graph refresh cadence — Per-chain freshness verdicts (append-only refreshes like `platform_capability_graph.md` §27 single-chain or §29 full sweep) MAY be formalized as a cadence discipline in a future MINOR amendment; two-trigger threshold met at S2739 (§27) + S2741 (§29). PLAYBOOK-6.10.6 already forbids acting on stale artifacts; a cadence rule would additionally require periodic refresh even absent imminent Cat A use.
 - Zoom-out ledger evolution — `logs/zoom_out_classifications.jsonl` is a first-cut JSONL substrate; migrating to a Django model with query surface, exposing a PA-tool read handler for live SIGN queries, or introducing rotation/archival at ~500 rows are all candidate MINOR amendments once the ledger accretes enough rows or a real query-load trigger surfaces.
 - Anti-rubber-stamp SIGN discipline — S2777 turn 1 surfaced a mid-arc AGREE x4 SIGN with zero `tool_runs` that would have shipped an incorrect claim; Chris's pressure test caught it and a tool-grounded re-route recovered in one turn. If a second independent trigger surfaces, formalizing a "verify tool_runs non-empty when substrate claims are being verified" check MAY be codified via a future MINOR amendment extending §6.10.7 or §6.10.8.
+- Fold-authoring evidence-admission helper — a pattern-matching helper that prefills stable-state-pointer + file+line prompts when a zoom-out fold's concern text includes gap-asserting phrases (e.g., "ungated", "no auth", "no error handling", "endpoint X is unprotected"). MAY be codified in a future MINOR amendment; trigger: 3+ SIGN cycles delayed >5min by manual verification of a §6.10.9 evidence admission, OR one SIGN blocked by absence of the helper. Corresponds to S2786 zoom-out Fold B (`future_trigger`), persisted in `logs/zoom_out_classifications.jsonl` at 2026-07-14T21:31Z under arc `n25_fold_authoring_hygiene_amendment`.
 
 ---
 
@@ -1338,3 +1344,4 @@ The Constitutional Debt Register records items intentionally deferred by prior a
 | v0.5.0 | v0.4.1 | [] | 2026-07-11 | playbook-v0.5.0 | MINOR — activate Chapter 7 STUB scope partially with 5 new [GR] rules: PLAYBOOK-7.4.1/7.4.2/7.4.3 (close-ceremony delivery discipline); PLAYBOOK-7.5.1 (staged codification of anti-pattern substrates — three-PR pattern); PLAYBOOK-7.6.1 (session-close SIGN-cycle discipline — watchpoint-attestation shape, EXTENDS PLAYBOOK-6.10.3 for close-cycle scope). Candidacy ratified at RATIFICATION_2026-07-10_i0302_arc_close.md §5 (Chris D-verdict S2751). Stage 1 shape ratified at S2752 (`playbook_v0_5_proposal_shape.md`); Stage 2 codification + ratification at S2753 (merge SHA `f7e40ddb`, PR #3134, workspace deliverable `4c322f48-3d0b-4e32-8a30-15a08400f887`). Rule count 196 → 201. Old §7.4/§7.5 renumbered to §7.7/§7.8. |
 | v0.6.0 | v0.5.0 | [] | 2026-07-11 | playbook-v0.6.0 | MINOR — codify recycle-after-merge as PLAYBOOK-7.4.4 (new [GR] rule under §7.4 Close-ceremony delivery discipline). Corroboration ladder: 4 negative signals (S2758/S2759/S2760/S2761 STALE_BOTH next-session-opens under pre-convention) + 3 positive signals (S2763/S2764/S2765 FRESH · SHA-match under post-convention). Chris D-verdict at S2766. Rule count 201 → 202. Reclassified from Chris's originally-labeled "v0.5.1 PATCH" framing to MINOR per PLAYBOOK-10.4.1 constitutional constraint (PATCH cannot introduce rules) — joint Claude+Rigby W1 finding at S2766 SIGN batch. |
 | v0.7.0 | v0.6.0 | [] | 2026-07-13 | playbook-v0.7.0 | MINOR — codify zoom-out ask + fold-classification SIGN discipline as PLAYBOOK-6.10.7 (zoom-out ask mandate for joint SIGN routings) + PLAYBOOK-6.10.8 (classify {`same_pr_actionable` / `same_pr_mitigatable` / `future_trigger`} + persist to `logs/zoom_out_classifications.jsonl` via `record_zoom_out_concern` before D-verdict; no-folds carve-out; graceful-degradation clause for command failure). Evidence: 7-session S2771–S2777 corroboration streak (2 F-BLOCKING DISAGREEs that prevented ship-time incorrect artifacts) + N22 classification substrate shipped S2777 (13-row seed ledger). Chris D-verdict at S2778. Rule count 202 → 204. Author-side sequencing note: I-0302 three-PR pattern candidacy (previously proposed for PLAYBOOK-6.10.7 in RATIFICATION_2026-07-10_i0302_arc_close.md §11) re-slotted to PLAYBOOK-6.10.9 per PLAYBOOK-10.7.5 next-integer rule — pre-allocation in a candidate document does not constitute ratified reservation. Rules dogfooded at authoring: 4 same_pr_actionable folds from this amendment's own SIGN incorporated pre-D-verdict; ledger grew 13 → 17 rows during S2778. |
+| v0.8.0 | v0.7.0 | [] | 2026-07-14 | playbook-v0.8.0 | MINOR — codify fold-authoring evidence-admission discipline as PLAYBOOK-6.10.9 (a new [GR] rule under §6.10 that EXTENDS PLAYBOOK-6.10.8 for the fold-authoring-turn scope). Rule requires zoom-out folds asserting concrete code-state facts to admit stable-state-pointer + file+line evidence with an (i)/(ii)/(iii) verified-state outcome inline in the SIGN attestation, before classify + persist. Two-trigger corpus: `logs/zoom_out_classifications.jsonl` row 31 (S2784 T2 SIGN Fold 4 — "no auth gating" overstated actual authN-present/authZ-absent) + row 32 (S2785 T1 SIGN Fold 1 — "completely ungated" overstated actual inline-authN-with-Token-fallback). Chris D-verdict at S2786. Rule count 204 → 205. Author-side sequencing note: I-0302 three-PR pattern candidacy (previously re-slotted to PLAYBOOK-6.10.9 in v0.7.0 provenance) again re-slotted forward to PLAYBOOK-6.10.10 per PLAYBOOK-10.7.5 next-integer rule — pre-allocation in a candidate document still does not constitute ratified reservation. Rules dogfooded at authoring: 2 folds from this amendment's own SIGN persisted BEFORE D-verdict per PLAYBOOK-6.10.8 — Fold A `same_pr_mitigatable` (drove reframing of "fold-authoring hygiene" to "evidence admission" throughout rule text and title), Fold B `future_trigger` (recorded as §6.12 extension-point note for a pattern-matching helper). Also dogfooded at authoring: SIGN turn 2 F-BLOCKING DISAGREE from Rigby on "at HEAD" underspecification drove the "stable state pointer (commit SHA; if PR/branch used, MUST include SHA under review)" text — a T4 revision cycle before final D-verdict. Ledger grew 34 → 36 rows during S2786. §6.12 extension-point note added for the Fold B helper candidacy. |
