@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-14T05:37:23+00:00",
+    "generated": "2026-07-14T17:23:22+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "2fc68b79dae6",
-    "doc_count": 2591,
-    "commit_count": 7936,
+    "git_head": "b2595ee7b538",
+    "doc_count": 2592,
+    "commit_count": 7942,
     "confidence_breakdown": {
-      "HIGH": 1644,
+      "HIGH": 1645,
       "MEDIUM": 402,
       "LOW": 6,
       "UNKNOWN": 539
@@ -2003,7 +2003,7 @@
         2740,
         2742
       ],
-      "commit_count": 18,
+      "commit_count": 20,
       "prs": [
         3048,
         3058,
@@ -2015,7 +2015,8 @@
         3134,
         3135,
         3155,
-        3167
+        3167,
+        3176
       ]
     },
     "docs/EOS_RULES.md": {
@@ -2588,7 +2589,7 @@
         2745,
         2749
       ],
-      "commit_count": 1280,
+      "commit_count": 1282,
       "prs": [
         10,
         11,
@@ -3173,7 +3174,8 @@
         3166,
         3168,
         3171,
-        3173
+        3173,
+        3175
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7515,7 +7517,7 @@
         2745,
         2749
       ],
-      "commit_count": 228,
+      "commit_count": 230,
       "prs": [
         2213,
         2219,
@@ -7703,7 +7705,8 @@
         3166,
         3168,
         3171,
-        3173
+        3173,
+        3175
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20011,13 +20014,28 @@
     },
     "docs/handoffs/SESSION_2781_N17_SESSION_NUMBER_PILL_SEARCH_CHIP.md": {
       "originating_session": 2781,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "59022516",
+      "first_commit_date": "2026-07-13",
+      "first_commit_subject": "docs(cascade): S2781 close cascade \u2014 N17 handoff + INDEX + provenance",
+      "sessions_touched": [
+        2781
+      ],
+      "commit_count": 2,
+      "prs": [
+        3175
+      ]
+    },
+    "docs/handoffs/SESSION_2782_SUBSTRATE_FIX_PLUS_C1_OBSERVABILITY.md": {
+      "originating_session": 2782,
       "confidence": "LOW",
       "match_source": "frontmatter",
       "first_commit_sha": null,
       "first_commit_date": null,
       "first_commit_subject": null,
       "sessions_touched": [
-        2781
+        2782
       ],
       "commit_count": 0,
       "prs": []
