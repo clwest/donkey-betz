@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-13T23:20:27+00:00",
+    "generated": "2026-07-14T03:27:32+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "aa3dccc509b6",
-    "doc_count": 2583,
-    "commit_count": 7916,
+    "git_head": "eaccf3acfb02",
+    "doc_count": 2585,
+    "commit_count": 7918,
     "confidence_breakdown": {
-      "HIGH": 1639,
+      "HIGH": 1640,
       "MEDIUM": 402,
       "LOW": 6,
-      "UNKNOWN": 536
+      "UNKNOWN": 537
     },
     "excludes": [
       "docs/archive/",
@@ -2587,7 +2587,7 @@
         2745,
         2749
       ],
-      "commit_count": 1270,
+      "commit_count": 1272,
       "prs": [
         10,
         11,
@@ -3167,7 +3167,8 @@
         3161,
         3162,
         3163,
-        3164
+        3164,
+        3165
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7509,7 +7510,7 @@
         2745,
         2749
       ],
-      "commit_count": 218,
+      "commit_count": 220,
       "prs": [
         2213,
         2219,
@@ -7692,7 +7693,8 @@
         3161,
         3162,
         3163,
-        3164
+        3164,
+        3165
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -19925,13 +19927,28 @@
     },
     "docs/handoffs/SESSION_2776_PA_WRAPPER_OWNERSHIP_CHECK_RATIFIED.md": {
       "originating_session": 2776,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "eaccf3ac",
+      "first_commit_date": "2026-07-13",
+      "first_commit_subject": "feat(pa): S2776 N21 pa_local.sh wrapper token/pin ownership check (#3165)",
+      "sessions_touched": [
+        2776
+      ],
+      "commit_count": 2,
+      "prs": [
+        3165
+      ]
+    },
+    "docs/handoffs/SESSION_2777_ZOOM_OUT_CLASSIFICATIONS_HELPER_RATIFIED.md": {
+      "originating_session": 2777,
       "confidence": "LOW",
       "match_source": "frontmatter",
       "first_commit_sha": null,
       "first_commit_date": null,
       "first_commit_subject": null,
       "sessions_touched": [
-        2776
+        2777
       ],
       "commit_count": 0,
       "prs": []
@@ -37042,6 +37059,19 @@
       "commit_count": 2,
       "prs": [
         3163
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-13_pa_wrapper_ownership_check.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "eaccf3ac",
+      "first_commit_date": "2026-07-13",
+      "first_commit_subject": "feat(pa): S2776 N21 pa_local.sh wrapper token/pin ownership check (#3165)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3165
       ]
     },
     "docs/research/implementation/RATIFICATION_2026-07-13_session_freshness_verdicts_jsonl.md": {
