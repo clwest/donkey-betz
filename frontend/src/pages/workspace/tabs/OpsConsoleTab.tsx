@@ -4,7 +4,7 @@
  * Replaces the generic System tab with actionable ops data.
  */
 
-import { useEffect, useRef, useState, Suspense, lazy } from 'react'
+import { useEffect, useMemo, useRef, useState, Suspense, lazy } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -417,6 +417,40 @@ export function OpsConsoleTab() {
   const resetLedgerFilters = () => {
     setLedgerFilters({ sessionMin: '', sessionMax: '', envelopeOnly: false, dateFrom: '', dateTo: '', text: '' })
     setLedgerLimit(LEDGER_LIMIT_DEFAULT)
+  }
+
+  // S2781 N17: session_number pill inside the search chip.
+  // When the search text is a 4- or 5-digit numeric literal, expose a
+  // one-click promotion "→ S{num}" that swaps the substring text search
+  // for an exact session-scope filter (fast, precise). Regex tightened
+  // to 4-5 digits per S2781 T1 SIGN V2 fold (all real session numbers
+  // >= 1000, so <4-digit inputs are noisy typos, not intent).
+  const parsedSessionFromText = useMemo(
+    () => (/^\d{4,5}$/.test(ledgerFilters.text) ? Number(ledgerFilters.text) : null),
+    [ledgerFilters.text],
+  )
+  // S2781 T1 SIGN V3 mitigation: 5-second Undo chip so a misclick on
+  // the pill doesn't silently destroy the operator's typed query.
+  const [n17UndoState, setN17UndoState] = useState<{ prevText: string } | null>(null)
+  useEffect(() => {
+    if (!n17UndoState) return
+    const t = window.setTimeout(() => setN17UndoState(null), 5000)
+    return () => window.clearTimeout(t)
+  }, [n17UndoState])
+  const promoteToSessionFilter = (num: number) => {
+    setN17UndoState({ prevText: ledgerFilters.text })
+    setLedgerFilters((f) => ({
+      ...f,
+      sessionMin: String(num),
+      sessionMax: String(num),
+      text: '',
+    }))
+  }
+  const undoSessionPromotion = () => {
+    if (!n17UndoState) return
+    const restored = n17UndoState.prevText
+    setLedgerFilters((f) => ({ ...f, sessionMin: '', sessionMax: '', text: restored }))
+    setN17UndoState(null)
   }
 
   // S2765: recent recycle events — JSONL-backed (logs/recycle_events.jsonl,
@@ -869,15 +903,46 @@ export function OpsConsoleTab() {
               aria-label="Date to"
             />
             {/* S2771 N14: text search input — debounced 200ms; case-insensitive
-                substring match against the full handoff body server-side. */}
-            <input
-              type="search"
-              placeholder="search text…"
-              value={ledgerFilters.text}
-              onChange={(e) => setLedgerFilters((f) => ({ ...f, text: e.target.value }))}
-              className="ml-2 flex-1 min-w-[8rem] max-w-[18rem] px-2 py-1 bg-dark-bg border border-dark-border rounded text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-primary-500/40"
-              aria-label="Search handoff body text"
-            />
+                substring match against the full handoff body server-side.
+                S2781 N17: wraps input in a relative div so the session-pill /
+                undo-chip can absolute-position inside the right edge. */}
+            <div className="relative ml-2 flex-1 min-w-[8rem] max-w-[18rem]">
+              <input
+                type="search"
+                placeholder="search text…"
+                value={ledgerFilters.text}
+                onChange={(e) => setLedgerFilters((f) => ({ ...f, text: e.target.value }))}
+                className="w-full pr-20 px-2 py-1 bg-dark-bg border border-dark-border rounded text-gray-300 placeholder:text-gray-600 focus:outline-none focus:border-primary-500/40"
+                aria-label="Search handoff body text"
+              />
+              {/* S2781 N17: session_number pill — appears when text is a
+                  4-5 digit numeric literal AND no undo is pending. Click
+                  promotes text → sessionMin=sessionMax and clears text. */}
+              {parsedSessionFromText !== null && !n17UndoState && (
+                <button
+                  type="button"
+                  onClick={() => promoteToSessionFilter(parsedSessionFromText)}
+                  title={`Jump to session ${parsedSessionFromText} (converts text search to exact session filter)`}
+                  aria-label={`Jump to session ${parsedSessionFromText} — replaces text search with session filter`}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-primary-500/40 text-primary-300 text-xs font-mono bg-dark-card hover:bg-primary-500/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary-500/60 transition-colors"
+                >
+                  → S{parsedSessionFromText}
+                </button>
+              )}
+              {/* S2781 T1 SIGN V3: 5-second Undo chip — restores the prior
+                  text if the operator misclicked the promotion pill. */}
+              {n17UndoState && (
+                <button
+                  type="button"
+                  onClick={undoSessionPromotion}
+                  title="Restore prior search text (5s window)"
+                  aria-label="Undo session filter promotion and restore prior search text"
+                  className="absolute right-1 top-1/2 -translate-y-1/2 px-1.5 py-0.5 rounded border border-amber-500/40 text-amber-300 text-xs font-mono bg-dark-card hover:bg-amber-500/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-amber-500/60 transition-colors"
+                >
+                  ↩ Undo
+                </button>
+              )}
+            </div>
             {ledgerFiltersActive && (
               <button
                 type="button"
