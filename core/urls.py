@@ -108,6 +108,10 @@ from core.views_ops_console import (
     recent_recycles,
 )
 
+from core.views_governance import (
+    zoom_out_ledger,
+)
+
 from core.views_pa_whoami import pa_whoami
 
 from core.views_ats_optimization import (
@@ -2407,6 +2411,10 @@ urlpatterns = [
     path('api/ops/health-summary/', health_summary, name='ops-health-summary'),
     path('api/ops/close-ceremony-ledger/', close_ceremony_ledger, name='ops-close-ceremony-ledger'),
     path('api/ops/recent-recycles/', recent_recycles, name='ops-recent-recycles'),
+
+    # S2780 N22 v3: Governance ledger REST endpoint (separate namespace
+    # from /api/ops/* per S2779 V6 fold + S2780 V7 fold A).
+    path('api/governance/zoom-out-ledger/', zoom_out_ledger, name='governance-zoom-out-ledger'),
 
     # Spider Dashboard API endpoints
     path('api/spider/stats/', lambda r: __import__('ai_core.api.spider_api', fromlist=['SpiderStatsAPI']).SpiderStatsAPI.as_view()(r), name='spider_stats'),

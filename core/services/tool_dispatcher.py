@@ -222,6 +222,7 @@ class ToolResult:
 from core.services.td_handlers_agents import AgentHandlersMixin
 from core.services.td_handlers_content import ContentHandlersMixin
 from core.services.td_handlers_ops import OpsHandlersMixin
+from core.services.td_handlers_governance import GovernanceHandlersMixin
 from core.services.td_handlers_core import CoreHandlersMixin
 from core.services.td_handlers_gateway import GatewayHandlersMixin
 from core.services.td_handlers_codejobs import CodeJobHandlersMixin
@@ -235,7 +236,7 @@ from core.services.td_handlers_employee import EmployeeHandlersMixin
 from core.services.pa_identity import PA_IDENTITY
 
 
-class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin, CoreHandlersMixin, GatewayHandlersMixin, CodeJobHandlersMixin, RailwayToolMixin, NewsletterHandlersMixin, RigbyWorkQueueReviewMixin, RigbyShiftBriefMixin, EmployeeHandlersMixin):
+class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin, GovernanceHandlersMixin, CoreHandlersMixin, GatewayHandlersMixin, CodeJobHandlersMixin, RailwayToolMixin, NewsletterHandlersMixin, RigbyWorkQueueReviewMixin, RigbyShiftBriefMixin, EmployeeHandlersMixin):
     """
     Centralized dispatcher for all PA tool executions.
 
@@ -497,6 +498,11 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
 
         # Session 1078: Ops tool — version, SLO status, failure signatures
         self.register("ops_tool", self._handle_ops)
+
+        # S2780 N22 v3: Zoom-out tool — dedicated governance ledger surface
+        # (factored out from ops_tool per S2779 V6 fold Trigger B firing).
+        # Read path for logs/zoom_out_classifications.jsonl per PLAYBOOK-6.10.8.
+        self.register("zoom_out_tool", self._handle_zoom_out)
         # Session 1202 §A.2 — Diagnostic telemetry surface (read-only)
         self.register("diagnostics_tool", self._handle_diagnostics)
 
