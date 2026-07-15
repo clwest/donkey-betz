@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-14T22:02:27+00:00",
+    "generated": "2026-07-14T22:47:03+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "d6859acfab07",
+    "git_head": "39b69d820247",
     "doc_count": 2597,
-    "commit_count": 7958,
+    "commit_count": 7962,
     "confidence_breakdown": {
-      "HIGH": 1649,
+      "HIGH": 1650,
       "MEDIUM": 402,
-      "LOW": 6,
+      "LOW": 5,
       "UNKNOWN": 540
     },
     "excludes": [
@@ -2590,7 +2590,7 @@
         2745,
         2749
       ],
-      "commit_count": 1290,
+      "commit_count": 1292,
       "prs": [
         10,
         11,
@@ -3180,7 +3180,8 @@
         3178,
         3180,
         3182,
-        3184
+        3184,
+        3186
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7522,7 +7523,7 @@
         2745,
         2749
       ],
-      "commit_count": 238,
+      "commit_count": 240,
       "prs": [
         2213,
         2219,
@@ -7715,7 +7716,8 @@
         3178,
         3180,
         3182,
-        3184
+        3184,
+        3186
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20098,16 +20100,18 @@
     },
     "docs/handoffs/SESSION_2786_PLAYBOOK_V0_8_0_RATIFIED.md": {
       "originating_session": 2786,
-      "confidence": "LOW",
-      "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "421f0f6f",
+      "first_commit_date": "2026-07-14",
+      "first_commit_subject": "docs(cascade): S2786 close cascade \u2014 handoff + start-here + INDEX + provenance (#3186)",
       "sessions_touched": [
         2786
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3186
+      ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
       "originating_session": 280,
