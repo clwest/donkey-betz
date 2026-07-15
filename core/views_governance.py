@@ -34,6 +34,7 @@ _GOVERNANCE_ALLOWED_PARAMS__ZOOM_OUT_LEDGER: frozenset[str] = frozenset({
     'classification',
     'arc',
     'limit',
+    'include',
 })
 
 
@@ -116,6 +117,8 @@ def zoom_out_ledger(request):
         payload['arc'] = request.GET.get('arc')
     if 'limit' in request.GET:
         payload['limit'] = request.GET.get('limit')
+    if 'include' in request.GET:
+        payload['include'] = request.GET.get('include')
 
     try:
         result = _call_zoom_out_tool(
