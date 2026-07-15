@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-15T21:10:30+00:00",
+    "generated": "2026-07-15T21:45:59+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "e5be876fe814",
-    "doc_count": 2603,
-    "commit_count": 7978,
+    "git_head": "43b6ef8af1d9",
+    "doc_count": 2604,
+    "commit_count": 7982,
     "confidence_breakdown": {
-      "HIGH": 1654,
+      "HIGH": 1655,
       "MEDIUM": 402,
       "LOW": 5,
       "UNKNOWN": 542
@@ -2590,7 +2590,7 @@
         2745,
         2749
       ],
-      "commit_count": 1300,
+      "commit_count": 1302,
       "prs": [
         10,
         11,
@@ -3185,7 +3185,8 @@
         3188,
         3190,
         3192,
-        3194
+        3194,
+        3196
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7527,7 +7528,7 @@
         2745,
         2749
       ],
-      "commit_count": 248,
+      "commit_count": 250,
       "prs": [
         2213,
         2219,
@@ -7725,7 +7726,8 @@
         3188,
         3190,
         3192,
-        3194
+        3194,
+        3196
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20207,6 +20209,21 @@
       "commit_count": 2,
       "prs": [
         3194
+      ]
+    },
+    "docs/handoffs/SESSION_2791_SIGN_LEDGER_DRILLDOWN.md": {
+      "originating_session": 2791,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "1d52cf34",
+      "first_commit_date": "2026-07-15",
+      "first_commit_subject": "docs(cascade): S2791 close cascade \u2014 handoff + start-here + INDEX + provenance (#3196)",
+      "sessions_touched": [
+        2791
+      ],
+      "commit_count": 2,
+      "prs": [
+        3196
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
