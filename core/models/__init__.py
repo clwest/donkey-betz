@@ -221,6 +221,9 @@ from ..models_workflow_run import WorkflowRun
 # Import ops runs (Context Packet #9 - Ops Observability)
 from ..models_ops_runs import OpsRun, OpsRunEvent
 
+# Import Tenant Boundary Health (S2794 N23 — RUR-C1 substrate)
+from ..models_tenant_boundary_health import TenantBoundaryHealthReport
+
 # Session 1250 PR 6 - RigbyWorkItem (internal operational queue)
 from ..models_rigby_work_items import RigbyWorkItem
 
@@ -545,6 +548,9 @@ __all__ = [
     # Ops Runs (Context Packet #9)
     'OpsRun',
     'OpsRunEvent',
+
+    # Tenant Boundary Health (S2794 N23 — RUR-C1 substrate)
+    'TenantBoundaryHealthReport',
 
     # Impact Events (Session 1089 - Autonomy #8)
     'ImpactEvent',

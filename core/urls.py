@@ -109,6 +109,7 @@ from core.views_ops_console import (
 )
 
 from core.views_governance import (
+    tenant_boundary_health,
     zoom_out_ledger,
 )
 
@@ -2415,6 +2416,10 @@ urlpatterns = [
     # S2780 N22 v3: Governance ledger REST endpoint (separate namespace
     # from /api/ops/* per S2779 V6 fold + S2780 V7 fold A).
     path('api/governance/zoom-out-ledger/', zoom_out_ledger, name='governance-zoom-out-ledger'),
+
+    # S2794 N23: RUR-C1 tenant boundary health surface (Workspace tab consumes).
+    path('api/governance/tenant-boundary-health/', tenant_boundary_health,
+         name='governance-tenant-boundary-health'),
 
     # Spider Dashboard API endpoints
     path('api/spider/stats/', lambda r: __import__('ai_core.api.spider_api', fromlist=['SpiderStatsAPI']).SpiderStatsAPI.as_view()(r), name='spider_stats'),
