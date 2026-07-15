@@ -27,6 +27,9 @@ Regression: `core/tests/test_pilot_gates_authz_sweep_2789.py` (21 tests, all pas
 
 ## Deferred to S2790+ (mechanical continuation)
 
+**S2790 UPDATE:** `/api/time-travel/` prefix CLOSED (PR pending — 11 endpoints gated with `@token_auth_required`, `@csrf_exempt` removed per S2787 pattern, regression `core/tests/test_time_travel_authz_sweep_2790.py` = 44 tests). Ungated remaining: 65 (was 76).
+
+
 The remaining ungated-true-mutating candidates by prefix (each a per-prefix ship candidate for future sessions):
 
 | Prefix | Endpoints | Ship priority | Notes |
