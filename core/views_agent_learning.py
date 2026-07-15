@@ -3710,6 +3710,7 @@ def get_pilot_gate_detail(request, gate_id):
 
 
 @require_http_methods(["POST"])
+@token_auth_required
 def update_gate_status(request, gate_id):
     """
     Update gate status (start, ready, approve, block, decline).
@@ -3777,6 +3778,7 @@ def update_gate_status(request, gate_id):
 
 
 @require_http_methods(["POST"])
+@token_auth_required
 def update_checklist_item(request, gate_id, item_id):
     """
     Update a checklist item status.
@@ -3843,6 +3845,7 @@ def update_checklist_item(request, gate_id, item_id):
 
 
 @require_http_methods(["POST"])
+@token_auth_required
 def create_pilot_gate(request, decision_id):
     """
     Create a pilot readiness gate for a decision.
@@ -3894,6 +3897,7 @@ def create_pilot_gate(request, decision_id):
 
 
 @require_http_methods(["POST"])
+@token_auth_required
 def start_pilot_execution(request, gate_id):
     """
     Session 592: Create and start a pilot execution for an approved gate.
@@ -3976,6 +3980,7 @@ def start_pilot_execution(request, gate_id):
 
 
 @require_http_methods(["POST"])
+@token_auth_required
 def complete_pilot_execution(request, gate_id, pilot_id):
     """
     Session 592: Complete a running pilot execution.
@@ -4045,6 +4050,7 @@ def complete_pilot_execution(request, gate_id, pilot_id):
 
 
 @require_http_methods(["POST"])
+@token_auth_required
 def regenerate_checklist_content(request, gate_id):
     """
     Session 594: Regenerate AI content for checklist items.
@@ -4101,6 +4107,7 @@ def regenerate_checklist_content(request, gate_id):
 
 
 @require_http_methods(["POST"])
+@token_auth_required
 def approve_all_checklist_items(request, gate_id):
     """
     Session 594: Approve all checklist items that have AI-generated content.
