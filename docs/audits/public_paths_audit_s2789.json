@@ -1,0 +1,1321 @@
+{
+  "ungated_true_mutating": [
+    {
+      "path": "/api/neural-orchestra/reality-check/",
+      "prefix": "/api/neural-orchestra/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_neural_orchestra.py",
+      "view_line": 293,
+      "mutation_hits": [
+        "cache\\.clear\\("
+      ]
+    },
+    {
+      "path": "/api/teams/create/",
+      "prefix": "/api/teams/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_team_collaboration.py",
+      "view_line": 132,
+      "mutation_hits": [
+        "\\.objects\\.create\\(",
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/teams/roles/create/",
+      "prefix": "/api/teams/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_team_collaboration.py",
+      "view_line": 51,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/teams/<uuid:team_id>/members/",
+      "prefix": "/api/teams/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_team_collaboration.py",
+      "view_line": 263,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/teams/messages/",
+      "prefix": "/api/teams/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_team_collaboration.py",
+      "view_line": 317,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/teams/workflows/<uuid:workflow_id>/start/",
+      "prefix": "/api/teams/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_team_collaboration.py",
+      "view_line": 535,
+      "mutation_hits": [
+        "\\.objects\\.create\\(",
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/teams/workflows/<uuid:workflow_id>/steps/<uuid:step_id>/complete/",
+      "prefix": "/api/teams/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_team_collaboration.py",
+      "view_line": 670,
+      "mutation_hits": [
+        "\\.objects\\.create\\(",
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/distribution/platforms/create/",
+      "prefix": "/api/distribution/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_distribution.py",
+      "view_line": 79,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/distribution/content/<uuid:distribution_id>/submit/",
+      "prefix": "/api/distribution/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_distribution.py",
+      "view_line": 390,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/distribution/content/<uuid:distribution_id>/publish/",
+      "prefix": "/api/distribution/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_distribution.py",
+      "view_line": 427,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/distribution/content/<uuid:distribution_id>/sale/",
+      "prefix": "/api/distribution/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_distribution.py",
+      "view_line": 465,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/distribution/recommendations/",
+      "prefix": "/api/distribution/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_distribution.py",
+      "view_line": 511,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/distribution/gumroad/webhook/",
+      "prefix": "/api/distribution/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_platform_integrations.py",
+      "view_line": 1052,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/v1/research/self-blog/<uuid:blog_id>/delete/",
+      "prefix": "/api/v1/research/self-blog/",
+      "methods": [
+        "DELETE"
+      ],
+      "view_file": "core/views_research_demo.py",
+      "view_line": 872,
+      "mutation_hits": [
+        "\\.delete\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/v1/research/self-blog/<uuid:blog_id>/approve/",
+      "prefix": "/api/v1/research/self-blog/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_research_demo.py",
+      "view_line": 902,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/v1/research/self-blog/<uuid:blog_id>/publish/",
+      "prefix": "/api/v1/research/self-blog/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_research_demo.py",
+      "view_line": 944,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/v1/research/self-blog/<uuid:blog_id>/enhance/",
+      "prefix": "/api/v1/research/self-blog/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_research_demo.py",
+      "view_line": 1005,
+      "mutation_hits": [
+        "\\.delay\\("
+      ]
+    },
+    {
+      "path": "/api/v1/research/self-blog/generate/",
+      "prefix": "/api/v1/research/self-blog/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_research_demo.py",
+      "view_line": 1052,
+      "mutation_hits": [
+        "\\.delay\\("
+      ]
+    },
+    {
+      "path": "/api/v1/research/self-blog/generate-v2/",
+      "prefix": "/api/v1/research/self-blog/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_research_demo.py",
+      "view_line": 1107,
+      "mutation_hits": [
+        "\\.delay\\("
+      ]
+    },
+    {
+      "path": "/api/initiatives/trigger/",
+      "prefix": "/api/initiatives/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_research_demo.py",
+      "view_line": 1999,
+      "mutation_hits": [
+        "\\.delay\\("
+      ]
+    },
+    {
+      "path": "/api/initiatives/<uuid:initiative_id>/action-items/create/",
+      "prefix": "/api/initiatives/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_research_demo.py",
+      "view_line": 2267,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/action-items/<uuid:item_id>/",
+      "prefix": "/api/action-items/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_research_demo.py",
+      "view_line": 2141,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/action-items/<uuid:item_id>/delete/",
+      "prefix": "/api/action-items/",
+      "methods": [
+        "DELETE"
+      ],
+      "view_file": "core/views_research_demo.py",
+      "view_line": 2353,
+      "mutation_hits": [
+        "\\.delete\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/spider-dashboard/execute/",
+      "prefix": "/api/spider-dashboard/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_spider_dashboard.py",
+      "view_line": 198,
+      "mutation_hits": [
+        "\\.delay\\("
+      ]
+    },
+    {
+      "path": "/api/spider-health/executions/<uuid:execution_id>/retry/",
+      "prefix": "/api/spider-health/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_spider_dashboard.py",
+      "view_line": 438,
+      "mutation_hits": [
+        "\\.objects\\.create\\(",
+        "\\.save\\(\\)",
+        "\\.delay\\("
+      ]
+    },
+    {
+      "path": "/api/spider-health/run/<str:spider_name>/",
+      "prefix": "/api/spider-health/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_spider_dashboard.py",
+      "view_line": 531,
+      "mutation_hits": [
+        "\\.save\\(\\)",
+        "\\.delay\\("
+      ]
+    },
+    {
+      "path": "/api/spider-intelligence/run-all/",
+      "prefix": "/api/spider-intelligence/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_spider_intelligence.py",
+      "view_line": 961,
+      "mutation_hits": [
+        "\\.delay\\("
+      ]
+    },
+    {
+      "path": "/api/spider-feed/<uuid:item_id>/annotate/",
+      "prefix": "/api/spider-feed/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_spider_feed.py",
+      "view_line": 281,
+      "mutation_hits": [
+        "\\.objects\\.update_or_create\\("
+      ]
+    },
+    {
+      "path": "/api/agent-dreams/trigger/",
+      "prefix": "/api/agent-dreams/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 1337,
+      "mutation_hits": [
+        "\\.delay\\("
+      ]
+    },
+    {
+      "path": "/api/agent-dreams/mark-shown/",
+      "prefix": "/api/agent-dreams/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 1367,
+      "mutation_hits": [
+        "\\.filter\\([^)]*\\)\\.update\\("
+      ]
+    },
+    {
+      "path": "/api/agent-dreams/<uuid:dream_id>/react/",
+      "prefix": "/api/agent-dreams/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 1413,
+      "mutation_hits": [
+        "\\.objects\\.create\\(",
+        "\\.save\\(\\)",
+        "\\.delay\\("
+      ]
+    },
+    {
+      "path": "/api/pilot-gates/<uuid:gate_id>/status/",
+      "prefix": "/api/pilot-gates/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 3712,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/pilot-gates/<uuid:gate_id>/items/<uuid:item_id>/",
+      "prefix": "/api/pilot-gates/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 3779,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/pilot-gates/<uuid:gate_id>/pilot/",
+      "prefix": "/api/pilot-gates/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 3896,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/pilot-gates/<uuid:gate_id>/pilot/<uuid:pilot_id>/complete/",
+      "prefix": "/api/pilot-gates/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 3978,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/pilot-gates/<uuid:gate_id>/regenerate/",
+      "prefix": "/api/pilot-gates/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 4047,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/pilot-gates/<uuid:gate_id>/approve-all/",
+      "prefix": "/api/pilot-gates/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 4103,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/experiments/<uuid:experiment_id>/update-kpi/",
+      "prefix": "/api/experiments/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 4672,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/experiments/<uuid:experiment_id>/complete/",
+      "prefix": "/api/experiments/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 4778,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/experiments/<uuid:experiment_id>/raise-target/",
+      "prefix": "/api/experiments/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 4721,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/hive-mind/start/",
+      "prefix": "/api/hive-mind/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_hive_mind.py",
+      "view_line": 19,
+      "mutation_hits": [
+        "\\.objects\\.create\\(",
+        "\\.save\\(\\)",
+        "\\.delay\\("
+      ]
+    },
+    {
+      "path": "/api/memory-palace/memory/<uuid:memory_id>/delete/",
+      "prefix": "/api/memory-palace/",
+      "methods": [
+        "DELETE"
+      ],
+      "view_file": "core/views_memory_palace.py",
+      "view_line": 612,
+      "mutation_hits": [
+        "\\.delete\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/memory-palace/connect/",
+      "prefix": "/api/memory-palace/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_memory_palace.py",
+      "view_line": 447,
+      "mutation_hits": [
+        "\\.objects\\.get_or_create\\(",
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/agent-relationships/create/",
+      "prefix": "/api/agent-relationships/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_relationships.py",
+      "view_line": 158,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/agent-relationships/relationship/<uuid:relationship_id>/interact/",
+      "prefix": "/api/agent-relationships/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_relationships.py",
+      "view_line": 211,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/agent-relationships/auto-generate/",
+      "prefix": "/api/agent-relationships/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_relationships.py",
+      "view_line": 319,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/agent-evolution/agent/<uuid:agent_id>/award-xp/",
+      "prefix": "/api/agent-evolution/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_evolution.py",
+      "view_line": 182,
+      "mutation_hits": [
+        "\\.objects\\.get_or_create\\("
+      ]
+    },
+    {
+      "path": "/api/agent-evolution/agent/<uuid:agent_id>/task/",
+      "prefix": "/api/agent-evolution/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_evolution.py",
+      "view_line": 498,
+      "mutation_hits": [
+        "\\.objects\\.get_or_create\\(",
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/agent-evolution/agent/<uuid:agent_id>/unlock/<uuid:ability_id>/",
+      "prefix": "/api/agent-evolution/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_evolution.py",
+      "view_line": 337,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/agent-evolution/abilities/create/",
+      "prefix": "/api/agent-evolution/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_evolution.py",
+      "view_line": 290,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/agent-evolution/initialize/",
+      "prefix": "/api/agent-evolution/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_evolution.py",
+      "view_line": 465,
+      "mutation_hits": [
+        "\\.objects\\.get_or_create\\("
+      ]
+    },
+    {
+      "path": "/api/time-travel/session/start/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 197,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/time-travel/session/<uuid:session_id>/end/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 232,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/time-travel/session/<uuid:session_id>/bookmark/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 263,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/time-travel/decision/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 291,
+      "mutation_hits": [
+        "\\.objects\\.create\\(",
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/time-travel/decision/<uuid:decision_id>/outcome/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 351,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/time-travel/decision/<uuid:decision_id>/flag/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 375,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/time-travel/bookmark/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 403,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/time-travel/bookmark/<uuid:bookmark_id>/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "DELETE"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 445,
+      "mutation_hits": [
+        "\\.delete\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/time-travel/annotation/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 464,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/time-travel/annotation/<uuid:annotation_id>/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "DELETE"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 497,
+      "mutation_hits": [
+        "\\.delete\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/time-travel/agent/<uuid:agent_id>/simulate/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 658,
+      "mutation_hits": [
+        "\\.objects\\.create\\(",
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/memory-clusters/agent/<uuid:agent_id>/",
+      "prefix": "/api/memory-clusters/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_memory_clusters.py",
+      "view_line": 102,
+      "mutation_hits": [
+        "\\.objects\\.create\\(",
+        "\\.filter\\([^)]*\\)\\.delete\\(",
+        "\\.delete\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/memory-clusters/generate-all/",
+      "prefix": "/api/memory-clusters/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_memory_clusters.py",
+      "view_line": 392,
+      "mutation_hits": [
+        "\\.filter\\([^)]*\\)\\.delete\\(",
+        "\\.delete\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/memory-clusters/cluster/<uuid:cluster_id>/add-memory/",
+      "prefix": "/api/memory-clusters/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_memory_clusters.py",
+      "view_line": 441,
+      "mutation_hits": [
+        "\\.objects\\.get_or_create\\("
+      ]
+    },
+    {
+      "path": "/api/memory-clusters/cluster/<uuid:cluster_id>/memory/<uuid:memory_id>/",
+      "prefix": "/api/memory-clusters/",
+      "methods": [
+        "DELETE"
+      ],
+      "view_file": "core/views_memory_clusters.py",
+      "view_line": 493,
+      "mutation_hits": [
+        "\\.delete\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/autonomous/triggers/<uuid:trigger_id>/update/",
+      "prefix": "/api/autonomous/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_autonomous_dashboard.py",
+      "view_line": 877,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/legal/cases/",
+      "prefix": "/api/legal/cases/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_legal_cases.py",
+      "view_line": 31,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/legal/cases/<uuid:case_id>/",
+      "prefix": "/api/legal/cases/",
+      "methods": [
+        "DELETE",
+        "PUT"
+      ],
+      "view_file": "core/views_legal_cases.py",
+      "view_line": 181,
+      "mutation_hits": [
+        "\\.objects\\.create\\(",
+        "\\.save\\(\\)",
+        "\\.delete\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/legal/cases/<uuid:case_id>/children/",
+      "prefix": "/api/legal/cases/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_legal_cases.py",
+      "view_line": 396,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/legal/cases/<uuid:case_id>/children/<uuid:child_id>/",
+      "prefix": "/api/legal/cases/",
+      "methods": [
+        "DELETE"
+      ],
+      "view_file": "core/views_legal_cases.py",
+      "view_line": 425,
+      "mutation_hits": [
+        "\\.delete\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/legal/cases/<uuid:case_id>/documents/",
+      "prefix": "/api/legal/cases/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_legal_cases.py",
+      "view_line": 450,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/legal/cases/<uuid:case_id>/documents/<uuid:document_id>/",
+      "prefix": "/api/legal/cases/",
+      "methods": [
+        "DELETE"
+      ],
+      "view_file": "core/views_legal_cases.py",
+      "view_line": 484,
+      "mutation_hits": [
+        "\\.delete\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/audit-tracking/findings/<uuid:finding_id>/status/",
+      "prefix": "/api/audit-tracking/findings/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_audit_tracking.py",
+      "view_line": 159,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/v1/telemetry/page-view/",
+      "prefix": "/api/v1/telemetry/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_telemetry.py",
+      "view_line": 27,
+      "mutation_hits": [
+        "cache\\.set\\("
+      ]
+    },
+    {
+      "path": "/api/newsletter/subscribe/",
+      "prefix": "/api/newsletter/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_newsletter.py",
+      "view_line": 17,
+      "mutation_hits": [
+        "\\.objects\\.get_or_create\\("
+      ]
+    }
+  ],
+  "gated_mutating": 143,
+  "admin": 611,
+  "ungated_no_mutation_evidence": [
+    {
+      "path": "/api/agents/execute/",
+      "prefix": "/api/agents/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_real_data.py",
+      "view_line": 60,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/discord/verify-link-code/",
+      "prefix": "/api/discord/verify-link-code/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_discord.py",
+      "view_line": 140,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/opportunities/<uuid:opportunity_id>/rescore/",
+      "prefix": "/api/opportunities/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_opportunity.py",
+      "view_line": 556,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/teams/workflows/<uuid:workflow_id>/execute/",
+      "prefix": "/api/teams/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_team_collaboration.py",
+      "view_line": 936,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/teams/workflows/<uuid:workflow_id>/run/",
+      "prefix": "/api/teams/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_team_collaboration.py",
+      "view_line": 1028,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/distribution/seed/",
+      "prefix": "/api/distribution/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_distribution.py",
+      "view_line": 973,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/initiatives/<uuid:initiative_id>/action-items/extract/",
+      "prefix": "/api/initiatives/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_research_demo.py",
+      "view_line": 2386,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/action-items/extract/",
+      "prefix": "/api/action-items/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_research_demo.py",
+      "view_line": 2386,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/initiatives/<uuid:initiative_id>/founder-intent/",
+      "prefix": "/api/initiatives/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_research_demo.py",
+      "view_line": 2580,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/learning/baseline/",
+      "prefix": "/api/learning/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_ai_learning_api.py",
+      "view_line": 20,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/learning/collect/",
+      "prefix": "/api/learning/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_ai_learning_api.py",
+      "view_line": 68,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/learning/analyze/",
+      "prefix": "/api/learning/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_ai_learning_api.py",
+      "view_line": 112,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/learning/synthesize/",
+      "prefix": "/api/learning/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_ai_learning_api.py",
+      "view_line": 170,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/learning/save/",
+      "prefix": "/api/learning/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_ai_learning_api.py",
+      "view_line": 270,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/spider-intelligence/insights/",
+      "prefix": "/api/spider-intelligence/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_spider_intelligence.py",
+      "view_line": 258,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/spider-feed/<uuid:item_id>/vote/",
+      "prefix": "/api/spider-feed/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_spider_feed.py",
+      "view_line": 367,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/pilot-gates/create/<uuid:decision_id>/",
+      "prefix": "/api/pilot-gates/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 3845,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/pilots/<uuid:pilot_id>/implement/",
+      "prefix": "/api/pilots/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 4339,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/experiments/<uuid:experiment_id>/halt/",
+      "prefix": "/api/experiments/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 4876,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/experiments/<uuid:experiment_id>/remediation/",
+      "prefix": "/api/experiments/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 5050,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/experiments/kpis/update/",
+      "prefix": "/api/experiments/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_learning.py",
+      "view_line": 5465,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/hive-mind/preview/",
+      "prefix": "/api/hive-mind/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_hive_mind.py",
+      "view_line": 243,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/memory-palace/create/",
+      "prefix": "/api/memory-palace/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_memory_palace.py",
+      "view_line": 178,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/memory-palace/search/",
+      "prefix": "/api/memory-palace/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_memory_palace.py",
+      "view_line": 234,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/memory-palace/assign/",
+      "prefix": "/api/memory-palace/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_memory_palace.py",
+      "view_line": 374,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/agent-evolution/agent/<uuid:agent_id>/prestige/",
+      "prefix": "/api/agent-evolution/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_agent_evolution.py",
+      "view_line": 224,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/memory-clusters/find-similar/",
+      "prefix": "/api/memory-clusters/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_memory_clusters.py",
+      "view_line": 560,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/autonomous/situations/<str:situation_type>/toggle/",
+      "prefix": "/api/autonomous/situations/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_autonomous_dashboard.py",
+      "view_line": 422,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/autonomous/situations/<str:situation_type>/run-now/",
+      "prefix": "/api/autonomous/situations/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_autonomous_dashboard.py",
+      "view_line": 451,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/autonomous/triggers/<uuid:trigger_id>/toggle/",
+      "prefix": "/api/autonomous/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_autonomous_dashboard.py",
+      "view_line": 945,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/autonomous/triggers/<uuid:trigger_id>/reset-cooldown/",
+      "prefix": "/api/autonomous/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_autonomous_dashboard.py",
+      "view_line": 978,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/learning/trigger/",
+      "prefix": "/api/learning/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_learning_path.py",
+      "view_line": 17,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/stripe/webhook/",
+      "prefix": "/api/stripe/webhook/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_stripe.py",
+      "view_line": 23,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/legal/active-case/",
+      "prefix": "/api/legal/active-case/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_legal_cases.py",
+      "view_line": 588,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/immune/quarantine/",
+      "prefix": "/api/immune/quarantine/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_immune.py",
+      "view_line": 220,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/immune/quarantine/<str:entity_type>/<str:entity_value>/",
+      "prefix": "/api/immune/quarantine/",
+      "methods": [
+        "DELETE"
+      ],
+      "view_file": "core/views_immune.py",
+      "view_line": 318,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/audit-tracking/findings/<uuid:finding_id>/task/",
+      "prefix": "/api/audit-tracking/findings/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_audit_tracking.py",
+      "view_line": 232,
+      "mutation_hits": []
+    },
+    {
+      "path": "/api/audit-tracking/findings/<uuid:finding_id>/verify/",
+      "prefix": "/api/audit-tracking/findings/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_audit_tracking.py",
+      "view_line": 284,
+      "mutation_hits": []
+    }
+  ],
+  "unknown": 63
+}
