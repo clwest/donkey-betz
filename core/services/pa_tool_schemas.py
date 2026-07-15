@@ -2621,7 +2621,11 @@ PA_TOOL_SCHEMAS = [
             "Response embeds `advisory` header + `is_gate: false` + `semantics: "
             "\"advisory_pattern_evidence\"` to prevent advisory→gate drift. "
             "Use during joint SIGN loops to consult prior zoom-out folds before "
-            "repeating them, or to answer 'what did we surface last time on this arc?'."
+            "repeating them, or to answer 'what did we surface last time on this arc?'. "
+            "Optional `include=aggregations` returns arc/rule-target counts for "
+            "drill-down triage (S2791 UI parity); aggregations are advisory "
+            "summaries, not gates or standalone proposals — cite underlying "
+            "rows when making recommendations."
         ),
         "parameters": {
             "type": "object",
@@ -2637,7 +2641,10 @@ PA_TOOL_SCHEMAS = [
                         "includes `total_rows` + `counts_by_classification` "
                         "aggregates over the FULL ledger, plus filtered `items` "
                         "tail-window. Fail-soft: returns empty list with diagnostic "
-                        "note when the log file is missing."
+                        "note when the log file is missing. Pass `include=aggregations` "
+                        "to add a `aggregations` block with `top_arcs_by_count`, "
+                        "`future_trigger_rule_targets` (PLAYBOOK-x.y[.z] regex hits "
+                        "over future_trigger rows only), and `sessions_covered`."
                     ),
                 },
                 "session": {
@@ -2660,6 +2667,27 @@ PA_TOOL_SCHEMAS = [
                 "limit": {
                     "type": "integer",
                     "description": "Max results (default 20, max 100).",
+                },
+                "include": {
+                    "type": "string",
+                    "description": (
+                        "Comma-separated opt-in expansions. Currently supports "
+                        "'aggregations' — adds an `aggregations` block with "
+                        "`top_arcs_by_count` (top 20 arcs by row count), "
+                        "`future_trigger_rule_targets` (PLAYBOOK-x.y[.z] regex "
+                        "hits parsed from concern_text of future_trigger rows "
+                        "only, aggregated across the FULL ledger not the "
+                        "filtered tail), and `sessions_covered` (sorted list of "
+                        "distinct integer session numbers). ADVISORY POSTURE: "
+                        "the aggregations block embeds `is_gate:false` + "
+                        "`semantics:advisory_pattern_evidence`; rule_target counts "
+                        "are pattern evidence, NOT rule-codification proposals. "
+                        "Any downstream workflow acting on rule_target counts "
+                        "must also retrieve + quote the underlying future_trigger "
+                        "rows via `classification=future_trigger` — Chris D-verdict "
+                        "remains the explicit gate for any codification or "
+                        "policy-change decision. Omit for pure filter-tail response."
+                    ),
                 },
             },
             "required": ["action"],
