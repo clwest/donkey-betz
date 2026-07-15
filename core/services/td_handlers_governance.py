@@ -56,9 +56,16 @@ class GovernanceHandlersMixin:
 
         Filters:
           session: int (exact-match on originating session)
+          since_session: int (inclusive lower bound on originating session; S2793 N22 v2)
+          until_session: int (inclusive upper bound on originating session; S2793 N22 v2)
           classification: enum (same_pr_actionable / same_pr_mitigatable / future_trigger)
           arc: str (substring match on arc slug)
           limit: int (default 20, max 100) — tail window
+
+        Note: since_session/until_session narrow items[] only. The
+        aggregations block (when include=aggregations) still computes over
+        ALL rows to preserve longitudinal-signal semantics — see
+        test_zoom_out_time_window_2793.py contract 6 for the locked invariant.
 
         Path-traversal defense mirrors ``_ops_recent_recycles`` — resolve
         against BASE_DIR and refuse reads that escape the tree. Malformed
@@ -111,6 +118,22 @@ class GovernanceHandlersMixin:
                     session_filter = candidate
             except (TypeError, ValueError):
                 session_filter = None
+
+        # S2793 N22 v2: session-int window filters. Same autofill guard —
+        # session=0 or negative treated as "no filter" (LLM/UI empty-input
+        # normalization). Timestamp-based windows deferred as future_trigger
+        # per S2793 Fold 3.
+        def _parse_session_bound(raw):
+            if raw is None:
+                return None
+            try:
+                candidate = int(raw)
+            except (TypeError, ValueError):
+                return None
+            return candidate if candidate > 0 else None
+
+        since_session_filter = _parse_session_bound(payload.get('since_session'))
+        until_session_filter = _parse_session_bound(payload.get('until_session'))
 
         log_path = Path(settings.BASE_DIR) / 'logs' / 'zoom_out_classifications.jsonl'
         resolved = log_path.resolve()
@@ -197,6 +220,18 @@ class GovernanceHandlersMixin:
             filtered = [r for r in filtered if r.get('classification') == classification_filter]
         if session_filter is not None:
             filtered = [r for r in filtered if r.get('session') == session_filter]
+        if since_session_filter is not None:
+            filtered = [
+                r for r in filtered
+                if isinstance(r.get('session'), int)
+                and r['session'] >= since_session_filter
+            ]
+        if until_session_filter is not None:
+            filtered = [
+                r for r in filtered
+                if isinstance(r.get('session'), int)
+                and r['session'] <= until_session_filter
+            ]
         if arc_filter:
             filtered = [r for r in filtered if arc_filter in (r.get('arc') or '')]
 
@@ -220,6 +255,10 @@ class GovernanceHandlersMixin:
             result['classification_filter'] = classification_filter
         if session_filter is not None:
             result['session_filter'] = session_filter
+        if since_session_filter is not None:
+            result['since_session_filter'] = since_session_filter
+        if until_session_filter is not None:
+            result['until_session_filter'] = until_session_filter
         if arc_filter:
             result['arc_filter'] = arc_filter
 
