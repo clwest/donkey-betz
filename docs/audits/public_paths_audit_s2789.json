@@ -625,140 +625,6 @@
       ]
     },
     {
-      "path": "/api/time-travel/session/start/",
-      "prefix": "/api/time-travel/",
-      "methods": [
-        "POST"
-      ],
-      "view_file": "core/views_time_travel.py",
-      "view_line": 197,
-      "mutation_hits": [
-        "\\.objects\\.create\\("
-      ]
-    },
-    {
-      "path": "/api/time-travel/session/<uuid:session_id>/end/",
-      "prefix": "/api/time-travel/",
-      "methods": [
-        "POST"
-      ],
-      "view_file": "core/views_time_travel.py",
-      "view_line": 232,
-      "mutation_hits": [
-        "\\.save\\(\\)"
-      ]
-    },
-    {
-      "path": "/api/time-travel/session/<uuid:session_id>/bookmark/",
-      "prefix": "/api/time-travel/",
-      "methods": [
-        "POST"
-      ],
-      "view_file": "core/views_time_travel.py",
-      "view_line": 263,
-      "mutation_hits": [
-        "\\.save\\(\\)"
-      ]
-    },
-    {
-      "path": "/api/time-travel/decision/",
-      "prefix": "/api/time-travel/",
-      "methods": [
-        "POST"
-      ],
-      "view_file": "core/views_time_travel.py",
-      "view_line": 291,
-      "mutation_hits": [
-        "\\.objects\\.create\\(",
-        "\\.save\\(\\)"
-      ]
-    },
-    {
-      "path": "/api/time-travel/decision/<uuid:decision_id>/outcome/",
-      "prefix": "/api/time-travel/",
-      "methods": [
-        "POST"
-      ],
-      "view_file": "core/views_time_travel.py",
-      "view_line": 351,
-      "mutation_hits": [
-        "\\.save\\(\\)"
-      ]
-    },
-    {
-      "path": "/api/time-travel/decision/<uuid:decision_id>/flag/",
-      "prefix": "/api/time-travel/",
-      "methods": [
-        "POST"
-      ],
-      "view_file": "core/views_time_travel.py",
-      "view_line": 375,
-      "mutation_hits": [
-        "\\.save\\(\\)"
-      ]
-    },
-    {
-      "path": "/api/time-travel/bookmark/",
-      "prefix": "/api/time-travel/",
-      "methods": [
-        "POST"
-      ],
-      "view_file": "core/views_time_travel.py",
-      "view_line": 403,
-      "mutation_hits": [
-        "\\.objects\\.create\\("
-      ]
-    },
-    {
-      "path": "/api/time-travel/bookmark/<uuid:bookmark_id>/",
-      "prefix": "/api/time-travel/",
-      "methods": [
-        "DELETE"
-      ],
-      "view_file": "core/views_time_travel.py",
-      "view_line": 445,
-      "mutation_hits": [
-        "\\.delete\\(\\)"
-      ]
-    },
-    {
-      "path": "/api/time-travel/annotation/",
-      "prefix": "/api/time-travel/",
-      "methods": [
-        "POST"
-      ],
-      "view_file": "core/views_time_travel.py",
-      "view_line": 464,
-      "mutation_hits": [
-        "\\.objects\\.create\\("
-      ]
-    },
-    {
-      "path": "/api/time-travel/annotation/<uuid:annotation_id>/",
-      "prefix": "/api/time-travel/",
-      "methods": [
-        "DELETE"
-      ],
-      "view_file": "core/views_time_travel.py",
-      "view_line": 497,
-      "mutation_hits": [
-        "\\.delete\\(\\)"
-      ]
-    },
-    {
-      "path": "/api/time-travel/agent/<uuid:agent_id>/simulate/",
-      "prefix": "/api/time-travel/",
-      "methods": [
-        "POST"
-      ],
-      "view_file": "core/views_time_travel.py",
-      "view_line": 658,
-      "mutation_hits": [
-        "\\.objects\\.create\\(",
-        "\\.save\\(\\)"
-      ]
-    },
-    {
       "path": "/api/memory-clusters/agent/<uuid:agent_id>/",
       "prefix": "/api/memory-clusters/",
       "methods": [
@@ -1317,5 +1183,142 @@
       "mutation_hits": []
     }
   ],
-  "unknown": 63
+  "unknown": 63,
+  "closed_at_S2790": [
+    {
+      "path": "/api/time-travel/session/start/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 197,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/time-travel/session/<uuid:session_id>/end/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 232,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/time-travel/session/<uuid:session_id>/bookmark/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 263,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/time-travel/decision/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 291,
+      "mutation_hits": [
+        "\\.objects\\.create\\(",
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/time-travel/decision/<uuid:decision_id>/outcome/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 351,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/time-travel/decision/<uuid:decision_id>/flag/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 375,
+      "mutation_hits": [
+        "\\.save\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/time-travel/bookmark/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 403,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/time-travel/bookmark/<uuid:bookmark_id>/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "DELETE"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 445,
+      "mutation_hits": [
+        "\\.delete\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/time-travel/annotation/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 464,
+      "mutation_hits": [
+        "\\.objects\\.create\\("
+      ]
+    },
+    {
+      "path": "/api/time-travel/annotation/<uuid:annotation_id>/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "DELETE"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 497,
+      "mutation_hits": [
+        "\\.delete\\(\\)"
+      ]
+    },
+    {
+      "path": "/api/time-travel/agent/<uuid:agent_id>/simulate/",
+      "prefix": "/api/time-travel/",
+      "methods": [
+        "POST"
+      ],
+      "view_file": "core/views_time_travel.py",
+      "view_line": 658,
+      "mutation_hits": [
+        "\\.objects\\.create\\(",
+        "\\.save\\(\\)"
+      ]
+    }
+  ],
+  "s2789_pilot_gates_closed": true
 }
