@@ -83,6 +83,8 @@ const CLASSIFICATION_STYLES: Record<string, { label: string; badge: string }> = 
 
 function buildQueryString(filters: {
   session: string
+  sinceSession: string
+  untilSession: string
   classification: ClassificationFilter
   arc: string
   limit: number
@@ -90,8 +92,13 @@ function buildQueryString(filters: {
   // S2791: always request aggregations so the chip strip stays populated
   // even when a filter is applied (aggregations are computed over ALL
   // rows server-side per test_zoom_out_aggregations_2791 contract 1).
+  // S2793 N22 v2: since_session/until_session narrow items[] only —
+  // aggregations still global. See test_zoom_out_time_window_2793
+  // contract 6 for the locked invariant.
   const parts: string[] = [`limit=${filters.limit}`, 'include=aggregations']
   if (filters.session) parts.push(`session=${encodeURIComponent(filters.session)}`)
+  if (filters.sinceSession) parts.push(`since_session=${encodeURIComponent(filters.sinceSession)}`)
+  if (filters.untilSession) parts.push(`until_session=${encodeURIComponent(filters.untilSession)}`)
   if (filters.classification) parts.push(`classification=${filters.classification}`)
   if (filters.arc) parts.push(`arc=${encodeURIComponent(filters.arc)}`)
   return parts.join('&')
@@ -99,13 +106,22 @@ function buildQueryString(filters: {
 
 export function ZoomOutLedgerSection() {
   const [session, setSession] = useState('')
+  const [sinceSession, setSinceSession] = useState('')
+  const [untilSession, setUntilSession] = useState('')
   const [classification, setClassification] = useState<ClassificationFilter>('')
   const [arc, setArc] = useState('')
   const [limit, setLimit] = useState(20)
   const [helpOpen, setHelpOpen] = useState(false)
   const [detailRow, setDetailRow] = useState<ZoomOutRow | null>(null)
 
-  const queryString = buildQueryString({ session, classification, arc, limit })
+  const queryString = buildQueryString({
+    session,
+    sinceSession,
+    untilSession,
+    classification,
+    arc,
+    limit,
+  })
 
   const { data, isLoading, isError } = useQuery<ZoomOutLedgerResponse | null>({
     queryKey: ['governance-zoom-out-ledger', queryString],
@@ -122,7 +138,9 @@ export function ZoomOutLedgerSection() {
     staleTime: 30_000,
   })
 
-  const hasFilters = Boolean(session || classification || arc)
+  const hasFilters = Boolean(
+    session || sinceSession || untilSession || classification || arc,
+  )
   const filteredCount = data?.count ?? 0
   const totalRows = data?.total_rows ?? 0
 
@@ -172,6 +190,15 @@ export function ZoomOutLedgerSection() {
             PLAYBOOK-6.10.8 (constitutional at Playbook v0.7.0).
           </p>
           <p>
+            <span className="font-semibold">Filters:</span> session
+            (exact), from S#/to S# window (inclusive session-int range,
+            S2793 N22 v2), classification enum, arc substring. The window
+            filter narrows <span className="font-mono">items[]</span> only —
+            the aggregations chip strip below still computes across the
+            <span className="whitespace-nowrap"> full ledger</span> to
+            preserve longitudinal-signal semantics.
+          </p>
+          <p>
             Each row carries a classification:
           </p>
           <ul className="list-disc pl-5 space-y-1">
@@ -203,6 +230,31 @@ export function ZoomOutLedgerSection() {
           onChange={(e) => setSession(e.target.value.replace(/\D/g, ''))}
           className="w-24 px-2 py-1 rounded bg-dark-bg border border-dark-border text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-primary-500/40"
           aria-label="Filter by session number"
+        />
+        {/* S2793 N22 v2: session-int window filters. Aggregations remain
+            over ALL rows — see the "aggregations remain longitudinal"
+            note in the section footer. */}
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="from S#"
+          value={sinceSession}
+          onChange={(e) => setSinceSession(e.target.value.replace(/\D/g, ''))}
+          className="w-20 px-2 py-1 rounded bg-dark-bg border border-dark-border text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-primary-500/40"
+          aria-label="Window start (inclusive session number)"
+          title="Inclusive lower bound on session number (aggregations remain global)"
+        />
+        <input
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="to S#"
+          value={untilSession}
+          onChange={(e) => setUntilSession(e.target.value.replace(/\D/g, ''))}
+          className="w-20 px-2 py-1 rounded bg-dark-bg border border-dark-border text-gray-200 placeholder:text-gray-600 focus:outline-none focus:border-primary-500/40"
+          aria-label="Window end (inclusive session number)"
+          title="Inclusive upper bound on session number (aggregations remain global)"
         />
         <select
           value={classification}
@@ -239,6 +291,8 @@ export function ZoomOutLedgerSection() {
             type="button"
             onClick={() => {
               setSession('')
+              setSinceSession('')
+              setUntilSession('')
               setClassification('')
               setArc('')
             }}
