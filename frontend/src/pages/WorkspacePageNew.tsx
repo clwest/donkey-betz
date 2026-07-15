@@ -96,6 +96,7 @@ import {
   GovernanceTab,
 } from './workspace/tabs'
 import { ZoomOutLedgerSection } from './workspace/tabs/ZoomOutLedgerSection'
+import { TenantBoundaryHealthSection } from './workspace/tabs/TenantBoundaryHealthSection'
 import { Toast } from './workspace/components'
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
 // PLATFORM_TABS/LEGACY_TO_PLATFORM no longer needed — platform merged into workspace
@@ -141,6 +142,7 @@ const primaryTabs: PrimaryTab[] = [
       { id: 'alerts', label: 'Alerts', icon: Bell },
       { id: 'boardroom', label: 'Governance', icon: ClipboardList },
       { id: 'sign-ledger', label: 'SIGN Ledger', icon: ScrollText },
+      { id: 'tenant-boundary', label: 'Tenant Boundary', icon: ShieldAlert },
       { id: 'self-healing', label: 'Self-Healing', icon: Wrench },
       { id: 'autopilot', label: 'Autopilot', icon: Bot },
       { id: 'cost', label: 'Cost', icon: DollarSign },
@@ -1189,6 +1191,9 @@ export default function WorkspacePage() {
           {/* S2780 N22 v3: SIGN Ledger — Chris-facing zoom-out concern ledger. */}
           {activePrimary === 'system' && activeSub === 'sign-ledger' && (
             <ZoomOutLedgerSection />
+          )}
+          {activePrimary === 'system' && activeSub === 'tenant-boundary' && (
+            <TenantBoundaryHealthSection />
           )}
           {/* S2783: Self-Healing — Emergency controls + remediation/audit runners. */}
           {activePrimary === 'system' && activeSub === 'self-healing' && (
