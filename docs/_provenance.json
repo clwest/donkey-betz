@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-15T10:58:34+00:00",
+    "generated": "2026-07-15T13:42:15+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "8cf1e73a29fa",
-    "doc_count": 2601,
-    "commit_count": 7970,
+    "git_head": "29c69911e3b4",
+    "doc_count": 2602,
+    "commit_count": 7974,
     "confidence_breakdown": {
-      "HIGH": 1652,
+      "HIGH": 1653,
       "MEDIUM": 402,
       "LOW": 5,
       "UNKNOWN": 542
@@ -2590,7 +2590,7 @@
         2745,
         2749
       ],
-      "commit_count": 1296,
+      "commit_count": 1298,
       "prs": [
         10,
         11,
@@ -3183,7 +3183,8 @@
         3184,
         3186,
         3188,
-        3190
+        3190,
+        3192
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7525,7 +7526,7 @@
         2745,
         2749
       ],
-      "commit_count": 244,
+      "commit_count": 246,
       "prs": [
         2213,
         2219,
@@ -7721,7 +7722,8 @@
         3184,
         3186,
         3188,
-        3190
+        3190,
+        3192
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -9450,13 +9452,14 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "8cf1e73a",
+      "first_commit_sha": "29c69911",
       "first_commit_date": "2026-07-15",
-      "first_commit_subject": "feat(security): S2789 broader PUBLIC_PATHS audit \u2014 gate 7 pilot-gates POST endpoints (#3191)",
+      "first_commit_subject": "feat(security): S2790 broader PUBLIC_PATHS audit \u2014 gate 11 /api/time-travel/ endpoints (#3193)",
       "sessions_touched": [],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        3191
+        3191,
+        3193
       ]
     },
     "docs/audits/README.md": {
@@ -10290,13 +10293,14 @@
       "originating_session": null,
       "confidence": "UNKNOWN",
       "match_source": null,
-      "first_commit_sha": "8cf1e73a",
+      "first_commit_sha": "29c69911",
       "first_commit_date": "2026-07-15",
-      "first_commit_subject": "feat(security): S2789 broader PUBLIC_PATHS audit \u2014 gate 7 pilot-gates POST endpoints (#3191)",
+      "first_commit_subject": "feat(security): S2790 broader PUBLIC_PATHS audit \u2014 gate 11 /api/time-travel/ endpoints (#3193)",
       "sessions_touched": [],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        3191
+        3191,
+        3193
       ]
     },
     "docs/body/BODY_ARCHITECTURE.md": {
@@ -20171,6 +20175,21 @@
       "commit_count": 2,
       "prs": [
         3190
+      ]
+    },
+    "docs/handoffs/SESSION_2789_BROADER_PUBLIC_PATHS_AUDIT.md": {
+      "originating_session": 2789,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "f2618605",
+      "first_commit_date": "2026-07-15",
+      "first_commit_subject": "docs(cascade): S2789 close cascade \u2014 handoff + start-here + INDEX + provenance (#3192)",
+      "sessions_touched": [
+        2789
+      ],
+      "commit_count": 2,
+      "prs": [
+        3192
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
