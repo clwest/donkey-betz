@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-15T02:19:37+00:00",
+    "generated": "2026-07-15T10:58:34+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "10110f492284",
-    "doc_count": 2598,
-    "commit_count": 7966,
+    "git_head": "8cf1e73a29fa",
+    "doc_count": 2601,
+    "commit_count": 7970,
     "confidence_breakdown": {
-      "HIGH": 1651,
+      "HIGH": 1652,
       "MEDIUM": 402,
       "LOW": 5,
-      "UNKNOWN": 540
+      "UNKNOWN": 542
     },
     "excludes": [
       "docs/archive/",
@@ -2590,7 +2590,7 @@
         2745,
         2749
       ],
-      "commit_count": 1294,
+      "commit_count": 1296,
       "prs": [
         10,
         11,
@@ -3182,7 +3182,8 @@
         3182,
         3184,
         3186,
-        3188
+        3188,
+        3190
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7524,7 +7525,7 @@
         2745,
         2749
       ],
-      "commit_count": 242,
+      "commit_count": 244,
       "prs": [
         2213,
         2219,
@@ -7719,7 +7720,8 @@
         3182,
         3184,
         3186,
-        3188
+        3188,
+        3190
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -9444,6 +9446,19 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/audits/PUBLIC_PATHS_AUDIT_S2789.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "8cf1e73a",
+      "first_commit_date": "2026-07-15",
+      "first_commit_subject": "feat(security): S2789 broader PUBLIC_PATHS audit \u2014 gate 7 pilot-gates POST endpoints (#3191)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3191
+      ]
+    },
     "docs/audits/README.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -10270,6 +10285,19 @@
       "sessions_touched": [],
       "commit_count": 1,
       "prs": []
+    },
+    "docs/audits/public_paths_audit_s2789.json": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "8cf1e73a",
+      "first_commit_date": "2026-07-15",
+      "first_commit_subject": "feat(security): S2789 broader PUBLIC_PATHS audit \u2014 gate 7 pilot-gates POST endpoints (#3191)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3191
+      ]
     },
     "docs/body/BODY_ARCHITECTURE.md": {
       "originating_session": 738,
@@ -20128,6 +20156,21 @@
       "commit_count": 2,
       "prs": [
         3188
+      ]
+    },
+    "docs/handoffs/SESSION_2788_FOLD_C_AUTHZ_AUDIT_SWEEP.md": {
+      "originating_session": 2788,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "ad5d4b52",
+      "first_commit_date": "2026-07-14",
+      "first_commit_subject": "docs(cascade): S2788 close cascade \u2014 handoff + start-here + INDEX + provenance (#3190)",
+      "sessions_touched": [
+        2788
+      ],
+      "commit_count": 2,
+      "prs": [
+        3190
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
