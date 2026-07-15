@@ -40,6 +40,12 @@ _GOVERNANCE_ALLOWED_PARAMS__ZOOM_OUT_LEDGER: frozenset[str] = frozenset({
 })
 
 
+# S2794 N23: tenant boundary health endpoint. Currently no query params;
+# frozenset stays empty but is kept explicit so future extensions must
+# opt-in via allowlist edit (not silently accept a new key).
+_GOVERNANCE_ALLOWED_PARAMS__TENANT_BOUNDARY_HEALTH: frozenset[str] = frozenset()
+
+
 def _reject_unknown_query_params(
     request,
     allowed: frozenset[str],
@@ -147,3 +153,110 @@ def zoom_out_ledger(request):
             'is_gate': False,
             'error': str(e),
         })
+
+
+# ── S2794 N23: Tenant Boundary Health ────────────────────────────────────
+
+_TENANT_BOUNDARY_ADVISORY: str = (
+    "Advisory signal — not a launch gate. "
+    "Human approval required to open the alpha cohort, flip runtime flags, "
+    "or promote the platform out of single-user pre-prod. "
+    "Report data is longitudinal; treat green results as one input among many."
+)
+
+
+@require_GET
+@login_required
+@_governance_staff_only
+def tenant_boundary_health(request):
+    """GET /api/governance/tenant-boundary-health/ — RUR-C1 readiness surface.
+
+    Returns the latest ``TenantBoundaryHealthReport`` (if any) plus the
+    advisory posture, launch-approval policy, and known-gaps list.
+
+    Response shape::
+
+        {
+          "advisory": "Advisory signal — not a launch gate. …",
+          "is_gate": false,
+          "policy": {"launch_approval": "Manual (Chris)"},
+          "latest_report": {
+            "id": "…",
+            "created_at": "2026-…",
+            "env": "local",
+            "git_sha": "…",
+            "runner_identity": "…",
+            "elapsed_secs": 262.2,
+            "total_tests": 324,
+            "passed": 324,
+            "failed": 0,
+            "errored": 0,
+            "skipped": 0,
+            "failing_test_ids": [],
+            "coverage_metadata": {"sync_http_bucket_a_public_endpoints": "covered", …},
+            "overall_status": "green"
+          } | null,
+          "coverage_metadata": {…},  # canonical from service
+          "known_gaps": [
+            "Async Celery task boundary — I-0303 has scoping but no P2+ …",
+            "WebSocket consumer boundary — I-0303 not opened; no coverage",
+            …
+          ]
+        }
+
+    Advisory posture (S2794 F1 mitigation): the response NEVER contains
+    a gate/toggle/flag. Consumers that treat overall_status='green' as
+    permission to open the alpha cohort violate the campaign posture.
+    """
+    reject = _reject_unknown_query_params(
+        request, _GOVERNANCE_ALLOWED_PARAMS__TENANT_BOUNDARY_HEALTH
+    )
+    if reject is not None:
+        return reject
+
+    from core.models import TenantBoundaryHealthReport
+    from core.services.cross_tenant_regression_service import (
+        COVERAGE_METADATA,
+        KNOWN_GAPS,
+    )
+
+    latest = (
+        TenantBoundaryHealthReport.objects
+        .order_by('-created_at')
+        .first()
+    )
+
+    latest_payload = None
+    if latest is not None:
+        latest_payload = {
+            'id': str(latest.id),
+            'created_at': latest.created_at.isoformat() if latest.created_at else None,
+            'env': latest.env,
+            'git_sha': latest.git_sha,
+            'runner_identity': latest.runner_identity,
+            'elapsed_secs': latest.elapsed_secs,
+            'total_tests': latest.total_tests,
+            'passed': latest.passed,
+            'failed': latest.failed,
+            'errored': latest.errored,
+            'skipped': latest.skipped,
+            'failing_test_ids': latest.failing_test_ids or [],
+            'coverage_metadata': latest.coverage_metadata or {},
+            'overall_status': latest.overall_status,
+        }
+
+    return JsonResponse({
+        'advisory': _TENANT_BOUNDARY_ADVISORY,
+        'is_gate': False,
+        'policy': {
+            'launch_approval': 'Manual (Chris)',
+            'reason': (
+                'RUR-C1 CAMPAIGN.md — parent closes only when I-0301 + I-0302 + '
+                'I-0303 all pass shared cross-tenant regression. Even at 100% '
+                'pass, alpha cohort open requires explicit Chris ratification.'
+            ),
+        },
+        'latest_report': latest_payload,
+        'coverage_metadata': dict(COVERAGE_METADATA),
+        'known_gaps': list(KNOWN_GAPS),
+    })
