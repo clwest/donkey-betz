@@ -2635,7 +2635,9 @@ PA_TOOL_SCHEMAS = [
                     "enum": ["list"],
                     "description": (
                         "list: read tail of logs/zoom_out_classifications.jsonl. "
-                        "Filters: session (int, exact match), classification "
+                        "Filters: session (int, exact match), since_session/"
+                        "until_session (int, inclusive window on originating "
+                        "session; S2793 N22 v2), classification "
                         "(same_pr_actionable / same_pr_mitigatable / future_trigger), "
                         "arc (substring), limit (default 20, max 100). Response "
                         "includes `total_rows` + `counts_by_classification` "
@@ -2650,6 +2652,30 @@ PA_TOOL_SCHEMAS = [
                 "session": {
                     "type": "integer",
                     "description": "Filter by originating session number (exact match, e.g. 2778). Omit for all sessions.",
+                },
+                "since_session": {
+                    "type": "integer",
+                    "description": (
+                        "Inclusive lower bound on originating session number "
+                        "(e.g. 2777). Combine with until_session for a "
+                        "session-int window (e.g. since_session=2780, "
+                        "until_session=2792 returns rows from S2780-S2792). "
+                        "ADVISORY POSTURE: window narrows `items[]` only — the "
+                        "`aggregations` block (when include=aggregations) still "
+                        "computes over ALL rows to preserve longitudinal-signal "
+                        "semantics. See test_zoom_out_time_window_2793 contract "
+                        "6 for the locked invariant. Zero or negative treated as "
+                        "'no filter' (autofill guard)."
+                    ),
+                },
+                "until_session": {
+                    "type": "integer",
+                    "description": (
+                        "Inclusive upper bound on originating session number "
+                        "(e.g. 2792). Same advisory posture as since_session — "
+                        "narrows items[] only; aggregations stay global. Zero "
+                        "or negative treated as 'no filter'."
+                    ),
                 },
                 "classification": {
                     "type": "string",
