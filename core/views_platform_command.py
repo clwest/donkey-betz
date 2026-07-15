@@ -2478,11 +2478,15 @@ def self_healing_progress_view(request):
 
 
 @require_GET
+@login_required
+@_platform_staff_only
 def celery_debug_view(request):
     """
     GET /api/platform/celery-debug/
 
     Session 842: Debug endpoint to check Celery status and recent task activity.
+    S2788 Fold C tightening: staff-only + removed from PUBLIC_PATHS
+    (previously anon-reachable, leaked redis/beat/periodic-task state).
     """
     from django.conf import settings
     from core.models_unified_system import AgentExecution
@@ -2627,14 +2631,18 @@ def celery_debug_view(request):
         }, status=500)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@login_required
+@_platform_staff_only
 def cleanup_stale_executions_view(request):
     """
     POST /api/platform/cleanup-stale-executions/
 
     Session 842: Manually trigger cleanup of stale agent executions.
     Useful when Celery Beat is not running and tasks are stuck.
+
+    S2788 Fold C: staff-only + removed from PUBLIC_PATHS
+    (previously anon-reachable POST mutation).
 
     Query params:
         hours_threshold: Hours before marking as stale (default 2)
@@ -2693,13 +2701,16 @@ def cleanup_stale_executions_view(request):
         }, status=500)
 
 
-@csrf_exempt
 @require_http_methods(["POST", "DELETE"])
+@login_required
+@_platform_staff_only
 def delete_failed_executions_view(request):
     """
     DELETE /api/platform/delete-failed-executions/
 
     Session 895: Delete old failed agent executions to clean up the UI.
+
+    S2788 Fold C: staff-only (previously any-authed-user-reachable).
 
     Query params:
         hours_old: Only delete failures older than this (default 1)

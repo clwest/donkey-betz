@@ -450,8 +450,10 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/self-healing/progress/',  # Live remediation progress
 
         # Session 842: Celery Debug & Cleanup (for production debugging)
-        '/api/platform/celery-debug/',  # Celery status and stale task info
-        '/api/platform/cleanup-stale-executions/',  # Manual cleanup of stuck tasks
+        # S2788 Fold C: '/api/platform/celery-debug/' and
+        # '/api/platform/cleanup-stale-executions/' removed — both are now
+        # staff-only per S2772 N16 contract (leaked infra info / anon-reachable
+        # POST mutation respectively).
 
         # Session 1069: Internal config snapshot (no secrets, for cross-service comparison)
         '/api/internal/config-snapshot/',
