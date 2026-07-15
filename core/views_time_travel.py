@@ -12,6 +12,7 @@ from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 from django.db.models import Count, Avg
 
+from .auth_middleware import token_auth_required
 from .models_unified_system import (
     AgentSession, DecisionPoint, ThoughtBubble, ReplayBookmark, DebugAnnotation, Agent
 )
@@ -194,8 +195,8 @@ def get_session_detail(request, session_id):
 # SESSION MANAGEMENT
 # =============================================================================
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@token_auth_required
 def start_session(request):
     """Start a new debug session for an agent.
     Session 750: Fixed to accept agent_id from request body instead of URL param.
@@ -229,8 +230,8 @@ def start_session(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@token_auth_required
 def end_session(request, session_id):
     """End a debug session."""
     try:
@@ -260,8 +261,8 @@ def end_session(request, session_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@token_auth_required
 def toggle_bookmark_session(request, session_id):
     """Toggle bookmark on a session."""
     try:
@@ -288,8 +289,8 @@ def toggle_bookmark_session(request, session_id):
 # DECISION POINT MANAGEMENT
 # =============================================================================
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@token_auth_required
 def record_decision(request):
     """Record a decision point during agent execution.
     Session 750: Fixed to accept session_id from request body instead of URL param.
@@ -348,8 +349,8 @@ def record_decision(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@token_auth_required
 def update_decision_outcome(request, decision_id):
     """Update the outcome of a decision after execution."""
     try:
@@ -372,8 +373,8 @@ def update_decision_outcome(request, decision_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@token_auth_required
 def flag_decision(request, decision_id):
     """Flag a decision for review."""
     try:
@@ -400,8 +401,8 @@ def flag_decision(request, decision_id):
 # BOOKMARKS & ANNOTATIONS
 # =============================================================================
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@token_auth_required
 def create_bookmark(request):
     """Create a bookmark at a specific decision point.
     Session 750: Fixed to accept session_id from request body instead of URL param.
@@ -442,8 +443,8 @@ def create_bookmark(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@csrf_exempt
 @require_http_methods(["DELETE"])
+@token_auth_required
 def delete_bookmark(request, bookmark_id):
     """Delete a bookmark."""
     try:
@@ -461,8 +462,8 @@ def delete_bookmark(request, bookmark_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@token_auth_required
 def add_annotation(request):
     """Add an annotation to a decision point.
     Session 750: Fixed to accept decision_id from request body instead of URL param.
@@ -494,8 +495,8 @@ def add_annotation(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@csrf_exempt
 @require_http_methods(["DELETE"])
+@token_auth_required
 def delete_annotation(request, annotation_id):
     """Delete an annotation."""
     try:
@@ -655,8 +656,8 @@ def get_agent_sessions(request, agent_id):
 # SIMULATE DEBUG SESSION (for demo/testing)
 # =============================================================================
 
-@csrf_exempt
 @require_http_methods(["POST"])
+@token_auth_required
 def simulate_session(request, agent_id):
     """Create a simulated debug session for testing the UI.
     Session 750: Enhanced with realistic data instead of placeholders.
