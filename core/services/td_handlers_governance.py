@@ -69,9 +69,17 @@ class GovernanceHandlersMixin:
         via ``record_zoom_out_concern``). This handler is the read path.
         """
         import json
+        import re
         from collections import Counter
         from pathlib import Path
         from django.conf import settings
+
+        # PLAYBOOK-x.y.z (or x.y for two-level) captured verbatim from
+        # concern_text of future_trigger rows for aggregation. Matches the
+        # forms Rigby uses in her SIGN folds (see e.g. row 47/50 in the
+        # ledger). Case-insensitive; requires at least one dot to avoid
+        # picking up bare "PLAYBOOK-6".
+        _PLAYBOOK_RULE_RE = re.compile(r'PLAYBOOK-\d+\.\d+(?:\.\d+)?', re.IGNORECASE)
 
         # Advisory language: keep in sync with
         # core/management/commands/zoom_out_streak_report.py ADVISORY_HEADER.
@@ -214,4 +222,46 @@ class GovernanceHandlersMixin:
             result['session_filter'] = session_filter
         if arc_filter:
             result['arc_filter'] = arc_filter
+
+        # S2791: opt-in aggregations for the Sign Ledger drill-down UI.
+        # Advisory posture preserved — computed over ALL rows (not filter
+        # window) but never affects gating; is_gate stays False.
+        include_raw = payload.get('include')
+        include_tokens = set()
+        if isinstance(include_raw, str):
+            include_tokens = {
+                t.strip().lower() for t in include_raw.split(',') if t.strip()
+            }
+        elif isinstance(include_raw, (list, tuple)):
+            include_tokens = {
+                str(t).strip().lower() for t in include_raw if str(t).strip()
+            }
+        if 'aggregations' in include_tokens:
+            arc_counter: Counter[str] = Counter()
+            rule_target_counter: Counter[str] = Counter()
+            sessions_seen: set[int] = set()
+            for r in all_rows:
+                arc = r.get('arc') or ''
+                if arc:
+                    arc_counter[arc] += 1
+                sess = r.get('session')
+                if isinstance(sess, int):
+                    sessions_seen.add(sess)
+                if r.get('classification') == 'future_trigger':
+                    concern = r.get('concern_text') or ''
+                    for m in _PLAYBOOK_RULE_RE.findall(concern):
+                        rule_target_counter[m.upper()] += 1
+            result['aggregations'] = {
+                'top_arcs_by_count': [
+                    {'arc': arc, 'count': n}
+                    for arc, n in arc_counter.most_common(20)
+                ],
+                'future_trigger_rule_targets': [
+                    {'rule_id': rid, 'count': n}
+                    for rid, n in rule_target_counter.most_common()
+                ],
+                'sessions_covered': sorted(sessions_seen),
+                'is_gate': False,
+                'semantics': 'advisory_pattern_evidence',
+            }
         return result
