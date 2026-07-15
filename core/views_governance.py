@@ -31,6 +31,8 @@ _governance_staff_only = user_passes_test(
 # ── Query-param allowlists ───────────────────────────────────────────────
 _GOVERNANCE_ALLOWED_PARAMS__ZOOM_OUT_LEDGER: frozenset[str] = frozenset({
     'session',
+    'since_session',
+    'until_session',
     'classification',
     'arc',
     'limit',
@@ -98,9 +100,15 @@ def zoom_out_ledger(request):
 
     Query params (all optional):
       session: int — filter by originating session (exact match)
+      since_session: int — inclusive lower bound on originating session (S2793 N22 v2)
+      until_session: int — inclusive upper bound on originating session (S2793 N22 v2)
       classification: enum — same_pr_actionable / same_pr_mitigatable / future_trigger
       arc: str — substring match on arc slug
       limit: int — tail window size (default 20, max 100)
+      include: str — comma-separated opt-in blocks (e.g., 'aggregations')
+
+    Note: since_session/until_session narrow items[] only. Aggregations
+    remain computed over ALL rows to preserve longitudinal-signal semantics.
     """
     reject = _reject_unknown_query_params(
         request, _GOVERNANCE_ALLOWED_PARAMS__ZOOM_OUT_LEDGER
@@ -111,6 +119,10 @@ def zoom_out_ledger(request):
     payload: Dict[str, Any] = {'action': 'list'}
     if 'session' in request.GET:
         payload['session'] = request.GET.get('session')
+    if 'since_session' in request.GET:
+        payload['since_session'] = request.GET.get('since_session')
+    if 'until_session' in request.GET:
+        payload['until_session'] = request.GET.get('until_session')
     if 'classification' in request.GET:
         payload['classification'] = request.GET.get('classification')
     if 'arc' in request.GET:
