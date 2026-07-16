@@ -2,140 +2,135 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2796 CLOSED — `td_handlers_ops` validation slice 1 (4 tools)
+## READ THIS FIRST — SESSION 2797 CLOSED — public landing page at `/welcome` (first user-visible market ship)
 
-**Refreshed 2026-07-15 (SESSION 2796 CLOSED — engineering-first session #10 in row. Session opened with a market-shipping priority signal from Chris ("we need to start making real progress to get this app to market and getting some users") — persisted as `project_market_shipping_priority_2026_07_15`. Chris picked `td_handlers_ops` slice (from the S2795 gap map's top 5 triage slices) — the cheapest cheapest AND user-visible payoff because Rigby-as-operator surface reliability directly affects Chris's autonomy. Ship: 4 per-tool validation docs (`ops_tool`, `status_snapshot_tool`, `diagnostics_tool`, `active_priority_tool`) using Rigby's 6-section template. Doc-only per Chris "validation quickest" — no code changes, no regression tests. Rigby T1 SIGN-WITH-EDITS with 8+ `repo_tool` tool_runs verifying schemas + handlers + no-pre-existing-docs. 4 folds classified + persisted BEFORE Chris D-verdict per PLAYBOOK-6.10.8: F1 doc evidence admission (adopted), F2 6-section doc template (adopted), F3 5th-tool `scheduled_tasks_tool` deferred (Rigby Z2), F4 next-incident-critical slice named in PR body (Rigby Z4). Latent classifier bug caught mid-ship: gap-map `NEXT_HEADING_RE` truncates parse at first h3 — restructured 4 docs to flat bulleted list under `## Covered actions` with per-action inline admission markers. Second regen confirmed all 4 upgraded from `validated_partial` to `validated_full`. Full 17-suite regression 318 tests OK (3.7s, unchanged from S2795 close — no code). Post-merge dogfood deferred to Rigby's first autonomous `build_pa_tool_audit` invocation (still-pending trigger from S2795). Rigby SIGN response non-truncated (sample size 7 — pattern very strongly holds). THIRTY-SIXTH close-cycle post-PLAYBOOK-7.4.4.)**
+**Refreshed 2026-07-15 (SESSION 2797 CLOSED — engineering-first session #11 in row, and first user-visible / market-shipping ship after 10 substrate sessions. Direct payoff of `project_market_shipping_priority_2026_07_15` persisted at S2796 open. Ship: public unauth `/welcome` route with LandingPage.tsx — 3-CTA marketing surface Chris can share with prospects. Ship shape A: ultra-static, zero backend, two mailto CTAs (primary open-ended + secondary pre-filled with lead-quality fields), copy in editable constants at top of file. NOVEL — Chris-caught positioning miss at T2: initial v1 copy anchored on 'sports betting' framing (violated `feedback_cycle_1a_verify_before_build` — skipped `docs/PLATFORM_WHAT_IT_IS.md`). Chris caught it before merge; rewrote to 'AI with receipts' framing centered on the verifiable-operating-model IP + new 'How it looks in practice' section featuring 3 real session receipts (S2795 duplicate-work catch, S2796 evidence-admission pushback, S2797 live-in-this-session V4 verification-limits admission). The receipts ARE the marketing. T3 tagline tightening post-merge (Chris tightened hero to 'AI with receipts.' / 'One AI proposes. One AI verifies. You decide with proof.') — direct evidence of the Rigby F3 editable-constants pattern working as intended. 4 folds classified + persisted BEFORE Chris D-verdict per PLAYBOOK-6.10.8. Rigby T1 SIGN-WITH-EDITS with 3 tool_runs (including repo-wide search returning 0 matches for 'Waitlist' + honest V4 admission she couldn't fully certify without additional file read). THIRTY-SEVENTH close-cycle post-PLAYBOOK-7.4.4.)**
 
-**S2796 ship:**
+**S2797 ship:**
 
-**PR #3205 · `ec44778f9`** — 7 files, +972 / -161. 4 new per-tool validation docs (~430 lines total) + new S2796 gap map snapshot + refreshed DOC-AUTOGEN'd `PA_TOOL_AUDIT.md` + fresh session pin. Zero code changes.
+**PR #3207 · `63aa705f5`** — 4 files, +296 / -2. New `LandingPage.tsx` (~280 lines) + `App.tsx` route wiring + `LoginPage.tsx` "Learn more" link + fresh session pin. T2 copy pivot from sports-betting to "AI with receipts" bundled into same PR. T3 tagline tightening bundled into close-cascade PR below.
 
-**Handoff:** `docs/handoffs/SESSION_2796_TD_HANDLERS_OPS_SLICE1.md`
-**Post-merge:** `make recycle-all` per PLAYBOOK-7.4.4 completed (thirty-sixth cycle, sha=`ec44778f9de1`).
-**Ledger state at close:** `logs/zoom_out_classifications.jsonl` — **68 rows** (28 same_pr_actionable / 23 same_pr_mitigatable / 16 future_trigger).
+**Handoff:** `docs/handoffs/SESSION_2797_PUBLIC_LANDING_PAGE.md`
+**Post-merge:** `make recycle-all` per PLAYBOOK-7.4.4 completed (thirty-seventh cycle).
+**Ledger state at close:** `logs/zoom_out_classifications.jsonl` — **72 rows** (29 same_pr_actionable / 23 same_pr_mitigatable / 16 future_trigger).
 
-**Gap map delta at close:** `untested 105 → 101 (-4)`, `validated_full 0 → 4 (+4)`, `validated_doc_exists_unknown 8 → 8 (unchanged)`.
-
----
-
-## SESSION-OPEN INFRA STORY (S2796)
-
-Engineering-first session #10 in row. **First market-shipping priority signal from Chris** — refines (does not replace) `feedback_engineering_bias_over_audit`. User-visible / UX / feature-shipping leans now go FIRST in candidate menus; substrate leans below with explicit trigger justification. Chris still picked substrate this session (validation slice) because it has direct user-visible payoff via Rigby-as-operator reliability.
-
-**Latent bug caught mid-ship:** gap-map classifier's `NEXT_HEADING_RE = re.compile(r'\n#+\s+', ...)` cuts the "Covered actions" parse at the first h3 sub-heading. My initial docs used `## Covered actions` + `### In scope` + `### Deferred` structure — classifier only saw the intro paragraph (zero backticks) and classified as `validated_partial`. Restructured to flat bulleted list under `## Covered actions` with per-action inline admission markers (e.g. `` - `version` — **in scope this ship** — ... `` / `` - `slo_status` — runtime-not-executed. ...``). Second regen confirmed 4 tools upgraded to `validated_full`. **Doc-note follow-up:** annotate the S2795 F2 6-section template spec to warn future authors about the h3 truncation.
-
-**Evidence capture pattern established:** dispatched Rigby to invoke 3 tools in one PA turn (`status_snapshot`, `diagnostics.advisor_invocations`, `active_priority.list`) — got live observed-run snippets for all 3 docs. Combined with earlier `ops_tool.version` + `ops_tool.recent_recycles` observations from freshness check, every doc has real observed-run evidence in §Evidence per F1 requirement.
+**Live URL:** `http://localhost:8000/welcome` — first user-visible marketing surface on the platform.
 
 ---
 
-## S2797 CANDIDATES (Chris selects at open)
+## SESSION-OPEN INFRA STORY (S2797)
+
+Engineering-first session #11 in row. **First user-visible market-shipping ship** after 10 sessions of substrate. Chris's market-shipping priority signal (persisted at S2796 open) held at S2797 candidate menu.
+
+**Novel-precedent moment — Chris-caught positioning miss at T2 review.** T1 copy anchored on the name (sports betting). Chris caught: *"why is the Welcome focused on sports betting if that's not the core part of the platform?"* Root cause: skipped `docs/PLATFORM_WHAT_IT_IS.md` before writing marketing copy despite it being source #1 in `context-kit orient`. Direct `feedback_cycle_1a_verify_before_build` violation. Corrected via same-PR pivot to "AI with receipts" framing centered on the verifiable-operating-model IP.
+
+**The "How it looks in practice" section is self-illustrating.** Three real session receipts on the landing page — S2795 (Rigby found `build_pa_tool_audit` before Claude built a duplicate), S2796 (Rigby's evidence-admission pushback), S2797-in-this-session (Rigby's V4 admission she couldn't fully certify without an additional file read). The Chris-catch at T2 review + the same-PR correction is itself an example of the pattern working — the T2 commit body explicitly names the violation as evidence. Meta-alignment: the miss became content.
+
+**T3 tagline tightening** (Chris asked mid-close): copy iterated without another PR round-trip or SIGN cycle, direct evidence of Rigby's F3 editable-constants-at-top-of-file pattern working as designed.
+
+---
+
+## S2798 CANDIDATES (Chris selects at open)
 
 ### First — freshness/regression sanity
 
-**Post-cascade freshness check:** wrapper pin retired (S2796 close); freshness should be FRESH · SHA-match at S2796 close SHA `ec44778f9` (or cascade PR merge SHA).
-**Ledger baseline:** 68 rows expected (28/23/16). Any drift = investigate.
-**Regression 17-suite:** 318 tests OK at S2796 close.
-**Gap map:** `docs/audits/PA_TOOLS_GAP_MAP_S2796.md` (4 full · 0 partial · 8 unknown · 101 untested).
+**Post-cascade freshness check:** wrapper pin retired (S2797 close); freshness should be FRESH · SHA-match at S2797 close SHA (or cascade PR merge SHA).
+**Ledger baseline:** 72 rows expected (29/23/16). Any drift = investigate.
+**Regression 17-suite:** 318 tests OK at S2796 close (S2797 was frontend-only — no backend regression risk).
 
-### Net-new engineering (⭐ recommended per `feedback_engineering_bias_over_audit` + `project_market_shipping_priority`)
+### Net-new engineering (⭐ user-visible / market-shipping leans first per `project_market_shipping_priority`)
 
-**⭐ USER-VISIBLE / UX leans (per market-shipping priority):**
-- **Something that puts a working feature in front of a user** — Chris directive emphasized. Candidate menus were not written up front; Chris to propose or ask for suggestions.
-- **Workspace-tab extension** per `feedback_workspace_over_command_center_for_new_ui` (e.g. gap-map summary tile, priority list widget, deliverables surface).
-- **First alpha-user-facing surface** — the biggest gap between substrate we have and a first user landing.
+**⭐ Landing page follow-ups (from S2797):**
+- **BettingPage first-user trace** — 9-tab, 3023-line surface; unknown state for a first user. What breaks, what's empty, what looks half-connected? Trace + fix top-1. ~1 session.
+- **Onboarding / signup flow** — first-user routing after auth. Currently new authenticated users land at `/` = CommandCenterPage (Chris's operator tool). Send them somewhere useful (BettingPage or a dedicated first-user page). ~1 session.
+- **Waitlist DB capture (Shape B)** — if S2797 mailto quality/volume becomes insufficient. Trigger-based, not calendar-based.
+- **Public deployment** — LandingPage is local-only. Requires: hosting decision + DNS pointing to `/welcome` + optional auth-app split (`app.donkeybetz.com` for Chris's authenticated surface).
 
-**Substrate leans (with explicit user-visible payoff — should be trigger-justified per `project_market_shipping_priority`):**
-- **Next `td_handlers_ops` sub-slice** — 9 untested tools remain. Options ranked by session cost:
-  - **Incident-critical slice** (Rigby Z4 concern): `autopilot_tool`, `governor_tool`, `infra_health_tool`, `spider_status_tool` (~1 slice PR)
-  - **Utility slice** (Rigby Z2 pick): `scheduled_tasks_tool` (~1 tool; small)
-  - **Remaining slice:** `agent_control_tool`, `agent_memory_tool`, `heartbeat_history_tool`, `ops_digest_tool` (~1 slice PR)
-- **Regression tests for the 4 S2796 tools** — deferred per "validation quickest"; queue for follow-up PR. Cheap.
-- **Cheap pre-work: add "Covered actions" sections to 8 existing `validated_doc_exists_unknown` docs** — upgrades all 8 to `validated_full` with zero risk. Note: MUST use flat bulleted list under `## Covered actions` (no h3 sub-headings) per the latent classifier truncation bug.
-- **Cheap pre-work: fix 23 tools flagged `actions_not_mentioned_in_description`** — zero-code, description-only PR.
-- **Open I-0303 (Async Tenant-Boundary Enforcement)** — the ONLY unopened RUR-C1 child arc. Multi-session arc.
-- **Wire tenant boundary health umbrella → Celery beat** — S2794 follow-up (~1 PR).
-- **Playbook amendment PR — future-trigger-encoded-as-test codification** (third instance still pending: S2791/S2792/S2793).
-- **Model drift arc** — 38+ auto-migrations queued.
-- **Next PUBLIC_PATHS prefix ship** (64 remaining across ~13 prefixes).
-- **Decorator order codebase migration** — row 45 `same_pr_mitigatable`.
-- **N24 anti-rubber-stamp SIGN codification** — 5 F-BLOCKING-equivalent triggers.
-- **AudioAgent completion-flip verification** — awaiting next timeout.
-- **Frontend raw-fetch consolidation** — 30 files with fetch(); deferrable.
+**User-visible / UX leans:**
+- **First-user "what to try" tour** — 3-5 things to click after landing in the app. Currently new users see CommandCenter with no orientation.
+- **Copy iteration on LandingPage** — Chris edits `COPY = {}` constants + rebuilds via `make frontend-ship`. No PR needed.
+- **AdvisorsPage / NeuralOrchestraPage / MythologyLabPage state** — audit what's live vs half-connected in the "differentiated IP" surfaces.
 
-**Still gated by S2774 ops-surface pause:** N9, N20, Candidate 1 (S2761 smoke), 30+ `core/urls.py` lambda-`__import__` sites.
+**Substrate leans (with explicit user-visible payoff):**
+- **Next `td_handlers_ops` sub-slice** — 9 untested tools remain. Options:
+  - **Incident-critical slice**: `autopilot_tool`, `governor_tool`, `infra_health_tool`, `spider_status_tool` (~1 slice PR)
+  - **Utility slice**: `scheduled_tasks_tool` (~1 tool; small)
+  - **Remaining slice**: `agent_control_tool`, `agent_memory_tool`, `heartbeat_history_tool`, `ops_digest_tool`
+- **Regression tests for the 4 S2796 tools** — deferred per "validation quickest"
+- **Add "Covered actions" flat-list sections to 8 existing `validated_doc_exists_unknown` docs** — cheap gap-map upgrade (must use flat bulleted list per latent classifier truncation bug)
+- **Fix 23 tools flagged `actions_not_mentioned_in_description`** — zero-code, description-only PR
+- **Open I-0303 (Async Tenant-Boundary Enforcement)** — RUR-C1 parent-close direct blocker. Multi-session arc.
+- **Wire tenant boundary health umbrella → Celery beat** — S2794 follow-up (~1 PR)
+- **Playbook amendment PR — future-trigger-encoded-as-test codification** — third instance still pending
+- **Doc-note the gap-map classifier h3-truncation bug** — annotate the S2795 F2 6-section template spec
 
-**Still owed:** P0.5 cost-threshold, P0.75 CI billing, `SESSION_819_SYSTEM_AUDIT_*` cleanup (16 untracked files from webhook cron — unchanged during S2796).
+**Still gated by S2774 ops-surface pause:** N9, N20, Candidate 1 (S2761 smoke).
+
+**Still owed:** P0.5 cost-threshold, P0.75 CI billing, `SESSION_819_SYSTEM_AUDIT_*` cleanup (16 untracked files).
 
 ### Deferred (waiting on triggers, not calendar)
 
 - **N10** — partial-recycle UI badge (gated on real partial-recycle event)
 - **First real N11 PARTIAL_RECYCLE tile fire** (watching)
-- **Q3 #5** (health_summary / ops_tool.overview overlap)
 - **N22 v3 timestamp-based windows** — trigger: session-int windows prove insufficient
 - **Second non-Rigby consumer of `zoom_out_tool`** — still awaited
 - **Second consumer of `pa_tools_gap_map` service** — trigger for factor-out abstraction test
-- **N17 smart-command-box creep** — row 21 `future_trigger`
-- **First autonomous Rigby invocation of `tenant_boundary_health` endpoint** — S2794 dogfood was prompted
+- **First autonomous Rigby invocation of `tenant_boundary_health`** — S2794 dogfood was prompted
 - **First autonomous Rigby invocation of `build_pa_tool_audit`** — S2795 + S2796 dogfoods were prompted
-- **F4 (telemetry-backed complaints, S2795 row 63) future_trigger** — fires when `tool_call_error_rate` query surface exists
+- **F4 (telemetry-backed complaints) future_trigger** — fires when `tool_call_error_rate` query surface exists
 - **First graceful-degradation clause activation on PLAYBOOK-6.10.8** — pending
 - **Third served-artifact-freshness trigger** — PLAYBOOK-7.4.4 amendment candidate
-- **S2794 Row 57 autonomy creep trigger** — fires if any sibling PR wires status→flag auto-flip on tenant boundary health
-- **Third instance of future_trigger-encoded-as-test pattern — still standing** (S2791/S2792/S2793). S2795 F4 + S2796 folds did not extend or break.
-- **`status_snapshot_tool` version-source parity trigger** — fires when a second consumer of `version_sha_short` surfaces; reconcile with `ops_tool.version`
+- **Third instance of future_trigger-encoded-as-test pattern** — still standing (S2791/S2792/S2793); S2795-S2797 folds did not extend or break
+- **`status_snapshot_tool` version-source parity trigger**
+- **S2797 F4 root-domain discoverability** — fires on: (a) first prospect complaint about landing at `/login`; (b) inbound organic traffic observed; (c) Chris switches from manual to broader outreach
+- **First real prospect email via S2797 mailto CTAs** — first data point on funnel quality
 
-### Post-S2796 owed
+### Post-S2797 owed
 
-- **I-0303 scoping open** — RUR-C1 parent-close direct blocker
-- **Regression tests for 4 S2796 validation docs** (`ops_tool`, `status_snapshot_tool`, `diagnostics_tool`, `active_priority_tool`)
-- **8 remaining per-tool docs need "Covered actions" flat-list sections** — cheapest gap-map upgrade
-- **23 tools schema-lint `actions_not_mentioned_in_description`** — description-only PR
-- **`diagnostics_tool` PR-2 placeholders** — implement or remove (`schema_handler_diff`, `learning_bridge_writes`, `discord_health`)
-- **`status_snapshot_tool` version-source reconciliation** (`ops.version_sha_short = "dev"` vs `ops_tool.version = 0c38718b0492`)
-- **`status_snapshot_tool` cache-age surfacing**
-- **`active_priority_tool` TTL clamp response shape verification**
-- **Wire tenant boundary health umbrella → Celery beat + CI Action** — S2794 follow-up
-- **Playbook amendment PR — future-trigger-encoded-as-test codification** (candidate)
-- **64 remaining PUBLIC_PATHS candidates** across ~13 prefixes
-- **Decorator order codebase migration** (S2790 row 45)
-- **PLAYBOOK-6.10.11+ per-prefix authZ sweep codification** (S2790 row 47)
-- **N24 anti-rubber-stamp SIGN codification** — 5 triggers
-- **AudioAgent completion-flip verification**
-- **Ledger split drift audit** — now 28/23/16
-- **`SESSION_819_SYSTEM_AUDIT_*` untracked file cleanup** (16 files)
-- **Doc-note the classifier h3-truncation bug** in the S2795 F2 6-section template spec
+- **Public deployment of LandingPage** — hosting + DNS decisions
+- **Onboarding flow** — first-user routing to something useful (BettingPage or a first-user tour)
+- **BettingPage first-user trace + top-1 fix**
+- **Waitlist DB capture (Shape B)** — if mailto is insufficient
+- **I-0303 scoping** — RUR-C1 parent-close direct blocker
+- **Regression tests for 4 S2796 tools**
+- **8 remaining per-tool docs need "Covered actions"**
+- **23 tools schema-lint fix**
+- **Wire tenant boundary health → Celery beat**
+- **`diagnostics_tool` PR-2 placeholders**
+- **`SESSION_819_SYSTEM_AUDIT_*` cleanup** (16 files)
+- **Doc-note gap-map classifier h3-truncation bug** in S2795 F2 template spec
 
 ---
 
-## SESSION PIN — S2796 RETIRED (fresh mint required at S2797 open)
+## SESSION PIN — S2797 RETIRED (fresh mint required at S2798 open)
 
-**Pin history (S2796):**
+**Pin history (S2797):**
 
-- `pa-305af57e2bf04406` (label `s2796-td-handlers-ops-validation`) minted S2796 T1 open; **retired at S2796 close (`force=true`, twenty-seventh consecutive per S2770+ pattern)**
+- `pa-4eed0b501f284250` (label `s2797-user-visible-scoping`) minted S2797 T1 open; **retired at S2797 close (`force=true`, twenty-eighth consecutive per S2770+ pattern)**
 
-**Wrapper `tools/pa_local.sh` still points at `pa-305af57e2bf04406` (retired)** — intended failure mode forces S2797 first-action fresh mint.
+**Wrapper `tools/pa_local.sh` still points at `pa-4eed0b501f284250` (retired)** — intended failure mode forces S2798 first-action fresh mint.
 
-**S2797 open sequence:**
+**S2798 open sequence:**
 
 ```
 context-kit orient
 
 # Read this file end-to-end
-# Read S2796 handoff §2 (novel-precedent moments) + §3 (T1 SIGN cycle) + §6 (open items)
+# Read S2797 handoff §2 (novel-precedent moments) + §3 (T1/T2/T3 SIGN cycles) + §6 (open items)
 
-# Freshness check. Should be FRESH · SHA-match at S2796 close SHA (ec44778f9 or cascade PR SHA) — THIRTY-SIXTH close-cycle after PLAYBOOK-7.4.4.
-bash tools/pa_local.sh "S2797 open — freshness check: ops_tool.version verdict + head_commit_sha; ops_tool.recent_recycles limit=5"
+# Freshness check. Should be FRESH · SHA-match at S2797 close SHA (or cascade PR SHA).
+bash tools/pa_local.sh "S2798 open — freshness check: ops_tool.version verdict + head_commit_sha; ops_tool.recent_recycles limit=5"
 
-# Ledger check: confirm 68-row baseline survived close cascade
+# Ledger check: confirm 72-row baseline survived close cascade
 DJANGO_LOG_LEVEL=WARNING python manage.py zoom_out_streak_report --as-json 2>/dev/null | python -c "
 import json, sys
 d = sys.stdin.read()
 r = json.loads(d[d.find('{'):])
-assert r['total_rows']==68, r
-print('OK — 68 rows, counts:', r['counts_by_classification'])
+assert r['total_rows']==72, r
+print('OK — 72 rows, counts:', r['counts_by_classification'])
 "
 
-# Regression 17-suite (unchanged; no S2796 code changes)
+# Regression 17-suite (unchanged; S2797 was frontend-only)
 python manage.py test \
   core.tests.test_ops_auth_regression_2772 \
   core.tests.test_ops_query_param_allowlist_2773 \
@@ -156,37 +151,37 @@ python manage.py test \
   core.tests.test_pa_tools_gap_map_2795 \
   --noinput
 
-# Optional — regenerate gap map to see fresh counts
-DJANGO_LOG_LEVEL=WARNING python manage.py build_pa_tool_audit --gap-only --check 2>/dev/null | head -40
-
-# Mint fresh pin scoped to selected S2797 candidate.
+# Mint fresh pin scoped to selected S2798 candidate.
 python manage.py session_lifecycle open --label <candidate-scoped-label>
 python manage.py session_lifecycle history --limit 5
 
 grep '^python tools/pa_chat.py' tools/pa_local.sh
 ```
 
-**Anti-rubber-stamp check on S2797 first Rigby SIGN:** verify `tool_runs` non-empty. **PLAYBOOK-6.10.7 + 6.10.8 + 6.10.9 constitutional at v0.8.0** — every joint SIGN routing MUST include ≥1 zoom-out ask; folds MUST be classified + persisted BEFORE D-verdict; folds asserting concrete code-state facts MUST admit stable-state-pointer + file+line evidence + (i)/(ii)/(iii) outcome inline before classify+persist.
+**Anti-rubber-stamp check on S2798 first Rigby SIGN:** verify `tool_runs` non-empty. **PLAYBOOK-6.10.7 + 6.10.8 + 6.10.9 constitutional at v0.8.0** — zoom-out ask required; folds classify+persist BEFORE D-verdict; folds asserting concrete code-state facts MUST admit stable-state-pointer + file+line evidence + (i)/(ii)/(iii) outcome inline before classify+persist.
+
+**S2797 lesson to carry:** BEFORE writing any user-facing copy, marketing, or narrative content, READ `docs/PLATFORM_WHAT_IT_IS.md`. It's source #1 in `context-kit orient` for a reason. Skipping it and anchoring on the name = the exact violation Chris caught at T2 review.
 
 ---
 
 ## Twin-pointer card
 
-📁 **Repo `/` + `/docs/` — S2796 artifacts:**
+📁 **Repo `/` + `/docs/` — S2797 artifacts:**
 
-- **Ship docs:** `docs/research/tools/validation/{ops_tool,status_snapshot_tool,diagnostics_tool,active_priority_tool}_validation.md` (4 new)
-- **Ship gap map snapshot:** `docs/audits/PA_TOOLS_GAP_MAP_S2796.md`
-- **Ship refresh:** `docs/PA_TOOL_AUDIT.md` (DOC-AUTOGEN via `build_pa_tool_audit --include-validation-xref`)
-- **Handoff:** `docs/handoffs/SESSION_2796_TD_HANDLERS_OPS_SLICE1.md`
-- **Predecessors:** S2795 (gap map), S2733 (campaign retrospective), S2728→S2732 (validation campaign body)
+- **Ship page:** `frontend/src/pages/LandingPage.tsx` (~280 lines; copy in `COPY = {}` constants at top-of-file per Rigby F3)
+- **Route wiring:** `frontend/src/App.tsx` (unauth block, after `/login`)
+- **Login link back:** `frontend/src/pages/LoginPage.tsx` (bottom of form)
+- **Handoff:** `docs/handoffs/SESSION_2797_PUBLIC_LANDING_PAGE.md`
+- **Live URL (local):** `http://localhost:8000/welcome`
+- **Predecessors:** S2796 (market-shipping directive), S2795 (gap map)
 
 🖥️ **Workspace UI — `/workspaces` surface:**
 
-- **No Workspace tab this ship** — CLI + markdown-only
+- **No Workspace tab this ship** — LandingPage is public marketing surface
 - **Live surfaces at close:**
-  - `logs/zoom_out_classifications.jsonl` — **68 rows** (28/23/16)
-  - `logs/recycle_events.jsonl` — +1 event (post-#3205, sha=`ec44778f9de1`)
-  - `docs/audits/PA_TOOLS_GAP_MAP_S2796.md` — first S2796 snapshot
+  - `logs/zoom_out_classifications.jsonl` — **72 rows** (29/23/16); rows 69-72 are S2797 F1-F4
+  - `logs/recycle_events.jsonl` — +2 events (post-#3207 recycle + post-cascade recycle)
+  - `http://localhost:8000/welcome` — first user-visible market surface
 
 ---
 
@@ -195,54 +190,54 @@ grep '^python tools/pa_chat.py' tools/pa_local.sh
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | `ec44778f9` (S2796 ship) — cascade PR advances this at close |
+| HEAD | S2797 close cascade — advances at cascade PR merge |
 | Playbook version | v0.8.0 (unchanged) |
 | Playbook rule count | 205 (unchanged) |
 | RUR-C1 state | Unchanged; I-0303 still not opened |
-| RUR-C1 child arcs | I-0301 CLOSED (S2742) · I-0302 CLOSED (S2751) · **I-0303 NOT YET OPENED** |
-| Session pin | `pa-305af57e2bf04406` (retired at S2796 close, force=true, twenty-seventh consecutive) |
-| Wrapper default pin | `tools/pa_local.sh` — `pa-305af57e2bf04406` (retired; forces fresh mint at S2797 open) |
-| Live infra state | S2755→S2795 substrate + S2796 4-tool validation slice |
+| Session pin | `pa-4eed0b501f284250` (retired at S2797 close, force=true, twenty-eighth consecutive) |
+| Wrapper default pin | `tools/pa_local.sh` — `pa-4eed0b501f284250` (retired; forces fresh mint at S2798 open) |
 | Postgres :5432 | pg15 (July DB) — brew launchd `started` |
-| Postgres pg16 | Parked (April fossil) |
-| Freshness log | `logs/session_freshness.jsonl` — grew by 1 at S2796 open |
-| Recycle log | `logs/recycle_events.jsonl` — +1 event (post-#3205, sha=`ec44778f9de1`) |
-| Zoom-out ledger | `logs/zoom_out_classifications.jsonl` — **68 rows** (28 actionable / 23 mitigatable / 16 future_trigger) |
-| PA tool audit | `docs/PA_TOOL_AUDIT.md` — regenerated at close (158/114/157/113) |
-| PA tools gap map | `docs/audits/PA_TOOLS_GAP_MAP_S2796.md` — first S2796 snapshot (4 full / 0 partial / 8 unknown / 101 untested) |
-| Next move | Chris selects at S2797 open |
+| Freshness log | `logs/session_freshness.jsonl` — grew by 1 at S2797 open |
+| Recycle log | `logs/recycle_events.jsonl` — +2 events during S2797 close |
+| Zoom-out ledger | `logs/zoom_out_classifications.jsonl` — **72 rows** (29 actionable / 23 mitigatable / 16 future_trigger) |
+| PA tool audit | `docs/PA_TOOL_AUDIT.md` — unchanged (no PA tool changes this ship) |
+| PA tools gap map | `docs/audits/PA_TOOLS_GAP_MAP_S2796.md` — unchanged (last regen at S2796 close) |
+| **Public marketing surface** | **`http://localhost:8000/welcome` — LIVE (local)** |
+| Next move | Chris selects at S2798 open (fresh tomorrow) |
 
 ---
 
-## Recommended session-open protocol (S2797)
+## Recommended session-open protocol (S2798)
 
 1. `context-kit orient`
 2. Read this file end-to-end
-3. Read S2796 handoff §2 (novel-precedent moments) + §3 (T1 SIGN cycle) + §6 (open items)
-4. **Freshness + regression 17-suite + ledger verify** — see S2797 open sequence above
-5. **Watch for** ledger 68-row baseline surviving cascade merge; freshness FRESH · SHA-match
+3. Read S2797 handoff §2 (novel-precedent moments) + §3 (T1/T2/T3 SIGN cycles) + §6 (open items)
+4. **Freshness + regression 17-suite + ledger verify** — see S2798 open sequence above
+5. **Watch for** ledger 72-row baseline surviving cascade merge; freshness FRESH · SHA-match
 6. If `staleness_verdict != FRESH` → escalate
 7. **Check `brew services list | grep postgres` FIRST** if freshness fails oddly
 8. Verify runtime state: `git log --oneline -5`; confirm wrapper at retired pin
-9. Present candidate menu — **user-visible / UX leans FIRST per `project_market_shipping_priority`**; substrate leans below with explicit trigger justification
+9. Present candidate menu — user-visible / UX leans FIRST per `project_market_shipping_priority`
 10. **Anti-rubber-stamp check on first SIGN** — verify `tool_runs` non-empty
-11. Chris directs S2797 P0 selection (candidate menu is a prior, not a gate — Chris may pivot to something new)
+11. Chris directs S2798 P0 selection
 12. Mint fresh pin with candidate-scoped label
 13. Route work through Rigby joint agreement before coding
 14. **PLAYBOOK-6.10.9 constitutional at v0.8.0:** any zoom-out fold asserting concrete code-state facts MUST admit stable-state-pointer + file+line evidence + (i)/(ii)/(iii) outcome inline before classify+persist
+15. **BEFORE any user-facing content:** read `docs/PLATFORM_WHAT_IT_IS.md`
 
 ---
 
 ## Reference documents
 
-Ordered by frequency of use at S2797:
+Ordered by frequency of use at S2798:
 
 1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (anchor at v0.8.0)
-2. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.8.0 (205 rules)
-3. [`docs/handoffs/SESSION_2796_TD_HANDLERS_OPS_SLICE1.md`](docs/handoffs/SESSION_2796_TD_HANDLERS_OPS_SLICE1.md) — **S2796 handoff (current)**
-4. [`docs/audits/PA_TOOLS_GAP_MAP_S2796.md`](docs/audits/PA_TOOLS_GAP_MAP_S2796.md) — **S2796 gap map (4 full / 8 unknown / 101 untested)**
-5. [`docs/PA_TOOL_AUDIT.md`](docs/PA_TOOL_AUDIT.md) — fresh runtime-derived PA tool audit (regen at S2796 close)
-6. [`docs/research/tools/validation/`](docs/research/tools/validation/) — 22 existing validation docs (10 substrate + 12 per-tool, of which 4 are S2796 with flat-list Covered actions)
-7. [`docs/handoffs/SESSION_2795_PA_TOOLS_GAP_MAP.md`](docs/handoffs/SESSION_2795_PA_TOOLS_GAP_MAP.md) — S2795 predecessor
-8. [`docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md`](docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md) — S2728→S2732 validation campaign retrospective
-9. [`logs/zoom_out_classifications.jsonl`](logs/zoom_out_classifications.jsonl) — 68 rows at S2796 close (rows 65-68 are S2796 F1-F4 folds)
+2. [`docs/PLATFORM_WHAT_IT_IS.md`](docs/PLATFORM_WHAT_IT_IS.md) — **anchor for anything user-facing** (S2797 lesson)
+3. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.8.0 (205 rules)
+4. [`docs/handoffs/SESSION_2797_PUBLIC_LANDING_PAGE.md`](docs/handoffs/SESSION_2797_PUBLIC_LANDING_PAGE.md) — **S2797 handoff (current)**
+5. [`frontend/src/pages/LandingPage.tsx`](frontend/src/pages/LandingPage.tsx) — public landing page (copy in `COPY = {}` at top)
+6. [`docs/audits/PA_TOOLS_GAP_MAP_S2796.md`](docs/audits/PA_TOOLS_GAP_MAP_S2796.md) — PA tools gap map
+7. [`docs/PA_TOOL_AUDIT.md`](docs/PA_TOOL_AUDIT.md) — runtime PA tool audit
+8. [`docs/research/tools/validation/`](docs/research/tools/validation/) — 22 validation docs (4 at S2796 `validated_full`; 8 at `validated_doc_exists_unknown` awaiting flat-list upgrades)
+9. [`docs/handoffs/SESSION_2796_TD_HANDLERS_OPS_SLICE1.md`](docs/handoffs/SESSION_2796_TD_HANDLERS_OPS_SLICE1.md) — S2796 predecessor
+10. [`logs/zoom_out_classifications.jsonl`](logs/zoom_out_classifications.jsonl) — 72 rows at S2797 close (rows 69-72 are S2797 F1-F4)
