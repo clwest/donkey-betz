@@ -32,12 +32,17 @@ SKIP_USERNAMES = frozenset([
 ])
 
 # The welcome message from Rigby
+# S2798: routing target updated from "Command Center" to "Workspace" — the actual
+# post-login landing route is /workspace (see frontend/src/pages/LoginPage.tsx).
+# The pre-S2798 copy told users to head to Command Center; post-login flow actually
+# drops them at /workspace, so the two were mismatched. Fixed independently of the
+# onboarding-routing candidate — it's a pure copy bugfix.
 WELCOME_MESSAGE = """Welcome to Donkey Betz! I'm Rigby, your AI assistant.
 
 Here's how to get started:
-1. Head to the **Command Center** (home page) — that's where we chat
+1. Head to the **Workspace** tab — that's your home base
 2. Try asking me: "Rigby, what can you do?" or "Show me the platform overview"
-3. Check out the **Workspace** tab to see active projects
+3. Explore the workspace tabs (Overview, Files, Operations, Deliverables) to see what's active
 4. Click **Messages** in the sidebar to see team messages
 
 A few things I can help with:
