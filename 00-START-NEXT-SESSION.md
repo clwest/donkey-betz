@@ -2,141 +2,155 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2794 CLOSED — Tenant Boundary Health surface + cross-tenant regression umbrella (RUR-C1 substrate)
+## READ THIS FIRST — SESSION 2795 CLOSED — PA tools validation-coverage gap map
 
-**Refreshed 2026-07-15 (SESSION 2794 CLOSED — engineering-first session #8 in row per `feedback_engineering_bias_over_audit`. First genuine net-new user-facing surface in the S2788→S2793 substrate streak. Aimed at Chris's ask "prepare the platform for real world users" while staying inside RUR-C1 Tenant Boundary Lockdown parent arc. Shipped shared cross-tenant regression umbrella (`tests/security/test_cross_tenant_regression.py` — CAMPAIGN.md §5.2 canonical name), runner service + management command + Celery-ready CLI, `TenantBoundaryHealthReport` model + REST endpoint + migration, and operator-facing "Tenant Boundary" Workspace System sub-tab. Rigby T1 SIGN-with-edits upgraded my B-or-C proposal to "B fused with C-lite" — build umbrella as tab's data source in one PR. 3 folds classified + persisted BEFORE Chris D-verdict per PLAYBOOK-6.10.8: 57 `same_pr_mitigatable` (F1 read-only tile → de-facto gate — adopted via banner + policy line + code-shape no-toggle), 58 `same_pr_mitigatable` (F2 coverage honesty — adopted via matrix + gaps section), 59 `same_pr_actionable` (F3 result provenance — adopted via env/SHA/runner/timestamp fields). Full 16-suite regression: 295 tests OK (279 prior + 16 new). Post-merge dogfood: Rigby invoked `GET /api/governance/tenant-boundary-health/` via `http_smoke_test` — HTTP 200, F1/F2/F3 all verified live. First persisted health report row: 324/324 green in 269s. Rigby SIGN response non-truncated (sample size 5 — pattern now carries weight). THIRTY-THIRD close-cycle post-PLAYBOOK-7.4.4 codification.)**
+**Refreshed 2026-07-15 (SESSION 2795 CLOSED — engineering-first session #9 in row per `feedback_engineering_bias_over_audit`. NOT on the pre-planned S2795 open menu — surfaced by Chris mid-session: "Rigby has noted a few times that she doesn't have certain tools to call from the chat UI. I know at one point we had started you and Rigby testing/verifing all the tools she has and things like curl/HTTP tools she might need but I don't know if we ever actually finished it." Investigated: S2728→S2732 tool validation campaign shipped 57 patches + 270 tests across 18 tools, but 18/113 pairs = ~7% per-tool coverage. Right-sized ship: gap map that surfaces the shopping list without pre-committing to another 5-session sweep. Rigby T1 tool-grounded SIGN (6+ repo_tool calls) discovered pre-existing `build_pa_tool_audit` command + `PA_TOOL_AUDIT.md` (84KB stale from 2026-05-12) + `test_pa_tool_schema_drift.py` CI guard, and upgraded ship shape from B (new command) to (c) fold gap map into build_pa_tool_audit + preserve BC. 5 folds classified + persisted BEFORE Chris D-verdict: 60 `same_pr_actionable` (F1 doc_exists!=validated 3-state distinction — adopted), 61 `same_pr_mitigatable` (F2 "cross_cutting" too generous rename — adopted), 62 `same_pr_actionable` (F3 shopping-list coupling risk — adopted via triage slices + NOT-burn-down framing), 63 `future_trigger` (F4 telemetry-backed complaints — deferred to ToolCallRecord surface), 64 `same_pr_mitigatable` (F5 schema quality lint — adopted). Full 17-suite regression: 318 tests OK (295 prior + 23 new). Post-merge dogfood: Rigby found `docs/audits/PA_TOOLS_GAP_MAP_S2795.md` via `repo_tool.search`. Rigby SIGN response non-truncated (sample size 6 — pattern strongly holds). THIRTY-FIFTH close-cycle post-PLAYBOOK-7.4.4.)**
 
-**S2794 ship:**
+**S2795 ship:**
 
-**PR #3201 · `b0fef5d3c`** — 12 files, +1554 / -1. New `TenantBoundaryHealthReport` model (`0385` migration) + runner service + management command + REST endpoint + Workspace sub-tab + umbrella test + 283-line contract test file. CAMPAIGN.md canonical umbrella name shipped. First operator-facing readiness surface with F1 no-gate contract locked in tests + code shape.
+**PR #3203 · `5ec09d625`** — 6 files, +1756 / -321. New pure-logic module `core/services/pa_tools_gap_map.py` (431 lines) + extended `build_pa_tool_audit` with 4 optional flags (`--include-validation-xref`, `--emit-gap-json`, `--gap-only`, `--output PATH`) preserving BC on default. 23-test contract suite locks 14 contracts. First artifact at `docs/audits/PA_TOOLS_GAP_MAP_S2795.md`.
 
-**Handoff:** `docs/handoffs/SESSION_2794_TENANT_BOUNDARY_HEALTH.md`
-**Post-merge:** `make recycle-all` per PLAYBOOK-7.4.4 completed (thirty-third cycle, sha=`b0fef5d3c271`).
-**Ledger state at close:** `logs/zoom_out_classifications.jsonl` — **59 rows** (24 same_pr_actionable / 20 same_pr_mitigatable / 15 future_trigger).
+**Handoff:** `docs/handoffs/SESSION_2795_PA_TOOLS_GAP_MAP.md`
+**Post-merge:** `make recycle-all` per PLAYBOOK-7.4.4 completed (thirty-fifth cycle, sha=`5ec09d625e85`).
+**Ledger state at close:** `logs/zoom_out_classifications.jsonl` — **64 rows** (26 same_pr_actionable / 22 same_pr_mitigatable / 16 future_trigger).
 
 ---
 
-## SESSION-OPEN INFRA STORY (S2794)
+## SESSION-OPEN INFRA STORY (S2795)
 
-Engineering-first session #8 in row. Chris chose option 2 ("something entirely new") from the S2794 candidate menu with the frame "what would stay in the parent [RUR-C1] and help prep for real world users?". Verified RUR-C1 state before routing to Rigby: I-0301 CLOSED S2742, I-0302 CLOSED S2751, I-0303 NOT YET OPENED, `tests/security/test_cross_tenant_regression.py` (CAMPAIGN.md canonical umbrella) missing from disk, cross-tenant SLO not built.
+Engineering-first session #9 in row. **Critical process moment:** Chris did NOT pick from the S2795 candidate menu I wrote at S2794 close. He surfaced a NEW candidate mid-session ("Rigby doesn't have certain tools…"). Candidate menus are useful priors, not gates.
 
-Routed 4 candidates (A open I-0303 / B Workspace tab / C umbrella / D user accounts) with my B lean to Rigby with zoom-out ask. **Rigby SIGN-with-edits upgraded to "B fused with C-lite"** — build umbrella as tab's data source in ONE PR, not two options. Persisted 3 folds (57/58/59). Chris D-verdicted the branch ("let's do option 2") then the PR shape ("Got with i.").
+Rigby's tool-grounded read reshaped ship scope BEFORE code was written — she found `build_pa_tool_audit` (existing) + `PA_TOOL_AUDIT.md` (2 months stale) + `test_pa_tool_schema_drift.py` CI guard. Without her read I might have built a parallel command duplicating 60% of the introspection. Direct payoff of `feedback_cycle_1a_verify_before_build`.
 
-Runner service design pivot: initial pytest.main-in-process approach hit 255 test-DB fixture setup errors (pytest-django + live Django process collision). Refactored to subprocess+JUnit XML parse — reliable pattern, ~5s startup overhead, matches CI invocation. Documented in service module docstring.
+Fresh headline counts locked in the PR body (via `build_pa_tool_audit --check` at HEAD `a2b3e484b`): **158 tool names / 114 schemas / 157 handlers / 113 pairs / 44 handler-only agents by design / 1 meta-tool.**
+
+**Gap map first emit:** **105 UNTESTED · 8 validated_doc_exists_unknown · 44 agent_via_run_agent · 1 meta_no_handler.** Schema lints: 23 tools with actions_not_mentioned_in_description; 14 with no_required; 1 with no_properties.
+
+Top 5 triage slices (grouped by handler file, ~2-6 sessions each at 4/session S2728→S2732 pace):
+- `td_handlers_agents` — 23 untested (~6 sessions)
+- `td_handlers_core` — 22 untested (~6 sessions)
+- `td_handlers_content` — 12 untested (~3 sessions)
+- `td_handlers_gateway` — 11 untested (~3 sessions)
+- `td_handlers_ops` — 8 untested (~2 sessions)
+
+Sum of top-5 triage: ~20 sessions. Total untested: 105 = ~27 sessions if you validate all. **The gap map is a decision aid, not a burn-down.**
 
 ---
 
 ## THE PIVOTS — WHY THIS SHIP MATTERS
 
-**First RUR-C1 substrate ship since I-0302 close (S2751).** Between closed children and Chris's ask, this ship threaded the needle — built the two parent-close prerequisites (shared regression umbrella + operator readiness surface) that neither child arc shipped.
+**First mid-session Chris pivot to a candidate not on the S2795 open menu.** Signal: menus are priors, not gates.
 
-**First operator-facing readiness surface with F1 no-gate contract locked at three layers.** REST envelope contract (`is_gate: false` + `policy.launch_approval: "Manual (Chris)"`) + UI code-shape (no toggle controls exist in TSX) + model docstring (advisory posture repeated). A future PR that adds a toggle button breaks at least one contract test.
+**First tool-grounded pre-existing-substrate discovery that reshaped ship scope BEFORE code was written.** Rigby's read prevented duplicate work; ship shifted from "build new command" to "extend existing command behind flags". Direct payoff of `feedback_cycle_1a_verify_before_build`.
 
-**First subprocess+JUnit XML runner in the platform.** pytest.main-in-process collides with pytest-django DB fixtures inside a live Django process. Subprocess isolation + JUnit XML parse is the reliable pattern; documented for future runners.
+**First BC-preserving extension of a DOC-AUTOGEN artifact.** `docs/PA_TOOL_AUDIT.md` downstream readers protected; additive columns only under `--include-validation-xref`.
 
-**First single-PR full-stack ship threading Rigby SIGN B+C upgrade.** Rigby proposed folding B (tab) and C-lite (umbrella) — Chris D-verdicted the fusion via "Got with i.". Single-PR full stack: model + migration + service + command + REST + URL + tests + umbrella + frontend section + wire.
+**First rendered "triage slices" section as explicit anti-burn-down device.** F3 mitigation encoded in framing: "NOT a burn-down queue. Chris picks."
 
-**Rigby SIGN response non-truncation streak sample size now 5.** S2790→S2794 all clean. Tightened-prompt pattern now carries weight as a claim.
+**Rigby SIGN response non-truncation sample size 6.** S2790→S2795 all clean. Trend claim strongly holds.
 
-**Zoom-out ask (PLAYBOOK-6.10.7) load-bearing for fourth consecutive session.** All 3 S2794 folds surfaced by the zoom-out ask, none by direct claim scan. Same pattern as S2791/S2792/S2793.
+**Zoom-out ask (PLAYBOOK-6.10.7) load-bearing for fifth consecutive session.** All 5 S2795 folds surfaced by the zoom-out ask.
 
 ---
 
-## S2795 CANDIDATES (Chris selects at open)
+## S2796 CANDIDATES (Chris selects at open)
 
 ### First — freshness/regression sanity
 
-**Post-cascade freshness check:** wrapper pin retired (S2794 close); freshness should be FRESH · SHA-match at S2794 close SHA `b0fef5d3c` (or cascade PR merge SHA).
-**Ledger baseline:** 59 rows expected (24/20/15). Any drift = investigate.
-**Regression 16-suite:** 295 tests OK at S2794 close.
-**TenantBoundaryHealthReport table:** 1 row (green baseline) at close — additional rows persist across sessions as CLI `--persist` is invoked.
+**Post-cascade freshness check:** wrapper pin retired (S2795 close); freshness should be FRESH · SHA-match at S2795 close SHA `5ec09d625` (or cascade PR merge SHA).
+**Ledger baseline:** 64 rows expected (26/22/16). Any drift = investigate.
+**Regression 17-suite:** 318 tests OK at S2795 close.
+**Gap map:** `docs/audits/PA_TOOLS_GAP_MAP_S2795.md` (first emit; regenerate anytime via `python manage.py build_pa_tool_audit --gap-only --output <path>`).
 
 ### Net-new engineering (⭐ recommended per `feedback_engineering_bias_over_audit`)
 
-- **Open I-0303 (Async Tenant-Boundary Enforcement)** — the ONLY unopened RUR-C1 child arc. RUR-C1 parent closes only when I-0303 lands + all-3 pass umbrella. This is the direct RUR-C1 parent-close-unblock lever. Scoping doc first; may be a multi-session arc.
-- **Wire the umbrella runner into a Celery beat schedule** — the runner + management command shipped; only the periodic invocation is missing. Small (~1 PR). Trigger the F3 provenance chain end-to-end without operator manual invocation.
-- **Wire the umbrella runner into a CI GitHub Action** — same substrate, different trigger. Small.
-- **Playbook amendment PR — codify future-trigger-encoded-as-test pattern** (third-instance trigger fired at S2793 F3; still standing). Candidate slot `PLAYBOOK-6.10.10`.
-- **Continue Workspace-tab extension pattern** per `feedback_workspace_over_command_center_for_new_ui` — pick another underweight tab (Deliverables / Initiatives / Files / OpsConsole) and add a triage feature.
+- **⭐ Pick a triage slice from the S2795 gap map** — the ship deliberately produced 5 slices ranked by handler file. Options ordered by session cost:
+  - `td_handlers_ops` (8 untested, ~2 sessions) — cheapest, ops observability tools
+  - `td_handlers_gateway` (11 untested, ~3 sessions) — gateway/meta tools
+  - `td_handlers_content` (12 untested, ~3 sessions) — content pipeline
+  - `td_handlers_core` (22 untested, ~6 sessions) — foundational
+  - `td_handlers_agents` (23 untested, ~6 sessions) — agent dispatch
+- **Cheap pre-work: add "Covered actions" sections to the 8 existing per-tool validation docs** — this upgrades them from `validated_doc_exists_unknown` to `validated_full` / `validated_partial` in the gap map with ~zero risk. Cheapest gap-map upgrade possible.
+- **Cheap pre-work: fix the 23 tools flagged `actions_not_mentioned_in_description`** — edit schema description text to name the action verbs. Zero-code, description-only PR.
+- **Open I-0303 (Async Tenant-Boundary Enforcement)** — the ONLY unopened RUR-C1 child arc. RUR-C1 parent closes only when I-0303 lands + all-3 pass umbrella. Multi-session arc.
+- **Wire the tenant boundary health umbrella into a Celery beat schedule** — S2794 shipped runner + CLI; only the periodic invocation is missing. Small (~1 PR).
+- **Wire the tenant boundary health umbrella into a CI GitHub Action** — same substrate, different trigger.
+- **Playbook amendment PR — codify future-trigger-encoded-as-test pattern** (third-instance trigger fired at S2793 F3; still standing).
+- **Continue Workspace-tab extension pattern** per `feedback_workspace_over_command_center_for_new_ui`.
 - **Next PUBLIC_PATHS prefix ship** (64 remaining across ~13 prefixes per S2789 audit doc).
 - **Decorator order codebase migration** — row 45 `same_pr_mitigatable` (S2790).
 - **N24 anti-rubber-stamp SIGN codification** — 5 F-BLOCKING-equivalent triggers.
 - **AudioAgent completion-flip verification** — awaiting next timeout.
-- **Model drift arc** — 38+ auto-migrations queued (grew by 1 during S2794).
+- **Model drift arc** — 38+ auto-migrations queued.
 - **Frontend raw-fetch consolidation** — 30 files with fetch(); deferrable.
-- **Something entirely new** — fresh spider / agent capability / pipeline / dashboard.
 
 **Still gated by S2774 ops-surface pause:** N9, N20, Candidate 1 (S2761 smoke), 30+ `core/urls.py` lambda-`__import__` sites.
 
-**Still owed:** P0.5 cost-threshold, P0.75 CI billing, `SESSION_819_SYSTEM_AUDIT_*` cleanup (15 untracked files from webhook cron — grew from 13 during S2794).
+**Still owed:** P0.5 cost-threshold, P0.75 CI billing, `SESSION_819_SYSTEM_AUDIT_*` cleanup (17 untracked files from webhook cron — grew from 15 during S2795).
 
 ### Deferred (waiting on triggers, not calendar)
 
 - **N10** — partial-recycle UI badge (gated on real partial-recycle event)
 - **First real N11 PARTIAL_RECYCLE tile fire** (watching)
 - **Q3 #5** (health_summary / ops_tool.overview overlap)
-- **N22 v3 timestamp-based windows** — trigger: session-int windows prove insufficient OR consumer joins ledger against wall-clock artifacts
+- **N22 v3 timestamp-based windows** — trigger: session-int windows prove insufficient
 - **Second non-Rigby consumer of `zoom_out_tool`** — still awaited
+- **Second consumer of `pa_tools_gap_map` service** — trigger for factor-out abstraction test
 - **N17 smart-command-box creep** — row 21 `future_trigger`
-- **First autonomous Rigby invocation of `tenant_boundary_health` endpoint** — S2794 dogfood was prompted at post-merge; first unprompted is next trigger
+- **First autonomous Rigby invocation of `tenant_boundary_health` endpoint** — S2794 dogfood was prompted
+- **First autonomous Rigby invocation of `build_pa_tool_audit`** — S2795 dogfood was prompted
+- **F4 (telemetry-backed complaints, S2795 row 63) future_trigger** — fires when a `tool_call_error_rate` query surface exists (ToolCallRecord model already exists)
 - **First graceful-degradation clause activation on PLAYBOOK-6.10.8** — pending
 - **Third served-artifact-freshness trigger** — PLAYBOOK-7.4.4 amendment candidate
-- **S2783 Fold 1 same-PR mitigation** — GovernanceTab subtitle
-- **S2784 Fold 29 automation identity trigger** — pre-prod → non-staff automation deploy
-- **`@public_endpoint` opt-in decorator ADR** — 263-entry PUBLIC_PATHS wrong-pattern candidate
-- **Rigby SIGN response truncation follow-up** — sample size 5 across S2790→S2794; pattern claim now carries weight
-- **S2791 Row 50 aggregation drift trigger** — fires if `test_aggregations_block_repeats_advisory_markers` needs to change
-- **S2792 Row 53 aggregation scope mismatch trigger** — fires at ~200 ledger rows OR first user complaint
-- **S2793 Row 56 aggregation scope divergence trigger** — fires at user complaint OR timestamp windows added
-- **S2794 Row 57 autonomy creep trigger** — fires if a sibling PR wires any status→flag auto-flip on the tenant boundary health surface (F1 mitigation break signal)
-- **Third instance of future_trigger-encoded-as-test pattern** — TRIGGER HIT at S2793 F3; still standing at S2794 close (S2794 F3 was actionable-not-deferred, so pattern streak neither extends nor breaks). Playbook amendment candidate.
+- **S2794 Row 57 autonomy creep trigger** — fires if any sibling PR wires status→flag auto-flip on tenant boundary health
+- **Third instance of future_trigger-encoded-as-test pattern — still standing** (S2791/S2792/S2793). S2795 F4 was future_trigger but not encoded-as-test (deferred with no locked contract). Playbook amendment candidate.
 
-### Post-S2794 owed
+### Post-S2795 owed
 
 - **I-0303 scoping open** — RUR-C1 parent-close direct blocker
-- **Celery beat wire for the umbrella runner** — periodic invocation of the shipped runner
-- **CI GitHub Action wire for the umbrella runner** — CI-blessed reports for provenance
-- **Playbook amendment PR — future-trigger-encoded-as-test codification** (candidate; competes with I-0302 for `PLAYBOOK-6.10.10` slot)
-- **I-0302 three-PR pattern amendment** → PLAYBOOK-6.10.10 slot when opened (re-slotted forward again)
+- **Add "Covered actions" sections to 8 existing per-tool validation docs** — cheapest gap-map upgrade
+- **Fix 23 tools with actions_not_mentioned_in_description schema lints** — description-only PR
+- **Wire tenant boundary health umbrella to Celery beat + CI Action** — S2794 follow-up
+- **Playbook amendment PR — future-trigger-encoded-as-test codification** (candidate)
 - **64 remaining PUBLIC_PATHS candidates** across ~13 prefixes
 - **Decorator order codebase migration** (S2790 row 45)
 - **PLAYBOOK-6.10.11+ per-prefix authZ sweep codification** (S2790 row 47)
 - **N24 anti-rubber-stamp SIGN codification** — 5 triggers
 - **AudioAgent completion-flip verification**
-- **Ledger split drift audit** — now 24/20/15
-- **`SESSION_819_SYSTEM_AUDIT_*` untracked file cleanup** (15 files)
+- **Ledger split drift audit** — now 26/22/16
+- **`SESSION_819_SYSTEM_AUDIT_*` untracked file cleanup** (17 files)
 
 ---
 
-## SESSION PIN — S2794 RETIRED (fresh mint required at S2795 open)
+## SESSION PIN — S2795 RETIRED (fresh mint required at S2796 open)
 
-**Pin history (S2794):**
+**Pin history (S2795):**
 
-- `pa-1519703289af41fa` (label `s2794-rur-c1-new-surface-exploration`) minted S2794 open; **retired at S2794 close (`force=true`, twenty-fifth consecutive per S2770+ pattern)**
+- `pa-dd870b3158784a9d` (label `s2795-pa-tool-gap-map`) minted S2795 T1 open; **retired at S2795 close (`force=true`, twenty-sixth consecutive per S2770+ pattern)**
 
-**Wrapper `tools/pa_local.sh` still points at `pa-1519703289af41fa` (retired)** — intended failure mode forces S2795 first-action fresh mint.
+**Wrapper `tools/pa_local.sh` still points at `pa-dd870b3158784a9d` (retired)** — intended failure mode forces S2796 first-action fresh mint.
 
-**S2795 open sequence:**
+**S2796 open sequence:**
 
 ```
 context-kit orient
 
 # Read this file end-to-end
-# Read S2794 handoff §2 (novel-precedent moments) + §3 (T1 SIGN cycle) + §6 (open items)
+# Read S2795 handoff §2 (novel-precedent moments) + §3 (T1 SIGN cycle) + §6 (open items)
 
-# Freshness check. Should be FRESH · SHA-match at S2794 close SHA (b0fef5d3c or cascade PR SHA) — THIRTY-THIRD close-cycle after PLAYBOOK-7.4.4.
-bash tools/pa_local.sh "S2795 open — freshness check: ops_tool.version verdict + head_commit_sha; ops_tool.recent_recycles limit=5"
+# Freshness check. Should be FRESH · SHA-match at S2795 close SHA (5ec09d625 or cascade PR SHA) — THIRTY-FIFTH close-cycle after PLAYBOOK-7.4.4.
+bash tools/pa_local.sh "S2796 open — freshness check: ops_tool.version verdict + head_commit_sha; ops_tool.recent_recycles limit=5"
 
-# Ledger check: confirm 59-row baseline survived close cascade
+# Ledger check: confirm 64-row baseline survived close cascade
 DJANGO_LOG_LEVEL=WARNING python manage.py zoom_out_streak_report --as-json 2>/dev/null | python -c "
 import json, sys
 d = sys.stdin.read()
 r = json.loads(d[d.find('{'):])
-assert r['total_rows']==59, r
-print('OK — 59 rows, counts:', r['counts_by_classification'])
+assert r['total_rows']==64, r
+print('OK — 64 rows, counts:', r['counts_by_classification'])
 "
 
-# Regression 16-suite (S2793 15-suite + S2794 tenant boundary health)
+# Regression 17-suite (S2794 16-suite + S2795 gap map)
 python manage.py test \
   core.tests.test_ops_auth_regression_2772 \
   core.tests.test_ops_query_param_allowlist_2773 \
@@ -154,49 +168,42 @@ python manage.py test \
   core.tests.test_zoom_out_tool_aggregations_2792 \
   core.tests.test_zoom_out_time_window_2793 \
   core.tests.test_tenant_boundary_health_2794 \
+  core.tests.test_pa_tools_gap_map_2795 \
   --noinput
 
-# Optional — verify the umbrella runner is still working (subprocess+JUnit)
-DJANGO_LOG_LEVEL=WARNING python manage.py run_cross_tenant_regression --json 2>/dev/null | python -c "
-import json, sys
-r = json.loads(sys.stdin.read())
-assert r['overall_status'] in {'green','red','unknown'}
-print('umbrella:', r['overall_status'], '·', r['total_tests'], 'tests ·', r['elapsed_secs'], 's')
-"
+# Optional — regenerate gap map to see fresh counts
+DJANGO_LOG_LEVEL=WARNING python manage.py build_pa_tool_audit --gap-only --check 2>/dev/null | head -40
 
-# Mint fresh pin scoped to selected S2795 candidate.
+# Mint fresh pin scoped to selected S2796 candidate.
 python manage.py session_lifecycle open --label <candidate-scoped-label>
 python manage.py session_lifecycle history --limit 5
 
 grep '^python tools/pa_chat.py' tools/pa_local.sh
 ```
 
-**Anti-rubber-stamp check on S2795 first Rigby SIGN:** verify `tool_runs` non-empty. **PLAYBOOK-6.10.7 + 6.10.8 + 6.10.9 constitutional at v0.8.0** — every joint SIGN routing MUST include ≥1 zoom-out ask; folds MUST be classified + persisted BEFORE D-verdict; folds asserting concrete code-state facts MUST admit stable-state-pointer + file+line evidence + (i)/(ii)/(iii) outcome inline before classify+persist.
+**Anti-rubber-stamp check on S2796 first Rigby SIGN:** verify `tool_runs` non-empty. **PLAYBOOK-6.10.7 + 6.10.8 + 6.10.9 constitutional at v0.8.0** — every joint SIGN routing MUST include ≥1 zoom-out ask; folds MUST be classified + persisted BEFORE D-verdict; folds asserting concrete code-state facts MUST admit stable-state-pointer + file+line evidence + (i)/(ii)/(iii) outcome inline before classify+persist.
 
 ---
 
 ## Twin-pointer card
 
-📁 **Repo `/` + `/docs/` — S2794 artifacts:**
+📁 **Repo `/` + `/docs/` — S2795 artifacts:**
 
-- **Ship model:** `core/models_tenant_boundary_health.py` + migration `0385`
-- **Ship runner:** `core/services/cross_tenant_regression_service.py`
-- **Ship CLI:** `python manage.py run_cross_tenant_regression`
-- **Ship REST:** `core/views_governance.py:tenant_boundary_health` + `/api/governance/tenant-boundary-health/`
-- **Ship UI:** `frontend/src/pages/workspace/tabs/TenantBoundaryHealthSection.tsx` (System → Tenant Boundary sub-tab)
-- **Ship umbrella:** `tests/security/test_cross_tenant_regression.py` (CAMPAIGN.md canonical name)
-- **Ship contract tests:** `core/tests/test_tenant_boundary_health_2794.py`
-- **Handoff:** `docs/handoffs/SESSION_2794_TENANT_BOUNDARY_HEALTH.md`
-- **Predecessors:** S2793 (zoom-out time window), S2792 (aggregations parity), S2751 (I-0302 close), S2742 (I-0301 close + RUR-C1 parent ratification)
+- **Ship logic:** `core/services/pa_tools_gap_map.py`
+- **Ship command:** `python manage.py build_pa_tool_audit --gap-only --output <path>` (or `--include-validation-xref` for extended audit)
+- **Ship artifact:** `docs/audits/PA_TOOLS_GAP_MAP_S2795.md`
+- **Ship refresh:** `docs/PA_TOOL_AUDIT.md` (fresh at close)
+- **Ship tests:** `core/tests/test_pa_tools_gap_map_2795.py`
+- **Handoff:** `docs/handoffs/SESSION_2795_PA_TOOLS_GAP_MAP.md`
+- **Predecessors:** S2794 (tenant boundary health), S2733 (tool validation campaign retrospective), S2732 (validation campaign close), S2728→S2731 (campaign body)
 
 🖥️ **Workspace UI — `/workspaces` surface:**
 
-- **System / Tenant Boundary sub-tab** (`?tab=system&sub=tenant-boundary`) — NEW at this session
+- **No Workspace tab this ship** — deliberately CLI + markdown-only
 - **Live surfaces at close:**
-  - `logs/zoom_out_classifications.jsonl` — **59 rows** (24/20/15)
-  - `logs/session_freshness.jsonl` — grew by 1 at S2794 open
-  - `logs/recycle_events.jsonl` — +1 event from S2794 close (`sha=b0fef5d3c271`)
-  - `core_tenantboundaryhealthreport` — **1 row** at close (green baseline)
+  - `logs/zoom_out_classifications.jsonl` — **64 rows** (26/22/16)
+  - `logs/recycle_events.jsonl` — +1 event (post-#3203, sha=`5ec09d625e85`)
+  - `docs/audits/PA_TOOLS_GAP_MAP_S2795.md` — first emit
 
 ---
 
@@ -205,37 +212,38 @@ grep '^python tools/pa_chat.py' tools/pa_local.sh
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | `b0fef5d3c` (S2794 ship) — cascade PR advances this at close |
+| HEAD | `5ec09d625` (S2795 ship) — cascade PR advances this at close |
 | Playbook version | v0.8.0 (unchanged) |
 | Playbook rule count | 205 (unchanged) |
-| RUR-C1 state | Substrate advanced — shared regression umbrella + operator readiness surface shipped; parent CLOSE gated on I-0303 open + all-3 pass. |
+| RUR-C1 state | Substrate: gap-map surface built. RUR-C1 parent-close blocker unchanged (I-0303 not opened). |
 | RUR-C1 child arcs | I-0301 CLOSED (S2742) · I-0302 CLOSED (S2751) · **I-0303 NOT YET OPENED** |
-| Session pin | `pa-1519703289af41fa` (retired at S2794 close, force=true, twenty-fifth consecutive) |
-| Wrapper default pin | `tools/pa_local.sh` — `pa-1519703289af41fa` (retired; forces fresh mint at S2795 open) |
-| Live infra state | S2755→S2793 substrate + S2794 tenant boundary health + first health report row |
+| Session pin | `pa-dd870b3158784a9d` (retired at S2795 close, force=true, twenty-sixth consecutive) |
+| Wrapper default pin | `tools/pa_local.sh` — `pa-dd870b3158784a9d` (retired; forces fresh mint at S2796 open) |
+| Live infra state | S2755→S2794 substrate + S2795 PA tools gap map |
 | Postgres :5432 | pg15 (July DB) — brew launchd `started` |
 | Postgres pg16 | Parked (April fossil) |
-| Freshness log | `logs/session_freshness.jsonl` — grew by 1 at S2794 open |
-| Recycle log | `logs/recycle_events.jsonl` — +1 event (post-#3201, sha=`b0fef5d3c271`) |
-| Zoom-out ledger | `logs/zoom_out_classifications.jsonl` — **59 rows** (24 actionable / 20 mitigatable / 15 future_trigger) |
-| `TenantBoundaryHealthReport` | **1 row** (green baseline at close) |
-| Next move | Chris selects at S2795 open |
+| Freshness log | `logs/session_freshness.jsonl` — grew by 1 at S2795 open |
+| Recycle log | `logs/recycle_events.jsonl` — +1 event (post-#3203, sha=`5ec09d625e85`) |
+| Zoom-out ledger | `logs/zoom_out_classifications.jsonl` — **64 rows** (26 actionable / 22 mitigatable / 16 future_trigger) |
+| PA tool audit | `docs/PA_TOOL_AUDIT.md` — regenerated at close (158/114/157/113) |
+| PA tools gap map | `docs/audits/PA_TOOLS_GAP_MAP_S2795.md` — first emit (105 untested / 8 doc_exists_unknown / 44 agents / 1 meta) |
+| Next move | Chris selects at S2796 open |
 
 ---
 
-## Recommended session-open protocol (S2795)
+## Recommended session-open protocol (S2796)
 
 1. `context-kit orient`
 2. Read this file end-to-end
-3. Read S2794 handoff §2 (novel-precedent moments) + §3 (T1 SIGN cycle) + §6 (open items)
-4. **Freshness + regression 16-suite + ledger verify** — see S2795 open sequence above
-5. **Watch for** ledger 59-row baseline surviving cascade merge; freshness FRESH · SHA-match
+3. Read S2795 handoff §2 (novel-precedent moments) + §3 (T1 SIGN cycle) + §6 (open items)
+4. **Freshness + regression 17-suite + ledger verify** — see S2796 open sequence above
+5. **Watch for** ledger 64-row baseline surviving cascade merge; freshness FRESH · SHA-match
 6. If `staleness_verdict != FRESH` → escalate
 7. **Check `brew services list | grep postgres` FIRST** if freshness fails oddly
 8. Verify runtime state: `git log --oneline -5`; confirm wrapper at retired pin
 9. Present candidate menu — engineering leans first per `feedback_engineering_bias_over_audit`; Workspace-tab leans preferred per `feedback_workspace_over_command_center_for_new_ui`
 10. **Anti-rubber-stamp check on first SIGN** — verify `tool_runs` non-empty
-11. Chris directs S2795 P0 selection
+11. Chris directs S2796 P0 selection (candidate menu is a prior, not a gate — Chris may pivot to something new)
 12. Mint fresh pin with candidate-scoped label
 13. Route work through Rigby joint agreement before coding
 14. **PLAYBOOK-6.10.9 constitutional at v0.8.0:** any zoom-out fold asserting concrete code-state facts MUST admit stable-state-pointer + file+line evidence + (i)/(ii)/(iii) outcome inline before classify+persist
@@ -244,14 +252,14 @@ grep '^python tools/pa_chat.py' tools/pa_local.sh
 
 ## Reference documents
 
-Ordered by frequency of use at S2795:
+Ordered by frequency of use at S2796:
 
 1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (anchor at v0.8.0)
 2. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.8.0 (205 rules)
-3. [`docs/handoffs/SESSION_2794_TENANT_BOUNDARY_HEALTH.md`](docs/handoffs/SESSION_2794_TENANT_BOUNDARY_HEALTH.md) — **S2794 handoff (current)**
-4. [`docs/handoffs/SESSION_2793_ZOOM_OUT_TIME_WINDOW.md`](docs/handoffs/SESSION_2793_ZOOM_OUT_TIME_WINDOW.md) — S2793 predecessor
-5. [`docs/research/implementation/real_user_readiness/CAMPAIGN.md`](docs/research/implementation/real_user_readiness/CAMPAIGN.md) — RUR-C1 parent doc
-6. [`docs/research/implementation/RATIFICATION_2026-07-10_real_user_readiness.md`](docs/research/implementation/RATIFICATION_2026-07-10_real_user_readiness.md) — RUR-C1 parent ratification (Chris Q1-Q9 D-verdicts)
-7. [`docs/research/implementation/tenant_boundary_lockdown/I-030199_tenant_boundary_lockdown_implementation_close.md`](docs/research/implementation/tenant_boundary_lockdown/I-030199_tenant_boundary_lockdown_implementation_close.md) — I-0301 arc close
-8. [`docs/research/implementation/tenant_boundary_lockdown/I-030299_i0302_arc_close.md`](docs/research/implementation/tenant_boundary_lockdown/I-030299_i0302_arc_close.md) — I-0302 arc close
-9. [`logs/zoom_out_classifications.jsonl`](logs/zoom_out_classifications.jsonl) — 59 rows at S2794 close (rows 57/58/59 are S2794 F1+F2 adopted + F3 adopted)
+3. [`docs/handoffs/SESSION_2795_PA_TOOLS_GAP_MAP.md`](docs/handoffs/SESSION_2795_PA_TOOLS_GAP_MAP.md) — **S2795 handoff (current)**
+4. [`docs/audits/PA_TOOLS_GAP_MAP_S2795.md`](docs/audits/PA_TOOLS_GAP_MAP_S2795.md) — **S2795 gap map artifact (headline + triage slices + per-tool coverage table)**
+5. [`docs/PA_TOOL_AUDIT.md`](docs/PA_TOOL_AUDIT.md) — fresh runtime-derived PA tool audit (regen at S2795 close)
+6. [`docs/handoffs/SESSION_2794_TENANT_BOUNDARY_HEALTH.md`](docs/handoffs/SESSION_2794_TENANT_BOUNDARY_HEALTH.md) — S2794 predecessor
+7. [`docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md`](docs/handoffs/SESSION_2733_CAMPAIGN_RETROSPECTIVE.md) — S2728→S2732 validation campaign retrospective (methodology reference for triage slice execution)
+8. [`docs/research/tools/validation/`](docs/research/tools/validation/) — 18 existing validation docs (10 substrate + 8 per-tool without Covered actions checklist)
+9. [`logs/zoom_out_classifications.jsonl`](logs/zoom_out_classifications.jsonl) — 64 rows at S2795 close (rows 60/61/62/63/64 are S2795 F1-F5 folds)

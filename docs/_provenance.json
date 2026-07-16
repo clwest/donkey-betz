@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-15T23:08:11+00:00",
+    "generated": "2026-07-16T02:04:08+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "b0fef5d3c271",
-    "doc_count": 2606,
-    "commit_count": 7990,
+    "git_head": "5ec09d625e85",
+    "doc_count": 2608,
+    "commit_count": 7994,
     "confidence_breakdown": {
-      "HIGH": 1657,
+      "HIGH": 1658,
       "MEDIUM": 402,
       "LOW": 5,
-      "UNKNOWN": 542
+      "UNKNOWN": 543
     },
     "excludes": [
       "docs/archive/",
@@ -2590,7 +2590,7 @@
         2745,
         2749
       ],
-      "commit_count": 1306,
+      "commit_count": 1308,
       "prs": [
         10,
         11,
@@ -3188,7 +3188,8 @@
         3194,
         3196,
         3198,
-        3200
+        3200,
+        3202
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -3681,8 +3682,10 @@
       "sessions_touched": [
         1115
       ],
-      "commit_count": 2,
-      "prs": []
+      "commit_count": 4,
+      "prs": [
+        3203
+      ]
     },
     "docs/PERFECT_WORKFLOW_DESIGN.md": {
       "originating_session": 92,
@@ -7530,7 +7533,7 @@
         2745,
         2749
       ],
-      "commit_count": 254,
+      "commit_count": 256,
       "prs": [
         2213,
         2219,
@@ -7731,7 +7734,8 @@
         3194,
         3196,
         3198,
-        3200
+        3200,
+        3202
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -9375,6 +9379,19 @@
       "sessions_touched": [],
       "commit_count": 1,
       "prs": []
+    },
+    "docs/audits/PA_TOOLS_GAP_MAP_S2795.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "5ec09d62",
+      "first_commit_date": "2026-07-15",
+      "first_commit_subject": "feat(governance): S2795 PA tools validation-coverage gap map (#3203)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3203
+      ]
     },
     "docs/audits/PHASE0_APPLIED_NOTES.md": {
       "originating_session": 960,
@@ -20258,6 +20275,21 @@
       "commit_count": 2,
       "prs": [
         3200
+      ]
+    },
+    "docs/handoffs/SESSION_2794_TENANT_BOUNDARY_HEALTH.md": {
+      "originating_session": 2794,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "a2b3e484",
+      "first_commit_date": "2026-07-15",
+      "first_commit_subject": "docs(cascade): S2794 close cascade \u2014 handoff + start-here + INDEX + provenance (#3202)",
+      "sessions_touched": [
+        2794
+      ],
+      "commit_count": 2,
+      "prs": [
+        3202
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
