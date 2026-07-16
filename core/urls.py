@@ -1041,7 +1041,7 @@ from agents.views_instances import (
 # feed2d81-ee2f-44c0-8f17-816591d2a3ff).
 # Import Intelligent Assistant with Agent Integration (Session 58: Replaced with GPT-5 version from views_image)
 # from core.views_assistant_intelligent import assistant_chat_intelligent as assistant_chat
-from core.auth_views import login_view, logout_view, current_user, user_profile, profile_stats
+from core.auth_views import login_view, logout_view, current_user, user_profile, profile_stats, complete_onboarding_view
 from core.auth_views_enhanced import (
     register_view, verify_email_view, login_enhanced_view,
     forgot_password_view, reset_password_view, change_password_view,
@@ -2198,7 +2198,12 @@ urlpatterns = [
     path('api/auth/login/', login_view, name='auth-login-compat'),  # Backward compatibility
     path('api/v1/auth/logout/', logout_view, name='auth-logout'),
     path('api/v1/auth/user/', current_user, name='auth-current-user'),
-    
+
+    # S2798: onboarding mark-seen endpoint. Called when user dismisses first-run
+    # banner. Idempotent; delegates to onboard_new_user(). Not wired into login_view
+    # per Rigby T1 SIGN — token issuance must stay side-effect-free.
+    path('api/onboarding/complete/', complete_onboarding_view, name='onboarding-complete'),
+
     # Enhanced authentication endpoints
     path('api/v1/auth/register/', register_view, name='auth-register'),
     path('api/v1/auth/verify-email/', verify_email_view, name='auth-verify-email'),
