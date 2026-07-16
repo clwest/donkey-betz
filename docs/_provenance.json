@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-16T04:24:25+00:00",
+    "generated": "2026-07-16T15:13:16+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "63aa705f5209",
-    "doc_count": 2615,
-    "commit_count": 8003,
+    "git_head": "5167e1fa3906",
+    "doc_count": 2616,
+    "commit_count": 8007,
     "confidence_breakdown": {
-      "HIGH": 1660,
+      "HIGH": 1661,
       "MEDIUM": 402,
       "LOW": 5,
       "UNKNOWN": 548
@@ -2590,7 +2590,7 @@
         2745,
         2749
       ],
-      "commit_count": 1312,
+      "commit_count": 1314,
       "prs": [
         10,
         11,
@@ -3191,7 +3191,8 @@
         3200,
         3202,
         3204,
-        3206
+        3206,
+        3208
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7536,7 +7537,7 @@
         2745,
         2749
       ],
-      "commit_count": 260,
+      "commit_count": 262,
       "prs": [
         2213,
         2219,
@@ -7740,7 +7741,8 @@
         3200,
         3202,
         3204,
-        3206
+        3206,
+        3208
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20338,6 +20340,21 @@
       "commit_count": 2,
       "prs": [
         3206
+      ]
+    },
+    "docs/handoffs/SESSION_2797_PUBLIC_LANDING_PAGE.md": {
+      "originating_session": 2797,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "f2d3d6c2",
+      "first_commit_date": "2026-07-15",
+      "first_commit_subject": "docs(cascade): S2797 close cascade \u2014 handoff + start-here + INDEX + provenance + T3 tagline (#3208)",
+      "sessions_touched": [
+        2797
+      ],
+      "commit_count": 2,
+      "prs": [
+        3208
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
