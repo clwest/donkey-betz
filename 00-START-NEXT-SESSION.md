@@ -2,93 +2,71 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2800 CLOSED — worker-startup orphan reap + CodeReviewAgent MISSING_INPUT (Option B done; /docs/ restructuring research arc queued at S2801 per Chris directive at close — OVERRIDES BettingPage default)
+## READ THIS FIRST — SESSION 2801 CLOSED — /docs/ restructuring arc OPEN at Group 2700 (parent-scoping ratified; T1 inventory & topology audit is S2802 default)
 
-**Refreshed 2026-07-16 (SESSION 2800 CLOSED — fourth consecutive same-day engineering ship (S2797 → S2798 → S2799 → S2800). Chris directive at open: `"let's do option B then stop"` — one session, one ship, clean termination. Verify-before-build reframed the ship from "5 broken agents" to "1 infra handler + 1 real agent-code fix" after finding 4 of 5 failures are worker-restart orphans (SESSION_1084 §197 corroborated). Ships: `_reap_orphan_agent_executions_on_startup` handler on `worker_process_init` in `core/celery.py` (bulk UPDATE stale in-progress rows to `cancelled`) + CodeReviewAgent MISSING_INPUT early-return with structured error_code (`core/agents/code_review_agent.py`) + smoke gate mgmt command. **Live proof at post-merge recycle**: `[CELERY_WORKER_STARTUP_REAP] transitioned 16 orphan AgentExecution row(s) to cancelled` on first worker startup — 16 rows that would have been silently reaped as `failed` at 60min are now honestly labeled as worker-restart interruptions. Rigby T1 SIGN with tool-run evidence (ops_tool failure signatures + recycle cross-ref); 5 folds persisted BEFORE Chris D-verdict (rows 85-89) per PLAYBOOK-6.10.8 — third consecutive session with correct fold-timing discipline. Novel: **first ship with a live-measurable capability-lift receipt** (16-row reap number is the load-bearing metric). FORTIETH close-cycle post-PLAYBOOK-7.4.4.)**
+**Refreshed 2026-07-16 (SESSION 2801 CLOSED — fifth consecutive same-day multi-ship session (S2797 → S2798 → S2799 → S2800 → S2801). Shape shift: S2797–S2800 all engineering ships; S2801 is a research/scoping ship. Chris directive at S2800 close 2026-07-16: `"Before we do anything else I want you and Rigby to do a deep audit of the /docs/."` Ratified shape at S2801 T1: **parent-scoped research arc `2700`** using the `/docs/research/` pattern as the audit apparatus (dogfooded on `/docs/` itself). Chris D-verdict at T1: `"go ahead with the 6-thread package"`. Ships parent-scoping charter (262 lines) + OPEN_ARCS in-progress row + arc pin rotation. Rigby T1 SIGN-with-edits with tool-grounded evidence (ops_tool + search_docs + kb_tool); anti-rubber-stamp check PASSED per `feedback_verify_rigby_tool_runs_before_trusting_sign`. 4 zoom-out folds persisted rows 90-93 BEFORE Chris D-verdict per PLAYBOOK-6.10.8 — fourth consecutive session with correct fold-timing discipline. Novel: **first arc that dogfoods its own audit apparatus with explicit CHALLENGE mitigation** — row 91 fold surfaces self-referential lock-in risk; T2 charter mandates the challenge. FORTYSECOND close-cycle post-PLAYBOOK-7.4.4.)**
 
-**S2800 ship:**
+**S2801 ship:**
 
-**PR #3213 · `4c339a6a6b2a`** — 4 files, +274 / -1. Worker-startup orphan reap handler in `core/celery.py` + CodeReviewAgent MISSING_INPUT structured error_code in `core/agents/code_review_agent.py` + `smoke_broken_agents_pre_fix` mgmt command (extends S2799 smoke pattern to agent level) + fresh session pin.
+**PR #3216 · `f3d08d690`** — 3 files, +264 / -1. Parent-scoping doc at `docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md` (262 lines) + `docs/research/OPEN_ARCS.md` in-progress row for Group 2700 + `tools/pa_local.sh` arc pin rotation.
 
-**Handoff:** `docs/handoffs/SESSION_2800_FIX_BROKEN_AGENTS.md`
-**Post-merge:** `make recycle-all` per PLAYBOOK-7.4.4 completed (fortieth cycle). Reap handler fired on first worker startup, transitioned 16 orphan rows to `cancelled` — measurable evidence in `celery*.log`.
-**Ledger state at close:** `logs/zoom_out_classifications.jsonl` — **89 rows** (35 `same_pr_actionable` / 30 `same_pr_mitigatable` / 22 `future_trigger`); rows 85-89 are S2800 T1 folds.
+**Handoff:** `docs/handoffs/SESSION_2801_DOCS_RESTRUCTURING_ARC_OPEN.md`
+**Close cascade:** merged as [close-cascade PR] per PLAYBOOK-7.4.4 + `feedback_docs_cascade_at_every_close` + `feedback_cascade_pr_must_include_embed_step`.
+**Ledger state at close:** `logs/zoom_out_classifications.jsonl` — **93 rows** (35 `same_pr_actionable` / 32 `same_pr_mitigatable` / 23 `future_trigger` — approx; rows 90-93 are S2801 T1 folds).
 
-**Live proof:** `grep CELERY_WORKER_STARTUP_REAP celery*.log` — every worker startup now emits the reap count, giving Chris a running metric of how many false-failures the ship prevents over time.
-
----
-
-## SESSION-OPEN INFRA STORY (S2800)
-
-**Fourth consecutive same-day engineering ship.** S2797 (public landing page) → S2798 (onboarding banner) → S2799 (Rigby tool signposts) → S2800 (broken-agent fixes). One conversation, four ships, 21 ledger folds (68 → 89). Chris scoped S2800 as terminal: `"let's do option B then stop"`.
-
-**Root-cause reframe upstream of implementation.** Initial candidate framing was "fix 5 broken agents" per S2799 Thread 1 audit. Verify-before-build reading of `core/tasks_agents.py:2450-2523` (heartbeat thread) + SESSION_1084 §197 handoff surfaced: **4 of 5 failures are worker-restart orphans**, not real hangs. Heartbeat thread dies with worker on `make celery-recycle`, execution row's `last_heartbeat_at` freezes, cleanup watchdog reaps 60min later as `failed`. Every recycle manufactures 4-agent "failures" that inflate error stats. Ship reframed: 1 infra handler (fixes 4 of 5 at root) + 1 real agent-code fix (CodeReviewAgent MISSING_INPUT).
-
-**Live-measurable capability-lift receipt.** Post-merge `make recycle-all`: `[CELERY_WORKER_STARTUP_REAP] transitioned 16 orphan AgentExecution row(s) to cancelled`. That's 16 rows that WOULD have been marked `failed` at 60min — instead honestly labeled `Worker restart — execution interrupted (S2800)` with machine-parseable reason. Second consecutive ship with quantitative post-ship evidence (S2799 signpost lift was measurable via `zoom_out_tool` routing; S2800 orphan reap is measurable via log grep).
-
-**PLAYBOOK-6.10.8 discipline held (third session in a row).** 5 folds persisted between T1 SIGN and Chris "ship it." S2798 missed timing (persisted after D-verdict); S2799 corrected; S2800 held. Pattern stable.
-
-**Rigby T1 verify-honesty explicit.** Fold row 89 admits worker-restart hypothesis is **strongly consistent but not fully proven** — she couldn't produce a definitive day-bucket histogram cross-referencing every "no heartbeat" failure with `recycle_events.jsonl`. Ship covers the 4-known-orphan pattern; signposted follow-up for non-recycle-day no-heartbeat failures (those are real hangs needing different treatment). Direct PLAYBOOK-6.10.9 compliance.
+**Arc state:** `2700` **in-progress** (parent shipped). Children `2701..2706` **not-started**. Summary `2799` **not-started**. Full arc will span multiple sessions.
 
 ---
 
-## S2801 CANDIDATES — /docs/ RESTRUCTURING ARC IS THE DEFAULT (Chris directive at S2800 close)
+## SESSION-OPEN INFRA STORY (S2801)
 
-**⚠️ OVERRIDES the earlier C→B→BettingPage sequencing.** Chris at S2800 close: `"Before we do anything else I want you and Rigby to do a deep audit of the /docs/."` BettingPage moves behind the docs arc. Full context in `project_docs_restructuring_arc_queued.md` memory + this section.
+**Fifth consecutive same-day multi-ship session; shape-shift from engineering to research/scoping.** Discipline transferred cleanly across ship-shape boundary — PLAYBOOK-6.10.7/6.10.8/6.10.9 held identically on a scoping ship as on the engineering ships. Chris directive at S2800 close queued the arc without fresh re-scoping at S2801 open (clean predecessor→successor handoff).
 
-### ⭐ /docs/ RESTRUCTURING RESEARCH ARC (default candidate)
+**First arc that dogfoods its own audit apparatus.** T2 charter mandates CHALLENGE candidates against the `/docs/research/` pattern (Rigby fold 91 mitigation). Self-referential lock-in surfaced pre-authoring and baked into child scope directly — first arc where fold-content became child-audit-scope requirement.
 
-**Shape:** Option B ratified at S2800 close — parent-scoped research arc using the `/docs/research/` pattern to audit the rest of `/docs/`. Dogfoods the primitives Chris likes on the audit target itself.
+**PLAYBOOK-6.10.8 discipline held (fourth consecutive session).** 4 folds persisted between T1 SIGN and Chris "go ahead." Ledger 89 → 93 committed BEFORE joint recommendation to Chris. S2798 missed timing (persisted after); S2799 corrected; S2800 held; S2801 held.
 
-**Rules Chris set at close:**
-- **This is research/audit, NOT implementation.** Chris: `"I don't want this to be a session of work we are doing but it's something we need to do."` Output = design proposal + migration plan across the arc. No file moves, no code changes during the arc.
-- **Fresh session.** Chris directive; open with clean context. First-action fresh mint of pin scoped to the arc.
-- **Route parent-scoping through Rigby** for joint agreement before authoring (per collaboration model + PLAYBOOK-6.10.8 fold-before-D-verdict discipline held S2798+S2799+S2800).
+**Rigby T1 SIGN substantive.** Verdict SIGN-WITH-EDITS with scope-changing edits (T3 split into human-pain + audience-segmentation; T6 anchor-drift thread added — 4 threads → 6 threads). Not a rubber-stamp AGREE. tool_runs contained file:line citations to real evidence surfaces. Anti-rubber-stamp check PASSED per `feedback_verify_rigby_tool_runs_before_trusting_sign`.
 
-**Proposed four threads (surface at parent-scoping; Chris didn't ratify yet):**
+**Twin workspace deliverable deferred to arc close.** Per parent doc §5 anti-scope + `feedback_twin_deliverable_at_every_ratification` — twin applies to the RATIFIED restructuring plan (canonical summary at `2799`), not to the parent-scoping charter itself.
 
-1. **Inventory & topology** — what's IN `/docs/` (dir tree, file counts, auto-gen vs hand-written, freshness histogram)
-2. **What makes `/docs/research/` work** — reverse-engineer the transferable primitives: `RESEARCH_OPERATING_SYSTEM.md`, `OPEN_ARCS.md` manifest, `ARCHITECTURE_INDEX.md` decision matrix, `DOMAIN_RESEARCH_PLAYBOOK.md`, xx00/xx99 parent-scoping / canonical-summary shape
-3. **Human-user pain points in the rest** — where discoverability breaks; convention collisions (DOC_LIFECYCLE vs PLATFORM_WHAT_IT_IS vs CLAUDE.md vs docs/topics/); load-bearing-for-humans vs Claude-only vs Rigby-only
-4. **Handoffs + audits proliferation** — 676+ handoffs; growing `docs/audits/`; write-once-read-rarely triage; should handoffs age out to archive?
+---
 
-**Baseline numbers to carry in:**
-- 2618 docs indexed (S2800 cascade output)
-- 1443 active / 11 draft / 1733 superseded
-- 676+ handoff docs
-- Growing `docs/audits/` with SESSION_819_* cruft
-- `docs/topics/` narrative may drift; PLATFORM_INVENTORY authoritative for counts per DOC_LIFECYCLE §2c
+## S2802 CANDIDATES — T1 INVENTORY & TOPOLOGY AUDIT IS THE DEFAULT
 
-**Arc group number:** TBD at open — check `docs/research/OPEN_ARCS.md` for next unused. Sketched as `2900` at S2800 close but verify.
+### ⭐ T1 (2701) — Docs inventory & topology audit (default candidate)
 
-**Recommended parent-scoping structure (per DOMAIN_RESEARCH_PLAYBOOK):**
-- `docs/research/platform/NN00_docs_restructuring_domain_scoping.md` — parent (why, scope, threads, deliverables, non-goals)
-- `docs/research/platform/NN01_docs_inventory_topology_audit.md` — Thread 1
-- `docs/research/platform/NN02_docs_research_pattern_extraction_audit.md` — Thread 2
-- `docs/research/platform/NN03_docs_human_user_pain_points_audit.md` — Thread 3
-- `docs/research/platform/NN04_docs_handoffs_audits_proliferation_audit.md` — Thread 4
-- `docs/research/platform/NN99_docs_restructuring_canonical_summary.md` — arc close
+**Shape:** Group 2700 arc's first child audit. Load parent doc + `DOMAIN_RESEARCH_PLAYBOOK.md §9` (28 canonical questions). First-action fresh mint of pin scoped to T1.
 
-**Ship shape after arc:** the canonical summary becomes the ratified restructuring plan. Migration ships as follow-up sessions (post-arc-close), not during.
+**Scope (from parent §4):** what's IN `/docs/` (dir tree, file counts, auto-gen vs hand-written distribution, freshness histogram, size distribution, subdir purpose taxonomy). Ground-truth inventory that later threads reference.
 
-### After the docs arc — Chris's original sequencing resumes
+**Deliverable:** `docs/research/domains/docs_restructuring/2701_docs_inventory_topology_audit.md` with 28-question audit + `## Migration Queue (post-arc)` section (per hard-line non-goals discipline).
 
-- **BettingPage first-user trace + top-1 fix** (was default; now behind docs arc)
+**Anti-duplicate discipline:** cite `PLATFORM_INVENTORY.md` for runtime counts (never restate); cite `docs/INDEX.md` for corpus counts.
+
+**Explicitly out (parent §7 anti-scope):** any judgment on what should MOVE (T5/T6's job); T1 measures only.
+
+**Recommended S2802 flow:**
+1. Fresh mint of pin scoped to `s2802-t1-docs-inventory-topology`
+2. Read parent doc `2700_docs_restructuring_domain_scoping.md` end-to-end
+3. Read `DOMAIN_RESEARCH_PLAYBOOK.md §9` (28 questions)
+4. Execute inventory sweep (six-parallel-Explore per playbook §13)
+5. Author child audit
+6. Route to Rigby for T1 SIGN + zoom-out fold set
+7. Chris D-verdict
+8. Close-cascade
+
+### Alternate candidates (if Chris deprioritizes T1)
+
+- **BettingPage first-user trace + top-1 fix** — pre-existing default before docs arc queued; still owed after arc closes
 - **Stock Intelligence** — first non-betting revenue play (behind BettingPage)
 
-### S2800 follow-ups (all deferred; not blocking)
+### S2800/S2801 follow-ups (all deferred; not blocking)
 
-- **Non-recycle-day no-heartbeat monitor** (fold row 89 future_trigger) — after 7 days, sweep `AgentExecution.error_message LIKE '%no heartbeat%'` and cross-reference against recycle_events.jsonl. Any orphan-day failures = real hang, different fix needed.
-- **AudioAgent TTS payment wall** — separate config issue (ElevenLabs paid plan required). Not code; deferred until Chris decides on paid TTS provider.
-- **CodeReviewAgent workspace file discovery** — deferred per Rigby T1 (fail-fast > implicit guessing). Revisit only if MISSING_INPUT rate is high for user experience.
-- **`interrupted` status enum value** — deferred (existing `cancelled` + error_message string sufficient).
-
-### S2799 follow-ups (all deferred; not blocking)
-
-- **Per-signpost adoption telemetry** (S2799 F84) — fires 7 days post-ship (2026-07-23) if any of the 14 signposted tools has zero invocations
-- **`ops_digest_tool` handler FieldError fix** — `Cannot resolve keyword 'pattern_hash'` at `core/services/td_handlers_ops.py` (5-line ORM fix)
-- **`calendar_tool` rename/kill** — dead/misnamed
-- **`mission_verdict` read-only variant** — so it can earn a signpost
+- **Non-recycle-day no-heartbeat monitor** (S2800 fold row 89 future_trigger) — 7-day trigger fires 2026-07-23
+- **Per-signpost adoption telemetry** (S2799 F84) — 7-day trigger fires 2026-07-23
+- **AudioAgent TTS payment wall** — separate config; deferred
+- **CodeReviewAgent workspace file discovery** — deferred per Rigby T1 (fail-fast > implicit guessing)
 
 ### S2797/S2798 standing owed
 
@@ -102,130 +80,82 @@
 - 8 remaining per-tool docs need "Covered actions"
 - 23 tools schema-lint fix
 - Wire tenant boundary health → Celery beat
-- `SESSION_819_SYSTEM_AUDIT_*` cleanup (19+ files)
+- **`SESSION_819_SYSTEM_AUDIT_*` 19-file cleanup** — DEFERRED per Group 2700 non-goals (no deletions during arc); migration eligible post arc-close
 - Doc-note gap-map classifier h3-truncation bug in S2795 F2 template spec
 
 ### Deferred (waiting on triggers)
 
-- **NEW: S2800 F89** — non-recycle-day no-heartbeat failure monitor (concrete post-ship monitoring trigger)
-- **S2799 F80** — SMOKE_FAIL cluster ≥4/14 = Option-B trigger (already resolved — Option-B shipped this session; downgraded to closed)
-- **S2799 F83** — Dynamic signposts via PAToolLearningEnricher (v2) — fires when Chris wants to iterate signposts without a PR
-- **S2799 F84** — Per-signpost adoption telemetry (7-day check post-2026-07-16)
-- All S2797/S2798 triggers unchanged
+- All S2797-S2800 triggers unchanged
+- **NEW: parent doc open decisions O1-O4** — Chris ratifies as they surface during T1-T6 execution; none block T1 open
 
 ---
 
-## SESSION PIN — S2800 RETIRED (fresh mint required at S2801 open)
+## SESSION PIN — S2801 RETIRED (fresh mint required at S2802 open)
 
-**Pin history (S2800):**
+**Pin history (S2801):**
 
-- `pa-5ca1a29ad6514475` (label `s2800-fix-broken-agents`) minted S2800 open; **retired at S2800 close (`force=true`, thirty-first consecutive per S2770+ pattern)**
+- `pa-9e641d91391f40d8` (label `s2801-docs-restructuring-parent-scoping`) minted S2801 open; **retired at S2801 close (`force=true`, thirtysecond consecutive per S2770+ pattern)**
 
-**Wrapper `tools/pa_local.sh` still points at `pa-5ca1a29ad6514475` (retired)** — intended failure mode forces S2801 first-action fresh mint.
+**Wrapper `tools/pa_local.sh` still points at `pa-9e641d91391f40d8` (retired)** — intended failure mode forces S2802 first-action fresh mint.
 
-**S2801 open sequence:**
+**S2802 open sequence:**
 
 ```
 context-kit orient
 
 # Read this file end-to-end
-# Read S2800 handoff §2 (novel-precedent moments) + §3 (T1 SIGN cycle) + §7 (Chris directive queue)
+# Read S2801 handoff §2 (novel-precedent moments) + §3 (T1 SIGN cycle) + §7 (Chris directive queue)
+# Read parent doc: docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md
+# Read DOMAIN_RESEARCH_PLAYBOOK §9 (28 canonical questions)
 
-# Freshness check. Should be FRESH · SHA-match at S2800 close SHA (or cascade PR SHA).
-bash tools/pa_local.sh "S2801 open — freshness check: ops_tool.version verdict + head_commit_sha; ops_tool.recent_recycles limit=5"
+# Freshness check. Should be FRESH · SHA-match at S2801 close-cascade SHA.
+bash tools/pa_local.sh "S2802 open — freshness check: ops_tool.version verdict + head_commit_sha"
 
-# Ledger check: confirm 89-row baseline survived close cascade
+# Ledger check: confirm 93-row baseline survived S2801 close cascade
 DJANGO_LOG_LEVEL=WARNING python manage.py zoom_out_streak_report --as-json 2>/dev/null | python -c "
 import json, sys
 d = sys.stdin.read()
 r = json.loads(d[d.find('{'):])
-assert r['total_rows']==89, r
-print('OK — 89 rows, counts:', r['counts_by_classification'])
+assert r['total_rows']==93, r
+print('OK — 93 rows, counts:', r['counts_by_classification'])
 "
 
-# S2800 reap monitor — how many orphans did the handler catch since ship?
-grep CELERY_WORKER_STARTUP_REAP celery*.log | tail -10
-# For rolling total across all recycle events:
-grep -c "CELERY_WORKER_STARTUP_REAP.*transitioned" celery*.log
-
-# Regression 17-suite (unchanged; S2800 was reliability infra + agent fix)
-python manage.py test \
-  core.tests.test_ops_auth_regression_2772 \
-  core.tests.test_ops_query_param_allowlist_2773 \
-  core.tests.test_pa_wrapper_ownership_2776 \
-  core.tests.test_zoom_out_classifications_2777 \
-  core.tests.test_zoom_out_tool_2780 \
-  core.tests.test_governance_auth_regression_2780 \
-  core.tests.test_platform_auth_regression_2784 \
-  core.tests.test_decision_approve_auth_regression_2785 \
-  core.tests.test_csrf_enforcement_2787 \
-  core.tests.test_platform_authz_sweep_2788 \
-  core.tests.test_pilot_gates_authz_sweep_2789 \
-  core.tests.test_time_travel_authz_sweep_2790 \
-  core.tests.test_zoom_out_aggregations_2791 \
-  core.tests.test_zoom_out_tool_aggregations_2792 \
-  core.tests.test_zoom_out_time_window_2793 \
-  core.tests.test_tenant_boundary_health_2794 \
-  core.tests.test_pa_tools_gap_map_2795 \
-  --noinput
-
-# S2799 signpost lift check — count last-24h invocations on 14 signposted tools
-python manage.py shell <<'PY'
-from datetime import timedelta
-from django.utils import timezone
-from core.models_tool_calls import ToolCallRecord
-from django.db.models import Count
-SIGNPOSTED = [
-    'rigby_shift_brief_tool', 'employee_tool', 'zoom_out_tool', 'learning_tool',
-    'learning_patterns_tool', 'workflow_run_tool', 'gates_tool', 'pilots_tool',
-    'revenue_tracker_tool', 'self_awareness_tool', 'brainstorm_tool',
-    'ops_digest_tool', 'heartbeat_history_tool', 'surgical_moves_status_tool',
-]
-since = timezone.now() - timedelta(days=1)
-counts = dict(ToolCallRecord.objects.filter(
-    tool_name__in=SIGNPOSTED, created_at__gte=since
-).values_list('tool_name').annotate(c=Count('id')).values_list('tool_name', 'c'))
-for t in SIGNPOSTED:
-    print(f'  {t}: {counts.get(t, 0)}')
-print(f'Total signposted invocations in last 24h: {sum(counts.values())}')
-PY
-
-# Mint fresh pin scoped to BettingPage (or whichever candidate Chris picks).
-python manage.py session_lifecycle open --label <candidate-scoped-label>
-python manage.py session_lifecycle history --limit 5
+# Mint fresh pin scoped to T1 (if T1 selected as candidate)
+python manage.py session_lifecycle open --label s2802-t1-docs-inventory-topology
 
 grep '^python tools/pa_chat.py' tools/pa_local.sh
 ```
 
-**Anti-rubber-stamp check on S2801 first Rigby SIGN:** verify `tool_runs` non-empty. **PLAYBOOK-6.10.7 + 6.10.8 + 6.10.9 constitutional at v0.8.0** — zoom-out ask required; folds classify+persist BEFORE D-verdict; concrete code-state claims MUST admit stable-state-pointer + file+line evidence + (i)/(ii)/(iii) outcome inline.
+**Anti-rubber-stamp check on S2802 first Rigby SIGN:** verify `tool_runs` non-empty. **PLAYBOOK-6.10.7 + 6.10.8 + 6.10.9 constitutional at v0.8.0** — zoom-out ask required; folds classify+persist BEFORE D-verdict; concrete code-state claims MUST admit stable-state-pointer + file+line evidence + (i)/(ii)/(iii) outcome inline.
 
-**S2800 lessons to carry:**
+**S2801 lessons to carry:**
 
-1. **Verify-before-build reframes the ship.** Initial "fix 5 broken agents" framing was WRONG — root cause was 4-of-5 = worker orphans + 1-of-5 = real agent bug. Read SESSION_1084 §197 before touching any agent code; the finding likely applies to more agents than the 5 named.
-2. **PLAYBOOK-6.10.8 discipline stable.** Three sessions in a row with folds persisted before D-verdict. Continue the pattern.
-3. **Live-measurable receipts are the load-bearing verification.** The `[CELERY_WORKER_STARTUP_REAP] transitioned 16 rows` log line at post-merge recycle is quantitative evidence the fix works. Prefer receipts over "verified by inspection" wherever possible.
-4. **Chris's "then stop" termination clause is cleaner than implicit one-ship-per-session.** Watch for reuse.
+1. **Dogfooding an audit apparatus on itself requires explicit CHALLENGE mitigation.** Row 91 fold's "T2 must CHALLENGE the pattern" instruction IS a T2 child scope requirement. Do not treat the `/docs/research/` pattern as sacred while auditing it.
+2. **Fold-content can be child-audit-scope directly.** When a zoom-out fold surfaces a substrate risk that becomes a downstream audit requirement, wire it into the child charter — don't leave it as a comment.
+3. **PLAYBOOK-6.10.8 discipline stable (4 consecutive sessions).** Continue the pattern.
+4. **Joint Claude+Rigby recommendation shape held.** One package to Chris, not a menu. Chris D-verdict was one word: "go".
+5. **Discipline transfers across ship-shape boundary.** Engineering ships (S2797-S2800) and research/scoping ships (S2801) both honor same fold-timing + SIGN + close-cascade rules.
 
 ---
 
 ## Twin-pointer card
 
-📁 **Repo `/` + `/docs/` — S2800 artifacts:**
+📁 **Repo `/` + `/docs/` — S2801 artifacts:**
 
-- **Reap handler:** `core/celery.py` — `_reap_orphan_agent_executions_on_startup` (below shutdown handler)
-- **CodeReviewAgent fix:** `core/agents/code_review_agent.py:341` — MISSING_INPUT early-return
-- **Smoke gate:** `core/management/commands/smoke_broken_agents_pre_fix.py` (reusable — extension of S2799 pattern)
-- **Handoff:** `docs/handoffs/SESSION_2800_FIX_BROKEN_AGENTS.md`
-- **Live test:** `python manage.py smoke_broken_agents_pre_fix` (or `--as-json`)
-- **Predecessors:** S2799 (signposts), S2798 (onboarding), S2797 (landing)
+- **Parent-scoping doc:** `docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md` (262 lines)
+- **Arc manifest:** `docs/research/OPEN_ARCS.md` ## In-progress table (Group 2700 row)
+- **Handoff:** `docs/handoffs/SESSION_2801_DOCS_RESTRUCTURING_ARC_OPEN.md`
+- **Ledger:** `logs/zoom_out_classifications.jsonl` — 93 rows (rows 90-93 are S2801)
+- **Merge SHAs:** ship=`f3d08d690` (PR #3216); close-cascade=filled at merge
+- **Predecessors:** S2800 (broken agents), S2799 (signposts), S2798 (onboarding), S2797 (landing)
 
 🖥️ **Workspace UI — `/workspaces` surface:**
 
-- **No new Workspace tab** — reliability infra ship
+- **No new Workspace tab** — research/scoping ship
+- **Twin workspace deliverable:** deferred to arc close at `2799` canonical summary
 - **Live surfaces at close:**
-  - `logs/zoom_out_classifications.jsonl` — **89 rows** (35/30/22); rows 85-89 are S2800
-  - `logs/recycle_events.jsonl` — +2 events during S2800 close
-  - `celery*.log` — `[CELERY_WORKER_STARTUP_REAP]` log line on every worker startup (measurable)
+  - `logs/zoom_out_classifications.jsonl` — **93 rows** (rows 90-93 are S2801)
+  - `logs/recycle_events.jsonl` — +N events during S2801 close
   - `http://localhost:8000/welcome` — public LandingPage (unchanged since S2797)
   - `http://localhost:8000/workspace` — first-run banner (unchanged since S2798)
 
@@ -236,61 +166,64 @@ grep '^python tools/pa_chat.py' tools/pa_local.sh
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | S2800 close cascade — advances at cascade PR merge |
+| HEAD | S2801 close cascade — advances at cascade PR merge |
 | Playbook version | v0.8.0 (unchanged) |
 | Playbook rule count | 205 (unchanged) |
+| Arc state | Group 2700 **in-progress** (parent shipped); children 2701..2706 not-started; summary 2799 not-started |
 | RUR-C1 state | Unchanged; I-0303 still not opened |
-| Session pin | `pa-5ca1a29ad6514475` (retired at S2800 close, force=true, thirty-first consecutive) |
-| Wrapper default pin | `tools/pa_local.sh` — `pa-5ca1a29ad6514475` (retired; forces fresh mint at S2801 open) |
+| Session pin | `pa-9e641d91391f40d8` (retired at S2801 close, force=true, thirtysecond consecutive) |
+| Wrapper default pin | `tools/pa_local.sh` — `pa-9e641d91391f40d8` (retired; forces fresh mint at S2802 open) |
 | Postgres :5432 | pg15 (July DB) — brew launchd `started` |
-| Freshness log | `logs/session_freshness.jsonl` — grew by 1 at S2800 open |
-| Recycle log | `logs/recycle_events.jsonl` — +2 events during S2800 close |
-| Zoom-out ledger | `logs/zoom_out_classifications.jsonl` — **89 rows** (35 actionable / 30 mitigatable / 22 future_trigger) |
+| Freshness log | `logs/session_freshness.jsonl` — grew by 1 at S2801 open |
+| Recycle log | `logs/recycle_events.jsonl` — +N events during S2801 (post-merge + post-close-cascade) |
+| Zoom-out ledger | `logs/zoom_out_classifications.jsonl` — **93 rows** (rows 90-93 are S2801 T1 folds) |
 | Rigby signposts | 14 tools routed via `unified_pa_entrypoint.py:2799` (unchanged since S2799) |
-| Broken agents queue | 4 of 5 fixed at root (worker-startup orphan reap); 1 of 5 fixed (CodeReviewAgent MISSING_INPUT). AudioAgent TTS payment wall = separate config, not code. |
-| Worker reap metric | `[CELERY_WORKER_STARTUP_REAP] transitioned 16 orphan rows` (S2800 first post-merge recycle) |
-| Non-betting revenue play | Stock Intelligence identified (TIER 1); deferred behind BettingPage per Chris sequencing |
+| Worker reap metric | `[CELERY_WORKER_STARTUP_REAP]` continues logging every restart (S2800 handler stable) |
+| Non-betting revenue play | Stock Intelligence identified (TIER 1); deferred behind Group 2700 arc + BettingPage |
 | Test user for onboarding demo | `s2798_onboarding_test` / `test-onboard-s2798!` — state re-armed at S2798 close |
-| Next move | Chris selects at S2801 open (BettingPage default per C→B→BettingPage sequencing) |
+| Next move | Chris selects at S2802 open (T1 inventory & topology audit default per parent doc §4 + arc-open sequencing) |
 
 ---
 
-## Recommended session-open protocol (S2801)
+## Recommended session-open protocol (S2802)
 
 1. `context-kit orient`
 2. Read this file end-to-end
-3. Read S2800 handoff §2 (novel-precedent moments) + §3 (T1 SIGN) + §7 (Chris directive queue)
-4. **Freshness + regression 17-suite + ledger 89 verify** — see S2801 open sequence above
-5. **S2800 reap monitor** — count `[CELERY_WORKER_STARTUP_REAP]` log lines since ship (proves fix keeps working)
-6. **S2799 signpost lift check** — count last-24h invocations on 14 signposted tools
-7. **Watch for** ledger 89-row baseline surviving cascade merge; freshness FRESH · SHA-match
+3. Read S2801 handoff §2 (novel-precedent moments) + §3 (T1 SIGN cycle) + §7 (Chris directive queue)
+4. **Read parent doc:** `docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md` end-to-end
+5. **Read DOMAIN_RESEARCH_PLAYBOOK §9** (28 canonical questions apply to child audits)
+6. **Freshness + ledger 93 verify** — see S2802 open sequence above
+7. **Watch for** ledger 93-row baseline surviving cascade merge; freshness FRESH · SHA-match
 8. If `staleness_verdict != FRESH` → escalate
 9. **Check `brew services list | grep postgres` FIRST** if freshness fails oddly
 10. Verify runtime state: `git log --oneline -5`; confirm wrapper at retired pin
-11. **Default candidate: /docs/ restructuring research arc** (parent-scoped Option B) per Chris directive at S2800 close — OVERRIDES BettingPage. Full instructions in `## S2801 CANDIDATES` section above. This is research/audit, NOT implementation — no file moves or code changes during the arc.
+11. **Default candidate: T1 (2701) inventory & topology audit** — first child of arc `2700`. Full instructions in `## S2802 CANDIDATES` section above.
 12. **Anti-rubber-stamp check on first SIGN** — verify `tool_runs` non-empty
-13. Chris directs S2801 P0 selection (docs arc unless override)
-14. Mint fresh pin scoped to the arc (e.g. `s2801-docs-restructuring-parent-scoping`)
-15. Route parent-scoping through Rigby joint agreement before authoring any research doc
-16. Check `docs/research/OPEN_ARCS.md` for next unused arc group number (sketched as `2900` at S2800 close but verify)
-17. **PLAYBOOK-6.10.8 constitutional at v0.8.0 (S2798 → S2799 → S2800 discipline held three consecutive sessions):** fold persistence is the FINAL step of joint SIGN, BEFORE writing the Chris-facing recommendation
-18. **PLAYBOOK-6.10.9 constitutional at v0.8.0:** any zoom-out fold asserting concrete code-state facts MUST admit stable-state-pointer + file+line evidence + (i)/(ii)/(iii) outcome inline before classify+persist
-19. **BEFORE any user-facing content:** read `docs/PLATFORM_WHAT_IT_IS.md`
+13. Chris directs S2802 P0 selection (T1 unless override)
+14. Mint fresh pin scoped to the child (e.g. `s2802-t1-docs-inventory-topology`)
+15. Route T1 audit through Rigby joint SIGN before authoring child doc
+16. **PLAYBOOK-6.10.8 constitutional at v0.8.0:** fold persistence is the FINAL step of joint SIGN, BEFORE writing the Chris-facing recommendation
+17. **PLAYBOOK-6.10.9 constitutional at v0.8.0:** any zoom-out fold asserting concrete code-state facts MUST admit stable-state-pointer + file+line evidence + (i)/(ii)/(iii) outcome inline before classify+persist
+18. **Non-goals discipline hard-line:** no file moves / deletions / renames / code changes during arc; each child ships `## Migration Queue (post-arc)` section
+19. **T2 dogfooding lock-in mitigation (Rigby fold 91):** T2 audit MUST include CHALLENGE candidates against the `/docs/research/` pattern; do not treat it as sacred
+20. **BEFORE any user-facing content:** read `docs/PLATFORM_WHAT_IT_IS.md`
 
 ---
 
 ## Reference documents
 
-Ordered by frequency of use at S2801:
+Ordered by frequency of use at S2802:
 
 1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (anchor at v0.8.0)
-2. [`docs/PLATFORM_WHAT_IT_IS.md`](docs/PLATFORM_WHAT_IT_IS.md) — **anchor for user-ready reasoning**
-3. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.8.0 (205 rules)
-4. [`docs/handoffs/SESSION_2800_FIX_BROKEN_AGENTS.md`](docs/handoffs/SESSION_2800_FIX_BROKEN_AGENTS.md) — **S2800 handoff (current)**
-5. [`docs/handoffs/SESSION_2799_RIGBY_TOOL_SIGNPOSTS.md`](docs/handoffs/SESSION_2799_RIGBY_TOOL_SIGNPOSTS.md) — S2799 predecessor
-6. [`docs/handoffs/SESSION_1084_HANG_CONTAINMENT.md`](docs/handoffs/SESSION_1084_HANG_CONTAINMENT.md) — root-cause reference for S2800 orphan pattern
-7. [`core/celery.py`](core/celery.py) — worker-lifecycle handlers (S2800 reap added)
-8. [`core/agents/code_review_agent.py`](core/agents/code_review_agent.py) — MISSING_INPUT block at execute() top
-9. [`core/management/commands/smoke_broken_agents_pre_fix.py`](core/management/commands/smoke_broken_agents_pre_fix.py) — smoke gate (agent-level extension of S2799 pattern)
-10. [`core/services/unified_pa_entrypoint.py`](core/services/unified_pa_entrypoint.py) — TOOL SIGNPOSTS at line 2799 (S2799)
-11. [`logs/zoom_out_classifications.jsonl`](logs/zoom_out_classifications.jsonl) — 89 rows at S2800 close (rows 85-89 are S2800)
+2. [`docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md`](docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md) — **Group 2700 parent charter (current)**
+3. [`docs/research/DOMAIN_RESEARCH_PLAYBOOK.md`](docs/research/DOMAIN_RESEARCH_PLAYBOOK.md) — child audit process framework (§9 28 questions, §11 templates, §13 explore-agent sweeps, §14 evidence rules)
+4. [`docs/research/OPEN_ARCS.md`](docs/research/OPEN_ARCS.md) — arc-state manifest (Group 2700 in-progress)
+5. [`docs/PLATFORM_INVENTORY.md`](docs/PLATFORM_INVENTORY.md) — runtime counts (cite; never restate)
+6. [`docs/PLATFORM_WHAT_IT_IS.md`](docs/PLATFORM_WHAT_IT_IS.md) — **anchor for user-ready reasoning**
+7. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.8.0 (205 rules)
+8. [`docs/00-START-HERE/DOC_LIFECYCLE.md`](docs/00-START-HERE/DOC_LIFECYCLE.md) — §2b/§2c/§3 constraints (arc DESIGNS UNDER these)
+9. [`docs/canon/INDEX.md`](docs/canon/INDEX.md) — canon registry (≤10 cap)
+10. [`docs/handoffs/SESSION_2801_DOCS_RESTRUCTURING_ARC_OPEN.md`](docs/handoffs/SESSION_2801_DOCS_RESTRUCTURING_ARC_OPEN.md) — **S2801 handoff (current)**
+11. [`docs/handoffs/SESSION_2800_FIX_BROKEN_AGENTS.md`](docs/handoffs/SESSION_2800_FIX_BROKEN_AGENTS.md) — S2800 predecessor
+12. [`docs/handoffs/SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md`](docs/handoffs/SESSION_1143_DOCS_AUDIT_AND_CLEANUP.md) — prior /docs/ audit reference (T5 substrate-integrity cross-ref)
+13. [`logs/zoom_out_classifications.jsonl`](logs/zoom_out_classifications.jsonl) — 93 rows at S2801 close (rows 90-93 are S2801)
