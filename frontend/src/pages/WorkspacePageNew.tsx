@@ -1,6 +1,11 @@
 // Session 825: Slim WorkspacePage Orchestrator
 // Session 1035: Refocused to workspace-only tabs (Overview, Files, Operations, Git, Triggers)
 // System-wide tabs moved to PlatformPage (/platform)
+//
+// S2798: First-run onboarding banner. Chris/Rigby joint SIGN picked this page as the
+// mount container — /workspace is the actual post-login landing (see LoginPage.tsx),
+// and both existing + prospective users will end up here first. See ONBOARDING_COPY
+// constants below for the editable banner content (Rigby F3 pattern from S2797).
 
 import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -48,7 +53,7 @@ import {
   Wrench,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import { workspaceApi, workspaceOperationsApi } from '@/lib/api'
+import { workspaceApi, workspaceOperationsApi, authApi } from '@/lib/api'
 import ReactMarkdown from 'react-markdown'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
@@ -98,6 +103,31 @@ import {
 import { ZoomOutLedgerSection } from './workspace/tabs/ZoomOutLedgerSection'
 import { TenantBoundaryHealthSection } from './workspace/tabs/TenantBoundaryHealthSection'
 import { Toast } from './workspace/components'
+
+// ─── S2798: First-run onboarding banner (editable copy — Rigby F3) ───────────
+// Chris can iterate copy here without touching JSX. Banner shows only when
+// current_user response has needs_onboarding=true (derived from is_first_login()
+// service: no prior PA convos + no prior onboarding DM). Dismiss = POST to
+// /api/onboarding/complete/ which fires the existing onboard_new_user() service.
+const ONBOARDING_COPY = {
+  headline: 'Welcome to Donkey Betz',
+  sub: 'Three things to try first — dismiss when you\'ve got the shape.',
+  tries: [
+    {
+      title: 'Talk to Rigby',
+      body: 'Click any Rigby chat surface and ask: "what can you do?" or "show me the platform overview." She uses tools, not vibes — you\'ll see the tool_runs in her reply.',
+    },
+    {
+      title: 'Open a workspace tab',
+      body: 'Files, Operations, Deliverables, Initiatives — each tab is a live view of what\'s active on the platform right now. Poke around; nothing here is destructive.',
+    },
+    {
+      title: 'Read your welcome DM',
+      body: 'Rigby sends a welcome message to your inbox when you dismiss this banner. It has more concrete first-touch prompts you can copy-paste.',
+    },
+  ],
+  dismiss_label: 'Got it — dismiss',
+}
 import type { Workspace, WorkspaceTab, ActionResult } from './workspace/types'
 // PLATFORM_TABS/LEGACY_TO_PLATFORM no longer needed — platform merged into workspace
 import { useWorkspaceTabTracking } from '@/hooks/usePageTracking'
@@ -869,6 +899,25 @@ export default function WorkspacePage() {
   const queryClient = useQueryClient()
   const { isAuthenticated } = useAuthStore()
 
+  // S2798: fetch fresh needs_onboarding on mount (independent of stale login-time
+  // payload). Only shows banner when current_user says the user has never had an
+  // onboarding DM AND never had a PA conversation.
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false)
+  const { data: currentUserData, refetch: refetchCurrentUser } = useQuery({
+    queryKey: ['auth-current-user-onboarding'],
+    queryFn: () => authApi.getUser(),
+    enabled: isAuthenticated,
+    staleTime: 60_000,
+  })
+  const needsOnboarding = (currentUserData?.data?.user?.needs_onboarding ?? false) as boolean
+  const completeOnboardingMutation = useMutation({
+    mutationFn: () => authApi.completeOnboarding(),
+    onSuccess: () => {
+      setOnboardingDismissed(true)
+      refetchCurrentUser()
+    },
+  })
+
   // WebSocket for real-time updates
   const { status: wsStatus } = useSystemEvents({
     onFileModified: () => {
@@ -1054,6 +1103,36 @@ export default function WorkspacePage() {
           )}
         </div>
       </div>
+
+      {/* S2798: First-run onboarding banner */}
+      {needsOnboarding && !onboardingDismissed && (
+        <div className="card border border-primary-500/40 bg-primary-500/5">
+          <div className="flex items-start justify-between gap-4 mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-primary-300">{ONBOARDING_COPY.headline}</h2>
+              <p className="text-sm text-gray-400 mt-1">{ONBOARDING_COPY.sub}</p>
+            </div>
+            <button
+              onClick={() => completeOnboardingMutation.mutate()}
+              disabled={completeOnboardingMutation.isPending}
+              className="btn btn-primary text-xs"
+            >
+              {completeOnboardingMutation.isPending ? 'Saving...' : ONBOARDING_COPY.dismiss_label}
+            </button>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            {ONBOARDING_COPY.tries.map((t, i) => (
+              <div key={i} className="p-3 rounded bg-dark-bg/60 border border-dark-border">
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-mono text-primary-400">{String(i + 1).padStart(2, '0')}</span>
+                  <h3 className="text-sm font-semibold text-white">{t.title}</h3>
+                </div>
+                <p className="text-xs text-gray-400 leading-relaxed">{t.body}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* No workspace selected */}
       {!activeWorkspace && (

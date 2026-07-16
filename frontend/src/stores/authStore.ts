@@ -6,6 +6,7 @@ interface User {
   username: string
   email: string
   platform_role?: string
+  needs_onboarding?: boolean  // S2798: first-run banner trigger
 }
 
 interface AuthState {

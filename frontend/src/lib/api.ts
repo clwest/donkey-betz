@@ -96,6 +96,8 @@ export const authApi = {
   logout: () => api.post('/v1/auth/logout/'),
   getUser: () => api.get('/v1/auth/user/'),
   validateToken: () => api.post('/v1/auth/validate-token/'),
+  // S2798: dismiss first-run banner + trigger welcome DM (idempotent).
+  completeOnboarding: () => api.post('/onboarding/complete/'),
 }
 
 export const agentsApi = {

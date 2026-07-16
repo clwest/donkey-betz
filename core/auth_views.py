@@ -108,7 +108,18 @@ def current_user(request):
         except Exception:
             credits = 10000
             subscription = 'premium'
-            
+
+        # S2798: expose needs_onboarding so the frontend can conditionally render a
+        # first-run banner without introducing side effects at token issuance. Seam
+        # chosen after Rigby T1 SIGN DISAGREE on wiring onboarding into login_view
+        # (side effects on script/test/mobile/refresh auth). current_user is a
+        # read-only bootstrap endpoint — safe place for a derived boolean.
+        try:
+            from core.services.user_onboarding_service import is_first_login
+            needs_onboarding = is_first_login(request.user)
+        except Exception:
+            needs_onboarding = False
+
         return Response({
             'user': {
                 'id': str(request.user.id),
@@ -117,6 +128,7 @@ def current_user(request):
                 'credits': credits,
                 'subscription': subscription,
                 'platform_role': getattr(request.user, 'platform_role', 'unified_user'),  # Session 998
+                'needs_onboarding': needs_onboarding,  # S2798
             }
         })
     else:
@@ -124,6 +136,28 @@ def current_user(request):
             {'detail': 'Not authenticated'},
             status=status.HTTP_401_UNAUTHORIZED
         )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def complete_onboarding_view(request):
+    """
+    S2798: explicit user action to mark onboarding complete.
+
+    Called when the user dismisses the first-run banner on /workspace. Fires
+    the existing onboard_new_user() service (idempotent — no-ops if the user
+    already has an onboarding DM). Returns 200 with the resulting
+    needs_onboarding state so the frontend can update in-place.
+    """
+    from core.services.user_onboarding_service import onboard_new_user, is_first_login
+
+    result = onboard_new_user(request.user)
+    return Response({
+        'ok': True,
+        'onboarded': result.get('success', False),
+        'needs_onboarding': is_first_login(request.user),
+        'detail': result.get('message') or result.get('error'),
+    })
 
 
 @api_view(['GET', 'PUT'])
