@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-16T16:41:18+00:00",
+    "generated": "2026-07-16T17:12:34+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "4c339a6a6b2a",
-    "doc_count": 2618,
-    "commit_count": 8015,
+    "git_head": "f3d08d690c7e",
+    "doc_count": 2620,
+    "commit_count": 8021,
     "confidence_breakdown": {
-      "HIGH": 1663,
+      "HIGH": 1664,
       "MEDIUM": 402,
-      "LOW": 5,
+      "LOW": 6,
       "UNKNOWN": 548
     },
     "excludes": [
@@ -2590,7 +2590,7 @@
         2745,
         2749
       ],
-      "commit_count": 1318,
+      "commit_count": 1320,
       "prs": [
         10,
         11,
@@ -3194,7 +3194,8 @@
         3206,
         3208,
         3210,
-        3212
+        3212,
+        3214
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7539,7 +7540,7 @@
         2745,
         2749
       ],
-      "commit_count": 266,
+      "commit_count": 268,
       "prs": [
         2213,
         2219,
@@ -7746,7 +7747,8 @@
         3206,
         3208,
         3210,
-        3212
+        3212,
+        3214
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20389,6 +20391,21 @@
       "commit_count": 2,
       "prs": [
         3212
+      ]
+    },
+    "docs/handoffs/SESSION_2800_FIX_BROKEN_AGENTS.md": {
+      "originating_session": 2800,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "a38642e4",
+      "first_commit_date": "2026-07-16",
+      "first_commit_subject": "docs(cascade): S2800 close cascade \u2014 handoff + start-here + INDEX + provenance (#3214)",
+      "sessions_touched": [
+        2800
+      ],
+      "commit_count": 2,
+      "prs": [
+        3214
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -35498,7 +35515,7 @@
         2499,
         2500
       ],
-      "commit_count": 100,
+      "commit_count": 102,
       "prs": [
         2773,
         2775,
@@ -35585,7 +35602,8 @@
         2982,
         2983,
         2984,
-        2985
+        2985,
+        3216
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -36001,6 +36019,21 @@
       "commit_count": 1,
       "prs": [
         2831
+      ]
+    },
+    "docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md": {
+      "originating_session": 2801,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "f3d08d69",
+      "first_commit_date": "2026-07-16",
+      "first_commit_subject": "docs(research): S2801 open Group 2700 /docs/ restructuring \u2014 parent scoping (#3216)",
+      "sessions_touched": [
+        2801
+      ],
+      "commit_count": 2,
+      "prs": [
+        3216
       ]
     },
     "docs/research/domains/event_integration_architecture/2000_event_integration_architecture_domain_scoping.md": {
