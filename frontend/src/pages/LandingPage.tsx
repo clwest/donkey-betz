@@ -30,8 +30,8 @@ import {
 const COPY = {
   brand: 'Donkey Betz',
   tagline: 'AI with receipts',
-  hero_headline: 'AI that shows its work.',
-  hero_sub: 'Most AI gives you an answer. Donkey Betz gives you two AIs that verify each other, push back with evidence, and hand you the receipts. One proposes. One audits. Neither trusts the other blindly. You decide with proof, not promises.',
+  hero_headline: 'AI with receipts.',
+  hero_sub: 'One AI proposes. One AI verifies. You decide with proof.',
 
   features: [
     {
