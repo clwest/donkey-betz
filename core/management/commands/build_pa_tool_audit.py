@@ -18,18 +18,30 @@ The interesting cross-checks aren't the totals, they're the *gaps*:
 Run::
 
     python manage.py build_pa_tool_audit
+    python manage.py build_pa_tool_audit --check           # dry-run stdout
+    python manage.py build_pa_tool_audit --include-validation-xref  # S2795: adds Category+Lint cols
+    python manage.py build_pa_tool_audit --emit-gap-json   # S2795: JSON gap map on stdout
+    python manage.py build_pa_tool_audit --gap-only        # S2795: standalone gap-map artifact
+    python manage.py build_pa_tool_audit --gap-only \\
+        --output docs/audits/PA_TOOLS_GAP_MAP_S2795.md     # S2795: override output path
+
+S2795 additions (this session): validation-doc cross-reference,
+per-tool coverage categorization, schema-quality lint, triage slices.
+Default behavior (no flags) unchanged for BC.
 """
 from __future__ import annotations
 
 import inspect
+import json as _json
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional
 
 from django.core.management.base import BaseCommand
 
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 OUTPUT_PATH = REPO_ROOT / 'docs' / 'PA_TOOL_AUDIT.md'
+VALIDATION_DOCS_DIR = REPO_ROOT / 'docs' / 'research' / 'tools' / 'validation'
 
 
 class Command(BaseCommand):
@@ -40,6 +52,45 @@ class Command(BaseCommand):
             '--check',
             action='store_true',
             help='Print the would-be file to stdout instead of writing.',
+        )
+        # ── S2795 flags (all optional; default behavior unchanged) ─
+        parser.add_argument(
+            '--include-validation-xref',
+            action='store_true',
+            help=(
+                'S2795: cross-reference validation docs at '
+                'docs/research/tools/validation/ and add Category + Lint '
+                'columns to the standard PA_TOOL_AUDIT.md table.'
+            ),
+        )
+        parser.add_argument(
+            '--emit-gap-json',
+            action='store_true',
+            help=(
+                'S2795: emit the gap-map summary (categories, lints, '
+                'triage slices, validation-doc totals) as JSON on stdout. '
+                'Suppresses default markdown output when combined with '
+                '--check.'
+            ),
+        )
+        parser.add_argument(
+            '--gap-only',
+            action='store_true',
+            help=(
+                'S2795: write the standalone gap-map artifact only. '
+                'Does NOT regenerate docs/PA_TOOL_AUDIT.md; produces the '
+                'coverage/lint/triage table at --output (default: '
+                'docs/audits/PA_TOOLS_GAP_MAP.md).'
+            ),
+        )
+        parser.add_argument(
+            '--output',
+            type=str,
+            default=None,
+            help=(
+                'S2795: override the output path (only meaningful with '
+                '--gap-only). Path resolved relative to repo root.'
+            ),
         )
 
     def handle(self, *args: Any, **opts: Any) -> None:
@@ -66,11 +117,74 @@ class Command(BaseCommand):
         agent_name_enum = (props.get('agent_name') or {}).get('enum', []) or []
         run_agent_targets = set(agent_name_enum)
 
+        # ── S2795: gap-map enrichment ────────────────────────────
+        want_xref = bool(opts.get('include_validation_xref'))
+        want_gap_json = bool(opts.get('emit_gap_json'))
+        want_gap_only = bool(opts.get('gap_only'))
+        gap_summary: Optional[dict] = None
+        docs_index: Optional[dict] = None
+        if want_xref or want_gap_json or want_gap_only:
+            from core.services.pa_tools_gap_map import (
+                build_gap_map,
+                index_validation_docs,
+                render_gap_map_markdown,
+            )
+            docs_index = index_validation_docs(VALIDATION_DOCS_DIR)
+            gap_summary = build_gap_map(
+                rows=rows,
+                docs_index=docs_index,
+                schemas_by_name=schema_names,
+                run_agent_targets=run_agent_targets,
+            )
+
+        if want_gap_only:
+            # Standalone gap-map artifact. Skip the default PA_TOOL_AUDIT.md
+            # regeneration entirely — this path exists for the S2795 first
+            # emit + any future one-shot re-runs Chris wants without
+            # touching the established doc.
+            assert gap_summary is not None and docs_index is not None
+            output_path_str = opts.get('output')
+            if output_path_str:
+                target = Path(output_path_str)
+                if not target.is_absolute():
+                    target = REPO_ROOT / target
+            else:
+                target = REPO_ROOT / 'docs' / 'audits' / 'PA_TOOLS_GAP_MAP.md'
+            rendered_gap = render_gap_map_markdown(
+                rows=rows, summary=gap_summary, docs_index=docs_index
+            )
+            if opts.get('check'):
+                self.stdout.write(rendered_gap)
+                if want_gap_json:
+                    self.stdout.write(_json.dumps(gap_summary, indent=2))
+                return
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(rendered_gap)
+            headline = gap_summary['headline']
+            self.stdout.write(self.style.SUCCESS(
+                f"Wrote {target.relative_to(REPO_ROOT)} "
+                f"(gap map · {headline['total_rows']} tool names · "
+                f"{headline['per_category'].get('validated_full', 0)} full · "
+                f"{headline['per_category'].get('validated_partial', 0)} partial · "
+                f"{headline['per_category'].get('validated_doc_exists_unknown', 0)} unknown · "
+                f"{headline['per_category'].get('untested', 0)} untested)"
+            ))
+            if want_gap_json:
+                self.stdout.write(_json.dumps(gap_summary, indent=2))
+            return
+
         findings = self._collect_findings(rows, run_agent_targets=run_agent_targets)
-        rendered = self._render(rows, findings=findings)
+        rendered = self._render(
+            rows,
+            findings=findings,
+            include_xref=want_xref,
+            gap_summary=gap_summary,
+        )
 
         if opts['check']:
             self.stdout.write(rendered)
+            if want_gap_json and gap_summary is not None:
+                self.stdout.write(_json.dumps(gap_summary, indent=2))
             return
 
         OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -83,6 +197,8 @@ class Command(BaseCommand):
             f"({len(rows)} tool names · {n_schemas} schemas · "
             f"{n_handlers} handlers · {n_both} wired both sides)"
         ))
+        if want_gap_json and gap_summary is not None:
+            self.stdout.write(_json.dumps(gap_summary, indent=2))
 
     # ----------------------------------------------------------- inspect
 
@@ -215,7 +331,14 @@ class Command(BaseCommand):
 
     # ------------------------------------------------------------ render
 
-    def _render(self, rows: list[dict], *, findings: list[str]) -> str:
+    def _render(
+        self,
+        rows: list[dict],
+        *,
+        findings: list[str],
+        include_xref: bool = False,
+        gap_summary: Optional[dict] = None,
+    ) -> str:
         n_total = len(rows)
         n_schemas = sum(1 for r in rows if r['has_schema'])
         n_handlers = sum(1 for r in rows if r['has_handler'])
@@ -267,11 +390,36 @@ class Command(BaseCommand):
                 out.append(f'- {f}')
             out.append('')
 
+        # S2795: optional gap-map section preceding the overview table.
+        if include_xref and gap_summary is not None:
+            from core.services.pa_tools_gap_map import CATEGORY_LABEL
+            out.append('## Validation coverage (S2795)')
+            out.append('')
+            headline = gap_summary['headline']
+            for cat, n in sorted(
+                headline['per_category'].items(), key=lambda kv: -kv[1]
+            ):
+                label = CATEGORY_LABEL.get(cat, cat)
+                out.append(f'- `{cat}` ({label}): **{n}**')
+            per_lint = headline.get('per_lint') or {}
+            if per_lint:
+                out.append('')
+                out.append('**Schema quality lints:**')
+                for tag, n in sorted(per_lint.items(), key=lambda kv: -kv[1]):
+                    out.append(f'- `{tag}`: **{n}** tools')
+            out.append('')
+
         # Overview table
         out.append('## Tool overview')
         out.append('')
-        out.append('| Tool | Wiring | Actions | Required | Summary |')
-        out.append('|---|:-:|:-:|:-:|---|')
+        if include_xref:
+            out.append(
+                '| Tool | Wiring | Actions | Required | Category | Lint | Summary |'
+            )
+            out.append('|---|:-:|:-:|:-:|---|---|---|')
+        else:
+            out.append('| Tool | Wiring | Actions | Required | Summary |')
+            out.append('|---|:-:|:-:|:-:|---|')
         for r in rows:
             wiring = (
                 '✓ ✓' if (r['has_schema'] and r['has_handler']) else
@@ -282,10 +430,19 @@ class Command(BaseCommand):
             summary = r['description'].split('. ')[0].replace('|', '\\|')
             if len(summary) > 110:
                 summary = summary[:107] + '…'
-            out.append(
-                f'| `{r["name"]}` | {wiring} | {n_actions or "—"} | '
-                f'{n_required or "—"} | {summary or "_(no description)_"} |'
-            )
+            if include_xref:
+                cat = r.get('category', '')
+                lints_str = ', '.join(r.get('lints', [])) or '—'
+                out.append(
+                    f'| `{r["name"]}` | {wiring} | {n_actions or "—"} | '
+                    f'{n_required or "—"} | {cat or "—"} | {lints_str} | '
+                    f'{summary or "_(no description)_"} |'
+                )
+            else:
+                out.append(
+                    f'| `{r["name"]}` | {wiring} | {n_actions or "—"} | '
+                    f'{n_required or "—"} | {summary or "_(no description)_"} |'
+                )
         out.append('')
 
         # Detail appendix
