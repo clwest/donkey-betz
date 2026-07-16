@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { usePAStore } from '@/stores/paStore'
 import Layout from '@/components/layout/Layout'
 import LoginPage from '@/pages/LoginPage'
+import LandingPage from '@/pages/LandingPage'  // S2797: public unauth landing page at /welcome
 import InboxPage from '@/pages/InboxPage'
 import WorkspaceCreatePage from '@/pages/WorkspaceCreatePage'
 import WorkspaceDashboardPage from '@/pages/WorkspaceDashboardPage'
@@ -62,6 +63,10 @@ function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      {/* S2797: Public marketing / early-access surface. Unauth. Chris shares
+          donkeybetz.com/welcome with prospects. Root / stays authenticated
+          (CommandCenter) per Rigby F4 deferred discoverability trigger. */}
+      <Route path="/welcome" element={<LandingPage />} />
       <Route path="/vip/accept" element={<VipAcceptPage />} />
       <Route path="/r/:token" element={<ReviewPortalPage />} />
       <Route path="/operator-edge" element={<OperatorEdgePage />} />
