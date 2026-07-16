@@ -16,10 +16,13 @@ IMPORTANT DISCLAIMERS:
 import logging
 import re
 from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional, Tuple
+from typing import TYPE_CHECKING, Dict, Any, List, Optional, Tuple
 from uuid import UUID
 
 from django.utils import timezone
+
+if TYPE_CHECKING:
+    from core.models_legal import GeneratedResponse, LitigationDocument
 
 logger = logging.getLogger(__name__)
 
@@ -848,11 +851,15 @@ class LegalResponseWriter:
 
     def generate_response(
         self,
-        document_id: UUID,
+        doc: "LitigationDocument",
         case_context: Optional[Dict] = None,
     ) -> Dict[str, Any]:
         """
         Generate a response to a filing.
+
+        `doc` MUST be scoped to the requesting user by the caller — this
+        service performs no authorization check. Pass a raw ID lookup and
+        you have an IDOR vector.
 
         Returns a structured response with:
         - Admit/Deny/Insufficient Knowledge for each allegation
@@ -863,12 +870,7 @@ class LegalResponseWriter:
         - Proposed order
         - Exhibit list
         """
-        from core.models_legal import LitigationDocument, GeneratedResponse
-
-        try:
-            doc = LitigationDocument.objects.get(id=document_id)
-        except LitigationDocument.DoesNotExist:
-            return {'success': False, 'error': 'Document not found'}
+        from core.models_legal import GeneratedResponse
 
         case_profile = doc.case_profile
 
@@ -1137,11 +1139,15 @@ class LegalFilingPackager:
 
     def create_filing_package(
         self,
-        response_id: UUID,
+        response: "GeneratedResponse",
         formats: List[str] = ['docx', 'txt'],
     ) -> Dict[str, Any]:
         """
         Create a complete filing package.
+
+        `response` MUST be scoped to the requesting user by the caller —
+        this service performs no authorization check. Pass a raw ID lookup
+        and you have an IDOR vector.
 
         Includes:
         - Response document
@@ -1150,16 +1156,10 @@ class LegalFilingPackager:
         - Exhibit List
         - Conferral Email (if needed)
         """
-        from core.models_legal import GeneratedResponse
-
-        try:
-            response = GeneratedResponse.objects.get(id=response_id)
-        except GeneratedResponse.DoesNotExist:
-            return {'success': False, 'error': 'Response not found'}
 
         package = {
             'documents': [],
-            'response_id': str(response_id),
+            'response_id': str(response.id),
         }
 
         # Main response
