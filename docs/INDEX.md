@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-07-16 09:54
+**Generated:** 2026-07-16 10:37
 **Current Session:** 2799
 **Total Documentation:** 3186 files | 956,159 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 8,377 |
+| Total cross-references | 8,384 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -38,7 +38,7 @@
 | `docs/INDEX.md` | 189 | INDEX |
 | `docs/research/ARCHITECTURE_INDEX.md` | 139 | ARCHITECTURE INDEX |
 | `docs/research/OPEN_ARCS.md` | 137 | OPEN ARCS |
-| `docs/apis/README.md` | 121 | README |
+| `docs/architecture/README.md` | 122 | README |
 | `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` | 113 | DOMAIN RESEARCH PLAYBOOK |
 | `docs/AGENTS.md` | 84 | AGENTS |
 | `docs/00-START-HERE/DOC_LIFECYCLE.md` | 81 | DOC LIFECYCLE |
@@ -258,9 +258,9 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_2799_RIGBY_TOOL_SIGNPOSTS.md | handoffs | 225 | 2026-07-16 09:51 |
+| SESSION_2799_RIGBY_TOOL_SIGNPOSTS.md | handoffs | 225 | 2026-07-16 09:55 |
+| INDEX.md | docs | 402 | 2026-07-16 09:55 |
 | SESSION_2798_ONBOARDING_ROUTING.md | handoffs | 231 | 2026-07-16 09:13 |
-| INDEX.md | docs | 402 | 2026-07-16 09:13 |
 | SESSION_819_SYSTEM_AUDIT_20260716_125723.md | audits | 111 | 2026-07-16 06:57 |
 | SESSION_2797_PUBLIC_LANDING_PAGE.md | handoffs | 195 | 2026-07-15 22:26 |
 | SESSION_2796_TD_HANDLERS_OPS_SLICE1.md | handoffs | 176 | 2026-07-15 20:56 |
