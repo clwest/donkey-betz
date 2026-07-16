@@ -957,22 +957,18 @@ def generate_response_to_filing(request, document_id):
         from core.models_legal import LitigationDocument
         from core.services.litigation_brain import get_response_writer
 
-        # Verify user owns this document's case
-        try:
-            doc = LitigationDocument.objects.get(id=document_id)
-            if doc.case_profile.user != user:
-                return Response({
-                    'success': False,
-                    'error': 'Document not found'
-                }, status=404)
-        except LitigationDocument.DoesNotExist:
+        doc = LitigationDocument.objects.filter(
+            id=document_id,
+            case_profile__user=user,
+        ).first()
+        if not doc:
             return Response({
                 'success': False,
                 'error': 'Document not found'
             }, status=404)
 
         writer = get_response_writer()
-        result = writer.generate_response(doc.id)
+        result = writer.generate_response(doc)
 
         return Response(result)
 
@@ -1047,14 +1043,11 @@ def get_generated_response(request, response_id):
     try:
         from core.models_legal import GeneratedResponse
 
-        try:
-            r = GeneratedResponse.objects.get(id=response_id)
-            if r.case_profile.user != user:
-                return Response({
-                    'success': False,
-                    'error': 'Response not found'
-                }, status=404)
-        except GeneratedResponse.DoesNotExist:
+        r = GeneratedResponse.objects.filter(
+            id=response_id,
+            case_profile__user=user,
+        ).first()
+        if not r:
             return Response({
                 'success': False,
                 'error': 'Response not found'
@@ -1101,14 +1094,11 @@ def create_filing_package(request, response_id):
         from core.models_legal import GeneratedResponse
         from core.services.litigation_brain import get_filing_packager
 
-        try:
-            r = GeneratedResponse.objects.get(id=response_id)
-            if r.case_profile.user != user:
-                return Response({
-                    'success': False,
-                    'error': 'Response not found'
-                }, status=404)
-        except GeneratedResponse.DoesNotExist:
+        r = GeneratedResponse.objects.filter(
+            id=response_id,
+            case_profile__user=user,
+        ).first()
+        if not r:
             return Response({
                 'success': False,
                 'error': 'Response not found'
@@ -1118,7 +1108,7 @@ def create_filing_package(request, response_id):
         formats = request.data.get('formats', ['docx', 'txt'])
 
         packager = get_filing_packager()
-        result = packager.create_filing_package(r.id, formats=formats)
+        result = packager.create_filing_package(r, formats=formats)
 
         if not result.get('success'):
             return Response(result, status=500)
@@ -1277,14 +1267,11 @@ def get_document_thread(request, document_id):
     try:
         from core.models_legal import LitigationDocument
 
-        try:
-            doc = LitigationDocument.objects.get(id=document_id)
-            if doc.case_profile.user != user:
-                return Response({
-                    'success': False,
-                    'error': 'Document not found'
-                }, status=404)
-        except LitigationDocument.DoesNotExist:
+        doc = LitigationDocument.objects.filter(
+            id=document_id,
+            case_profile__user=user,
+        ).first()
+        if not doc:
             return Response({
                 'success': False,
                 'error': 'Document not found'
