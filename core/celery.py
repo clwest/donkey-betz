@@ -68,6 +68,61 @@ def _log_worker_process_shutdown(pid=None, exitcode=None, **_kwargs):
         _os.uname().nodename,
     )
 
+
+@worker_process_init.connect
+def _reap_orphan_agent_executions_on_startup(**_kwargs):
+    """S2800 (Session 2800 Option B): sweep AgentExecution rows left in
+    `in_progress` state by a dead worker + transition to `cancelled` with
+    a machine-parseable error_message so the 60-min cleanup watchdog
+    doesn't later reap them as `failed`.
+
+    Runs on every worker child startup. Rows with fresh heartbeats
+    (still-alive workers) are excluded via the `last_heartbeat_at`
+    staleness filter. Bounded to `created_at` in the last 24h to avoid
+    picking up truly ancient rows (those are their own housekeeping
+    problem). Bulk UPDATE — best-effort, does not block worker startup
+    if the query errors.
+
+    Rigby T1 SIGN (S2800): use existing `cancelled` enum value +
+    machine-parseable error_message rather than adding a new
+    `interrupted` enum value; reduces downstream consumer audit.
+    """
+    try:
+        # Local imports — signal handlers must not touch the import
+        # machinery at tick time. See heartbeat comment at
+        # core/tasks_agents.py:2450 for the rationale.
+        from datetime import timedelta
+        from django.db import close_old_connections as _reap_close_old_connections
+        from django.db.models import Q
+        from django.utils import timezone as _reap_timezone
+        from core.models_unified_system import AgentExecution
+
+        _reap_close_old_connections()
+        now = _reap_timezone.now()
+        heartbeat_cutoff = now - timedelta(minutes=3)
+        created_cutoff = now - timedelta(hours=24)
+
+        # Orphan filter: in-progress AND (no heartbeat ever, or heartbeat
+        # went stale ≥3min ago). Fresh-heartbeat rows are left alone (those
+        # workers are still running).
+        rowcount = AgentExecution.objects.filter(
+            Q(last_heartbeat_at__isnull=True) | Q(last_heartbeat_at__lt=heartbeat_cutoff),
+            status='in_progress',
+            created_at__gte=created_cutoff,
+        ).update(
+            status='cancelled',
+            error_message='Worker restart — execution interrupted (S2800)',
+            completed_at=now,
+        )
+        if rowcount:
+            logger.info(
+                "[CELERY_WORKER_STARTUP_REAP] transitioned %d orphan AgentExecution row(s) to cancelled",
+                rowcount,
+            )
+    except Exception as e:
+        # Best-effort — never block worker startup on this.
+        logger.warning("[CELERY_WORKER_STARTUP_REAP] reap failed: %s", e)
+
 # Celery Beat Schedule — MINIMAL (token-conservation mode)
 # Session 1077+: Stripped to essentials only. Full schedule preserved in git history.
 # Only cleanups + health checks run. All agent exercises, spider crawls,
