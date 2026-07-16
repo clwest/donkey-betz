@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-16T02:04:08+00:00",
+    "generated": "2026-07-16T02:55:32+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "5ec09d625e85",
-    "doc_count": 2608,
-    "commit_count": 7994,
+    "git_head": "ec44778f9de1",
+    "doc_count": 2614,
+    "commit_count": 7998,
     "confidence_breakdown": {
-      "HIGH": 1658,
+      "HIGH": 1659,
       "MEDIUM": 402,
       "LOW": 5,
-      "UNKNOWN": 543
+      "UNKNOWN": 548
     },
     "excludes": [
       "docs/archive/",
@@ -2590,7 +2590,7 @@
         2745,
         2749
       ],
-      "commit_count": 1308,
+      "commit_count": 1310,
       "prs": [
         10,
         11,
@@ -3189,7 +3189,8 @@
         3196,
         3198,
         3200,
-        3202
+        3202,
+        3204
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -3682,9 +3683,10 @@
       "sessions_touched": [
         1115
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
-        3203
+        3203,
+        3205
       ]
     },
     "docs/PERFECT_WORKFLOW_DESIGN.md": {
@@ -7533,7 +7535,7 @@
         2745,
         2749
       ],
-      "commit_count": 256,
+      "commit_count": 258,
       "prs": [
         2213,
         2219,
@@ -7735,7 +7737,8 @@
         3196,
         3198,
         3200,
-        3202
+        3202,
+        3204
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -9391,6 +9394,19 @@
       "commit_count": 2,
       "prs": [
         3203
+      ]
+    },
+    "docs/audits/PA_TOOLS_GAP_MAP_S2796.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "ec44778f",
+      "first_commit_date": "2026-07-15",
+      "first_commit_subject": "docs(validation): S2796 td_handlers_ops slice 1 \u2014 validation docs for 4 tools (#3205)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3205
       ]
     },
     "docs/audits/PHASE0_APPLIED_NOTES.md": {
@@ -20290,6 +20306,21 @@
       "commit_count": 2,
       "prs": [
         3202
+      ]
+    },
+    "docs/handoffs/SESSION_2795_PA_TOOLS_GAP_MAP.md": {
+      "originating_session": 2795,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "0c38718b",
+      "first_commit_date": "2026-07-15",
+      "first_commit_subject": "docs(cascade): S2795 close cascade \u2014 handoff + start-here + INDEX + provenance (#3204)",
+      "sessions_touched": [
+        2795
+      ],
+      "commit_count": 2,
+      "prs": [
+        3204
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
@@ -38448,6 +38479,19 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/research/tools/validation/active_priority_tool_validation.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "ec44778f",
+      "first_commit_date": "2026-07-15",
+      "first_commit_subject": "docs(validation): S2796 td_handlers_ops slice 1 \u2014 validation docs for 4 tools (#3205)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3205
+      ]
+    },
     "docs/research/tools/validation/agent_introspection_run_agent_validation.md": {
       "originating_session": 2728,
       "confidence": "MEDIUM",
@@ -38524,6 +38568,19 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/research/tools/validation/diagnostics_tool_validation.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "ec44778f",
+      "first_commit_date": "2026-07-15",
+      "first_commit_subject": "docs(validation): S2796 td_handlers_ops slice 1 \u2014 validation docs for 4 tools (#3205)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3205
+      ]
+    },
     "docs/research/tools/validation/kb_ingest_validation.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -38534,6 +38591,19 @@
       "sessions_touched": [],
       "commit_count": 1,
       "prs": []
+    },
+    "docs/research/tools/validation/ops_tool_validation.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "ec44778f",
+      "first_commit_date": "2026-07-15",
+      "first_commit_subject": "docs(validation): S2796 td_handlers_ops slice 1 \u2014 validation docs for 4 tools (#3205)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3205
+      ]
     },
     "docs/research/tools/validation/orm_helper_defaults_validation.md": {
       "originating_session": 2730,
@@ -38647,6 +38717,19 @@
       ],
       "commit_count": 1,
       "prs": []
+    },
+    "docs/research/tools/validation/status_snapshot_tool_validation.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "ec44778f",
+      "first_commit_date": "2026-07-15",
+      "first_commit_subject": "docs(validation): S2796 td_handlers_ops slice 1 \u2014 validation docs for 4 tools (#3205)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3205
+      ]
     },
     "docs/research/tools/validation/worker_cache_behavior_validation.md": {
       "originating_session": 2731,
