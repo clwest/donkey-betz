@@ -355,6 +355,40 @@ Be constructive and brief."""
             'review_tool_failures': [],
         }
 
+        # S2800 (Option B): fail fast with a machine-parseable MISSING_INPUT
+        # signal when the task contains no discoverable file path AND no
+        # inline code block. Prior behavior was to attempt the auto-chain,
+        # fall through to a terse "No code inspection or review completed"
+        # message (76% of failures per S2799 Thread 1 audit), and burn
+        # tokens on an LLM call that had nothing to review. Rigby T1 SIGN
+        # (S2800) asked for structured error_code so outer workflows can
+        # distinguish missing-input from real-review-failure — signposted
+        # in error_code + error_type fields on AgentResult.
+        import re as _re
+        _has_file_hint = bool(_re.search(r'[\w/.-]+\.\w{1,6}\b', task))  # e.g. core/foo.py, src/bar.tsx
+        _has_code_block = '```' in task or (task.count('\n') >= 3 and any(kw in task for kw in ('def ', 'function ', 'class ', 'import ', 'return ')))
+        if not _has_file_hint and not _has_code_block:
+            execution_time = int((time.time() - start_time) * 1000)
+            return AgentResult(
+                success=False,
+                message=(
+                    "I need a file path or a code snippet to review. "
+                    "Try again with something like: `review core/services/foo.py`, "
+                    "or paste a code block inside triple backticks."
+                ),
+                error='MISSING_INPUT: no file path or code block found in task',
+                data={
+                    'error_code': 'MISSING_INPUT',
+                    'error_type': 'input_validation',
+                    'task_preview': task[:200],
+                    'hint': 'Provide a file path (e.g. core/foo.py) or a fenced code block.',
+                },
+                agent_name=self.name,
+                execution_time_ms=execution_time,
+                decisions_made=0,
+                tool_calls=[],
+            )
+
         with self.time_travel_session("code_review", task, input_data=context):
             try:
                 # Session 529: Use intelligent prompting
