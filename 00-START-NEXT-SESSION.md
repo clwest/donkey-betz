@@ -2,7 +2,7 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2800 CLOSED — worker-startup orphan reap + CodeReviewAgent MISSING_INPUT (Option B done; BettingPage next per Chris sequencing)
+## READ THIS FIRST — SESSION 2800 CLOSED — worker-startup orphan reap + CodeReviewAgent MISSING_INPUT (Option B done; /docs/ restructuring research arc queued at S2801 per Chris directive at close — OVERRIDES BettingPage default)
 
 **Refreshed 2026-07-16 (SESSION 2800 CLOSED — fourth consecutive same-day engineering ship (S2797 → S2798 → S2799 → S2800). Chris directive at open: `"let's do option B then stop"` — one session, one ship, clean termination. Verify-before-build reframed the ship from "5 broken agents" to "1 infra handler + 1 real agent-code fix" after finding 4 of 5 failures are worker-restart orphans (SESSION_1084 §197 corroborated). Ships: `_reap_orphan_agent_executions_on_startup` handler on `worker_process_init` in `core/celery.py` (bulk UPDATE stale in-progress rows to `cancelled`) + CodeReviewAgent MISSING_INPUT early-return with structured error_code (`core/agents/code_review_agent.py`) + smoke gate mgmt command. **Live proof at post-merge recycle**: `[CELERY_WORKER_STARTUP_REAP] transitioned 16 orphan AgentExecution row(s) to cancelled` on first worker startup — 16 rows that would have been silently reaped as `failed` at 60min are now honestly labeled as worker-restart interruptions. Rigby T1 SIGN with tool-run evidence (ops_tool failure signatures + recycle cross-ref); 5 folds persisted BEFORE Chris D-verdict (rows 85-89) per PLAYBOOK-6.10.8 — third consecutive session with correct fold-timing discipline. Novel: **first ship with a live-measurable capability-lift receipt** (16-row reap number is the load-bearing metric). FORTIETH close-cycle post-PLAYBOOK-7.4.4.)**
 
@@ -32,29 +32,49 @@
 
 ---
 
-## S2801 CANDIDATES — BETTINGPAGE IS THE DEFAULT (Chris sequenced)
+## S2801 CANDIDATES — /docs/ RESTRUCTURING ARC IS THE DEFAULT (Chris directive at S2800 close)
 
-### First — freshness/regression sanity
+**⚠️ OVERRIDES the earlier C→B→BettingPage sequencing.** Chris at S2800 close: `"Before we do anything else I want you and Rigby to do a deep audit of the /docs/."` BettingPage moves behind the docs arc. Full context in `project_docs_restructuring_arc_queued.md` memory + this section.
 
-**Post-cascade freshness check:** wrapper pin retired (S2800 close); freshness should be FRESH · SHA-match at S2800 close SHA (`4c339a6a6b2a` or cascade PR SHA).
-**Ledger baseline:** 89 rows expected (35/30/22). Any drift = investigate.
-**Regression 17-suite:** 318 tests OK at S2798 open; unchanged (S2800 was reliability infra + agent fix; no test-covered surface).
-**Reap monitor:** `grep CELERY_WORKER_STARTUP_REAP celery*.log` — running count of orphans caught since S2800 ship.
+### ⭐ /docs/ RESTRUCTURING RESEARCH ARC (default candidate)
 
-### ⭐ BETTINGPAGE (default per Chris sequencing) — first-user trace + top-1 fix
+**Shape:** Option B ratified at S2800 close — parent-scoped research arc using the `/docs/research/` pattern to audit the rest of `/docs/`. Dogfoods the primitives Chris likes on the audit target itself.
 
-Per Chris directive at S2799 open (persisted): **C → B → BettingPage**. C shipped at S2799 (signposts). B shipped at S2800 (worker reap + CodeReviewAgent). BettingPage is next.
+**Rules Chris set at close:**
+- **This is research/audit, NOT implementation.** Chris: `"I don't want this to be a session of work we are doing but it's something we need to do."` Output = design proposal + migration plan across the arc. No file moves, no code changes during the arc.
+- **Fresh session.** Chris directive; open with clean context. First-action fresh mint of pin scoped to the arc.
+- **Route parent-scoping through Rigby** for joint agreement before authoring (per collaboration model + PLAYBOOK-6.10.8 fold-before-D-verdict discipline held S2798+S2799+S2800).
 
-- **BettingPage first-user trace** — 9-tab, 3023-line surface. Unknown state for a first user. What breaks, what's empty, what looks half-connected? Trace + fix top-1. Same shape as S2798 onboarding routing (audit → verify-before-build → ship one concrete fix). ~1 session.
+**Proposed four threads (surface at parent-scoping; Chris didn't ratify yet):**
 
-### Stock Intelligence — first non-betting revenue play (from S2799 Thread 3)
+1. **Inventory & topology** — what's IN `/docs/` (dir tree, file counts, auto-gen vs hand-written, freshness histogram)
+2. **What makes `/docs/research/` work** — reverse-engineer the transferable primitives: `RESEARCH_OPERATING_SYSTEM.md`, `OPEN_ARCS.md` manifest, `ARCHITECTURE_INDEX.md` decision matrix, `DOMAIN_RESEARCH_PLAYBOOK.md`, xx00/xx99 parent-scoping / canonical-summary shape
+3. **Human-user pain points in the rest** — where discoverability breaks; convention collisions (DOC_LIFECYCLE vs PLATFORM_WHAT_IT_IS vs CLAUDE.md vs docs/topics/); load-bearing-for-humans vs Claude-only vs Rigby-only
+4. **Handoffs + audits proliferation** — 676+ handoffs; growing `docs/audits/`; write-once-read-rarely triage; should handoffs age out to archive?
 
-Deferred behind BettingPage per Chris sequencing but the strategic candidate:
+**Baseline numbers to carry in:**
+- 2618 docs indexed (S2800 cascade output)
+- 1443 active / 11 draft / 1733 superseded
+- 676+ handoff docs
+- Growing `docs/audits/` with SESSION_819_* cruft
+- `docs/topics/` narrative may drift; PLATFORM_INVENTORY authoritative for counts per DOC_LIFECYCLE §2c
 
-- Add newsletter scheduler (send daily brief to Pro subscribers — 3 days work)
-- Add Stripe subscription gate on premium briefs / SEC depth (2 days)
-- Total: ~1-2 weeks to first non-betting revenue
-- Genuinely differentiated vs ChatGPT (citation provenance + multi-agent debate)
+**Arc group number:** TBD at open — check `docs/research/OPEN_ARCS.md` for next unused. Sketched as `2900` at S2800 close but verify.
+
+**Recommended parent-scoping structure (per DOMAIN_RESEARCH_PLAYBOOK):**
+- `docs/research/platform/NN00_docs_restructuring_domain_scoping.md` — parent (why, scope, threads, deliverables, non-goals)
+- `docs/research/platform/NN01_docs_inventory_topology_audit.md` — Thread 1
+- `docs/research/platform/NN02_docs_research_pattern_extraction_audit.md` — Thread 2
+- `docs/research/platform/NN03_docs_human_user_pain_points_audit.md` — Thread 3
+- `docs/research/platform/NN04_docs_handoffs_audits_proliferation_audit.md` — Thread 4
+- `docs/research/platform/NN99_docs_restructuring_canonical_summary.md` — arc close
+
+**Ship shape after arc:** the canonical summary becomes the ratified restructuring plan. Migration ships as follow-up sessions (post-arc-close), not during.
+
+### After the docs arc — Chris's original sequencing resumes
+
+- **BettingPage first-user trace + top-1 fix** (was default; now behind docs arc)
+- **Stock Intelligence** — first non-betting revenue play (behind BettingPage)
 
 ### S2800 follow-ups (all deferred; not blocking)
 
@@ -247,14 +267,15 @@ grep '^python tools/pa_chat.py' tools/pa_local.sh
 8. If `staleness_verdict != FRESH` → escalate
 9. **Check `brew services list | grep postgres` FIRST** if freshness fails oddly
 10. Verify runtime state: `git log --oneline -5`; confirm wrapper at retired pin
-11. **Default candidate: BettingPage first-user trace + top-1 fix** per Chris C→B→BettingPage sequencing
+11. **Default candidate: /docs/ restructuring research arc** (parent-scoped Option B) per Chris directive at S2800 close — OVERRIDES BettingPage. Full instructions in `## S2801 CANDIDATES` section above. This is research/audit, NOT implementation — no file moves or code changes during the arc.
 12. **Anti-rubber-stamp check on first SIGN** — verify `tool_runs` non-empty
-13. Chris directs S2801 P0 selection (BettingPage unless override)
-14. Mint fresh pin with candidate-scoped label
-15. Route work through Rigby joint agreement before coding
-16. **PLAYBOOK-6.10.8 constitutional at v0.8.0 (S2799 + S2800 discipline held for third consecutive session):** fold persistence is the FINAL step of joint SIGN, BEFORE writing the Chris-facing recommendation
-17. **PLAYBOOK-6.10.9 constitutional at v0.8.0:** any zoom-out fold asserting concrete code-state facts MUST admit stable-state-pointer + file+line evidence + (i)/(ii)/(iii) outcome inline before classify+persist
-18. **BEFORE any user-facing content:** read `docs/PLATFORM_WHAT_IT_IS.md`
+13. Chris directs S2801 P0 selection (docs arc unless override)
+14. Mint fresh pin scoped to the arc (e.g. `s2801-docs-restructuring-parent-scoping`)
+15. Route parent-scoping through Rigby joint agreement before authoring any research doc
+16. Check `docs/research/OPEN_ARCS.md` for next unused arc group number (sketched as `2900` at S2800 close but verify)
+17. **PLAYBOOK-6.10.8 constitutional at v0.8.0 (S2798 → S2799 → S2800 discipline held three consecutive sessions):** fold persistence is the FINAL step of joint SIGN, BEFORE writing the Chris-facing recommendation
+18. **PLAYBOOK-6.10.9 constitutional at v0.8.0:** any zoom-out fold asserting concrete code-state facts MUST admit stable-state-pointer + file+line evidence + (i)/(ii)/(iii) outcome inline before classify+persist
+19. **BEFORE any user-facing content:** read `docs/PLATFORM_WHAT_IT_IS.md`
 
 ---
 
