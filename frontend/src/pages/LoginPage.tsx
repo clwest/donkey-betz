@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/lib/api'
 
@@ -83,6 +83,15 @@ export default function LoginPage() {
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
+
+        {/* S2797: link out to public marketing surface for first-touch prospects
+            who bounced to /login without knowing what Donkey Betz is. */}
+        <div className="mt-6 text-center text-sm text-gray-500">
+          New here?{' '}
+          <Link to="/welcome" className="text-primary-400 hover:text-primary-300">
+            Learn more →
+          </Link>
+        </div>
       </div>
     </div>
   )
