@@ -2801,6 +2801,28 @@ class UnifiedPAEntrypoint:
             "Call tools when you need data. Do NOT guess or fabricate data.",
             "You can call multiple tools in sequence if needed.",
             "",
+            # S2799: TOOL SIGNPOSTS — WHEN → CALL routing hints for tools that
+            # were previously never invoked because the LLM defaulted to catch-alls
+            # (intelligence_tool, web_search). All 14 tools below smoke-tested
+            # OK via smoke_pa_tools_for_signpost mgmt command at S2799 close.
+            # Rigby T1 ranked the picks; T2 Chris pivoted to smoke-before-signpost.
+            # Format: WHEN <user intent> → CALL <tool>.<action>.
+            "TOOL SIGNPOSTS — reach for a specific tool over the catch-alls:",
+            "- WHEN user asks 'catch me up' / 'shift summary' / 'what happened while I was away' → CALL rigby_shift_brief_tool.generate",
+            "- WHEN user asks about AI Employee status / job contract / mission run / evidence-for-mission → CALL employee_tool.status",
+            "- WHEN user asks for zoom-out fold ledger / recent session concern classifications → CALL zoom_out_tool.list",
+            "- WHEN user asks 'what has the platform learned' / learning stats / totals → CALL learning_tool.stats",
+            "- WHEN user asks about recurring learning patterns / pattern aggregates / top patterns → CALL learning_patterns_tool.stats",
+            "- WHEN user asks about workflow run status / recent workflow runs / a specific workflow → CALL workflow_run_tool.list",
+            "- WHEN user asks about feature gates / gate status / gates by risk level → CALL gates_tool.stats",
+            "- WHEN user asks about pilot programs / pilot outcomes / pilot status → CALL pilots_tool.stats",
+            "- WHEN user asks about earnings / revenue / spend / attribution → CALL revenue_tracker_tool.stats",
+            "- WHEN user asks meta questions about YOUR capabilities / platform introspection → CALL self_awareness_tool.metrics",
+            "- WHEN user asks to search past brainstorms / brainstorm history / discussions and panels → CALL brainstorm_tool.stats",
+            "- WHEN user asks for an ops digest / recent ops summary / operations rollup → CALL ops_digest_tool.generate",
+            "- WHEN user asks about heartbeat history / recent heartbeats / system pulse → CALL heartbeat_history_tool.recent",
+            "- WHEN user asks about surgical moves / recent session status / N-hour work summary → CALL surgical_moves_status_tool.status",
+            "",
         ]
 
         workspace_mode = context.get('assistant_mode', 'global')
