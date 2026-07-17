@@ -8,6 +8,7 @@ import {
   Sparkles, X, Copy, Eye
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import CreateCaseWizardModal from './legal/CreateCaseWizardModal'
 
 type TabType = 'overview' | 'documents' | 'cases' | 'litigation'
 
@@ -28,11 +29,23 @@ interface LegalDocument {
 
 interface LegalCase {
   id: string
+  case_number: string
+  case_type?: string
+  case_type_display?: string
+  case_title?: string
+  county?: string
+  state?: string
+  status?: string
+  status_display?: string
+  petitioner_name?: string
+  respondent_name?: string
+  children_count?: number
+  documents_count?: number
+  created_at?: string
+  updated_at?: string
+  // Legacy fields still referenced elsewhere (Litigation/Overview active-case cards)
   title?: string
   name?: string
-  case_type?: string
-  status?: string
-  created_at?: string
   children?: unknown[]
   documents?: unknown[]
 }
@@ -85,6 +98,8 @@ export default function LegalPage() {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const [draftStatus, setDraftStatus] = useState<DraftStatus | null>(null)
   const [viewingDocId, setViewingDocId] = useState<string | null>(null)
+  const [caseWizardOpen, setCaseWizardOpen] = useState(false)
+  const [creatingCase, setCreatingCase] = useState(false)
   const queryClient = useQueryClient()
 
   // Fetch documents (case files)
@@ -116,6 +131,38 @@ export default function LegalPage() {
       setActionResult({ type: 'error', message: 'Analysis failed.' })
     },
   })
+
+  // S2806 Phase 3.2 — create case then set-active in one flow
+  const handleCreateCase = async (payload: Record<string, unknown>) => {
+    setCreatingCase(true)
+    try {
+      const createResp = await legalApi.createCase(payload)
+      const newCaseId: string | undefined = createResp.data?.case_id
+      // Refresh the cases list regardless of set-active outcome
+      queryClient.invalidateQueries({ queryKey: ['legal-cases'] })
+      if (newCaseId) {
+        try {
+          await legalApi.setActiveCase(newCaseId)
+          queryClient.invalidateQueries({ queryKey: ['legal-active-case'] })
+          setActionResult({
+            type: 'success',
+            message: `Case ${createResp.data?.case_number || ''} created and set active.`.trim(),
+          })
+        } catch {
+          // Case was created; only the set-active step failed. Recoverable.
+          setActionResult({
+            type: 'error',
+            message: 'Case created — could not set as active. Select the case from the list to activate it.',
+          })
+        }
+      } else {
+        setActionResult({ type: 'success', message: 'Case created.' })
+      }
+      setCaseWizardOpen(false)
+    } finally {
+      setCreatingCase(false)
+    }
+  }
 
   // S2804 Phase 3.1a — document detail query (fires only when a row is selected)
   const { data: viewingDocData, isLoading: loadingViewingDoc } = useQuery({
@@ -366,12 +413,16 @@ export default function LegalPage() {
                       <div className="flex items-center gap-3">
                         <Gavel size={18} className="text-accent-amber" />
                         <div>
-                          <p className="font-medium text-sm">{legalCase.title || legalCase.name || 'Untitled Case'}</p>
-                          <p className="text-xs text-gray-500">{legalCase.case_type || 'Case'}</p>
+                          <p className="font-medium text-sm">
+                            {legalCase.case_title || legalCase.case_number || 'Untitled Case'}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {legalCase.case_type_display || legalCase.case_type || 'Case'}
+                          </p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm">{(legalCase.documents as unknown[])?.length || 0} docs</p>
+                        <p className="text-sm">{legalCase.documents_count ?? 0} docs</p>
                       </div>
                     </div>
                   ))}
@@ -469,7 +520,7 @@ export default function LegalPage() {
             <h3 className="text-lg font-semibold">Case Profiles</h3>
             <button
               className="btn btn-primary text-sm flex items-center gap-2"
-              onClick={() => setActionResult({ type: 'success', message: 'Create case coming soon!' })}
+              onClick={() => setCaseWizardOpen(true)}
             >
               <Plus size={14} />
               New Case
@@ -491,11 +542,24 @@ export default function LegalPage() {
                       <Gavel size={20} className="text-accent-amber" />
                     </div>
                     <div>
-                      <p className="font-medium">{legalCase.title || legalCase.name || 'Untitled Case'}</p>
+                      <p className="font-medium">
+                        {legalCase.case_title || legalCase.case_number || 'Untitled Case'}
+                      </p>
                       <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400">{legalCase.case_type || 'Case'}</span>
-                        <span className="text-xs text-gray-500">{(legalCase.documents as unknown[])?.length || 0} documents</span>
-                        <span className="text-xs text-gray-500">{(legalCase.children as unknown[])?.length || 0} children</span>
+                        <span className="text-xs px-2 py-0.5 rounded bg-dark-bg text-gray-400">
+                          {legalCase.case_type_display || legalCase.case_type || 'Case'}
+                        </span>
+                        {legalCase.county && (
+                          <span className="text-xs text-gray-500">
+                            {legalCase.county}, {legalCase.state || 'CO'}
+                          </span>
+                        )}
+                        <span className="text-xs text-gray-500">
+                          {legalCase.documents_count ?? 0} documents
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {legalCase.children_count ?? 0} children
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -789,6 +853,14 @@ export default function LegalPage() {
           </div>
         </div>
       )}
+
+      {/* S2806 Phase 3.2 — Create Case wizard modal */}
+      <CreateCaseWizardModal
+        open={caseWizardOpen}
+        onClose={() => setCaseWizardOpen(false)}
+        onSubmit={handleCreateCase}
+        submitting={creatingCase}
+      />
     </div>
   )
 }

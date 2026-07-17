@@ -1552,6 +1552,9 @@ export const legalApi = {
   caseDetail: (caseId: string) => api.get(`/legal/cases/${caseId}/`),
   caseContext: (caseId: string) => api.get(`/legal/cases/${caseId}/context/`),
   activeCase: () => api.get('/legal/active-case/'),
+  // S2806 Phase 3.2 — case-creation wizard
+  createCase: (payload: Record<string, unknown>) => api.post('/legal/cases/', payload),
+  setActiveCase: (caseId: string) => api.post('/legal/active-case/', { case_id: caseId }),
 
   // Litigation
   litigationDocuments: (caseId: string) => api.get(`/legal/litigation/${caseId}/documents/`),
