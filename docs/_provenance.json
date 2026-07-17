@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-17T01:42:28+00:00",
+    "generated": "2026-07-17T02:34:51+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "1d94f8765147",
-    "doc_count": 2622,
-    "commit_count": 8033,
+    "git_head": "d84f2079f300",
+    "doc_count": 2623,
+    "commit_count": 8039,
     "confidence_breakdown": {
-      "HIGH": 1666,
+      "HIGH": 1667,
       "MEDIUM": 402,
       "LOW": 6,
       "UNKNOWN": 548
@@ -2590,7 +2590,7 @@
         2745,
         2749
       ],
-      "commit_count": 1324,
+      "commit_count": 1326,
       "prs": [
         10,
         11,
@@ -3197,7 +3197,8 @@
         3212,
         3214,
         3217,
-        3221
+        3221,
+        3223
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7542,7 +7543,7 @@
         2745,
         2749
       ],
-      "commit_count": 272,
+      "commit_count": 274,
       "prs": [
         2213,
         2219,
@@ -7752,7 +7753,8 @@
         3212,
         3214,
         3217,
-        3221
+        3221,
+        3223
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20440,6 +20442,21 @@
       "commit_count": 2,
       "prs": [
         3221
+      ]
+    },
+    "docs/handoffs/SESSION_2803_COLORADO_FAMILY_LAW_PHASE3_FRONTEND.md": {
+      "originating_session": 2803,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "ef8517b3",
+      "first_commit_date": "2026-07-16",
+      "first_commit_subject": "docs(cascade): S2803 close cascade \u2014 handoff + start-here + INDEX + provenance + pin rotation (#3223)",
+      "sessions_touched": [
+        2803
+      ],
+      "commit_count": 2,
+      "prs": [
+        3223
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
