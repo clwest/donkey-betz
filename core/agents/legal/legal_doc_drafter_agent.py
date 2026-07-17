@@ -2399,7 +2399,9 @@ For detailed information on this procedure in {county} County, Colorado, please 
 
             analysis = "\n\n".join(analysis_parts) if analysis_parts else str(info)
 
-            # Save using the model's helper method
+            # Save using the model's helper method.
+            # S2807 Phase 3.1 P1.b: helper now binds CaseProfile via
+            # case_profile_id (mirrors S2805 P1 for LegalDocument).
             research = LegalResearchResult.save_legal_research(
                 user=self.user,
                 query=task,
@@ -2409,13 +2411,7 @@ For detailed information on this procedure in {county} County, Colorado, please 
                 jurisdiction='Colorado',
                 sources_used=info.get('sources', []),
                 execution_time_ms=execution_time_ms,
-                # S2805 Phase 3.1 P1: LegalResearchResult still uses the
-                # LegalCase-based `case_id` param. Passing case_profile_id
-                # here would silently fail the LegalCase.get inside the
-                # helper (same latent-bug class we just fixed for
-                # LegalDocument). Pass None until a Phase 3.1 P1.b arc
-                # migrates LegalResearchResult to CaseProfile.
-                case_id=None,
+                case_profile_id=self.case_profile_id,
             )
 
             logger.info(f"Saved LegalResearchResult {research.id}: {research_type}")
