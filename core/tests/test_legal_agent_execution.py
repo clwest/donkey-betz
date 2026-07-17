@@ -41,19 +41,20 @@ def _noop_session(*args, **kwargs):
     yield None
 
 
-def _make_agent(user=None, case_id=None):
+def _make_agent(user=None, case_profile_id=None):
     """Build a LegalDocDrafterAgent with all side-effect boundaries mocked.
 
     Bypasses __init__ (which registers agent in DB via _ensure_agent_registered)
     and manually sets the attrs execute() reads. Callers still need to set
-    `_call_openai` + `_execute_tool_call` per test.
+    `_call_openai` + `_execute_tool_call` per test. S2805 Phase 3.1 P1
+    renamed the case field to `case_profile_id` (CaseProfile UUID).
     """
     agent = LegalDocDrafterAgent.__new__(LegalDocDrafterAgent)
     agent.user = user
     agent.name = 'LegalDocDrafterAgent'
     agent.agent_name = 'LegalDocDrafterAgent'
-    agent.case_id = case_id
-    agent._current_case = None
+    agent.case_profile_id = case_profile_id
+    agent._current_case_profile = None
     agent._spider_service = None
     agent._semantic_search = None
     agent._tt_decision_count = 0
