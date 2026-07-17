@@ -366,3 +366,98 @@ class LegalAgentCaseProfileBindingTests(TestCase):
         cp.refresh_from_db()  # no-op for @property, but proves no stale field
         self.assertEqual(cp.document_count, 2,
                          'CaseProfile.document_count @property must reflect live count')
+
+
+# =============================================================================
+# T7 — S2807 Phase 3.1 P1.b: LegalResearchResult unification
+# =============================================================================
+# Mirrors T6 for the research-save codepath. Additional discipline vs T6:
+#   T7b asserts observable logger.warning on unknown case_profile_id
+#   (S2805 Lesson 3 — never silent-swallow). T6b only tolerated silent None.
+
+
+class LegalAgentCaseProfileResearchBindingTests(TestCase):
+    """Verify the P1.b refactor:
+      T7a  save with case_profile_id binds LegalResearchResult.case_profile
+      T7b  save with unknown case_profile_id → logger.warning + case_profile None
+      T7c  save with no case_profile_id → both case FKs None
+      T7d  INVARIANT: helper NEVER writes LegalResearchResult.case (legacy)
+      T7e  CaseProfile.research_result_count @property reflects live count
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(
+            username='legal_p3_1_p1b_test_s2807', password='x'
+        )
+
+    def _make_case_profile(self, **overrides):
+        from core.models_legal import CaseProfile
+        defaults = dict(
+            user=self.user,
+            case_number='2026DR0002',
+            case_type='custody',
+            county='Denver',
+            state='Colorado',
+        )
+        defaults.update(overrides)
+        return CaseProfile.objects.create(**defaults)
+
+    def _save_via_agent(self, case_profile_id=None):
+        agent = _make_agent(user=self.user, case_profile_id=case_profile_id)
+        return agent._save_legal_research(
+            task='What are the deadlines for filing a motion to modify custody?',
+            info={'explanation': 'Motions to modify may be filed at any time...'},
+            context={'case_type': 'custody'},
+            execution_time_ms=17,
+        )
+
+    def test_t7a_save_with_case_profile_id_binds_case_profile_fk(self):
+        cp = self._make_case_profile()
+        research = self._save_via_agent(case_profile_id=str(cp.id))
+        self.assertIsNotNone(research, 'save must return the LegalResearchResult')
+        self.assertEqual(research.case_profile_id, cp.id,
+                         'case_profile FK must be bound to the passed CaseProfile')
+
+    def test_t7b_unknown_case_profile_id_logs_warning_and_leaves_none(self):
+        """Delta from T6b — S2805 Lesson 3 (never silent-swallow) codified
+        as an observable logger.warning assertion.
+        """
+        import uuid
+        bogus_id = str(uuid.uuid4())
+        with self.assertLogs('core.models_unified_system', level='WARNING') as cm:
+            research = self._save_via_agent(case_profile_id=bogus_id)
+        self.assertIsNotNone(research, 'save must succeed even when CaseProfile is missing')
+        self.assertIsNone(research.case_profile,
+                          'unknown case_profile_id must leave FK None')
+        joined = '\n'.join(cm.output)
+        self.assertIn('CaseProfile', joined,
+                      'warning must mention CaseProfile lookup failure')
+        self.assertIn(bogus_id, joined,
+                      'warning must include the missing case_profile_id')
+
+    def test_t7c_no_case_profile_id_leaves_both_case_fks_none(self):
+        research = self._save_via_agent(case_profile_id=None)
+        self.assertIsNotNone(research)
+        self.assertIsNone(research.case_profile)
+        self.assertIsNone(research.case, 'legacy case FK must also be None on agent saves')
+
+    def test_t7d_invariant_helper_never_writes_legacy_case_fk(self):
+        """Mirrors T6d — agent-writes-case-profile-only invariant, extended
+        to the research-save path.
+        """
+        cp = self._make_case_profile()
+        research = self._save_via_agent(case_profile_id=str(cp.id))
+        self.assertEqual(research.case_profile_id, cp.id)
+        self.assertIsNone(research.case,
+                          'agent-writes-case-profile-only invariant violated: '
+                          'legacy `case` FK was populated on a new save')
+
+    def test_t7e_case_profile_research_result_count_property_is_live(self):
+        cp = self._make_case_profile()
+        self.assertEqual(cp.research_result_count, 0, 'starts at zero')
+        self._save_via_agent(case_profile_id=str(cp.id))
+        self._save_via_agent(case_profile_id=str(cp.id))
+        cp.refresh_from_db()
+        self.assertEqual(cp.research_result_count, 2,
+                         'CaseProfile.research_result_count @property must reflect live count')
