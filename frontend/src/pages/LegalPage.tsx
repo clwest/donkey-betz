@@ -5,7 +5,7 @@ import {
   Scale, FileText, Upload, FolderOpen,
   Loader2, CheckCircle, XCircle, Plus,
   Gavel, ChevronRight, Network, AlertTriangle,
-  Sparkles, X
+  Sparkles, X, Copy, Eye
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -64,6 +64,18 @@ interface DraftStatus {
   document_id?: string | null
 }
 
+interface LegalDocumentDetail {
+  id: string
+  title: string
+  document_type?: string
+  content: string
+  original_query?: string
+  generation_context?: Record<string, unknown>
+  status?: string
+  word_count?: number
+  created_at?: string
+}
+
 export default function LegalPage() {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
@@ -72,6 +84,7 @@ export default function LegalPage() {
   const [draftAckChecked, setDraftAckChecked] = useState(false)
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const [draftStatus, setDraftStatus] = useState<DraftStatus | null>(null)
+  const [viewingDocId, setViewingDocId] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
   // Fetch documents (case files)
@@ -103,6 +116,14 @@ export default function LegalPage() {
       setActionResult({ type: 'error', message: 'Analysis failed.' })
     },
   })
+
+  // S2804 Phase 3.1a — document detail query (fires only when a row is selected)
+  const { data: viewingDocData, isLoading: loadingViewingDoc } = useQuery({
+    queryKey: ['legal-document-detail', viewingDocId],
+    queryFn: () => legalApi.documentDetail(viewingDocId as string),
+    enabled: !!viewingDocId,
+  })
+  const viewingDoc: LegalDocumentDetail | null = viewingDocData?.data?.document || null
 
   // S2803 Phase 3.0 — draft dispatch mutation
   const draftMutation = useMutation({
@@ -302,6 +323,7 @@ export default function LegalPage() {
                     <div
                       key={doc.id}
                       className="flex items-center justify-between p-3 rounded-lg border border-dark-border hover:border-gray-600 transition-colors cursor-pointer"
+                      onClick={() => setViewingDocId(doc.id)}
                     >
                       <div className="flex items-center gap-3">
                         <FileText size={18} className="text-primary-400" />
@@ -387,7 +409,8 @@ export default function LegalPage() {
               {documents.map((doc) => (
                 <div
                   key={doc.id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-dark-border hover:border-gray-600 transition-colors"
+                  className="flex items-center justify-between p-4 rounded-lg border border-dark-border hover:border-gray-600 transition-colors cursor-pointer"
+                  onClick={() => setViewingDocId(doc.id)}
                 >
                   <div className="flex items-center gap-4">
                     <div className="h-10 w-10 rounded-lg bg-primary-600/20 flex items-center justify-center">
@@ -412,7 +435,14 @@ export default function LegalPage() {
                     </span>
                     <button
                       className="btn btn-secondary text-sm"
-                      onClick={() => analyzeMutation.mutate(doc.id)}
+                      onClick={(e) => { e.stopPropagation(); setViewingDocId(doc.id) }}
+                    >
+                      <Eye size={14} className="mr-1 inline" />
+                      View
+                    </button>
+                    <button
+                      className="btn btn-secondary text-sm"
+                      onClick={(e) => { e.stopPropagation(); analyzeMutation.mutate(doc.id) }}
                       disabled={analyzeMutation.isPending}
                     >
                       {analyzeMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : 'Analyze'}
@@ -536,6 +566,95 @@ export default function LegalPage() {
       {/* Toast notification */}
       {actionResult && (
         <Toast result={actionResult} onClose={() => setActionResult(null)} />
+      )}
+
+      {/* S2804 Phase 3.1a — View Document modal */}
+      {viewingDocId && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => setViewingDocId(null)}
+        >
+          <div
+            className="w-full max-w-3xl max-h-[90vh] rounded-lg border border-dark-border bg-dark-bg shadow-xl flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between p-6 border-b border-dark-border flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <FileText size={22} className="text-primary-400" />
+                <div>
+                  <h2 className="text-lg font-semibold">
+                    {viewingDoc?.title || (loadingViewingDoc ? 'Loading…' : 'Document')}
+                  </h2>
+                  {viewingDoc && (
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      <span className="text-xs px-2 py-0.5 rounded bg-dark-bg-alt text-gray-400 border border-dark-border">
+                        {viewingDoc.document_type || 'document'}
+                      </span>
+                      <span className="text-xs px-2 py-0.5 rounded bg-dark-bg-alt text-gray-400 border border-dark-border">
+                        {viewingDoc.status || 'draft'}
+                      </span>
+                      {viewingDoc.word_count !== undefined && (
+                        <span className="text-xs text-gray-500">{viewingDoc.word_count} words</span>
+                      )}
+                      {viewingDoc.created_at && (
+                        <span className="text-xs text-gray-500">
+                          {new Date(viewingDoc.created_at).toLocaleString()}
+                        </span>
+                      )}
+                      {(viewingDoc.generation_context as { phase3_1_fallback_used?: boolean } | undefined)?.phase3_1_fallback_used && (
+                        <span className="text-xs px-2 py-0.5 rounded bg-accent-amber/20 text-accent-amber border border-accent-amber/40">
+                          Auto-recovered draft
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingDocId(null)}
+                className="text-gray-400 hover:text-white flex-shrink-0"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto flex-1">
+              {loadingViewingDoc ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 size={32} className="animate-spin text-gray-500" />
+                </div>
+              ) : viewingDoc?.content ? (
+                <pre className="whitespace-pre-wrap font-sans text-sm text-gray-200 leading-relaxed">
+                  {viewingDoc.content}
+                </pre>
+              ) : (
+                <p className="text-gray-400 text-center py-16">No content available.</p>
+              )}
+            </div>
+
+            {viewingDoc?.content && (
+              <div className="flex items-center justify-between p-4 border-t border-dark-border flex-shrink-0">
+                <p className="text-xs text-gray-500">
+                  Review before filing. Generated documents are templates.
+                </p>
+                <button
+                  className="btn btn-secondary text-sm flex items-center gap-2"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(viewingDoc.content)
+                      setActionResult({ type: 'success', message: 'Copied to clipboard.' })
+                    } catch {
+                      setActionResult({ type: 'error', message: 'Copy failed.' })
+                    }
+                  }}
+                >
+                  <Copy size={14} />
+                  Copy
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
       {/* S2803 Phase 3.0 — Draft Motion modal */}
