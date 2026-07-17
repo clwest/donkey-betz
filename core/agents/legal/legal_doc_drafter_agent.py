@@ -162,6 +162,89 @@ JDF_FORM_MAPPING = {
 }
 
 # =========================================================================
+# S2808 Phase 4a: Form-selection keyword map
+# =========================================================================
+# Deterministic keyword sets per JDF_FORM_MAPPING relief_type. Used by
+# LegalDocDrafterAgent._recommend_form to classify a natural-language
+# situation description against the existing form catalog. `primary`
+# keywords/phrases score 3 points; `signals` score 1. Rule-based (no LLM)
+# — GPT fallback deferred per S2808 Rigby SIGN Q2.
+RELIEF_TYPE_KEYWORDS = {
+    'emergency_parenting': {
+        'primary': [
+            'emergency', 'immediate danger', 'imminent', 'urgent',
+            'restraining order', 'protection order',
+        ],
+        'signals': [
+            'danger', 'harm', 'abuse', 'safety', 'threat', 'hurt', 'unsafe',
+            'weapon', 'violence', 'hitting',
+        ],
+    },
+    'restrict_parenting': {
+        'primary': [
+            'restrict parenting', 'limit parenting time',
+            'supervised visitation', 'no contact',
+        ],
+        'signals': [
+            'unsafe', 'harmful', 'concerning behavior', 'substance',
+            'drug', 'alcohol', 'neglect',
+        ],
+    },
+    'modify_parenting_time': {
+        'primary': [
+            'modify parenting time', 'change parenting time',
+            'change custody schedule', 'modify custody', 'change visitation',
+            'change the schedule',
+        ],
+        'signals': [
+            'moved', 'schedule change', 'new job', 'relocated', 'work schedule',
+            'school change', 'different schedule', 'more time',
+        ],
+    },
+    'enforce_order': {
+        'primary': [
+            'enforce', 'contempt', 'not following order', 'violating order',
+            'contempt of court', 'refuses to follow',
+        ],
+        'signals': [
+            'ignoring', 'refuses', "won't comply", 'disobeying', 'withholding',
+            'denying visits', 'not letting me see',
+        ],
+    },
+    'modify_child_support': {
+        'primary': [
+            'modify child support', 'change child support', 'reduce support',
+            'increase support', 'modify support',
+        ],
+        'signals': [
+            'income change', 'lost job', 'raise', 'financial', 'unemployment',
+            'pay cut', 'new income',
+        ],
+    },
+    'third_party_interference': {
+        'primary': [
+            'third party', 'girlfriend', 'boyfriend', 'grandparent',
+            'stepparent', 'new spouse', 'new partner',
+        ],
+        'signals': [
+            'influence', 'says things', 'poisoning', 'exposing',
+            'around my child',
+        ],
+    },
+    'communication_issue': {
+        'primary': [
+            'communication', 'talking to my child about', 'saying things to child',
+            'talking badly',
+        ],
+        'signals': [
+            'badmouthing', 'derogatory', 'alienating', 'parental alienation',
+            'insulting me',
+        ],
+    },
+}
+
+
+# =========================================================================
 # Session 404: Statutory Criteria Categories (no citations, just categories)
 # =========================================================================
 STATUTORY_CRITERIA = {
@@ -2066,6 +2149,121 @@ Contact your local court's self-help center for assistance selecting the right f
         return {
             'success': True,
             'form_info': "\n".join(form_info)
+        }
+
+    def _recommend_form(
+        self,
+        situation: str,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """S2808 Phase 4a — recommend a Colorado JDF form for a situation.
+
+        Rule-based keyword-match against RELIEF_TYPE_KEYWORDS. Deterministic;
+        no LLM call. Ambiguous situations return the top candidate plus
+        alternates and a low-confidence signal so callers can prompt the
+        user for clarification.
+
+        Args:
+            situation: Free-text description ("she moved to Denver with the
+                kids without telling me").
+            context: Optional context dict (unused today; reserved for
+                case_type/county-based tie-breaks in future).
+
+        Returns:
+            {
+                'success': bool,
+                'situation': str,                    # echoed input
+                'top_match': {                       # None when no keyword hit
+                    'relief_type', 'form_number', 'official_title',
+                    'required_attachments', 'criteria', 'filing_notes',
+                    'score',
+                } | None,
+                'alternates': [                      # up to 2 next-best
+                    {relief_type, form_number, official_title, score}, ...
+                ],
+                'confidence': 'high' | 'medium' | 'low' | 'none',
+                'clarifying_questions': [str, ...],  # populated when confidence low/none
+                'disclaimer': str,
+            }
+        """
+        _ = context  # reserved for future disambiguation heuristics
+        situation_text = (situation or '').strip()
+        if not situation_text:
+            return {
+                'success': False,
+                'error': 'situation is required',
+            }
+
+        needle = situation_text.lower()
+        scored: List[Tuple[str, int]] = []  # (relief_type, score)
+        for relief_type, keyword_set in RELIEF_TYPE_KEYWORDS.items():
+            score = 0
+            for phrase in keyword_set.get('primary', []):
+                if phrase.lower() in needle:
+                    score += 3
+            for phrase in keyword_set.get('signals', []):
+                if phrase.lower() in needle:
+                    score += 1
+            if score > 0:
+                scored.append((relief_type, score))
+
+        scored.sort(key=lambda pair: pair[1], reverse=True)
+
+        def _envelope(relief_type: str, score: int) -> Dict[str, Any]:
+            form_data = JDF_FORM_MAPPING.get(relief_type, {})
+            return {
+                'relief_type': relief_type,
+                'form_number': form_data.get('primary_form', ''),
+                'official_title': form_data.get('official_title', ''),
+                'required_attachments': form_data.get('required_attachments', []),
+                'criteria': form_data.get('criteria', ''),
+                'filing_notes': form_data.get('filing_notes', ''),
+                'score': score,
+            }
+
+        clarifying_questions = [
+            'Is there an existing court order in place?',
+            'Are you concerned about the immediate safety of the children?',
+            'Has the other parent recently changed jobs, schedule, or moved?',
+        ]
+        disclaimer = (
+            'General information only — not legal advice. '
+            'Consult a licensed Colorado family law attorney to confirm the correct form for your case.'
+        )
+
+        if not scored:
+            return {
+                'success': True,
+                'situation': situation_text,
+                'top_match': None,
+                'alternates': [],
+                'confidence': 'none',
+                'clarifying_questions': clarifying_questions,
+                'disclaimer': disclaimer,
+            }
+
+        top_relief_type, top_score = scored[0]
+        top_match = _envelope(top_relief_type, top_score)
+        alternates = [_envelope(rt, s) for rt, s in scored[1:3]]
+
+        # Confidence heuristic: gap between top and second determines certainty.
+        second_score = scored[1][1] if len(scored) > 1 else 0
+        gap = top_score - second_score
+        if top_score >= 3 and gap >= 3:
+            confidence = 'high'
+        elif top_score >= 2 and gap >= 1:
+            confidence = 'medium'
+        else:
+            confidence = 'low'
+
+        return {
+            'success': True,
+            'situation': situation_text,
+            'top_match': top_match,
+            'alternates': alternates,
+            'confidence': confidence,
+            'clarifying_questions': clarifying_questions if confidence == 'low' else [],
+            'disclaimer': disclaimer,
         }
 
     def _explain_procedure(
