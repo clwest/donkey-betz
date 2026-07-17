@@ -5717,25 +5717,61 @@ def draft_legal_document_task(self, task_description, context=None, user_id=None
     """
     Session 1062: Async legal document drafting via LegalDocDrafterAgent.
     Dispatched by PA legal_doc_drafter_agent handler to avoid PA tool timeout.
+    S2803 Phase 3.0: writes terminal state back to LegalDocumentDispatchLog
+        (resulting_document, status, completed_at, error_message) so the
+        /api/legal/draft-status/<task_id>/ endpoint reflects real progress.
+        In-task update is preferred over signal handlers per Rigby SIGN B5.
     """
     from core.agent_router import AgentRouter
     from django.contrib.auth import get_user_model
+    from django.utils import timezone as _timezone
+    from core.models_legal_audit import LegalDocumentDispatchLog
 
     user = None
     if user_id:
         User = get_user_model()
         user = User.objects.filter(id=user_id).first()
 
-    router = AgentRouter(user=user)
-    result = router.route(
-        agent_name='LegalDocDrafterAgent',
-        task=task_description,
-        context=context or {},
-    )
+    task_id = str(self.request.id) if getattr(self, 'request', None) else ''
+    dispatch_log = None
+    if task_id:
+        dispatch_log = LegalDocumentDispatchLog.objects.filter(task_id=task_id).first()
+
+    try:
+        router = AgentRouter(user=user)
+        result = router.route(
+            agent_name='LegalDocDrafterAgent',
+            task=task_description,
+            context=context or {},
+        )
+    except Exception as exc:
+        if dispatch_log:
+            dispatch_log.status = 'failed'
+            dispatch_log.error_message = f'{type(exc).__name__}: {exc}'[:2000]
+            dispatch_log.completed_at = _timezone.now()
+            dispatch_log.save(update_fields=['status', 'error_message', 'completed_at'])
+        raise
 
     output_text = ''
     if result:
-        output_text = result.message or result.content or str(result)
+        output_text = result.message or getattr(result, 'content', '') or str(result)
+
+    if dispatch_log:
+        if result and result.success:
+            dispatch_log.status = 'completed'
+            saved_ids = (result.data or {}).get('saved_document_ids', [])
+            if saved_ids:
+                from core.models_unified_system import LegalDocument
+                dispatch_log.resulting_document = LegalDocument.objects.filter(
+                    id=saved_ids[0]
+                ).first()
+        else:
+            dispatch_log.status = 'failed'
+            dispatch_log.error_message = (getattr(result, 'error', '') or 'Unknown failure')[:2000]
+        dispatch_log.completed_at = _timezone.now()
+        dispatch_log.save(update_fields=[
+            'status', 'completed_at', 'error_message', 'resulting_document',
+        ])
 
     return {
         'agent': 'LegalDocDrafterAgent',
