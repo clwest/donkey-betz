@@ -1573,6 +1573,10 @@ export const legalApi = {
   draftMotion: (data: { task_description: string; disclaimer_acknowledged: boolean }) =>
     api.post('/legal/draft/', data),
   draftStatus: (taskId: string) => api.get(`/legal/draft-status/${taskId}/`),
+
+  // S2808 Phase 4a — form-selection intelligence
+  selectForm: (data: { situation: string; case_type?: string }) =>
+    api.post('/legal/select-form/', data),
 }
 
 export const podcastApi = {
