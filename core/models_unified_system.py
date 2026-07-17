@@ -17280,12 +17280,24 @@ class LegalDocument(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # Link to case (optional - can exist independently)
+    # `case` is the legacy Session 403 LegalCase FK. Grandfathered for
+    # historical rows; the LegalDocDrafterAgent NEVER writes it as of
+    # S2805 Phase 3.1 P1 unification. Canonical case linkage is
+    # `case_profile` (CaseProfile — the richer Session 406 model).
     case = models.ForeignKey(
         LegalCase,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='documents'
+    )
+    case_profile = models.ForeignKey(
+        'core.CaseProfile',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='legal_documents',
+        help_text='S2805 Phase 3.1 P1: canonical case linkage. Replaces `case` (LegalCase) for new saves.'
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,

@@ -41,18 +41,20 @@ def _noop_session(*args, **kwargs):
     yield None
 
 
-def _make_agent(user=None, case_id=None):
+def _make_agent(user=None, case_profile_id=None):
     """Build a LegalDocDrafterAgent with all __init__ side-effects bypassed.
 
     Reuses the pattern from test_legal_agent_execution.py:_make_agent — same
-    attr enumeration from BaseAgent.__init__:477-488.
+    attr enumeration from BaseAgent.__init__:477-488. S2805 Phase 3.1 P1
+    renamed the case field to `case_profile_id` (CaseProfile UUID, not
+    LegalCase).
     """
     agent = LegalDocDrafterAgent.__new__(LegalDocDrafterAgent)
     agent.user = user
     agent.name = 'LegalDocDrafterAgent'
     agent.agent_name = 'LegalDocDrafterAgent'
-    agent.case_id = case_id
-    agent._current_case = None
+    agent.case_profile_id = case_profile_id
+    agent._current_case_profile = None
     agent._spider_service = None
     agent._semantic_search = None
     agent._tt_decision_count = 0
@@ -273,3 +275,94 @@ class LegalAgentFallbackSaveTests(TestCase):
             LegalDocument.objects.count(), 0,
             'Fallback fired for unknown intent — over-triggering'
         )
+
+
+# =============================================================================
+# T6 — S2805 Phase 3.1 P1: CaseProfile unification
+# =============================================================================
+# Rigby SIGN edits ratified:
+#   1) Explicit "agent writes only case_profile, never case" invariant + test
+#   2) CaseProfile.document_count as @property (no denormalization)
+#   3) Rename case_id → case_profile_id (prevent UUID-meaning-drift regression)
+
+
+class LegalAgentCaseProfileBindingTests(TestCase):
+    """Verify the P1 refactor:
+      T6a  save with case_profile_id binds LegalDocument.case_profile
+      T6b  save with unknown case_profile_id → case_profile stays None (no crash)
+      T6c  save with no case_profile_id → both case FKs None
+      T6d  INVARIANT: agent NEVER writes LegalDocument.case (legacy) — grandfathered
+      T6e  CaseProfile.document_count property reflects live count
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(username='legal_p3_1_p1_test_s2805', password='x')
+
+    def _make_case_profile(self, **overrides):
+        from core.models_legal import CaseProfile
+        defaults = dict(
+            user=self.user,
+            case_number='2026DR0001',
+            case_type='custody',
+            county='Denver',
+            state='Colorado',
+        )
+        defaults.update(overrides)
+        return CaseProfile.objects.create(**defaults)
+
+    def _save_via_agent(self, case_profile_id=None):
+        agent = _make_agent(user=self.user, case_profile_id=case_profile_id)
+        return agent._save_legal_document(
+            task='Draft a motion to modify parenting time',
+            document={
+                'document_type': 'motion',
+                'motion_type': 'modify_parenting_time',
+                'document': '# MOTION BODY\n\nContents.',
+            },
+            context={'case_type': 'custody'},
+            execution_time_ms=42,
+        )
+
+    def test_t6a_save_with_case_profile_id_binds_case_profile_fk(self):
+        cp = self._make_case_profile()
+        doc = self._save_via_agent(case_profile_id=str(cp.id))
+        self.assertIsNotNone(doc, 'save must return the LegalDocument')
+        self.assertEqual(doc.case_profile_id, cp.id,
+                         'case_profile FK must be bound to the passed CaseProfile')
+
+    def test_t6b_unknown_case_profile_id_leaves_case_profile_none(self):
+        import uuid
+        bogus_id = str(uuid.uuid4())
+        doc = self._save_via_agent(case_profile_id=bogus_id)
+        self.assertIsNotNone(doc, 'save must succeed even when CaseProfile is missing')
+        self.assertIsNone(doc.case_profile, 'unknown case_profile_id must leave FK None')
+
+    def test_t6c_no_case_profile_id_leaves_both_case_fks_none(self):
+        doc = self._save_via_agent(case_profile_id=None)
+        self.assertIsNotNone(doc)
+        self.assertIsNone(doc.case_profile)
+        self.assertIsNone(doc.case, 'legacy case FK must also be None on agent saves')
+
+    def test_t6d_invariant_agent_never_writes_legacy_case_fk(self):
+        """Grandfathering invariant per Rigby SIGN Fold 3 mitigation.
+
+        Even when a CaseProfile is bound (case_profile is set), the agent
+        must NEVER also populate the legacy `case` FK. Prevents dual-FK
+        ambiguity where downstream readers might diverge.
+        """
+        cp = self._make_case_profile()
+        doc = self._save_via_agent(case_profile_id=str(cp.id))
+        self.assertEqual(doc.case_profile_id, cp.id)
+        self.assertIsNone(doc.case,
+                          'agent-writes-case-profile-only invariant violated: '
+                          'legacy `case` FK was populated on a new save')
+
+    def test_t6e_case_profile_document_count_property_is_live(self):
+        cp = self._make_case_profile()
+        self.assertEqual(cp.document_count, 0, 'starts at zero')
+        self._save_via_agent(case_profile_id=str(cp.id))
+        self._save_via_agent(case_profile_id=str(cp.id))
+        cp.refresh_from_db()  # no-op for @property, but proves no stale field
+        self.assertEqual(cp.document_count, 2,
+                         'CaseProfile.document_count @property must reflect live count')

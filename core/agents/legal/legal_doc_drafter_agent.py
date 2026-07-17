@@ -981,28 +981,44 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
         max_items_per_hour=5
     )
 
-    def __init__(self, user=None, case_id: str = None):
+    def __init__(self, user=None, case_profile_id: Optional[str] = None, case_id: Optional[str] = None):
+        """S2805 Phase 3.1 P1: canonical case linkage is `case_profile_id`
+        (CaseProfile). The legacy `case_id` kwarg is accepted as an alias
+        for backward compatibility with any surviving caller but will be
+        removed in a future arc; both map to the same internal
+        `self.case_profile_id` attribute.
+        """
         super().__init__(user)
         self._spider_service = None
         self._semantic_search = None
-        self.case_id = case_id  # Optional: Link to LegalCase
-        self._current_case = None
+        # S2805 Phase 3.1 P1: rename case_id → case_profile_id (Rigby SIGN
+        # edit — prevents UUID-meaning-drift regression). The value is a
+        # CaseProfile UUID (per Session 406). Legacy LegalCase FK is no
+        # longer written by this agent.
+        self.case_profile_id = case_profile_id or case_id
+        self._current_case_profile = None
         # Session 405: Ensure agent is registered in database for learning hooks
         self._ensure_agent_registered()
 
     @property
-    def current_case(self):
-        """Get the current LegalCase if case_id is provided."""
-        if self._current_case is None and self.case_id:
+    def current_case_profile(self):
+        """Get the current CaseProfile if case_profile_id is provided.
+
+        S2805 Phase 3.1 P1: was `current_case` returning LegalCase — the
+        session-set `active_case_id` was always a CaseProfile UUID per
+        Session 406, so the LegalCase lookup silently failed on every
+        call. Now resolves CaseProfile correctly.
+        """
+        if self._current_case_profile is None and self.case_profile_id:
             try:
-                from core.models_unified_system import LegalCase
-                self._current_case = LegalCase.objects.get(id=self.case_id)
+                from core.models_legal import CaseProfile
+                self._current_case_profile = CaseProfile.objects.get(id=self.case_profile_id)
             except Exception as _e:
                 logger.warning(
-                    "legal_doc_drafter_agent.current_case: swallowed (%s: %s) — degraded",
+                    "legal_doc_drafter_agent.current_case_profile: swallowed (%s: %s) — degraded",
                     type(_e).__name__, _e,
                 )
-        return self._current_case
+        return self._current_case_profile
 
     @property
     def spider_service(self):
@@ -1327,7 +1343,7 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
                         'disclaimer_included': True,
                         'saved_document_ids': saved_doc_ids,
                         'saved_research_ids': saved_research_ids,
-                        'case_id': self.case_id,
+                        'case_profile_id': self.case_profile_id,
                     },
                     agent_name=self.name,
                     execution_time_ms=execution_time,
@@ -1372,7 +1388,7 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
                                     'document_type': doc_type,
                                     'motion_type': doc.get('motion_type', ''),
                                     'jurisdiction': 'Colorado',
-                                    'case_id': str(self.case_id) if self.case_id else None,
+                                    'case_profile_id': str(self.case_profile_id) if self.case_profile_id else None,
                                 },
                                 user=self.user,
                             )
@@ -2279,7 +2295,8 @@ For detailed information on this procedure in {county} County, Colorado, please 
             return None
 
         try:
-            from core.models_unified_system import LegalDocument, LegalCase
+            from core.models_unified_system import LegalDocument
+            from core.models_legal import CaseProfile
 
             # Determine document type from the result
             doc_type = document.get('document_type', 'other')
@@ -2295,12 +2312,18 @@ For detailed information on this procedure in {county} County, Colorado, please 
             else:
                 title = f"Legal Document: {task[:100]}"
 
-            # Get case if available
-            case = None
-            if self.case_id:
+            # S2805 Phase 3.1 P1: bind CaseProfile (Session 406 model), not
+            # LegalCase (Session 403 legacy). The `active_case_id` set by
+            # Session 406 in request.session is a CaseProfile UUID; the old
+            # LegalCase.get lookup silently failed on every save. The
+            # legacy `case` FK is NEVER written by the agent going forward
+            # (agent-writes-case-profile-only invariant per Rigby SIGN edit
+            # 1); grandfathered rows retain their existing `case` value.
+            case_profile = None
+            if self.case_profile_id:
                 try:
-                    case = LegalCase.objects.get(id=self.case_id)
-                except LegalCase.DoesNotExist:
+                    case_profile = CaseProfile.objects.get(id=self.case_profile_id)
+                except CaseProfile.DoesNotExist:
                     pass
 
             # Build generation_context. S2804 Phase 3.1 P0 (Rigby SIGN B1) —
@@ -2316,10 +2339,12 @@ For detailed information on this procedure in {county} County, Colorado, please 
             if document.get('fallback_recovery') or context.get('phase3_1_fallback_used'):
                 gen_context['phase3_1_fallback_used'] = True
 
-            # Create the document record
+            # Create the document record. Agent binds ONLY case_profile —
+            # `case` (legacy LegalCase FK) is intentionally left NULL per
+            # agent-writes-case-profile-only invariant.
             legal_doc = LegalDocument.objects.create(
                 user=self.user,
-                case=case,
+                case_profile=case_profile,
                 document_type=doc_type,
                 title=title,
                 content=document.get('document', ''),
@@ -2328,10 +2353,8 @@ For detailed information on this procedure in {county} County, Colorado, please 
                 status='draft',
             )
 
-            # Update case document count
-            if case:
-                case.document_count = case.documents.count()
-                case.save(update_fields=['document_count', 'updated_at'])
+            # No document_count denormalization — CaseProfile.document_count
+            # is a live @property that returns self.legal_documents.count().
 
             logger.info(f"Saved LegalDocument {legal_doc.id}: {title}")
             return legal_doc
@@ -2386,7 +2409,13 @@ For detailed information on this procedure in {county} County, Colorado, please 
                 jurisdiction='Colorado',
                 sources_used=info.get('sources', []),
                 execution_time_ms=execution_time_ms,
-                case_id=self.case_id,
+                # S2805 Phase 3.1 P1: LegalResearchResult still uses the
+                # LegalCase-based `case_id` param. Passing case_profile_id
+                # here would silently fail the LegalCase.get inside the
+                # helper (same latent-bug class we just fixed for
+                # LegalDocument). Pass None until a Phase 3.1 P1.b arc
+                # migrates LegalResearchResult to CaseProfile.
+                case_id=None,
             )
 
             logger.info(f"Saved LegalResearchResult {research.id}: {research_type}")
