@@ -1403,6 +1403,8 @@ from core.views_legal import (
     get_generated_response, create_filing_package, get_document_types,
     # Session 410: Document Threading APIs
     get_document_threads, get_document_thread, get_documents_needing_response,
+    # S2803 Phase 3.0: Legal drafting dispatch + live status
+    draft_legal_document, draft_legal_document_status,
 )
 from core.views_multi_llm import (
     available_llm_providers, intelligent_model_selection, multi_model_comparison,
@@ -3937,6 +3939,9 @@ urlpatterns += [
     path('api/legal/litigation/<uuid:case_profile_id>/threads/', get_document_threads, name='litigation-document-threads'),
     path('api/legal/litigation/document/<uuid:document_id>/thread/', get_document_thread, name='litigation-document-thread'),
     path('api/legal/litigation/<uuid:case_profile_id>/needs-response/', get_documents_needing_response, name='litigation-needs-response'),
+    # S2803 Phase 3.0: legal drafting dispatch + live status
+    path('api/legal/draft/', draft_legal_document, name='legal-draft-dispatch'),
+    path('api/legal/draft-status/<str:task_id>/', draft_legal_document_status, name='legal-draft-status'),
 ]
 
 # =============================================================================

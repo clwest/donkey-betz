@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { legalApi } from '@/lib/api'
 import {
   Scale, FileText, Upload, FolderOpen,
   Loader2, CheckCircle, XCircle, Plus,
-  Gavel, ChevronRight, Network
+  Gavel, ChevronRight, Network, AlertTriangle,
+  Sparkles, X
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
@@ -56,9 +57,21 @@ function Toast({ result, onClose }: { result: ActionResult; onClose: () => void 
   )
 }
 
+interface DraftStatus {
+  status: 'dispatched' | 'completed' | 'failed'
+  celery_state?: string
+  error_message?: string | null
+  document_id?: string | null
+}
+
 export default function LegalPage() {
   const [activeTab, setActiveTab] = useState<TabType>('overview')
   const [actionResult, setActionResult] = useState<ActionResult | null>(null)
+  const [draftModalOpen, setDraftModalOpen] = useState(false)
+  const [draftTaskDescription, setDraftTaskDescription] = useState('')
+  const [draftAckChecked, setDraftAckChecked] = useState(false)
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
+  const [draftStatus, setDraftStatus] = useState<DraftStatus | null>(null)
   const queryClient = useQueryClient()
 
   // Fetch documents (case files)
@@ -91,6 +104,58 @@ export default function LegalPage() {
     },
   })
 
+  // S2803 Phase 3.0 — draft dispatch mutation
+  const draftMutation = useMutation({
+    mutationFn: (payload: { task_description: string; disclaimer_acknowledged: boolean }) =>
+      legalApi.draftMotion(payload),
+    onSuccess: (resp) => {
+      const taskId = resp.data?.task_id
+      if (taskId) {
+        setActiveTaskId(taskId)
+        setDraftStatus({ status: 'dispatched', celery_state: 'PENDING' })
+      }
+    },
+    onError: (err: unknown) => {
+      const anyErr = err as { response?: { data?: { error?: string; error_code?: string } } }
+      const msg = anyErr?.response?.data?.error || 'Draft dispatch failed'
+      setActionResult({ type: 'error', message: msg })
+    },
+  })
+
+  // S2803 Phase 3.0 — poll draft status every 5s until terminal
+  useEffect(() => {
+    if (!activeTaskId) return
+    if (draftStatus?.status === 'completed' || draftStatus?.status === 'failed') return
+
+    let cancelled = false
+    const poll = async () => {
+      try {
+        const resp = await legalApi.draftStatus(activeTaskId)
+        if (cancelled) return
+        const data = resp.data as DraftStatus
+        setDraftStatus(data)
+        if (data.status === 'completed') {
+          setActionResult({ type: 'success', message: 'Draft ready! See Documents tab.' })
+          queryClient.invalidateQueries({ queryKey: ['legal-documents'] })
+        } else if (data.status === 'failed') {
+          setActionResult({
+            type: 'error',
+            message: `Drafting failed: ${data.error_message || 'unknown error'}`,
+          })
+        }
+      } catch {
+        // transient — keep polling
+      }
+    }
+
+    poll()
+    const interval = setInterval(poll, 5000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [activeTaskId, draftStatus?.status, queryClient])
+
   const documents: LegalDocument[] = documentsData?.data?.documents || documentsData?.data || []
   const cases: LegalCase[] = casesData?.data?.cases || casesData?.data || []
   const activeCase = activeCaseData?.data
@@ -100,8 +165,37 @@ export default function LegalPage() {
     setTimeout(() => setActionResult(null), 3000)
   }
 
+  const openDraftModal = () => {
+    setDraftTaskDescription('')
+    setDraftAckChecked(false)
+    setActiveTaskId(null)
+    setDraftStatus(null)
+    setDraftModalOpen(true)
+  }
+
+  const submitDraft = () => {
+    if (!draftTaskDescription.trim() || !draftAckChecked) return
+    draftMutation.mutate({
+      task_description: draftTaskDescription.trim(),
+      disclaimer_acknowledged: true,
+    })
+  }
+
   return (
     <div className="space-y-6">
+      {/* S2803 Phase 3.0 — non-dismissable legal disclaimer banner (Rigby SIGN Fold 3 mandatory floor) */}
+      <div className="flex items-start gap-3 rounded-lg border border-accent-amber/40 bg-accent-amber/10 px-4 py-3">
+        <AlertTriangle size={20} className="text-accent-amber flex-shrink-0 mt-0.5" />
+        <div className="text-sm text-accent-amber">
+          <p className="font-semibold">This tool provides general legal information, not legal advice.</p>
+          <p className="text-accent-amber/90 mt-1">
+            It does not create an attorney-client relationship. Consult a licensed Colorado attorney
+            for advice on specific legal matters. Generated documents are templates that require your
+            review before filing.
+          </p>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -113,13 +207,22 @@ export default function LegalPage() {
             <p className="text-gray-400">AI-powered legal document analysis and case management</p>
           </div>
         </div>
-        <button
-          className="btn btn-primary flex items-center gap-2"
-          onClick={() => setActionResult({ type: 'success', message: 'Upload dialog coming soon!' })}
-        >
-          <Upload size={16} />
-          Upload Document
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            className="btn btn-primary flex items-center gap-2"
+            onClick={openDraftModal}
+          >
+            <Sparkles size={16} />
+            Draft New Motion
+          </button>
+          <button
+            className="btn btn-secondary flex items-center gap-2"
+            onClick={() => setActionResult({ type: 'success', message: 'Upload dialog coming soon!' })}
+          >
+            <Upload size={16} />
+            Upload Document
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -433,6 +536,139 @@ export default function LegalPage() {
       {/* Toast notification */}
       {actionResult && (
         <Toast result={actionResult} onClose={() => setActionResult(null)} />
+      )}
+
+      {/* S2803 Phase 3.0 — Draft Motion modal */}
+      {draftModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !activeTaskId && setDraftModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-2xl rounded-lg border border-dark-border bg-dark-bg p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <Sparkles size={22} className="text-accent-amber" />
+                <h2 className="text-lg font-semibold">Draft a Legal Document</h2>
+              </div>
+              {!activeTaskId && (
+                <button
+                  onClick={() => setDraftModalOpen(false)}
+                  className="text-gray-400 hover:text-white"
+                >
+                  <X size={20} />
+                </button>
+              )}
+            </div>
+
+            {!activeTaskId && (
+              <>
+                <label className="block text-sm text-gray-300 mb-2">
+                  Describe what you need drafted (motion type, key facts, requested relief)
+                </label>
+                <textarea
+                  value={draftTaskDescription}
+                  onChange={(e) => setDraftTaskDescription(e.target.value)}
+                  placeholder="e.g. Draft a Motion to Modify Parenting Time based on a schedule change. Current order is 18 months old. Requested new schedule: alternating full weeks."
+                  className="w-full h-40 rounded-lg border border-dark-border bg-black/40 p-3 text-sm text-white placeholder-gray-500 focus:border-primary-500 focus:outline-none"
+                  autoFocus
+                />
+
+                <label className="flex items-start gap-2 mt-4 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={draftAckChecked}
+                    onChange={(e) => setDraftAckChecked(e.target.checked)}
+                    className="mt-1"
+                  />
+                  <span className="text-sm text-gray-300">
+                    I understand this is <strong>general legal information, not legal advice</strong>.
+                    I will review the generated draft with a licensed attorney before filing.
+                  </span>
+                </label>
+
+                <div className="flex items-center justify-end gap-2 mt-6">
+                  <button
+                    className="btn btn-secondary"
+                    onClick={() => setDraftModalOpen(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="btn btn-primary flex items-center gap-2"
+                    disabled={
+                      !draftTaskDescription.trim() ||
+                      !draftAckChecked ||
+                      draftMutation.isPending
+                    }
+                    onClick={submitDraft}
+                  >
+                    {draftMutation.isPending ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Sparkles size={16} />
+                    )}
+                    Draft
+                  </button>
+                </div>
+              </>
+            )}
+
+            {activeTaskId && draftStatus?.status !== 'completed' && draftStatus?.status !== 'failed' && (
+              <div className="flex flex-col items-center py-8 gap-4">
+                <Loader2 size={32} className="animate-spin text-accent-amber" />
+                <div className="text-center">
+                  <p className="font-medium">Drafting your document…</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    This typically takes 1–3 minutes.
+                    {draftStatus?.celery_state && ` (${draftStatus.celery_state})`}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {draftStatus?.status === 'completed' && (
+              <div className="flex flex-col items-center py-8 gap-4">
+                <CheckCircle size={32} className="text-accent-green" />
+                <div className="text-center">
+                  <p className="font-medium text-accent-green">Draft ready!</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Find it in the Documents tab. Review before filing.
+                  </p>
+                </div>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setDraftModalOpen(false)
+                    setActiveTab('documents')
+                  }}
+                >
+                  View Documents
+                </button>
+              </div>
+            )}
+
+            {draftStatus?.status === 'failed' && (
+              <div className="flex flex-col items-center py-8 gap-4">
+                <XCircle size={32} className="text-accent-red" />
+                <div className="text-center">
+                  <p className="font-medium text-accent-red">Drafting failed</p>
+                  <p className="text-sm text-gray-400 mt-1 max-w-md">
+                    {draftStatus.error_message || 'Unknown error — try again.'}
+                  </p>
+                </div>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => setDraftModalOpen(false)}
+                >
+                  Close
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       )}
     </div>
   )
