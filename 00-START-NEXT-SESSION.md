@@ -2,143 +2,133 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2805 CLOSED — Colorado Family Law Phase 3.1 P1 SHIPPED (Phase 3.2 case-creation wizard is S2806 default)
+## READ THIS FIRST — SESSION 2806 CLOSED — Colorado Family Law Phase 3.2 SHIPPED (Phase 3.1 P1.b or Phase 4a is S2807 default)
 
-**Refreshed 2026-07-17 (SESSION 2805 CLOSED — ninth consecutive same-day multi-ship session (S2797 → S2798 → S2799 → S2800 → S2801 → S2802 → S2803 → S2804 → S2805). Phase 3.1 P1 shipped (PR #3227 `0376a0b33`) — CaseProfile/LegalCase unification: added nullable `LegalDocument.case_profile` FK, refactored `_save_legal_document` to bind CaseProfile (fixes latent silent bug where `active_case_id` session UUID was being resolved via `LegalCase.get()` and swallowed as DoesNotExist), renamed agent attr `case_id` → `case_profile_id` (Rigby SIGN edit), added `CaseProfile.document_count` as live `@property`, added T6a-e regression tests. Full legal suite 56 tests OK in 4.722s. First arc where live-DB counts fully overrode a handoff claim (S2804 handoff said "2 rows"; live query = 1). First `makemigrations` rejection — auto-generated 679-line/44-op migration discarded, hand-wrote scoped 43-line migration. FORTYNINTH close-cycle post-PLAYBOOK-7.4.4.)**
+**Refreshed 2026-07-17 (SESSION 2806 CLOSED — tenth-consecutive same-day multi-ship session (S2797 → S2798 → S2799 → S2800 → S2801 → S2802 → S2803 → S2804 → S2805 → S2806). Phase 3.2 shipped (PR #3229 `52fd9aa55`) — case-creation wizard: new self-contained `CreateCaseWizardModal` component (Case Info / Petitioner / Respondent / Children sections), wired to previously-placeholder "New Case" button on `/legal` Cases tab, POSTs `/api/legal/cases/` → `/api/legal/active-case/` in one flow with retry-toast fallback. Backend endpoints already existed (verified live at open — fifth-consecutive session where anchor-verify tightened handoff scope; scope collapsed from 5 steps to 3). Frontend-only PR: +524/−10 LOC across 3 files. First fold-in fix promoted BY Rigby (cases-list display bug at `LegalPage.tsx:494` renderd `title||name` neither of which exist in backend DTO — updated to `case_title||case_number` while adjacent). First S2797-arc frontend deliverable that is a net-new user affordance (previous 9 all backend or narrow UI wiring). FIFTIETH close-cycle post-PLAYBOOK-7.4.4.)**
 
-**S2805 ship (1 PR, merged with --admin):**
+**S2806 ship (1 PR, merged with --admin):**
 
 | Phase | PR | Merged to | Focus |
 |---|---|---|---|
-| 3.1 P1 | **#3227** · `0376a0b33` | main | Migration 0387 (LegalDocument.case_profile FK) + agent refactor (case_id→case_profile_id + CaseProfile lookup + agent-writes-case-profile-only invariant) + CaseProfile.document_count @property + 5 T6 regression tests |
+| 3.2 | **#3229** · `52fd9aa55` | main | `CreateCaseWizardModal.tsx` (new, 439 LOC) + `legalApi.createCase`/`setActiveCase` + `LegalPage.tsx` wiring + Cases-list DTO alignment fold-in fix |
 
-**Handoff:** `docs/handoffs/SESSION_2805_COLORADO_FAMILY_LAW_PHASE3_1_P1_CASEPROFILE_UNIFICATION.md`
+**Handoff:** `docs/handoffs/SESSION_2806_COLORADO_FAMILY_LAW_PHASE3_2_CASE_WIZARD.md`
 **Close cascade:** merged as [close-cascade PR] per PLAYBOOK-7.4.4 + `feedback_docs_cascade_at_every_close` + `feedback_cascade_pr_must_include_embed_step`.
-**Ledger state at close:** `logs/zoom_out_classifications.jsonl` — **111 rows** (rows 109-111 P1 folds: UUID meaning drift · denorm counter coupling · dual-FK ambiguity).
+**Ledger state at close:** `logs/zoom_out_classifications.jsonl` — **112 rows** (row 112 P3.2 fold: LegalPage coupling `same_pr_mitigatable` mitigated in-PR via self-contained component file).
 
-**Arc state:** Colorado Family Law — Phases 0/1/2/2.1/3.0/3.1 P0/3.1a/**3.1 P1** ✅; Phase 3.2 = case-creation wizard (S2806 default); Phase 4a = form-selection intelligence (NEW, queued); Phase 4 = statute-citation quality; Phase 5 = spider beat schedule.
-
----
-
-## SESSION-OPEN INFRA STORY (S2805)
-
-**First arc where live-DB counts fully overrode a handoff claim.** S2804 handoff §7 said "2 rows"; live query at S2805 open = 1 (Phase 0 doc only). Refined scope shipped with 0-backfill migration on live-DB evidence, not handoff prose. Substrate lesson: verify handoff data claims via live query at session open — cheap and prevents scope drift.
-
-**First `makemigrations` rejection in the Colorado arc.** Auto-generated 679-line migration contained 44 operations, only 2 lines were P1-relevant. Discarded and hand-wrote a 43-line scoped migration. Blast-radius discipline — unrelated model drift belongs to its own migrations.
-
-**Same-session end-to-end refined scope: tighter than the handoff scope.** S2804 handoff §7 laid out 5-step P1; live-evidence refinement collapsed 3 of those 5 (no backfill code, no frontend churn, silent-bug-fix became load-bearing motivation).
+**Arc state:** Colorado Family Law — Phases 0/1/2/2.1/3.0/3.1 P0/3.1a/3.1 P1/**3.2** ✅; Phase 3.1 P1.b = LegalResearchResult unification (S2807 default candidate); Phase 4a = form-selection intelligence (queued); Phase 4 = statute-citation quality; Phase 5 = spider beat schedule.
 
 ---
 
-## S2806 CANDIDATES — PHASE 3.2 IS THE DEFAULT
+## SESSION-OPEN INFRA STORY (S2806)
 
-### ⭐ Phase 3.2 — Case creation wizard (default candidate)
+**Fifth-consecutive session where anchor-verify at open collapsed handoff scope.** S2805 handoff said "5-step scope with (1) verify or add POST endpoint" — live-read at open confirmed both `POST /api/legal/cases/` (`views_legal_cases.py:70-178`) and `POST /api/legal/active-case/` (`:618-641`) exist with full functionality from Session 406. Scope collapsed from 5 steps to 3; Phase 3.2 became a frontend-only PR.
 
-**Chris ratified at S2804 close** as post-P1 next step. P1 now unblocks 3.2 because CaseProfile has a live FK path from LegalDocument (verified post-recycle: `core_legaldocument.case_profile_id` column present).
+**First fold-in bug fix promoted BY Rigby, not Claude Code.** Rigby's tool-grounded SIGN caught latent Cases-list rendering bug (`LegalPage.tsx:494` referenced non-existent `title`/`name` fields; had been broken since tab was authored). Promoted from "future cleanup" to "fix while you're here" as SIGN edit 3. Substrate lesson: tool-grounded SIGN can surface latent pre-existing bugs adjacent to scope at near-zero coordination cost.
+
+**First fully-additive user-affordance PR of the S2797 streak.** Previous 9 sessions were backend correctness or narrow UI wiring (draft modal / view modal / agent reliability / migration). Phase 3.2 is the first arc that ships a net-new capability (case creation) users can immediately exercise.
+
+---
+
+## S2807 CANDIDATES
+
+### ⭐ Phase 3.1 P1.b — LegalResearchResult unification (default candidate)
+
+Same latent-bug class as P1 fixed for LegalDocument. `save_legal_research` at `core/models_unified_system.py:17612` uses LegalCase-based `case_id` param with silent `DoesNotExist` swallowing. Small PR; ships standalone or paired with Phase 4a.
 
 **Scope:**
-1. Verify or add `POST /api/legal/case-profiles/` create endpoint (CaseProfile model exists; a create surface may already exist under a different name — verify at open)
-2. Wizard modal on LegalPage — fields: case_number, court, county, district, division, case_type; parties as first-class rows (petitioner + respondent)
-3. `active_case_id` session write on wizard submit (so subsequent draft dispatches bind `case_profile` correctly per P1)
-4. Frontend: "New Case" button in LegalPage Cases tab → wizard modal → save → CaseProfile visible in list
+1. Read `save_legal_research` at `models_unified_system.py:17612` + verify current `case_id` semantics
+2. Refactor to CaseProfile-based `case_profile_id` param (mirror P1 pattern from `legal_doc_drafter_agent.py:2298-2314`)
+3. Migration if `LegalResearchResult` needs a `case_profile` FK (verify at open — may already have one)
+4. Test coverage matching T6a-e pattern from P1
 
-**Non-goals:**
-- Do NOT touch drafter agent (P1 already correct)
-- Do NOT drop `LegalCase` model or `LegalDocument.case` FK (grandfathered per S2803/S2804)
+### Phase 4a — Form-selection intelligence (queued, Chris mid-P3.1 requirement)
 
-### Phase 3.1 P1.b — LegalResearchResult unification (small companion)
+User describes situation → agent picks correct JDF form + procedural knowledge. Standalone arc. Larger scope than P1.b; could be S2807 P0 if Chris wants to prioritize user-facing intelligence over substrate cleanup.
 
-`save_legal_research` at `core/models_unified_system.py:17612` still uses LegalCase-based `case_id` param with silent `DoesNotExist` swallowing — same latent-bug class as the LegalDocument one P1 just fixed. Small PR. Can ship standalone or pair with 3.2.
+### Alternate S2807 candidates
 
-### Phase 4a (NEW, queued) — Form-selection intelligence
-
-Chris's mid-Phase-3.1 requirement (`docs/handoffs/SESSION_2804…md` §2). User describes situation → agent picks correct JDF form + procedural knowledge. Standalone arc.
-
-### Phase 4 — Statute-citation content quality
-
-C.R.S. § 14-10-129 + "substantial and continuing change of circumstances" standard language.
-
-### Phase 5 — Spider beat schedule
-
-Monthly refresh for `colorado_family_law_spider`.
-
-### Alternate candidates
-
-- **Small follow-up PRs owed:**
-  - `LegalDocumentIngestor` + `LegalContextBuilder` unscoped-query hardening (Phase 2 punt)
-  - `LegalDocument.generation_context` add `blank=True` (Phase 2 model quirk)
-  - PA→Celery E2E integration test (Rigby Phase 2 SIGN Fold 4)
-  - 7,829-line `legal_doc_drafter_agent.py` mechanical split into `agents/legal/` submodules (Rigby Phase 2 SIGN Fold 3)
-
-- **Group 2700 docs restructuring arc** (still queued since S2801; blocked behind Colorado arc)
+- **Wizard-related follow-ups** (Phase 3.2 emergent):
+  - Wizard extraction to `/legal/cases/new` route (deferred per row-112 fold; triggers: deep-link, draft-persistence, browser-back)
+  - Attorney sub-form when `!is_pro_se` (backend accepts; wizard MVP defaults `is_pro_se=true`)
+- **Phase 4 — Statute-citation content quality**: C.R.S. § 14-10-129 language
+- **Phase 5 — Spider beat schedule**: monthly refresh for `colorado_family_law_spider`
+- **Small follow-up PRs owed** (still open from S2803/S2804):
+  - `LegalDocumentIngestor` + `LegalContextBuilder` unscoped-query hardening
+  - `LegalDocument.generation_context` add `blank=True`
+  - PA→Celery E2E integration test
+  - 7,829-line `legal_doc_drafter_agent.py` mechanical split into `agents/legal/` submodules
+- **Group 2700 docs restructuring arc** (still queued behind Colorado arc)
 - **BettingPage first-user trace** (pre-Colorado default)
 - **Stock Intelligence** (first non-betting revenue play)
 
 ---
 
-## SESSION PIN — S2805 RETIRED (fresh mint required at S2806 open)
+## SESSION PIN — S2806 RETIRED (fresh mint required at S2807 open)
 
-**Pin history (S2805):**
+**Pin history (S2806):**
 
-- `pa-b9dc1af5c7b04afd` (label `s2805-colorado-family-law-phase3.1-p1-unification`) minted S2805 open; **retired at S2805 close (`force=true`, thirtysixth consecutive per S2770+ pattern)**
+- `pa-3c492806c55149e9` (label `s2806-colorado-family-law-phase3.2-case-wizard`) minted S2806 open; **retired at S2806 close (`force=true`, thirty-seventh consecutive per S2770+ pattern)**
 
-**Wrapper `tools/pa_local.sh` still points at `pa-b9dc1af5c7b04afd` (retired)** — intended failure mode forces S2806 first-action fresh mint.
+**Wrapper `tools/pa_local.sh` still points at `pa-3c492806c55149e9` (retired)** — intended failure mode forces S2807 first-action fresh mint.
 
-**S2806 open sequence:**
+**S2807 open sequence:**
 
 ```
 context-kit orient
 
 # Read this file end-to-end
-# Read S2805 handoff — §2 (Rigby SIGN + folds), §3 (novel-precedent moments), §6 (Phase 3.2 scope)
-# Read core/models_legal.py CaseProfile (lines 15-75) — the model to wire wizard against
-# Read core/urls.py — grep for 'case-profiles' to find existing create/detail endpoints
-# Read frontend/src/pages/LegalPage.tsx — Cases tab render (~332-388) — "New Case" button lands here
+# Read S2806 handoff — §2 (Rigby SIGN + folds), §3 (novel-precedent moments), §6 (S2807 candidates)
+# Read core/models_unified_system.py around line 17612 — save_legal_research (P1.b target)
+# Grep 'LegalResearchResult' in core/ to find all usages
+# Verify handoff data claim: does LegalResearchResult already have a case_profile FK, or is one needed?
 
 # Freshness check
-bash tools/pa_local.sh "S2806 open — freshness check: ops_tool.version verdict + head_commit_sha"
+bash tools/pa_local.sh "S2807 open — freshness check: ops_tool.version verdict + head_commit_sha"
 
-# Ledger check: confirm 111-row baseline survived S2805 close cascade
+# Ledger check: confirm 112-row baseline survived S2806 close cascade
 DJANGO_LOG_LEVEL=WARNING python manage.py zoom_out_streak_report --as-json 2>/dev/null | python -c "
 import json, sys
 d = sys.stdin.read()
 r = json.loads(d[d.find('{'):])
-assert r['total_rows']==111, r
-print('OK — 111 rows, counts:', r['counts_by_classification'])
+assert r['total_rows']==112, r
+print('OK — 112 rows, counts:', r['counts_by_classification'])
 "
 
-# Mint fresh pin scoped to Phase 3.2
-python manage.py session_lifecycle open --label s2806-colorado-family-law-phase3.2-case-wizard
+# Mint fresh pin scoped to P1.b (or Phase 4a per Chris)
+python manage.py session_lifecycle open --label s2807-colorado-family-law-phase3.1-p1b-legalresearchresult
 
 grep '^python tools/pa_chat.py' tools/pa_local.sh
 ```
 
-**Anti-rubber-stamp check on S2806 first Rigby SIGN:** verify `tool_runs` non-empty. **PLAYBOOK-6.10.7 + 6.10.8 + 6.10.9 constitutional at v0.8.0.**
+**Anti-rubber-stamp check on S2807 first Rigby SIGN:** verify `tool_runs` non-empty. **PLAYBOOK-6.10.7 + 6.10.8 + 6.10.9 constitutional at v0.8.0.**
 
-**S2805 lessons to carry:**
+**S2806 lessons to carry:**
 
-1. **Verify handoff data claims via live query at session open** — S2804 handoff said "2 rows"; live query = 1. Cheap and prevents scope drift. Extend to every handoff-data-referenced claim.
-2. **`makemigrations` output is a starting point, not a commit target when significant drift exists** — auto-generated 679-line P1 migration was 98% unrelated. Hand-write scoped migrations when drift is present; those other model changes belong to their own migrations.
-3. **Silent `DoesNotExist` swallowing is a bug-hiding pattern** — the LegalCase.get pattern hid the mismatch for months. When refactoring lookup code, prefer explicit failure signal (logger.warning at minimum) over `except: pass`. Applied to P1; consider audit sweep for other instances.
-4. **Refined scope tighter than handoff scope is the healthy outcome** — 5-step scope collapsed to 3 (no backfill, no frontend churn). Trust the anchor-verify step at session open more than the retrospective handoff prose.
-5. **Rigby's tool surface has read-only zoom-out ledger access** — persistence via `manage.py record_zoom_out_concern` falls to Claude Code. Note for future: consider adding `zoom_out_tool.record` to Rigby's write surface as a Phase 3.5 candidate.
+1. **Anchor-verify at open ≠ optional — it is scope-shaping.** Fifth consecutive session where the live-code check collapsed 30-100% of a handoff's stated steps. Read live code / hit endpoints / query DB before authoring scope; treat handoff scope as a prior draft, not a work order.
+2. **Trust tool-grounded SIGN to promote latent bugs.** Rigby's read of the actual backend DTO vs. frontend rendering caught a latent field-mismatch bug that had been silently rendering "Untitled Case" for every case since the tab was authored. Fold-in fix cost near-nothing; expect this pattern on adjacent rendering code.
+3. **Self-contained component files pre-empt future extraction pain.** Wizard modal in its own file with page-agnostic props avoided any coupling to LegalPage state; future extraction to `/legal/cases/new` route is a mechanical import change, not a refactor.
+4. **Recycle-before-commit is unnecessary for pure frontend PRs.** `make frontend-ship` (build + collectstatic + daphne restart) is the deploy step for frontend-only changes; no worker recycle needed pre-merge. `make recycle-all` post-merge per PLAYBOOK-7.4.4 still applies.
+5. **Ledger persistence is Claude-Code-only.** Rigby's `zoom_out_tool.list` is read-only; `record_zoom_out_concern` management command is the write path. Include row persistence in the pre-Chris-recommendation phase per PLAYBOOK-6.10.8.
 
 ---
 
 ## Twin-pointer card
 
-📁 **Repo — S2805 artifacts:**
+📁 **Repo — S2806 artifacts:**
 
-- **PR (1, merged):** #3227 (Phase 3.1 P1 · `0376a0b33`)
-- **Substrate changes:** `core/models_unified_system.py` (LegalDocument.case_profile FK) + `core/models_legal.py` (CaseProfile.document_count @property) + `core/agents/legal/legal_doc_drafter_agent.py` (agent refactor + case_id→case_profile_id rename) + `core/migrations/0387_legal_document_case_profile_fk.py` (scoped migration)
-- **Test files (2 modified):** `test_legal_agent_drafting_reliability.py` (17→22 tests, 5 T6 P1 tests) + `test_legal_agent_execution.py` (helper rename)
-- **Handoff:** `docs/handoffs/SESSION_2805_COLORADO_FAMILY_LAW_PHASE3_1_P1_CASEPROFILE_UNIFICATION.md`
-- **Ledger:** `logs/zoom_out_classifications.jsonl` — **111 rows**
-- **Merge SHA:** `0376a0b33` (Phase 3.1 P1) → close-cascade filled at merge
+- **PR (1, merged):** #3229 (Phase 3.2 · `52fd9aa55`)
+- **Substrate changes:**
+  - `frontend/src/pages/legal/CreateCaseWizardModal.tsx` — **new** 439-LOC self-contained wizard
+  - `frontend/src/lib/api.ts` — `createCase` + `setActiveCase` mutations
+  - `frontend/src/pages/LegalPage.tsx` — button wiring + Cases-list DTO alignment fold-in fix
+- **Handoff:** `docs/handoffs/SESSION_2806_COLORADO_FAMILY_LAW_PHASE3_2_CASE_WIZARD.md`
+- **Ledger:** `logs/zoom_out_classifications.jsonl` — **112 rows**
+- **Merge SHA:** `52fd9aa55` (Phase 3.2) → close-cascade filled at merge
 
 🖥️ **Workspace UI — `/workspaces` surface:**
 
-- **`http://localhost:8000/legal`** — unchanged this session (P1 is backend-only). Post-P1: new drafter dispatches with `active_case_id` in session bind `case_profile` correctly. Wizard (Phase 3.2) provides the write path for `active_case_id`.
+- **`http://localhost:8000/legal`** — Cases tab "New Case" button now opens the wizard. Post-merge post-recycle: create case → set as active in one flow; subsequent drafter dispatches will bind `case_profile` correctly per P1.
 - **Twin workspace deliverable:** N/A this session; substrate ships directly.
 
 ---
@@ -148,60 +138,58 @@ grep '^python tools/pa_chat.py' tools/pa_local.sh
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | S2805 close cascade — advances at cascade PR merge |
+| HEAD | S2806 close cascade — advances at cascade PR merge |
 | Playbook version | v0.8.0 (unchanged) |
 | Playbook rule count | 205 (unchanged) |
-| Arc state | Colorado Family Law — Phases 0/1/2/2.1/3.0/3.1 P0/3.1a/**3.1 P1** ✅; Phase 3.2 NEXT (S2806) |
-| NEW arc candidate | Phase 4a form-selection intelligence (Chris mid-execution requirement, unchanged from S2804) |
+| Arc state | Colorado Family Law — Phases 0/1/2/2.1/3.0/3.1 P0/3.1a/3.1 P1/**3.2** ✅; Phase 3.1 P1.b NEXT candidate (S2807) |
+| NEW arc candidate | Wizard route extraction (deferred per row-112 fold; 3 trigger conditions); attorney sub-forms (conditional) |
 | Group 2700 docs arc | Still queued (blocked behind Colorado arc) |
 | RUR-C1 state | Unchanged; I-0303 still not opened |
-| Session pin | `pa-b9dc1af5c7b04afd` (retired at S2805 close, force=true, thirtysixth consecutive) |
-| Wrapper default pin | `tools/pa_local.sh` — `pa-b9dc1af5c7b04afd` (retired; forces fresh mint at S2806 open) |
+| Session pin | `pa-3c492806c55149e9` (retired at S2806 close, force=true, thirty-seventh consecutive) |
+| Wrapper default pin | `tools/pa_local.sh` — `pa-3c492806c55149e9` (retired; forces fresh mint at S2807 open) |
 | Postgres :5432 | pg15 (July DB) — brew launchd `started` |
-| Freshness log | `logs/session_freshness.jsonl` — grew by 1 at S2805 open |
-| Recycle log | `logs/recycle_events.jsonl` — +1 post-merge event during S2805 (+ close-cascade recycle to come) |
-| Zoom-out ledger | `logs/zoom_out_classifications.jsonl` — **111 rows** |
-| Colorado Family Law agent status | ✅ Dispatch works E2E; ✅ persistence reliable (Phase 3.1 P0 two-layer defense); ✅ visible in UI (Phase 3.1a modal); ✅ CaseProfile-backed on save (Phase 3.1 P1) |
-| Frontend `/legal` | ✅ Draft + view flow both live; Cases tab reads CaseProfile; "New Case" wizard is Phase 3.2 stub |
-| Next move | Phase 3.2 case-creation wizard per S2804/S2805 close ratification |
+| Freshness log | `logs/session_freshness.jsonl` — grew by 1 at S2806 open |
+| Recycle log | `logs/recycle_events.jsonl` — +1 post-merge event during S2806 (+ close-cascade recycle to come) |
+| Zoom-out ledger | `logs/zoom_out_classifications.jsonl` — **112 rows** |
+| Colorado Family Law agent status | ✅ Dispatch works E2E; ✅ persistence reliable; ✅ visible in UI; ✅ CaseProfile-backed; ✅ **case creation now user-driven via wizard (Phase 3.2)** |
+| Frontend `/legal` | ✅ Draft + view flow live; Cases tab reads CaseProfile with corrected DTO; **New Case wizard live** |
+| Next move | Phase 3.1 P1.b LegalResearchResult unification (default) OR Phase 4a form-selection (Chris redirect) |
 
 ---
 
-## Recommended session-open protocol (S2806)
+## Recommended session-open protocol (S2807)
 
 1. `context-kit orient`
 2. Read this file end-to-end
-3. Read S2805 handoff §2 (Rigby SIGN + folds) + §3 (novel-precedent moments) + §6 (Phase 3.2 scope)
-4. **Read `core/models_legal.py`** `CaseProfile` (lines 15-75) — the model to wire wizard against; `Party` model below it for petitioner/respondent
-5. **`Grep 'case-profiles' core/urls.py`** — find existing CaseProfile URL patterns (likely litigation-* endpoints; verify if `POST` create exists)
-6. **Read `frontend/src/pages/LegalPage.tsx`** Cases tab render (~332-388) — "New Case" button lands here as wizard modal
-7. **Freshness + ledger 111 verify** — see S2806 open sequence above
-8. If `staleness_verdict != FRESH` → escalate
-9. **Check `brew services list | grep postgres` FIRST** if freshness fails oddly
-10. Verify runtime state: `git log --oneline -5`; confirm wrapper at retired pin
-11. **Default candidate: Phase 3.2 case-creation wizard** (or Chris redirect)
-12. **Anti-rubber-stamp check on first SIGN** — verify `tool_runs` non-empty
-13. Chris directs S2806 P0 selection
-14. Mint fresh pin scoped `s2806-colorado-family-law-phase3.2-case-wizard`
-15. Route Phase 3.2 scope through Rigby joint SIGN before authoring
-16. **PLAYBOOK-6.10.8 constitutional at v0.8.0:** fold persistence is the FINAL step of joint SIGN, BEFORE writing the Chris-facing recommendation
-17. **PLAYBOOK-6.10.9 constitutional at v0.8.0:** any zoom-out fold asserting concrete code-state facts MUST admit stable-state-pointer + file:line evidence + (i)(ii)(iii) outcome inline before classify+persist
-18. **Anchor-verify at open:** any factual claim in this file about live DB state (row counts, FK presence, endpoint routing) MUST be re-verified via live query before scope authoring — S2805 lesson 1 codified
-19. **BEFORE any user-facing content:** read `docs/PLATFORM_WHAT_IT_IS.md`
+3. Read S2806 handoff §2 (Rigby SIGN + folds) + §3 (novel-precedent moments) + §6 (S2807 candidates)
+4. **Read `core/models_unified_system.py` around line 17612** — `save_legal_research` (P1.b target)
+5. **`Grep 'LegalResearchResult' core/`** — enumerate all usages + check for existing `case_profile` FK on the model
+6. **Freshness + ledger 112 verify** — see S2807 open sequence above
+7. If `staleness_verdict != FRESH` → escalate
+8. **Check `brew services list | grep postgres` FIRST** if freshness fails oddly
+9. Verify runtime state: `git log --oneline -5`; confirm wrapper at retired pin
+10. **Default candidate: Phase 3.1 P1.b LegalResearchResult unification** (or Chris redirect to Phase 4a form-selection intelligence)
+11. **Anti-rubber-stamp check on first SIGN** — verify `tool_runs` non-empty
+12. Chris directs S2807 P0 selection
+13. Mint fresh pin scoped `s2807-<label>`
+14. Route P1.b scope through Rigby joint SIGN before authoring
+15. **PLAYBOOK-6.10.8 constitutional at v0.8.0:** fold persistence is the FINAL step of joint SIGN, BEFORE writing the Chris-facing recommendation
+16. **PLAYBOOK-6.10.9 constitutional at v0.8.0:** any zoom-out fold asserting concrete code-state facts MUST admit stable-state-pointer + file:line evidence + (i)(ii)(iii) outcome inline before classify+persist
+17. **Anchor-verify at open (S2806 lesson 1):** any factual claim in this file about live code state MUST be re-verified via live query before scope authoring
+18. **BEFORE any user-facing content:** read `docs/PLATFORM_WHAT_IT_IS.md`
 
 ---
 
 ## Reference documents
 
-Ordered by frequency of use at S2806:
+Ordered by frequency of use at S2807:
 
 1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap + Rigby collaboration protocol (anchor at v0.8.0)
-2. [`docs/handoffs/SESSION_2805_COLORADO_FAMILY_LAW_PHASE3_1_P1_CASEPROFILE_UNIFICATION.md`](docs/handoffs/SESSION_2805_COLORADO_FAMILY_LAW_PHASE3_1_P1_CASEPROFILE_UNIFICATION.md) — **S2805 handoff (current)**
-3. [`core/models_legal.py`](core/models_legal.py) — `CaseProfile` (lines 15-75, wizard target) + `Party` (below) + `Attorney` + `LitigationDocument`
-4. [`core/urls.py`](core/urls.py) — grep `case-profiles` for existing endpoints (~3910-3930)
-5. [`frontend/src/pages/LegalPage.tsx`](frontend/src/pages/LegalPage.tsx) — Cases tab render for wizard modal insertion point
-6. [`core/agents/legal/legal_doc_drafter_agent.py`](core/agents/legal/legal_doc_drafter_agent.py) — P1 refactor landing site (case_profile_id, current_case_profile, _save_legal_document at ~2298-2361); do NOT touch this arc
-7. [`docs/PLATFORM_INVENTORY.md`](docs/PLATFORM_INVENTORY.md) — runtime counts (cite; never restate)
-8. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.8.0 (205 rules)
-9. [`docs/handoffs/SESSION_2804_COLORADO_FAMILY_LAW_PHASE3_1_AGENT_RELIABILITY.md`](docs/handoffs/SESSION_2804_COLORADO_FAMILY_LAW_PHASE3_1_AGENT_RELIABILITY.md) — S2804 predecessor
-10. [`logs/zoom_out_classifications.jsonl`](logs/zoom_out_classifications.jsonl) — 111 rows at S2805 close
+2. [`docs/handoffs/SESSION_2806_COLORADO_FAMILY_LAW_PHASE3_2_CASE_WIZARD.md`](docs/handoffs/SESSION_2806_COLORADO_FAMILY_LAW_PHASE3_2_CASE_WIZARD.md) — **S2806 handoff (current)**
+3. [`core/models_unified_system.py`](core/models_unified_system.py) — `save_legal_research` at ~17612 (P1.b target)
+4. [`core/agents/legal/legal_doc_drafter_agent.py`](core/agents/legal/legal_doc_drafter_agent.py) — reference P1 pattern for P1.b mirror (`_save_legal_document` at ~2298-2361)
+5. [`core/models_legal.py`](core/models_legal.py) — CaseProfile model (unchanged since P1)
+6. [`docs/PLATFORM_INVENTORY.md`](docs/PLATFORM_INVENTORY.md) — runtime counts (cite; never restate)
+7. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.8.0 (205 rules)
+8. [`docs/handoffs/SESSION_2805_COLORADO_FAMILY_LAW_PHASE3_1_P1_CASEPROFILE_UNIFICATION.md`](docs/handoffs/SESSION_2805_COLORADO_FAMILY_LAW_PHASE3_1_P1_CASEPROFILE_UNIFICATION.md) — S2805 predecessor (P1 pattern)
+9. [`logs/zoom_out_classifications.jsonl`](logs/zoom_out_classifications.jsonl) — 112 rows at S2806 close
