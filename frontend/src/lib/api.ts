@@ -1565,6 +1565,11 @@ export const legalApi = {
 
   // Export
   exportSection: (data: { section: string; format: string }) => api.post('/legal/export-section/', data),
+
+  // S2803 Phase 3.0 — drafting dispatch + live status
+  draftMotion: (data: { task_description: string; disclaimer_acknowledged: boolean }) =>
+    api.post('/legal/draft/', data),
+  draftStatus: (taskId: string) => api.get(`/legal/draft-status/${taskId}/`),
 }
 
 export const podcastApi = {
