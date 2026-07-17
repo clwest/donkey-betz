@@ -2491,7 +2491,8 @@ Consider these trends when crafting the response to maximize relevance and engag
         self,
         prompt: str,
         conversation_history: List[Dict[str, str]] = None,
-        execution_context: Dict[str, Any] = None
+        execution_context: Dict[str, Any] = None,
+        tool_choice=None,
     ) -> Dict[str, Any]:
         """
         Make a GPT API call with this agent's tools.
@@ -2501,6 +2502,12 @@ Consider these trends when crafting the response to maximize relevance and engag
             conversation_history: Optional previous messages
             execution_context: Optional context (spider_context, scifi_context) for delegation
                               Session 744: Store this so _execute_tool_call can access it
+            tool_choice: Optional override for OpenAI tool_choice. Default None
+                keeps existing "auto" behavior when tools are present. Pass a
+                string ("required") or dict ({"type":"function","function":{"name":X}})
+                to force GPT into a specific tool. S2804 Phase 3.1 P0 — Colorado
+                Family Law drafting agent uses this to force draft_motion when a
+                task is classified as a drafting request.
 
         Returns:
             OpenAI response dict with message and tool_calls
@@ -2549,7 +2556,10 @@ Consider these trends when crafting the response to maximize relevance and engag
             }
             if effective_tools:
                 create_kwargs["tools"] = effective_tools
-                create_kwargs["tool_choice"] = "auto"
+                # S2804 Phase 3.1 P0: honor caller-supplied tool_choice override
+                # (e.g. LegalDocDrafterAgent forcing draft_motion for drafting
+                # requests). Default preserves prior "auto" behavior.
+                create_kwargs["tool_choice"] = tool_choice if tool_choice is not None else "auto"
 
             # Session 1221 P1 — Tier 1 from deliverable 7ae61cf7. The
             # configured httpx read=90s is per-chunk; a slow-streaming
