@@ -85,6 +85,16 @@ class CaseProfile(models.Model):
         return self.legal_documents.count()
 
     @property
+    def research_result_count(self):
+        """S2807 Phase 3.1 P1.b: live count of linked LegalResearchResult rows.
+
+        No denormalization — matches the read-side pattern. Replaces
+        the LegalCase.research_count integer field that the legal
+        drafter agent used to maintain by hand.
+        """
+        return self.legal_research_results.count()
+
+    @property
     def petitioner(self):
         """Get the petitioner party for this case."""
         return self.parties.filter(party_type='petitioner').first()

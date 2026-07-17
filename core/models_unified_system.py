@@ -17473,12 +17473,26 @@ class LegalResearchResult(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
 
     # Link to case (optional)
+    # S2807 Phase 3.1 P1.b: legacy LegalCase FK grandfathered; new saves bind
+    # to `case_profile` (CaseProfile) instead. Mirrors S2805 P1 pattern for
+    # LegalDocument. Do NOT drop this field — existing rows may reference it.
     case = models.ForeignKey(
         LegalCase,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name='research_results'
+    )
+    case_profile = models.ForeignKey(
+        'core.CaseProfile',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='legal_research_results',
+        help_text=(
+            "S2807 Phase 3.1 P1.b: canonical case linkage. "
+            "Replaces `case` (LegalCase) for new saves."
+        ),
     )
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -17625,21 +17639,42 @@ class LegalResearchResult(models.Model):
         recommendations: list = None,
         sources_used: list = None,
         execution_time_ms: int = 0,
-        case_id: str = None,
+        case_profile_id: str = None,
+        case_id: str = None,  # S2807 P1.b: compat alias, mapped to case_profile_id
     ):
         """
         Helper to save LegalDocDrafterAgent research results.
+
+        S2807 Phase 3.1 P1.b — binds new rows to CaseProfile (Session 406)
+        instead of the legacy LegalCase (Session 403). Mirrors the S2805 P1
+        pattern for LegalDocument. Legacy `case_id` kwarg accepted as an
+        alias for `case_profile_id` (maps to the same lookup).
         """
-        case = None
-        if case_id:
+        from core.models_legal import CaseProfile
+
+        # S2807 P1.b: compat alias — old callers may still pass case_id
+        if case_profile_id is None and case_id is not None:
+            case_profile_id = case_id
+
+        case_profile = None
+        if case_profile_id:
             try:
-                case = LegalCase.objects.get(id=case_id)
-            except LegalCase.DoesNotExist:
-                pass
+                case_profile = CaseProfile.objects.get(id=case_profile_id)
+            except CaseProfile.DoesNotExist:
+                # S2805 Lesson 3 — never silent-swallow. Surface the mismatch
+                # so callers can trace lookup failures instead of losing them.
+                logger.warning(
+                    "save_legal_research: CaseProfile id=%s not found; "
+                    "research row will save with case_profile=None",
+                    case_profile_id,
+                )
 
         instance = cls.objects.create(
             user=user,
-            case=case,
+            # S2807 P1.b: agent-writes-case-profile-only invariant — never
+            # populate the legacy `case` FK from new saves (mirrors P1 for
+            # LegalDocument). Existing rows with `case` set are grandfathered.
+            case_profile=case_profile,
             research_type=research_type,
             query=query,
             case_type=case_type,
@@ -17656,10 +17691,9 @@ class LegalResearchResult(models.Model):
             execution_time_ms=execution_time_ms,
         )
 
-        # Update case research count
-        if case:
-            case.research_count = case.research_results.count()
-            case.save(update_fields=['research_count', 'updated_at'])
+        # S2807 P1.b: denorm counter removed — CaseProfile.research_result_count
+        # is now a live @property. Matches read-side pattern established by P1
+        # for CaseProfile.document_count.
 
         # Generate embedding for semantic search
         instance.generate_embedding()
