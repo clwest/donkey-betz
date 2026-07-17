@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-17T04:25:31+00:00",
+    "generated": "2026-07-17T04:54:26+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "52fd9aa55d85",
-    "doc_count": 2625,
-    "commit_count": 8047,
+    "git_head": "65dd02106abd",
+    "doc_count": 2626,
+    "commit_count": 8051,
     "confidence_breakdown": {
       "HIGH": 1669,
-      "MEDIUM": 402,
+      "MEDIUM": 403,
       "LOW": 6,
       "UNKNOWN": 548
     },
@@ -2588,9 +2588,10 @@
         2743,
         2744,
         2745,
-        2749
+        2749,
+        2806
       ],
-      "commit_count": 1330,
+      "commit_count": 1332,
       "prs": [
         10,
         11,
@@ -3200,7 +3201,8 @@
         3221,
         3223,
         3226,
-        3228
+        3228,
+        3230
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7543,9 +7545,10 @@
         2743,
         2744,
         2745,
-        2749
+        2749,
+        2806
       ],
-      "commit_count": 278,
+      "commit_count": 280,
       "prs": [
         2213,
         2219,
@@ -7758,7 +7761,8 @@
         3221,
         3223,
         3226,
-        3228
+        3228,
+        3230
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20491,6 +20495,21 @@
       "commit_count": 2,
       "prs": [
         3228
+      ]
+    },
+    "docs/handoffs/SESSION_2806_COLORADO_FAMILY_LAW_PHASE3_2_CASE_WIZARD.md": {
+      "originating_session": 2806,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "674ea255",
+      "first_commit_date": "2026-07-16",
+      "first_commit_subject": "docs(cascade): S2806 close cascade \u2014 handoff + start-here + INDEX + provenance + pin rotation (#3230)",
+      "sessions_touched": [
+        2806
+      ],
+      "commit_count": 2,
+      "prs": [
+        3230
       ]
     },
     "docs/handoffs/SESSION_280_AGENT_AUDIT.md": {
