@@ -1405,6 +1405,8 @@ from core.views_legal import (
     get_document_threads, get_document_thread, get_documents_needing_response,
     # S2803 Phase 3.0: Legal drafting dispatch + live status
     draft_legal_document, draft_legal_document_status,
+    # S2808 Phase 4a: Form-selection intelligence
+    select_legal_form,
 )
 from core.views_multi_llm import (
     available_llm_providers, intelligent_model_selection, multi_model_comparison,
@@ -3942,6 +3944,8 @@ urlpatterns += [
     # S2803 Phase 3.0: legal drafting dispatch + live status
     path('api/legal/draft/', draft_legal_document, name='legal-draft-dispatch'),
     path('api/legal/draft-status/<str:task_id>/', draft_legal_document_status, name='legal-draft-status'),
+    # S2808 Phase 4a: form-selection intelligence
+    path('api/legal/select-form/', select_legal_form, name='legal-select-form'),
 ]
 
 # =============================================================================

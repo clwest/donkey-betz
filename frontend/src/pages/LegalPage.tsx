@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import CreateCaseWizardModal from './legal/CreateCaseWizardModal'
+import FormPickerModal from './legal/FormPickerModal'
 
 type TabType = 'overview' | 'documents' | 'cases' | 'litigation'
 
@@ -100,6 +101,7 @@ export default function LegalPage() {
   const [viewingDocId, setViewingDocId] = useState<string | null>(null)
   const [caseWizardOpen, setCaseWizardOpen] = useState(false)
   const [creatingCase, setCreatingCase] = useState(false)
+  const [formPickerOpen, setFormPickerOpen] = useState(false)
   const queryClient = useQueryClient()
 
   // Fetch documents (case files)
@@ -282,6 +284,13 @@ export default function LegalPage() {
           >
             <Sparkles size={16} />
             Draft New Motion
+          </button>
+          <button
+            className="btn btn-secondary flex items-center gap-2"
+            onClick={() => setFormPickerOpen(true)}
+          >
+            <Sparkles size={16} />
+            Pick a Form
           </button>
           <button
             className="btn btn-secondary flex items-center gap-2"
@@ -860,6 +869,12 @@ export default function LegalPage() {
         onClose={() => setCaseWizardOpen(false)}
         onSubmit={handleCreateCase}
         submitting={creatingCase}
+      />
+
+      {/* S2808 Phase 4a — Form-selection modal */}
+      <FormPickerModal
+        open={formPickerOpen}
+        onClose={() => setFormPickerOpen(false)}
       />
     </div>
   )
