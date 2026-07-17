@@ -1525,3 +1525,44 @@ def draft_legal_document_status(request, task_id):
             payload['celery_state'] = 'unknown'
 
     return Response(payload)
+
+
+# =============================================================================
+# S2808 Phase 4a — Form-selection intelligence
+# =============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def select_legal_form(request):
+    """Recommend a Colorado JDF form for a plain-English situation description.
+
+    Body: {situation: str, case_type?: str}
+    Returns the LegalDocDrafterAgent._recommend_form envelope:
+        {success, situation, top_match, alternates, confidence,
+         clarifying_questions, disclaimer}
+    """
+    from core.agents.legal.legal_doc_drafter_agent import LegalDocDrafterAgent
+
+    situation = (request.data.get('situation') or '').strip()
+    if not situation:
+        return Response(
+            {'success': False, 'error': 'situation is required'},
+            status=400,
+        )
+
+    case_type = (request.data.get('case_type') or '').strip() or None
+
+    # Build a lightweight agent instance. `_recommend_form` is a pure
+    # rule-based method — no LLM, no DB writes, no case binding needed.
+    agent = LegalDocDrafterAgent.__new__(LegalDocDrafterAgent)
+    agent.user = request.user
+    agent.name = 'LegalDocDrafterAgent'
+    agent.agent_name = 'LegalDocDrafterAgent'
+
+    result = agent._recommend_form(
+        situation=situation,
+        context={'case_type': case_type} if case_type else None,
+    )
+    if result.get('success') is False:
+        return Response(result, status=400)
+    return Response(result)
