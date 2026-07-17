@@ -1428,3 +1428,100 @@ def get_document_types(request):
         # Session 410: Add litigation roles for Motion → Response → Reply chain
         'litigation_roles': dict(LitigationDocument.LITIGATION_ROLE_CHOICES),
     })
+
+
+# =============================================================================
+# S2803 Phase 3.0 — Legal Document Drafting Dispatch + Live Status
+# =============================================================================
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def draft_legal_document(request):
+    """Dispatch a legal-document drafting task with disclaimer enforcement.
+
+    Body: {task_description: str, disclaimer_acknowledged: bool}
+    Returns: {task_id, dispatch_log_id} on success; 400 on missing disclaimer.
+    """
+    from core.services.fleet_pa_chat_audit import _client_ip_from_request
+    from core.services.legal_dispatch import DisclaimerRequired, dispatch_legal_draft
+
+    task_description = (request.data.get('task_description') or '').strip()
+    disclaimer_acknowledged = bool(request.data.get('disclaimer_acknowledged'))
+
+    if not task_description:
+        return Response(
+            {'success': False, 'error': 'task_description is required'},
+            status=400,
+        )
+
+    try:
+        result = dispatch_legal_draft(
+            user=request.user,
+            task_description=task_description,
+            disclaimer_acknowledged=disclaimer_acknowledged,
+            ip_address=_client_ip_from_request(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', ''),
+            client_session_pin='',  # UI dispatches have no PA pin
+            context={},
+        )
+    except DisclaimerRequired as exc:
+        return Response(
+            {'success': False, 'error': str(exc), 'error_code': 'disclaimer_required'},
+            status=400,
+        )
+
+    if result.get('success') is False:
+        return Response(result, status=503)
+
+    return Response({'success': True, **result})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def draft_legal_document_status(request, task_id):
+    """Poll dispatch + Celery status for a legal drafting task.
+
+    Scoped to the requesting user — a task_id belonging to another user
+    returns 404 (no leaked existence check).
+    """
+    from core.models_legal_audit import LegalDocumentDispatchLog
+
+    dispatch_log = LegalDocumentDispatchLog.objects.filter(
+        task_id=task_id,
+        user=request.user,
+    ).first()
+    if not dispatch_log:
+        return Response(
+            {'success': False, 'error': 'Task not found'},
+            status=404,
+        )
+
+    # DB status is the source of truth for terminal states (updated by the
+    # drafting task on completion/failure). Derive live-Celery state for the
+    # in-flight case (dispatched → pending/started).
+    payload = {
+        'success': True,
+        'task_id': task_id,
+        'status': dispatch_log.status,
+        'dispatched_at': dispatch_log.dispatched_at.isoformat(),
+        'completed_at': (
+            dispatch_log.completed_at.isoformat() if dispatch_log.completed_at else None
+        ),
+        'error_message': dispatch_log.error_message or None,
+        'document_id': (
+            str(dispatch_log.resulting_document_id)
+            if dispatch_log.resulting_document_id else None
+        ),
+    }
+
+    if dispatch_log.status == 'dispatched':
+        # Task hasn't reached postrun yet — check Celery for finer-grained state.
+        try:
+            from core.celery import app as celery_app
+            result = celery_app.AsyncResult(task_id)
+            payload['celery_state'] = result.state  # PENDING / STARTED / etc.
+        except Exception as exc:
+            logger.debug(f"[LEGAL_DRAFT_STATUS] Celery state read failed: {exc}")
+            payload['celery_state'] = 'unknown'
+
+    return Response(payload)

@@ -303,25 +303,70 @@ class AgentHandlersMixin:
         """
         Session 1035: Handle legal assistant via AgentRouter.route().
         Session 1062: Made async — dispatches to Celery task to avoid PA tool timeout.
+        S2803 Phase 3.0: routes through shared dispatch_legal_draft helper —
+            same disclaimer_acknowledged gate + LegalDocumentDispatchLog audit
+            as the UI /api/legal/draft/ endpoint. Rigby PA callers MUST set
+            disclaimer_acknowledged=True in the payload (or the top-level
+            context) or dispatch is rejected.
         """
         task_description = payload.get('task') or payload.get('query', '')
-        context = payload.get('context', {})
+        context = payload.get('context', {}) or {}
+        # Accept the ack from either the payload root or the nested context.
+        disclaimer_acknowledged = bool(
+            payload.get('disclaimer_acknowledged')
+            or context.get('disclaimer_acknowledged')
+        )
+        client_session_pin = str(
+            payload.get('conversation_id')
+            or context.get('conversation_id')
+            or ''
+        )
 
-        from core.tasks import draft_legal_document_task
-        # Session 1069: Wrap .delay() to handle Redis/broker connection failures gracefully
-        try:
-            task = draft_legal_document_task.delay(
-                task_description=task_description,
-                context=context,
-                user_id=user_id,
-            )
-        except Exception as e:
-            logger.error(f"[LEGAL] Failed to dispatch Celery task: {e}")
+        from django.contrib.auth import get_user_model
+        from core.services.legal_dispatch import (
+            DisclaimerRequired,
+            dispatch_legal_draft,
+        )
+
+        User = get_user_model()
+        user = User.objects.filter(id=user_id).first() if user_id else None
+        if user is None:
             return {
                 'agent': 'LegalDocDrafterAgent',
                 'action': 'draft_legal_document',
                 'success': False,
-                'error': f'Task queue unavailable: {type(e).__name__}. Please try again in a few minutes.',
+                'error': 'Authenticated user required for legal drafting.',
+            }
+
+        try:
+            result = dispatch_legal_draft(
+                user=user,
+                task_description=task_description,
+                disclaimer_acknowledged=disclaimer_acknowledged,
+                ip_address=None,  # not available from PA tool dispatch surface
+                user_agent='',
+                client_session_pin=client_session_pin,
+                context=context,
+            )
+        except DisclaimerRequired as exc:
+            return {
+                'agent': 'LegalDocDrafterAgent',
+                'action': 'draft_legal_document',
+                'success': False,
+                'error_code': 'disclaimer_required',
+                'error': str(exc),
+                'message': (
+                    'Legal drafting requires explicit disclaimer acknowledgement. '
+                    'Include disclaimer_acknowledged=true in the tool call payload '
+                    'after confirming the user understands this is not legal advice.'
+                ),
+            }
+
+        if result.get('success') is False:
+            return {
+                'agent': 'LegalDocDrafterAgent',
+                'action': 'draft_legal_document',
+                **result,
             }
 
         return {
@@ -329,7 +374,8 @@ class AgentHandlersMixin:
             'action': 'draft_legal_document',
             'mode': 'async',
             'task': task_description,
-            'task_id': str(task.id),
+            'task_id': result['task_id'],
+            'dispatch_log_id': result['dispatch_log_id'],
             'message': (
                 'Legal document drafting has been queued. This typically takes '
                 '1-3 minutes. Use task_breakdown_tool to check progress.'
