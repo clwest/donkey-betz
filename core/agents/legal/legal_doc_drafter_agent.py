@@ -1177,8 +1177,25 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
                 # Standard mode: Build prompt with legal context
                 full_prompt = self._build_legal_prompt(task, context)
 
+                # S2804 Phase 3.1 P0: classify task intent + force tool_choice
+                # for high-confidence drafting requests. Prevents GPT from
+                # skipping the drafting tool and returning content-only, which
+                # would leave the user with a "Draft ready!" state and no
+                # persisted LegalDocument. Ambiguous → default auto (unchanged).
+                intent, intent_target = self._classify_task_intent(task, context)
+                tool_choice_override = None
+                if intent == 'drafting' and intent_target:
+                    tool_choice_override = {
+                        'type': 'function',
+                        'function': {'name': f'draft_{intent_target}'},
+                    }
+                    logger.info(
+                        f"[Phase 3.1 A] intent=drafting target={intent_target} — "
+                        f"forcing tool_choice=draft_{intent_target}"
+                    )
+
                 # Make GPT call
-                gpt_response = self._call_openai(full_prompt)
+                gpt_response = self._call_openai(full_prompt, tool_choice=tool_choice_override)
 
                 # Process tool calls
                 generated_documents = []
@@ -1256,6 +1273,41 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
                 # If no tool calls, use GPT's direct response
                 if not response_parts and gpt_response.get('content'):
                     response_parts.append(gpt_response.get('content'))
+
+                # S2804 Phase 3.1 P0 Layer B — Fallback save (Rigby SIGN B1).
+                # When the classifier flagged HIGH-confidence drafting intent
+                # but no tool produced a document (either GPT ignored the
+                # forced tool_choice or Layer A didn't force it for some
+                # reason), coerce GPT's content into a motion-typed document
+                # so users don't see "Draft ready!" with nothing persisted.
+                # Only fires when intent == 'drafting' (verb+noun match, per
+                # Fold 1 mitigation). Tags with a recovery marker in the
+                # generation_context so we can measure fallback rate without
+                # a schema change (per Rigby Fold 3 future_trigger).
+                if intent == 'drafting' and not generated_documents:
+                    fallback_content = "\n\n".join(response_parts).strip()
+                    if fallback_content:
+                        logger.warning(
+                            f"[Phase 3.1 B] drafting fallback fired — intent=drafting "
+                            f"target={intent_target} produced no tool document; saving "
+                            f"content-only ({len(fallback_content)} chars) as motion doc"
+                        )
+                        synthetic_doc = {
+                            'success': True,
+                            'document': fallback_content,
+                            'document_type': 'motion',
+                            'motion_type': 'other',
+                            'fallback_recovery': True,  # metadata marker
+                        }
+                        saved_doc = self._save_legal_document(
+                            task=task,
+                            document=synthetic_doc,
+                            context={**(context or {}), 'phase3_1_fallback_used': True},
+                            execution_time_ms=execution_time,
+                        )
+                        if saved_doc:
+                            saved_doc_ids.append(str(saved_doc.id))
+                            generated_documents.append(synthetic_doc)
 
                 # Session 404D: REMOVED DISCLAIMER from court-ready documents
                 # Disclaimers should NOT appear in final court documents
@@ -2251,6 +2303,19 @@ For detailed information on this procedure in {county} County, Colorado, please 
                 except LegalCase.DoesNotExist:
                     pass
 
+            # Build generation_context. S2804 Phase 3.1 P0 (Rigby SIGN B1) —
+            # propagate the fallback recovery marker if the caller flagged
+            # this as an auto-recovered draft (no tool_call produced a doc).
+            gen_context = {
+                'motion_type': motion_type,
+                'case_type': context.get('case_type', ''),
+                'jurisdiction': 'Colorado',
+                'execution_time_ms': execution_time_ms,
+                'tool_used': doc_type,
+            }
+            if document.get('fallback_recovery') or context.get('phase3_1_fallback_used'):
+                gen_context['phase3_1_fallback_used'] = True
+
             # Create the document record
             legal_doc = LegalDocument.objects.create(
                 user=self.user,
@@ -2259,13 +2324,7 @@ For detailed information on this procedure in {county} County, Colorado, please 
                 title=title,
                 content=document.get('document', ''),
                 original_query=task,
-                generation_context={
-                    'motion_type': motion_type,
-                    'case_type': context.get('case_type', ''),
-                    'jurisdiction': 'Colorado',
-                    'execution_time_ms': execution_time_ms,
-                    'tool_used': doc_type,
-                },
+                generation_context=gen_context,
                 status='draft',
             )
 
@@ -2495,6 +2554,69 @@ For detailed information on this procedure in {county} County, Colorado, please 
         except Exception as e:
             logger.warning(f"Failed to get prior research: {e}")
             return []
+
+    # =========================================================================
+    # S2804 Phase 3.1 P0: Task-intent classifier
+    # =========================================================================
+
+    # Verb + noun heuristic for high-confidence drafting classification.
+    # Rigby Phase 3.1 SIGN Fold 1 mitigation — noun-only match (e.g. "deadline
+    # for a motion") must NOT force tool_choice. Only verb+noun co-occurrence
+    # triggers drafting intent.
+    _DRAFTING_VERBS = (
+        'draft', 'write', 'generate', 'create', 'prepare', 'compose',
+    )
+    _DRAFTING_NOUNS = {
+        'motion': 'motion',
+        'declaration': 'declaration',
+        'email': 'email',
+        'letter': 'email',
+        'meet-and-confer': 'email',
+        'meet and confer': 'email',
+    }
+    # Info-phrase denylist — if any of these appear in the task, force
+    # classification to 'info' regardless of verb+noun match.
+    _INFO_PHRASE_DENYLIST = (
+        'deadline', 'what is', 'what are', 'how do i', 'how does', 'where do i',
+        'when do i', 'what happens if', 'can i', 'do i need', 'is it required',
+        'explain', 'tell me about',
+    )
+
+    def _classify_task_intent(
+        self, task: str, context: Dict[str, Any]
+    ) -> Tuple[str, Optional[str]]:
+        """Classify a task as drafting, info, or unknown.
+
+        Returns (intent, target) where:
+            intent is 'drafting' | 'info' | 'unknown'
+            target is 'motion' | 'email' | 'declaration' | None
+                (only populated when intent == 'drafting')
+
+        High-confidence drafting requires BOTH a drafting verb AND a document
+        noun (per Rigby SIGN Fold 1). Info-phrase denylist overrides.
+        """
+        task_lower = (task or '').lower()
+
+        # Denylist first — even verb+noun matches are downgraded if the task
+        # asks a factual question about a document type.
+        for phrase in self._INFO_PHRASE_DENYLIST:
+            if phrase in task_lower:
+                return ('info', None)
+
+        # Require both a drafting verb AND a document noun.
+        has_verb = any(v in task_lower for v in self._DRAFTING_VERBS)
+        matched_target = None
+        for noun, target in self._DRAFTING_NOUNS.items():
+            if noun in task_lower:
+                matched_target = target
+                break
+
+        if has_verb and matched_target:
+            return ('drafting', matched_target)
+        if matched_target and not has_verb:
+            # Noun without verb → probably an info query about the noun type.
+            return ('info', None)
+        return ('unknown', None)
 
     # =========================================================================
     # Session 404: Denied Motion Detection and Pipeline
