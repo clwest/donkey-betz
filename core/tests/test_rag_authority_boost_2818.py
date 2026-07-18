@@ -108,9 +108,10 @@ class AuthorityBonusIntegrationTests(SimpleTestCase):
     # relevance can gate the boost.
 
     def test_authority_bonus_applies_when_boost_hints_false(self):
-        """Explicit check: PA search_docs passes boost_hints=False. The
-        authority boost must still fire in that path — that's the whole
-        pilot rationale."""
+        """Explicit check: PA search_docs passes boost_hints=False. When
+        the authority gate is forced on, the boost fires regardless of
+        boost_hints — that's the S2818 pilot rationale, preserved through
+        the S2819 Shape C gate via explicit ``authority_gate=True``."""
         with TemporaryDirectory() as tmp:
             output = Path(tmp) / ".rag" / "corpus.jsonl"
             self._write_corpus(
@@ -123,7 +124,15 @@ class AuthorityBonusIntegrationTests(SimpleTestCase):
             )
 
             with patch.object(core_rag, "CORPUS_PATH", output):
-                hits = top_k("zero overlap query", k=1, boost_hints=False)
+                # S2819 update: pass authority_gate=True explicitly since
+                # the query has no count-intent phrasing and the default
+                # gate would auto-skip the boost.
+                hits = top_k(
+                    "zero overlap query",
+                    k=1,
+                    boost_hints=False,
+                    authority_gate=True,
+                )
 
             self.assertEqual(len(hits), 1)
             self.assertEqual(hits[0]["file"], "PLATFORM_INVENTORY.md")

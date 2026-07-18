@@ -36,6 +36,31 @@ AUTHORITY_FILE_BONUS = {
     "PLATFORM_INVENTORY.md": 8,
 }
 
+# S2819 Shape C — query-intent gating for AUTHORITY_FILE_BONUS.
+# Per S2818 envelope §6 follow-on: static per-chunk boost floods the
+# ranker on non-counts queries. This gate applies the boost only when the
+# query has count/inventory-listing intent. "list all" added per Rigby
+# open SIGN Q2 empirical evidence: PLATFORM_INVENTORY.md already dominates
+# "list all spiders" today (post-S2818) and gating on counts alone would
+# regress that legitimate inventory query. Pattern set kept minimal —
+# extension requires fresh SIGN cycle.
+_COUNT_INTENT_PATTERNS = (
+    "how many",
+    "how much",
+    "number of",
+    "count of",
+    "total",
+    "list all",
+)
+
+
+def _looks_like_count_query(question: str | None) -> bool:
+    """S2819 pilot — detect count/inventory intent in a query."""
+    if not question:
+        return False
+    q = question.lower()
+    return any(p in q for p in _COUNT_INTENT_PATTERNS)
+
 def _hint_score(text: str) -> int:
     t = text.lower()
     score = 0
@@ -63,7 +88,12 @@ def _authority_bonus(path: str) -> int:
     key = path[5:] if path.startswith("docs/") else path
     return AUTHORITY_FILE_BONUS.get(key, 0)
 
-def top_k(question: str, k: int = 8, boost_hints: bool = True) -> list[dict]:
+def top_k(
+    question: str,
+    k: int = 8,
+    boost_hints: bool = True,
+    authority_gate: bool | None = None,
+) -> list[dict]:
     """Rank corpus chunks by token-overlap against ``question``.
 
     boost_hints=True preserves the legacy askdocs CLI behavior (learning-
@@ -71,13 +101,20 @@ def top_k(question: str, k: int = 8, boost_hints: bool = True) -> list[dict]:
     general-purpose doc search where that bias is wrong (e.g., the
     Session 1142 ``search_docs`` PA tool).
 
-    Authority-anchor boosts (AUTHORITY_FILE_BONUS) apply unconditionally
-    per S2818 discovery-layer pilot.
+    Authority-anchor boosts (AUTHORITY_FILE_BONUS) are GATED on query
+    intent per S2819 Shape C. When ``authority_gate`` is None (default),
+    it's computed from the question via ``_looks_like_count_query`` —
+    boost fires only for count/inventory-listing intent, preserving the
+    S2818 primary criterion while eliminating the non-counts regression.
+    Callers may pass ``True`` / ``False`` to force the gate on/off (used
+    by tests and any future intent-aware layers).
     """
     if not CORPUS_PATH.exists():
         return []
     q = question.lower()
     q_terms = set(q.split())
+    if authority_gate is None:
+        authority_gate = _looks_like_count_query(question)
     scored = []
     with CORPUS_PATH.open() as f:
         for line in f:
@@ -92,8 +129,11 @@ def top_k(question: str, k: int = 8, boost_hints: bool = True) -> list[dict]:
                 base += _hint_score(tl)
                 base += _file_bonus(row.get("file", ""))
 
-            # S2818: authority boost applies regardless of boost_hints.
-            base += _authority_bonus(row.get("file", ""))
+            # S2819: authority boost is gated on query intent (S2818 shipped
+            # unconditional; empirical monoculture regression required
+            # gating — see S2819 envelope §5).
+            if authority_gate:
+                base += _authority_bonus(row.get("file", ""))
 
             if base:
                 scored.append((base, row))
