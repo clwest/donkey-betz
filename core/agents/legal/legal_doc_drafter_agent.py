@@ -2493,8 +2493,7 @@ For detailed information on this procedure in {county} County, Colorado, please 
             return None
 
         try:
-            from core.models_unified_system import LegalDocument
-            from core.models_legal import CaseProfile
+            from core.models_unified_system import LegalDocument, _resolve_case_profile
 
             # Determine document type from the result
             doc_type = document.get('document_type', 'other')
@@ -2511,18 +2510,14 @@ For detailed information on this procedure in {county} County, Colorado, please 
                 title = f"Legal Document: {task[:100]}"
 
             # S2805 Phase 3.1 P1: bind CaseProfile (Session 406 model), not
-            # LegalCase (Session 403 legacy). The `active_case_id` set by
-            # Session 406 in request.session is a CaseProfile UUID; the old
-            # LegalCase.get lookup silently failed on every save. The
-            # legacy `case` FK is NEVER written by the agent going forward
-            # (agent-writes-case-profile-only invariant per Rigby SIGN edit
-            # 1); grandfathered rows retain their existing `case` value.
-            case_profile = None
-            if self.case_profile_id:
-                try:
-                    case_profile = CaseProfile.objects.get(id=self.case_profile_id)
-                except CaseProfile.DoesNotExist:
-                    pass
+            # LegalCase (Session 403 legacy). The legacy `case` FK is NEVER
+            # written by the agent going forward (agent-writes-case-profile-only
+            # invariant per Rigby SIGN edit 1); grandfathered rows retain their
+            # existing `case` value.
+            #
+            # S2809 P1-back-port: get-or-warn via shared helper (was silent
+            # `pass` — Lesson 3 violation). Unified with save_legal_research.
+            case_profile = _resolve_case_profile(self.case_profile_id)
 
             # Build generation_context. S2804 Phase 3.1 P0 (Rigby SIGN B1) —
             # propagate the fallback recovery marker if the caller flagged

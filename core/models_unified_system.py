@@ -17452,6 +17452,32 @@ class LegalDocument(models.Model):
             logger.error(f"Failed to record learning outcome: {e}")
 
 
+def _resolve_case_profile(case_profile_id):
+    """S2809 P1-back-port: get-or-warn helper for CaseProfile lookups on
+    legal save paths (S2805 Lesson 3 — never silent-swallow).
+
+    Returns the CaseProfile if found, None otherwise. On DoesNotExist,
+    emits an observable logger.warning naming the missing id so callers
+    can trace lookup failures instead of losing them silently. Callers
+    should proceed with case_profile=None after a miss.
+
+    Shared substrate for:
+      - LegalResearchResult.save_legal_research (S2807 P1.b)
+      - LegalDocDrafterAgent._save_legal_document (S2805 P1, hardened here)
+    """
+    if not case_profile_id:
+        return None
+    from core.models_legal import CaseProfile
+    try:
+        return CaseProfile.objects.get(id=case_profile_id)
+    except CaseProfile.DoesNotExist:
+        logger.warning(
+            "CaseProfile id=%s not found; caller will save with case_profile=None",
+            case_profile_id,
+        )
+        return None
+
+
 class LegalResearchResult(models.Model):
     """
     Session 403: Legal research results from LegalDocDrafterAgent.
@@ -17650,24 +17676,15 @@ class LegalResearchResult(models.Model):
         pattern for LegalDocument. Legacy `case_id` kwarg accepted as an
         alias for `case_profile_id` (maps to the same lookup).
         """
-        from core.models_legal import CaseProfile
-
         # S2807 P1.b: compat alias — old callers may still pass case_id
         if case_profile_id is None and case_id is not None:
             case_profile_id = case_id
 
-        case_profile = None
-        if case_profile_id:
-            try:
-                case_profile = CaseProfile.objects.get(id=case_profile_id)
-            except CaseProfile.DoesNotExist:
-                # S2805 Lesson 3 — never silent-swallow. Surface the mismatch
-                # so callers can trace lookup failures instead of losing them.
-                logger.warning(
-                    "save_legal_research: CaseProfile id=%s not found; "
-                    "research row will save with case_profile=None",
-                    case_profile_id,
-                )
+        # S2809 P1-back-port: unified get-or-warn via shared helper.
+        # Prior inline try/except retained the same behavior; extraction
+        # gives us one place to enforce S2805 Lesson 3 across every legal
+        # save path (P1 document, P1.b research, future consumers).
+        case_profile = _resolve_case_profile(case_profile_id)
 
         instance = cls.objects.create(
             user=user,
