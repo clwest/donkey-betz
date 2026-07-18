@@ -36,6 +36,29 @@ AUTHORITY_FILE_BONUS = {
     "PLATFORM_INVENTORY.md": 8,
 }
 
+# S2820 — orientation-doc exclusion (last lexical policy in the discovery-
+# layer pilot chain S2818/S2819/S2820, declared "feature complete" at
+# S2820 close per Chris directive; S2821+ evaluates embedding-based
+# retrieval against the benchmark corpus this arc built).
+#
+# Rationale: 00-START-NEXT-SESSION.md is a transient orientation doc
+# regenerated every session close. It frequently contains raw example
+# text ("Q5 non-counts query: 'add a new spider to the network'") to
+# describe queued work items. When docs cascade re-embeds it, that
+# example text becomes searchable and the doc dominates queries that
+# literally reference the example — a same-class instance of T3 §7 C2
+# start-here-doc-example-text contamination, surfaced live during S2819.
+#
+# Skip these paths entirely in top_k. Documents are still on disk,
+# still readable, still in _index.json — just not searchable via the
+# lexical top_k lane. Empirical evidence from S2820 open SIGN Q1
+# baseline: 00-START-NEXT-SESSION.md#3 was #1 for "add a new spider to
+# the network" AND its exclusion causes zero regression on 3 unrelated
+# baseline queries (counts / handoff-intent / self-reference).
+_EXCLUDED_FILE_PATHS = frozenset({
+    "00-START-NEXT-SESSION.md",
+})
+
 # S2819 Shape C — query-intent gating for AUTHORITY_FILE_BONUS.
 # Per S2818 envelope §6 follow-on: static per-chunk boost floods the
 # ranker on non-counts queries. This gate applies the boost only when the
@@ -119,6 +142,9 @@ def top_k(
     with CORPUS_PATH.open() as f:
         for line in f:
             row = json.loads(line)
+            # S2820: skip orientation-only docs entirely.
+            if row.get("file", "") in _EXCLUDED_FILE_PATHS:
+                continue
             t = row["text"]
             tl = t.lower()
 
