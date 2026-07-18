@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-18T17:47:54+00:00",
+    "generated": "2026-07-18T18:06:20+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "6a9f2b000f86",
-    "doc_count": 2641,
-    "commit_count": 8087,
+    "git_head": "4f67e9544dab",
+    "doc_count": 2643,
+    "commit_count": 8091,
     "confidence_breakdown": {
-      "HIGH": 1676,
+      "HIGH": 1677,
       "MEDIUM": 405,
-      "LOW": 12,
+      "LOW": 13,
       "UNKNOWN": 548
     },
     "excludes": [
@@ -2593,7 +2593,7 @@
         2807,
         2808
       ],
-      "commit_count": 1350,
+      "commit_count": 1352,
       "prs": [
         10,
         11,
@@ -3213,7 +3213,8 @@
         3242,
         3244,
         3246,
-        3248
+        3248,
+        3250
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7561,7 +7562,7 @@
         2807,
         2808
       ],
-      "commit_count": 298,
+      "commit_count": 300,
       "prs": [
         2213,
         2219,
@@ -7784,7 +7785,8 @@
         3242,
         3244,
         3246,
-        3248
+        3248,
+        3250
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20688,6 +20690,21 @@
       "commit_count": 2,
       "prs": [
         3248
+      ]
+    },
+    "docs/handoffs/SESSION_2816_GROUP_2700_T6_ANCHOR_DRIFT.md": {
+      "originating_session": 2816,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "44352561",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2816 close cascade \u2014 handoff + start-here + INDEX + provenance + pin rotation (#3250)",
+      "sessions_touched": [
+        2816
+      ],
+      "commit_count": 2,
+      "prs": [
+        3250
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36385,6 +36402,21 @@
       "commit_count": 2,
       "prs": [
         3249
+      ]
+    },
+    "docs/research/domains/docs_restructuring/2799_docs_restructuring_canonical_summary.md": {
+      "originating_session": 2817,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "4f67e954",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(research): S2817 Group 2700 2799 \u2014 /docs/ restructuring canonical summary (ARC CLOSE) (#3251)",
+      "sessions_touched": [
+        2817
+      ],
+      "commit_count": 2,
+      "prs": [
+        3251
       ]
     },
     "docs/research/domains/event_integration_architecture/2000_event_integration_architecture_domain_scoping.md": {
