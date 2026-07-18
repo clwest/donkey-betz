@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-18T15:59:43+00:00",
+    "generated": "2026-07-18T16:19:21+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "8d5c8938600f",
-    "doc_count": 2631,
-    "commit_count": 8067,
+    "git_head": "a70b01265890",
+    "doc_count": 2633,
+    "commit_count": 8071,
     "confidence_breakdown": {
-      "HIGH": 1671,
+      "HIGH": 1672,
       "MEDIUM": 405,
-      "LOW": 7,
+      "LOW": 8,
       "UNKNOWN": 548
     },
     "excludes": [
@@ -2593,7 +2593,7 @@
         2807,
         2808
       ],
-      "commit_count": 1340,
+      "commit_count": 1342,
       "prs": [
         10,
         11,
@@ -3208,7 +3208,8 @@
         3232,
         3234,
         3236,
-        3238
+        3238,
+        3240
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7556,7 +7557,7 @@
         2807,
         2808
       ],
-      "commit_count": 288,
+      "commit_count": 290,
       "prs": [
         2213,
         2219,
@@ -7774,7 +7775,8 @@
         3232,
         3234,
         3236,
-        3238
+        3238,
+        3240
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20603,6 +20605,21 @@
       "commit_count": 2,
       "prs": [
         3238
+      ]
+    },
+    "docs/handoffs/SESSION_2811_GROUP_2700_T1_INVENTORY_AUDIT.md": {
+      "originating_session": 2811,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "152c69c7",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2811 close cascade \u2014 handoff + start-here + INDEX + provenance + pin rotation (#3240)",
+      "sessions_touched": [
+        2811
+      ],
+      "commit_count": 2,
+      "prs": [
+        3240
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36225,6 +36242,21 @@
       "commit_count": 2,
       "prs": [
         3239
+      ]
+    },
+    "docs/research/domains/docs_restructuring/2702_docs_research_pattern_extraction_audit.md": {
+      "originating_session": 2812,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "a70b0126",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(research): S2812 Group 2700 T2 \u2014 /docs/research/ pattern extraction & transferability audit (#3241)",
+      "sessions_touched": [
+        2812
+      ],
+      "commit_count": 2,
+      "prs": [
+        3241
       ]
     },
     "docs/research/domains/event_integration_architecture/2000_event_integration_architecture_domain_scoping.md": {
