@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-18T19:03:34+00:00",
+    "generated": "2026-07-18T19:41:28+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "13844fc82b2c",
-    "doc_count": 2647,
-    "commit_count": 8099,
+    "git_head": "93aed786f236",
+    "doc_count": 2649,
+    "commit_count": 8103,
     "confidence_breakdown": {
-      "HIGH": 1679,
+      "HIGH": 1680,
       "MEDIUM": 405,
       "LOW": 13,
-      "UNKNOWN": 550
+      "UNKNOWN": 551
     },
     "excludes": [
       "docs/archive/",
@@ -2593,7 +2593,7 @@
         2807,
         2808
       ],
-      "commit_count": 1356,
+      "commit_count": 1358,
       "prs": [
         10,
         11,
@@ -3216,7 +3216,8 @@
         3248,
         3250,
         3252,
-        3254
+        3254,
+        3256
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7564,7 +7565,7 @@
         2807,
         2808
       ],
-      "commit_count": 304,
+      "commit_count": 306,
       "prs": [
         2213,
         2219,
@@ -7790,7 +7791,8 @@
         3248,
         3250,
         3252,
-        3254
+        3254,
+        3256
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20739,6 +20741,21 @@
       "commit_count": 2,
       "prs": [
         3254
+      ]
+    },
+    "docs/handoffs/SESSION_2819_SHAPE_C_INTENT_GATING.md": {
+      "originating_session": 2819,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "87fef29d",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2819 close cascade \u2014 Shape C shipped + 00-START contamination queued (#3256)",
+      "sessions_touched": [
+        2819
+      ],
+      "commit_count": 2,
+      "prs": [
+        3256
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -38040,6 +38057,19 @@
       "commit_count": 2,
       "prs": [
         3255
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-18_s2820_orientation_doc_exclusion_and_lexical_pilot_feature_complete.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "93aed786",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "feat(rag): S2820 orientation-doc exclusion + LEXICAL PILOT FEATURE COMPLETE (#3257)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3257
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
