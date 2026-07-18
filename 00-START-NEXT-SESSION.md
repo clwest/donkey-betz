@@ -13,6 +13,7 @@
 | Close cascade (Phase-0 execution session — measurement package as docs + code, no runtime substrate change) | **#TBD** · (SHA at merge) | main | handoff + envelope (frozen) + Phase-0 working directory + 00-START update + zoom-out fold persistence + docs pipeline |
 
 **Handoff:** `docs/handoffs/SESSION_2822_PHASE0_EXECUTION_OPTION_A_DUAL.md`
+**Bridge deliverable (REQUIRED READING at S2823 open):** `docs/handoffs/SESSION_2822_PHASE0_TO_DOCS_AUDIT_BRIDGE.md` — reconnects Phase-0 findings to /docs/ audit arc; answers Chris's 5 bridge questions; provides dual-track S2823 first-session plan (Track A /docs/ audit + Track B Phase-0.5 evidence collection).
 **Envelope:** `docs/research/implementation/RATIFICATION_2026-07-18_s2822_phase0_methodology_ratified_r1_r6.md` (frozen at merge per PLAYBOOK-6.10.9)
 **Working directory:** `docs/research/discovery_layer/PHASE_0/` (corpus + classifiers + measurement report + recommendation summary)
 **Ledger state at close:** `logs/zoom_out_classifications.jsonl` — 122 rows unchanged pending +8 S2822 folds persisted at close cascade (Folds A-I documented in envelope §5.1). Post-cascade: 130 rows expected.
@@ -147,27 +148,29 @@ grep '^python tools/pa_chat.py' tools/pa_local.sh
 1. `context-kit orient`
 2. Read this file end-to-end
 3. Read S2822 handoff §3 + §6 + §7
-4. Read S2822 envelope §9 D-verdict + §10 methodology outcome + §11 Phase-0.5 arc direction
-5. Read Phase-0 measurement_report.md + RECOMMENDATION_PHASE0_SUMMARY.md as context
-6. Sanity checks (brew postgres + ledger row count verify — expect ~130 post-S2822-cascade)
-7. `git log --oneline -6` — should show S2822 close cascade + S2821 close + S2820 chain
-8. Mint fresh pin scoped `s2823-phase0-5-<subdirection>`
-9. **Anti-rubber-stamp check on first SIGN** — verify `tool_runs` non-empty (S2822 pattern: both OP3 SIGN cycles had 4+ tool_runs each)
-10. **R1 PROVENANCE DISCIPLINE MANDATORY** for Phase-0.5 corpus expansion — apply tier hierarchy to every row
-11. **BALANCED OPERATOR-STYLE HARVEST** — Chris + Claude + Rigby minimum; do NOT just collect 20 arbitrary rows
-12. **FEATURE-FLAG GATE** required for dogfood router — advisory-only per Chris R2
-13. **NO DISCOVERY FIXES** during Phase-0.5 — Chris R3 explicit preserve directive
-14. **ABSTAIN-POLICY PROPOSAL REQUIRED** before any Phase-1 impl — AMBIGUOUS/UNCLASSIFIABLE/CONTEXT_NEEDED canonical fallthrough per Chris R4
-15. Route Phase-0.5 execution scope through Rigby joint SIGN before authoring corpus expansion
-16. **For any implementation-shape work:** OP3 two-SIGN pattern (10/10 across shapes now including IN-LOOP variant)
-17. **UPPER BOUND / precision qualifiers** required for count claims
-18. **PLAYBOOK-6.10.7 + 6.10.8 + 6.10.9 constitutional** at v0.8.0
-19. **Anchor-verify at every scope decision point** (20-session trend)
-20. **BEFORE any user-facing content:** read `docs/PLATFORM_WHAT_IT_IS.md`
-21. **DO NOT patch the frozen lexical `top_k` policy** (per Chris directive at S2820 close)
-22. **DO NOT auto-adopt semantic default flips** (per S2821 non-recommendation)
-23. **DO NOT build RRF or global fusion during Phase-0.5** (per Chris R6 from S2821 + Phase-0 execution non-goals)
-24. **DO NOT delegate production routing decisions** to feature-flag dogfood router — advisory only per Chris R2
+4. **Read S2822 bridge deliverable end-to-end** (`docs/handoffs/SESSION_2822_PHASE0_TO_DOCS_AUDIT_BRIDGE.md`) — required for /docs/-audit reconnection + dual-track first-session plan
+5. Read S2822 envelope §9 D-verdict + §10 methodology outcome + §11 Phase-0.5 arc direction
+6. Read Phase-0 measurement_report.md + RECOMMENDATION_PHASE0_SUMMARY.md as context
+7. Sanity checks (brew postgres + ledger row count verify — expect ~131 post-S2822-cascade)
+8. `git log --oneline -6` — should show S2822 close cascade + S2821 close + S2820 chain
+9. Mint fresh pin scoped `s2823-phase0-5-dual-track` (per bridge §5.1)
+10. **Anti-rubber-stamp check on first SIGN** — verify `tool_runs` non-empty (S2822 pattern: both OP3 SIGN cycles had 4+ tool_runs each)
+11. **DUAL-TRACK EXECUTION** per bridge §5 — Track A /docs/ audit reconnection (~30% budget) + Track B Phase-0.5 evidence collection (~70% budget) — feedback loop per §5.4
+12. **R1 PROVENANCE DISCIPLINE MANDATORY** for Phase-0.5 corpus expansion — apply tier hierarchy to every row
+13. **BALANCED OPERATOR-STYLE HARVEST** — Chris + Claude + Rigby minimum; do NOT just collect 20 arbitrary rows
+14. **FEATURE-FLAG GATE** required for dogfood router — advisory-only per Chris R2
+15. **NO DISCOVERY FIXES** during Phase-0.5 — Chris R3 explicit preserve directive
+16. **ABSTAIN-POLICY PROPOSAL REQUIRED** before any Phase-1 impl — AMBIGUOUS/UNCLASSIFIABLE/CONTEXT_NEEDED canonical fallthrough per Chris R4
+17. Route Phase-0.5 execution scope through Rigby joint SIGN before authoring corpus expansion
+18. **For any implementation-shape work:** OP3 two-SIGN pattern (10/10 across shapes now including IN-LOOP variant)
+19. **UPPER BOUND / precision qualifiers** required for count claims
+20. **PLAYBOOK-6.10.7 + 6.10.8 + 6.10.9 constitutional** at v0.8.0
+21. **Anchor-verify at every scope decision point** (20-session trend)
+22. **BEFORE any user-facing content:** read `docs/PLATFORM_WHAT_IT_IS.md`
+23. **DO NOT patch the frozen lexical `top_k` policy** (per Chris directive at S2820 close)
+24. **DO NOT auto-adopt semantic default flips** (per S2821 non-recommendation)
+25. **DO NOT build RRF or global fusion during Phase-0.5** (per Chris R6 from S2821 + Phase-0 execution non-goals)
+26. **DO NOT delegate production routing decisions** to feature-flag dogfood router — advisory only per Chris R2
 
 ---
 
@@ -177,7 +180,8 @@ Ordered by frequency of use at S2823:
 
 1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap
 2. [`docs/handoffs/SESSION_2822_PHASE0_EXECUTION_OPTION_A_DUAL.md`](docs/handoffs/SESSION_2822_PHASE0_EXECUTION_OPTION_A_DUAL.md) — **S2822 handoff (current)**
-3. [`docs/research/implementation/RATIFICATION_2026-07-18_s2822_phase0_methodology_ratified_r1_r6.md`](docs/research/implementation/RATIFICATION_2026-07-18_s2822_phase0_methodology_ratified_r1_r6.md) — **S2822 envelope frozen; §9 Chris OPTION A-DUAL D-verdict + §10 methodology-outcome primary + §11 Phase-0.5 arc direction**
+3. [`docs/handoffs/SESSION_2822_PHASE0_TO_DOCS_AUDIT_BRIDGE.md`](docs/handoffs/SESSION_2822_PHASE0_TO_DOCS_AUDIT_BRIDGE.md) — **S2822 bridge deliverable (REQUIRED READING at S2823 open) — Phase-0 → /docs/ audit reconnection + dual-track first-session plan**
+4. [`docs/research/implementation/RATIFICATION_2026-07-18_s2822_phase0_methodology_ratified_r1_r6.md`](docs/research/implementation/RATIFICATION_2026-07-18_s2822_phase0_methodology_ratified_r1_r6.md) — **S2822 envelope frozen; §9 Chris OPTION A-DUAL D-verdict + §10 methodology-outcome primary + §11 Phase-0.5 arc direction**
 4. [`docs/research/discovery_layer/PHASE_0/RECOMMENDATION_PHASE0_SUMMARY.md`](docs/research/discovery_layer/PHASE_0/RECOMMENDATION_PHASE0_SUMMARY.md) — Phase-0 recommendation (Options + calibration + 4-item Phase-1 gate checklist)
 5. [`docs/research/discovery_layer/PHASE_0/measurement_report.md`](docs/research/discovery_layer/PHASE_0/measurement_report.md) — Phase-0 evidence (per-family + confusion + wrong-but-plausible + context-needed + provenance-tier stratified)
 6. [`docs/research/discovery_layer/PHASE_0/corpus.json`](docs/research/discovery_layer/PHASE_0/corpus.json) — Phase-0 33-row corpus (5 P1 + 10 P2 + 18 P3)
