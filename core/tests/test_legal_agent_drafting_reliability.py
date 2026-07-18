@@ -331,12 +331,24 @@ class LegalAgentCaseProfileBindingTests(TestCase):
         self.assertEqual(doc.case_profile_id, cp.id,
                          'case_profile FK must be bound to the passed CaseProfile')
 
-    def test_t6b_unknown_case_profile_id_leaves_case_profile_none(self):
+    def test_t6b_unknown_case_profile_id_logs_warning_and_leaves_none(self):
+        """S2809 P1-back-port: unknown case_profile_id must emit an
+        observable logger.warning (via shared `_resolve_case_profile`
+        helper) AND leave the FK None. Mirrors T7b's assertLogs delta —
+        codifies S2805 Lesson 3 (never silent-swallow) in the P1
+        document codepath, not just the P1.b research codepath.
+        """
         import uuid
         bogus_id = str(uuid.uuid4())
-        doc = self._save_via_agent(case_profile_id=bogus_id)
+        with self.assertLogs('core.models_unified_system', level='WARNING') as cm:
+            doc = self._save_via_agent(case_profile_id=bogus_id)
         self.assertIsNotNone(doc, 'save must succeed even when CaseProfile is missing')
         self.assertIsNone(doc.case_profile, 'unknown case_profile_id must leave FK None')
+        joined = '\n'.join(cm.output)
+        self.assertIn('CaseProfile', joined,
+                      'warning must mention CaseProfile lookup failure')
+        self.assertIn(bogus_id, joined,
+                      'warning must include the missing case_profile_id')
 
     def test_t6c_no_case_profile_id_leaves_both_case_fks_none(self):
         doc = self._save_via_agent(case_profile_id=None)
