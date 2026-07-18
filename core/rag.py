@@ -18,6 +18,24 @@ PREF_FILE_BONUS = [
     re.compile(r"LEARNING_LOOP.*", re.I),
 ]
 
+# S2818 (2799 §8 item #1) — discovery-layer enforcement pilot for
+# DOC_LIFECYCLE §2c "sole authoritative counts source" convention.
+# Applied ALWAYS in top_k (independent of boost_hints) so PA search_docs
+# calls (which pass boost_hints=False) benefit. Exact-path match (not
+# regex) to reduce rot fragility. Pilot scope is 1 doc; expand only after
+# empirical evidence of success@3 movement on T3 (c) counts scenarios.
+# Follow-up: migrate authority weighting into embedding-based retrieval
+# once that becomes the default (kb_tool.semantic_search).
+AUTHORITY_FILE_BONUS = {
+    # Magnitude matches legacy _file_bonus (8). S2818 OP3 post-authoring
+    # SIGN empirically showed +20 satisfies the counts-query success
+    # criterion but degrades non-counts how-to retrieval (T3 B1 shape:
+    # "add a new spider to the network" gets dominated by inventory
+    # chunks; topics/spider-network.md falls out of top-3). +8 is the
+    # tuned value tried first per Rigby's ship/iterate stop-condition.
+    "PLATFORM_INVENTORY.md": 8,
+}
+
 def _hint_score(text: str) -> int:
     t = text.lower()
     score = 0
@@ -36,6 +54,15 @@ def _file_bonus(path: str) -> int:
             return 8
     return 0
 
+def _authority_bonus(path: str) -> int:
+    """S2818 pilot — exact-path authority boost per DOC_LIFECYCLE §2c."""
+    if not path:
+        return 0
+    # Corpus stores paths without the leading 'docs/' prefix, but callers
+    # may pass a full path. Normalize by stripping the prefix once.
+    key = path[5:] if path.startswith("docs/") else path
+    return AUTHORITY_FILE_BONUS.get(key, 0)
+
 def top_k(question: str, k: int = 8, boost_hints: bool = True) -> list[dict]:
     """Rank corpus chunks by token-overlap against ``question``.
 
@@ -43,6 +70,9 @@ def top_k(question: str, k: int = 8, boost_hints: bool = True) -> list[dict]:
     loop bias from LEARNING_LOOP_HINTS + PREF_FILE_BONUS). Pass False for
     general-purpose doc search where that bias is wrong (e.g., the
     Session 1142 ``search_docs`` PA tool).
+
+    Authority-anchor boosts (AUTHORITY_FILE_BONUS) apply unconditionally
+    per S2818 discovery-layer pilot.
     """
     if not CORPUS_PATH.exists():
         return []
@@ -61,6 +91,9 @@ def top_k(question: str, k: int = 8, boost_hints: bool = True) -> list[dict]:
             if boost_hints:
                 base += _hint_score(tl)
                 base += _file_bonus(row.get("file", ""))
+
+            # S2818: authority boost applies regardless of boost_hints.
+            base += _authority_bonus(row.get("file", ""))
 
             if base:
                 scored.append((base, row))
