@@ -24,8 +24,11 @@ related:
   - docs/ENGINEERING_PLAYBOOK.md                                                          # v0.8.0 (v0.9 amendment ready per §10.2)
   - CLAUDE.md                                                                              # repo bootstrap
 twin_pointer:
-  workspace_deliverable_id: TBD (created post-authoring in workspace b4503364-2573-4401-9e28-61a739e0ce50 Donkey Betz per parent §5 D7 + memory feedback_twin_deliverable_at_every_ratification)
+  workspace_deliverable_id: 37d6ca76-89c3-4966-8f4c-decc52ce8169
   workspace_id: b4503364-2573-4401-9e28-61a739e0ce50
+  workspace_name: Donkey Betz
+  created_via: ORM-direct (bypasses pa_deliverables_tool diagnostic-flag bug per memory feedback_pa_deliverables_tool_flags_ratifications_as_diagnostic)
+  diagnostic_status: (empty — bypass validated)
 scope: canonical summary for Group 2700 arc — synthesizes T1-T6 findings into ratified /docs/ restructuring proposal; migration executes post-close in follow-up sessions per parent §5
 non_goals:
   - re-authoring T1-T6 findings (canonical summary synthesizes; does not re-audit — per Playbook §10 "What does NOT belong in canonical summary")
