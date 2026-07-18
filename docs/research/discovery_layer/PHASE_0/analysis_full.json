@@ -1,0 +1,826 @@
+{
+  "classifier_side_by_side": {
+    "COUNT": {
+      "n": 5,
+      "consequence": "HIGH",
+      "classifier_floor_prior": 0.9,
+      "a_f1": 1.0,
+      "b_f1": 1.0,
+      "a_meets_floor": true,
+      "b_meets_floor": true,
+      "a_precision": 1.0,
+      "a_recall": 1.0,
+      "b_precision": 1.0,
+      "b_recall": 1.0,
+      "delta_f1_b_minus_a": 0.0
+    },
+    "PROCEDURAL": {
+      "n": 4,
+      "consequence": "MEDIUM",
+      "classifier_floor_prior": 0.75,
+      "a_f1": 1.0,
+      "b_f1": 1.0,
+      "a_meets_floor": true,
+      "b_meets_floor": true,
+      "a_precision": 1.0,
+      "a_recall": 1.0,
+      "b_precision": 1.0,
+      "b_recall": 1.0,
+      "delta_f1_b_minus_a": 0.0
+    },
+    "DISCOVERY": {
+      "n": 9,
+      "consequence": "LOW",
+      "classifier_floor_prior": 0.7,
+      "a_f1": 0.3636363636363636,
+      "b_f1": 0.5,
+      "a_meets_floor": false,
+      "b_meets_floor": false,
+      "a_precision": 1.0,
+      "a_recall": 0.2222222222222222,
+      "b_precision": 1.0,
+      "b_recall": 0.3333333333333333,
+      "delta_f1_b_minus_a": 0.1363636363636364
+    },
+    "IDENTITY": {
+      "n": 6,
+      "consequence": "HIGH",
+      "classifier_floor_prior": 0.9,
+      "a_f1": 0.9090909090909091,
+      "b_f1": 0.8333333333333334,
+      "a_meets_floor": true,
+      "b_meets_floor": false,
+      "a_precision": 1.0,
+      "a_recall": 0.8333333333333334,
+      "b_precision": 0.8333333333333334,
+      "b_recall": 0.8333333333333334,
+      "delta_f1_b_minus_a": -0.07575757575757569
+    },
+    "SELF-REFERENCE": {
+      "n": 3,
+      "consequence": "HIGH",
+      "classifier_floor_prior": 0.9,
+      "a_f1": 1.0,
+      "b_f1": 0.8571428571428571,
+      "a_meets_floor": true,
+      "b_meets_floor": false,
+      "a_precision": 1.0,
+      "a_recall": 1.0,
+      "b_precision": 0.75,
+      "b_recall": 1.0,
+      "delta_f1_b_minus_a": -0.1428571428571429
+    },
+    "CONCEPTUAL": {
+      "n": 6,
+      "consequence": "LOW",
+      "classifier_floor_prior": 0.7,
+      "a_f1": 0.9090909090909091,
+      "b_f1": 0.9090909090909091,
+      "a_meets_floor": true,
+      "b_meets_floor": true,
+      "a_precision": 1.0,
+      "a_recall": 0.8333333333333334,
+      "b_precision": 1.0,
+      "b_recall": 0.8333333333333334,
+      "delta_f1_b_minus_a": 0.0
+    }
+  },
+  "wrong_but_plausible": {
+    "a": {
+      "count": 0,
+      "queries": []
+    },
+    "b": {
+      "count": 2,
+      "queries": [
+        [
+          "R5",
+          "DISCOVERY",
+          "IDENTITY"
+        ],
+        [
+          "A4",
+          "CONCEPTUAL",
+          "SELF-REFERENCE"
+        ]
+      ]
+    }
+  },
+  "context_needed": {
+    "summary": {
+      "n_posthoc_flagged": 3,
+      "n_classifier_a_flagged": 1,
+      "n_classifier_b_flagged": 0,
+      "by_type": {
+        "conversational": 3,
+        "operational": 4,
+        "repository": 0
+      },
+      "posthoc_flagged_queries": [
+        "A1",
+        "A2",
+        "A3"
+      ]
+    },
+    "per_row": [
+      {
+        "query_id": "Q1",
+        "query_text": "How many spiders do we have",
+        "intended_family": "COUNT",
+        "secondary_family": null,
+        "classifier_a_output": "COUNT",
+        "classifier_b_output": "COUNT",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "Q2",
+        "query_text": "How many agents do we have",
+        "intended_family": "COUNT",
+        "secondary_family": null,
+        "classifier_a_output": "COUNT",
+        "classifier_b_output": "COUNT",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "Q3",
+        "query_text": "How many database models",
+        "intended_family": "COUNT",
+        "secondary_family": null,
+        "classifier_a_output": "COUNT",
+        "classifier_b_output": "COUNT",
+        "posthoc_context_needed": false,
+        "context_type": "operational"
+      },
+      {
+        "query_id": "Q4",
+        "query_text": "How many celery tasks",
+        "intended_family": "COUNT",
+        "secondary_family": null,
+        "classifier_a_output": "COUNT",
+        "classifier_b_output": "COUNT",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "Q5",
+        "query_text": "add a new spider to the network",
+        "intended_family": "PROCEDURAL",
+        "secondary_family": null,
+        "classifier_a_output": "PROCEDURAL",
+        "classifier_b_output": "PROCEDURAL",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "Q6",
+        "query_text": "list all spiders",
+        "intended_family": "DISCOVERY",
+        "secondary_family": null,
+        "classifier_a_output": "DISCOVERY",
+        "classifier_b_output": "DISCOVERY",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "Q7",
+        "query_text": "Group 2700 docs restructuring T1 audit",
+        "intended_family": "DISCOVERY",
+        "secondary_family": null,
+        "classifier_a_output": "UNCLASSIFIABLE",
+        "classifier_b_output": "UNCLASSIFIABLE",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "Q8",
+        "query_text": "00-START-NEXT-SESSION",
+        "intended_family": "SELF-REFERENCE",
+        "secondary_family": null,
+        "classifier_a_output": "SELF-REFERENCE",
+        "classifier_b_output": "SELF-REFERENCE",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "C1",
+        "query_text": "Colorado JDF form-selection intelligence",
+        "intended_family": "DISCOVERY",
+        "secondary_family": null,
+        "classifier_a_output": "AMBIGUOUS",
+        "classifier_b_output": "UNCLASSIFIABLE",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "C4",
+        "query_text": "2701_docs_inventory_topology_audit",
+        "intended_family": "IDENTITY",
+        "secondary_family": null,
+        "classifier_a_output": "IDENTITY",
+        "classifier_b_output": "IDENTITY",
+        "posthoc_context_needed": false,
+        "context_type": "conversational"
+      },
+      {
+        "query_id": "R1",
+        "query_text": "morning_brief workflow",
+        "intended_family": "DISCOVERY",
+        "secondary_family": null,
+        "classifier_a_output": "AMBIGUOUS",
+        "classifier_b_output": "UNCLASSIFIABLE",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "R2",
+        "query_text": "agent router",
+        "intended_family": "DISCOVERY",
+        "secondary_family": null,
+        "classifier_a_output": "AMBIGUOUS",
+        "classifier_b_output": "DISCOVERY",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "R3",
+        "query_text": "AgentDecisionSummary writer",
+        "intended_family": "DISCOVERY",
+        "secondary_family": null,
+        "classifier_a_output": "AMBIGUOUS",
+        "classifier_b_output": "UNCLASSIFIABLE",
+        "posthoc_context_needed": false,
+        "context_type": "conversational"
+      },
+      {
+        "query_id": "R4",
+        "query_text": "DecisionRecord boardroom",
+        "intended_family": "DISCOVERY",
+        "secondary_family": null,
+        "classifier_a_output": "AMBIGUOUS",
+        "classifier_b_output": "UNCLASSIFIABLE",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "R5",
+        "query_text": "BINDING DIRECTIVE",
+        "intended_family": "DISCOVERY",
+        "secondary_family": null,
+        "classifier_a_output": "DISCOVERY",
+        "classifier_b_output": "IDENTITY",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "P1",
+        "query_text": "how do I add a new PA tool",
+        "intended_family": "PROCEDURAL",
+        "secondary_family": null,
+        "classifier_a_output": "PROCEDURAL",
+        "classifier_b_output": "PROCEDURAL",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "P2",
+        "query_text": "how do I restart the celery workers",
+        "intended_family": "PROCEDURAL",
+        "secondary_family": null,
+        "classifier_a_output": "PROCEDURAL",
+        "classifier_b_output": "PROCEDURAL",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "P3",
+        "query_text": "regenerate the platform inventory",
+        "intended_family": "PROCEDURAL",
+        "secondary_family": null,
+        "classifier_a_output": "PROCEDURAL",
+        "classifier_b_output": "PROCEDURAL",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "I1",
+        "query_text": "CLAUDE.md",
+        "intended_family": "IDENTITY",
+        "secondary_family": null,
+        "classifier_a_output": "IDENTITY",
+        "classifier_b_output": "IDENTITY",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "I2",
+        "query_text": "PLATFORM_INVENTORY.md",
+        "intended_family": "IDENTITY",
+        "secondary_family": null,
+        "classifier_a_output": "IDENTITY",
+        "classifier_b_output": "IDENTITY",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "I3",
+        "query_text": "ENGINEERING_PLAYBOOK.md",
+        "intended_family": "IDENTITY",
+        "secondary_family": null,
+        "classifier_a_output": "IDENTITY",
+        "classifier_b_output": "IDENTITY",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "I4",
+        "query_text": "core/rag.py",
+        "intended_family": "IDENTITY",
+        "secondary_family": null,
+        "classifier_a_output": "IDENTITY",
+        "classifier_b_output": "IDENTITY",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "S1",
+        "query_text": "the next session start doc",
+        "intended_family": "SELF-REFERENCE",
+        "secondary_family": null,
+        "classifier_a_output": "SELF-REFERENCE",
+        "classifier_b_output": "SELF-REFERENCE",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "S2",
+        "query_text": "where do I read this project's rules",
+        "intended_family": "SELF-REFERENCE",
+        "secondary_family": null,
+        "classifier_a_output": "SELF-REFERENCE",
+        "classifier_b_output": "SELF-REFERENCE",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "K1",
+        "query_text": "what is the difference between an agent and an advisor",
+        "intended_family": "CONCEPTUAL",
+        "secondary_family": null,
+        "classifier_a_output": "CONCEPTUAL",
+        "classifier_b_output": "CONCEPTUAL",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "K2",
+        "query_text": "how does the knowledge pipeline work",
+        "intended_family": "CONCEPTUAL",
+        "secondary_family": null,
+        "classifier_a_output": "CONCEPTUAL",
+        "classifier_b_output": "CONCEPTUAL",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "K3",
+        "query_text": "explain the body systems",
+        "intended_family": "CONCEPTUAL",
+        "secondary_family": null,
+        "classifier_a_output": "CONCEPTUAL",
+        "classifier_b_output": "CONCEPTUAL",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "K4",
+        "query_text": "why do we have both PLATFORM_WHAT_IT_IS and PLATFORM_INVENTORY",
+        "intended_family": "CONCEPTUAL",
+        "secondary_family": null,
+        "classifier_a_output": "CONCEPTUAL",
+        "classifier_b_output": "CONCEPTUAL",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "K5",
+        "query_text": "what does IS-ness versus aboutness mean in retrieval",
+        "intended_family": "CONCEPTUAL",
+        "secondary_family": null,
+        "classifier_a_output": "CONCEPTUAL",
+        "classifier_b_output": "CONCEPTUAL",
+        "posthoc_context_needed": false,
+        "context_type": null
+      },
+      {
+        "query_id": "A1",
+        "query_text": "how many models",
+        "intended_family": "COUNT",
+        "secondary_family": "CONCEPTUAL",
+        "classifier_a_output": "COUNT",
+        "classifier_b_output": "COUNT",
+        "posthoc_context_needed": true,
+        "context_type": "operational"
+      },
+      {
+        "query_id": "A2",
+        "query_text": "spider network",
+        "intended_family": "DISCOVERY",
+        "secondary_family": "CONCEPTUAL",
+        "classifier_a_output": "AMBIGUOUS",
+        "classifier_b_output": "DISCOVERY",
+        "posthoc_context_needed": true,
+        "context_type": "operational"
+      },
+      {
+        "query_id": "A3",
+        "query_text": "session 2821",
+        "intended_family": "IDENTITY",
+        "secondary_family": "DISCOVERY",
+        "classifier_a_output": "AMBIGUOUS",
+        "classifier_b_output": "UNCLASSIFIABLE",
+        "posthoc_context_needed": true,
+        "context_type": "operational"
+      },
+      {
+        "query_id": "A4",
+        "query_text": "the current one",
+        "intended_family": "CONCEPTUAL",
+        "secondary_family": null,
+        "classifier_a_output": "CONTEXT_NEEDED",
+        "classifier_b_output": "SELF-REFERENCE",
+        "posthoc_context_needed": false,
+        "context_type": "conversational"
+      }
+    ]
+  },
+  "provenance_tier_stratified_accuracy": {
+    "P1": {
+      "n": 5,
+      "a_accuracy": 0.2,
+      "b_accuracy": 0.2
+    },
+    "P2": {
+      "n": 10,
+      "a_accuracy": 0.8,
+      "b_accuracy": 0.8
+    },
+    "P3": {
+      "n": 18,
+      "a_accuracy": 0.8333333333333334,
+      "b_accuracy": 0.8888888888888888
+    }
+  },
+  "gate_calibration_recommendations": {
+    "COUNT": "prior 0.90 met (max observed 1.00); keep or tighten",
+    "PROCEDURAL": "prior 0.75 met (max observed 1.00); keep or tighten",
+    "DISCOVERY": "prior 0.70 SEVERELY missed (max 0.50); classifier fundamentally weak on this family",
+    "IDENTITY": "prior 0.90 met (max observed 0.91); keep or tighten",
+    "SELF-REFERENCE": "prior 0.90 met (max observed 1.00); keep or tighten",
+    "CONCEPTUAL": "prior 0.70 met (max observed 0.91); keep or tighten"
+  },
+  "collapse_candidates_b": {
+    "identity_to_doc_locate": {
+      "n_identity_rows": 6,
+      "n_predicted_as_doc_locate": 5,
+      "collapse_support": 0.8333333333333334
+    },
+    "selfref_to_doc_locate": {
+      "n_selfref_rows": 3,
+      "n_predicted_as_doc_locate": 0,
+      "collapse_support": 0.0
+    }
+  },
+  "point_vs_locate_b": {
+    "point_hits": 4,
+    "locate_hits": 8,
+    "point_distinct": true
+  },
+  "raw_a": {
+    "classifier": "A_flat",
+    "corpus_path": "/Users/donkeyking/development/unified-donkey-betz/docs/research/discovery_layer/PHASE_0/corpus.json",
+    "n_rows": 33,
+    "per_family": {
+      "COUNT": {
+        "n_intended": 5,
+        "tp": 5,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "PROCEDURAL": {
+        "n_intended": 4,
+        "tp": 4,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "DISCOVERY": {
+        "n_intended": 9,
+        "tp": 2,
+        "fp": 0,
+        "fn": 7,
+        "precision": 1.0,
+        "recall": 0.2222222222222222,
+        "f1": 0.3636363636363636
+      },
+      "IDENTITY": {
+        "n_intended": 6,
+        "tp": 5,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1.0,
+        "recall": 0.8333333333333334,
+        "f1": 0.9090909090909091
+      },
+      "SELF-REFERENCE": {
+        "n_intended": 3,
+        "tp": 3,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "CONCEPTUAL": {
+        "n_intended": 6,
+        "tp": 5,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1.0,
+        "recall": 0.8333333333333334,
+        "f1": 0.9090909090909091
+      }
+    },
+    "ambiguous_rate": 0.21212121212121213,
+    "unclassifiable_rate": 0.030303030303030304,
+    "context_needed_rate": 0.030303030303030304,
+    "hli_derivation_accuracy": 0.8787878787878788,
+    "wrong_but_plausible_count": 0,
+    "wrong_but_plausible_queries": []
+  },
+  "raw_b": {
+    "classifier": "B_two_axis",
+    "corpus_path": "/Users/donkeyking/development/unified-donkey-betz/docs/research/discovery_layer/PHASE_0/corpus.json",
+    "n_rows": 33,
+    "per_family": {
+      "COUNT": {
+        "n_intended": 5,
+        "tp": 5,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "PROCEDURAL": {
+        "n_intended": 4,
+        "tp": 4,
+        "fp": 0,
+        "fn": 0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0
+      },
+      "DISCOVERY": {
+        "n_intended": 9,
+        "tp": 3,
+        "fp": 0,
+        "fn": 6,
+        "precision": 1.0,
+        "recall": 0.3333333333333333,
+        "f1": 0.5
+      },
+      "IDENTITY": {
+        "n_intended": 6,
+        "tp": 5,
+        "fp": 1,
+        "fn": 1,
+        "precision": 0.8333333333333334,
+        "recall": 0.8333333333333334,
+        "f1": 0.8333333333333334
+      },
+      "SELF-REFERENCE": {
+        "n_intended": 3,
+        "tp": 3,
+        "fp": 1,
+        "fn": 0,
+        "precision": 0.75,
+        "recall": 1.0,
+        "f1": 0.8571428571428571
+      },
+      "CONCEPTUAL": {
+        "n_intended": 6,
+        "tp": 5,
+        "fp": 0,
+        "fn": 1,
+        "precision": 1.0,
+        "recall": 0.8333333333333334,
+        "f1": 0.9090909090909091
+      }
+    },
+    "ambiguous_rate": 0.0,
+    "unclassifiable_rate": 0.18181818181818182,
+    "context_needed_rate": 0.0,
+    "hli_derivation_accuracy": 0.8787878787878788,
+    "wrong_but_plausible_count": 2,
+    "wrong_but_plausible_queries": [
+      [
+        "R5",
+        "DISCOVERY",
+        "IDENTITY"
+      ],
+      [
+        "A4",
+        "CONCEPTUAL",
+        "SELF-REFERENCE"
+      ]
+    ],
+    "collapse_candidate_identity_doc_locate": {
+      "n_identity_rows": 6,
+      "n_predicted_as_doc_locate": 5,
+      "collapse_support": 0.8333333333333334
+    },
+    "collapse_candidate_selfref_doc_locate": {
+      "n_selfref_rows": 3,
+      "n_predicted_as_doc_locate": 0,
+      "collapse_support": 0.0
+    },
+    "point_vs_locate": {
+      "point_hits": 4,
+      "locate_hits": 8,
+      "point_distinct": true
+    }
+  },
+  "a_confusion": {
+    "AMBIGUOUS": {
+      "AMBIGUOUS": 0,
+      "CONCEPTUAL": 0,
+      "CONTEXT_NEEDED": 0,
+      "COUNT": 0,
+      "DISCOVERY": 0,
+      "IDENTITY": 0,
+      "PROCEDURAL": 0,
+      "SELF-REFERENCE": 0,
+      "UNCLASSIFIABLE": 0
+    },
+    "CONCEPTUAL": {
+      "AMBIGUOUS": 0,
+      "CONCEPTUAL": 5,
+      "CONTEXT_NEEDED": 1,
+      "COUNT": 0,
+      "DISCOVERY": 0,
+      "IDENTITY": 0,
+      "PROCEDURAL": 0,
+      "SELF-REFERENCE": 0,
+      "UNCLASSIFIABLE": 0
+    },
+    "CONTEXT_NEEDED": {
+      "AMBIGUOUS": 0,
+      "CONCEPTUAL": 0,
+      "CONTEXT_NEEDED": 0,
+      "COUNT": 0,
+      "DISCOVERY": 0,
+      "IDENTITY": 0,
+      "PROCEDURAL": 0,
+      "SELF-REFERENCE": 0,
+      "UNCLASSIFIABLE": 0
+    },
+    "COUNT": {
+      "AMBIGUOUS": 0,
+      "CONCEPTUAL": 0,
+      "CONTEXT_NEEDED": 0,
+      "COUNT": 5,
+      "DISCOVERY": 0,
+      "IDENTITY": 0,
+      "PROCEDURAL": 0,
+      "SELF-REFERENCE": 0,
+      "UNCLASSIFIABLE": 0
+    },
+    "DISCOVERY": {
+      "AMBIGUOUS": 6,
+      "CONCEPTUAL": 0,
+      "CONTEXT_NEEDED": 0,
+      "COUNT": 0,
+      "DISCOVERY": 2,
+      "IDENTITY": 0,
+      "PROCEDURAL": 0,
+      "SELF-REFERENCE": 0,
+      "UNCLASSIFIABLE": 1
+    },
+    "IDENTITY": {
+      "AMBIGUOUS": 1,
+      "CONCEPTUAL": 0,
+      "CONTEXT_NEEDED": 0,
+      "COUNT": 0,
+      "DISCOVERY": 0,
+      "IDENTITY": 5,
+      "PROCEDURAL": 0,
+      "SELF-REFERENCE": 0,
+      "UNCLASSIFIABLE": 0
+    },
+    "PROCEDURAL": {
+      "AMBIGUOUS": 0,
+      "CONCEPTUAL": 0,
+      "CONTEXT_NEEDED": 0,
+      "COUNT": 0,
+      "DISCOVERY": 0,
+      "IDENTITY": 0,
+      "PROCEDURAL": 4,
+      "SELF-REFERENCE": 0,
+      "UNCLASSIFIABLE": 0
+    },
+    "SELF-REFERENCE": {
+      "AMBIGUOUS": 0,
+      "CONCEPTUAL": 0,
+      "CONTEXT_NEEDED": 0,
+      "COUNT": 0,
+      "DISCOVERY": 0,
+      "IDENTITY": 0,
+      "PROCEDURAL": 0,
+      "SELF-REFERENCE": 3,
+      "UNCLASSIFIABLE": 0
+    },
+    "UNCLASSIFIABLE": {
+      "AMBIGUOUS": 0,
+      "CONCEPTUAL": 0,
+      "CONTEXT_NEEDED": 0,
+      "COUNT": 0,
+      "DISCOVERY": 0,
+      "IDENTITY": 0,
+      "PROCEDURAL": 0,
+      "SELF-REFERENCE": 0,
+      "UNCLASSIFIABLE": 0
+    }
+  },
+  "b_confusion": {
+    "CONCEPTUAL": {
+      "CONCEPTUAL": 5,
+      "COUNT": 0,
+      "DISCOVERY": 0,
+      "IDENTITY": 0,
+      "PROCEDURAL": 0,
+      "SELF-REFERENCE": 1,
+      "UNCLASSIFIABLE": 0
+    },
+    "COUNT": {
+      "CONCEPTUAL": 0,
+      "COUNT": 5,
+      "DISCOVERY": 0,
+      "IDENTITY": 0,
+      "PROCEDURAL": 0,
+      "SELF-REFERENCE": 0,
+      "UNCLASSIFIABLE": 0
+    },
+    "DISCOVERY": {
+      "CONCEPTUAL": 0,
+      "COUNT": 0,
+      "DISCOVERY": 3,
+      "IDENTITY": 1,
+      "PROCEDURAL": 0,
+      "SELF-REFERENCE": 0,
+      "UNCLASSIFIABLE": 5
+    },
+    "IDENTITY": {
+      "CONCEPTUAL": 0,
+      "COUNT": 0,
+      "DISCOVERY": 0,
+      "IDENTITY": 5,
+      "PROCEDURAL": 0,
+      "SELF-REFERENCE": 0,
+      "UNCLASSIFIABLE": 1
+    },
+    "PROCEDURAL": {
+      "CONCEPTUAL": 0,
+      "COUNT": 0,
+      "DISCOVERY": 0,
+      "IDENTITY": 0,
+      "PROCEDURAL": 4,
+      "SELF-REFERENCE": 0,
+      "UNCLASSIFIABLE": 0
+    },
+    "SELF-REFERENCE": {
+      "CONCEPTUAL": 0,
+      "COUNT": 0,
+      "DISCOVERY": 0,
+      "IDENTITY": 0,
+      "PROCEDURAL": 0,
+      "SELF-REFERENCE": 3,
+      "UNCLASSIFIABLE": 0
+    },
+    "UNCLASSIFIABLE": {
+      "CONCEPTUAL": 0,
+      "COUNT": 0,
+      "DISCOVERY": 0,
+      "IDENTITY": 0,
+      "PROCEDURAL": 0,
+      "SELF-REFERENCE": 0,
+      "UNCLASSIFIABLE": 0
+    }
+  }
+}
