@@ -12,6 +12,18 @@ const CASE_TYPE_OPTIONS = [
   { value: 'other', label: 'Other' },
 ] as const
 
+interface AttorneyForm {
+  full_name: string
+  firm_name: string
+  address: string
+  city: string
+  state: string
+  zip_code: string
+  phone: string
+  email: string
+  bar_number: string
+}
+
 interface PartyForm {
   full_name: string
   address: string
@@ -21,6 +33,7 @@ interface PartyForm {
   phone: string
   email: string
   is_pro_se: boolean
+  attorney: AttorneyForm | null
 }
 
 interface ChildForm {
@@ -50,6 +63,18 @@ interface CreateCaseWizardModalProps {
   submitting?: boolean
 }
 
+const EMPTY_ATTORNEY: AttorneyForm = {
+  full_name: '',
+  firm_name: '',
+  address: '',
+  city: '',
+  state: '',
+  zip_code: '',
+  phone: '',
+  email: '',
+  bar_number: '',
+}
+
 const EMPTY_PARTY: PartyForm = {
   full_name: '',
   address: '',
@@ -59,6 +84,7 @@ const EMPTY_PARTY: PartyForm = {
   phone: '',
   email: '',
   is_pro_se: true,
+  attorney: null,
 }
 
 function buildInitialPayload(): CasePayload {
@@ -160,11 +186,92 @@ function PartySection({
         <input
           type="checkbox"
           checked={party.is_pro_se}
-          onChange={(e) => onChange({ is_pro_se: e.target.checked })}
+          onChange={(e) => {
+            const nextProSe = e.target.checked
+            onChange({
+              is_pro_se: nextProSe,
+              attorney: nextProSe ? null : { ...EMPTY_ATTORNEY },
+            })
+          }}
           className="h-4 w-4"
         />
         Representing self (pro se)
       </label>
+      {!party.is_pro_se && party.attorney && (
+        <AttorneySection
+          attorney={party.attorney}
+          onChange={(patch) =>
+            onChange({ attorney: { ...(party.attorney as AttorneyForm), ...patch } })
+          }
+        />
+      )}
+    </div>
+  )
+}
+
+function AttorneySection({
+  attorney, onChange,
+}: {
+  attorney: AttorneyForm
+  onChange: (patch: Partial<AttorneyForm>) => void
+}) {
+  return (
+    <div className="mt-3 rounded border border-dark-border bg-dark-bg-alt/40 p-3 space-y-3">
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+        Attorney details
+      </h4>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <TextInput
+          label="Attorney full name"
+          value={attorney.full_name}
+          onChange={(v) => onChange({ full_name: v })}
+          required
+        />
+        <TextInput
+          label="Firm name"
+          value={attorney.firm_name}
+          onChange={(v) => onChange({ firm_name: v })}
+        />
+        <TextInput
+          label="Email"
+          type="email"
+          value={attorney.email}
+          onChange={(v) => onChange({ email: v })}
+        />
+        <TextInput
+          label="Phone"
+          value={attorney.phone}
+          onChange={(v) => onChange({ phone: v })}
+        />
+        <TextInput
+          label="Address"
+          value={attorney.address}
+          onChange={(v) => onChange({ address: v })}
+        />
+        <TextInput
+          label="City"
+          value={attorney.city}
+          onChange={(v) => onChange({ city: v })}
+        />
+        <div className="grid grid-cols-2 gap-3">
+          <TextInput
+            label="State"
+            value={attorney.state}
+            onChange={(v) => onChange({ state: v })}
+          />
+          <TextInput
+            label="Zip"
+            value={attorney.zip_code}
+            onChange={(v) => onChange({ zip_code: v })}
+          />
+        </div>
+        <TextInput
+          label="Bar number"
+          value={attorney.bar_number}
+          onChange={(v) => onChange({ bar_number: v })}
+          placeholder="e.g. 12345 (if known)"
+        />
+      </div>
     </div>
   )
 }
@@ -232,9 +339,29 @@ export default function CreateCaseWizardModal({
       setError('Respondent name is required.')
       return
     }
+    if (!payload.petitioner.is_pro_se && !payload.petitioner.attorney?.full_name.trim()) {
+      setError('Petitioner attorney name is required when petitioner is represented.')
+      return
+    }
+    if (!payload.respondent.is_pro_se && !payload.respondent.attorney?.full_name.trim()) {
+      setError('Respondent attorney name is required when respondent is represented.')
+      return
+    }
     setError(null)
+    // Rigby SIGN Q3 mitigation: strip attorney sub-object when full_name is
+    // empty OR party is pro se, so the backend never receives a stray empty
+    // attorney: {} that would create a hollow row via Attorney.objects.create.
+    const sanitizeParty = (p: PartyForm): PartyForm =>
+      p.is_pro_se || !p.attorney?.full_name.trim()
+        ? { ...p, attorney: null }
+        : p
+    const cleanPayload: CasePayload = {
+      ...payload,
+      petitioner: sanitizeParty(payload.petitioner),
+      respondent: sanitizeParty(payload.respondent),
+    }
     try {
-      await onSubmit(payload)
+      await onSubmit(cleanPayload)
       setPayload(buildInitialPayload())
     } catch (err) {
       const anyErr = err as { response?: { data?: { error?: string } }; message?: string }
