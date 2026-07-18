@@ -2,34 +2,38 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2817 CLOSED (night close 2026-07-18; picks up as S2818) — **GROUP 2700 ARC CLOSED**
+## READ THIS FIRST — SESSION 2818 CLOSED (afternoon close 2026-07-18; picks up as S2819) — **DISCOVERY-LAYER PILOT SHIPPED WITH LIMITATION**
 
-**Refreshed 2026-07-18 night (SESSION 2817 CLOSED — TWENTY-FIRST-consecutive same-day multi-ship session and NINE-CLOSE-CASCADE day: S2809-S2817 all closed 2026-07-18. **GROUP 2700 /docs/ RESTRUCTURING ARC CLOSED** with 2799 canonical summary (PR #3251 `4f67e9544`, +390 LOC). Twin-pointer discipline executed: repo doc + workspace deliverable UUID `37d6ca76-89c3-4966-8f4c-decc52ce8169` in Donkey Betz workspace via ORM-direct bypass of `pa_deliverables_tool` diagnostic-flag bug. Arc timeline: S2800 directive (2026-07-16) → S2801 parent → 14 Colorado sessions bumped → S2811-S2816 T1-T6 → **S2817 canonical summary (arc close, this session)**. 17 calendar sessions; 8 same-day arc-close sessions. **SEVENTH-CONSECUTIVE OP3 TRIGGER — 7/7 across ENTIRE arc.** 2799 §8 has 8-item follow-on queue for post-close migration + amendments. SIXTY-FIRST close-cycle post-PLAYBOOK-7.4.4.**
+**Refreshed 2026-07-18 afternoon (SESSION 2818 CLOSED — first post-Group-2700-arc-close session. Executed 2799 §8 item #1 as a discovery-layer authority-boost pilot for `docs/PLATFORM_INVENTORY.md`. Feature PR #3253 (`90ab139a9`, +372 LOC across 3 files). Primary success criterion met (T3 C5 fixed — counts queries now surface PLATFORM_INVENTORY.md#1/#2/#3); ships with documented known regression on non-counts how-to queries (result-set monoculture: 59 chunks × per-chunk bonus floods ranker on weak-overlap queries). Chris ratified ship-with-limitation path; Shape C query-intent gating queued as next arc. **EIGHTH-CONSECUTIVE OP3 TRIGGER — first in pilot-shape session, extends Group 2700 S2811-S2817 7/7 audit-shape streak into cross-shape generality evidence.** SIXTY-SECOND close-cycle post-PLAYBOOK-7.4.4.**
 
-**S2817 ship (1 PR, merged with --admin):**
+**S2818 ship (1 feature PR + 1 close cascade PR, both merged with --admin):**
 
 | Focus | PR | Merged to | Files |
 |---|---|---|---|
-| Group 2700 2799 canonical summary (arc close) | **#3251** · `4f67e9544` | main | `docs/research/domains/docs_restructuring/2799_docs_restructuring_canonical_summary.md` (+390 LOC, new) |
+| Discovery-layer authority-boost pilot (2799 §8 item #1) | **#3253** · `90ab139a9` | main | `core/rag.py` (mod), `core/tests/test_rag_authority_boost_2818.py` (new), `docs/research/implementation/RATIFICATION_2026-07-18_s2818_...md` (new envelope) |
+| Close cascade | **#TBD** · (SHA at merge) | main | handoff + start-here + pin rotation + docs pipeline |
 
-**Handoff:** `docs/handoffs/SESSION_2817_GROUP_2700_2799_CANONICAL_SUMMARY.md`
-**Twin-pointer deliverable:** UUID `37d6ca76-89c3-4966-8f4c-decc52ce8169` in Donkey Betz workspace (`b4503364-2573-4401-9e28-61a739e0ce50`)
+**Handoff:** `docs/handoffs/SESSION_2818_DISCOVERY_LAYER_PILOT.md`
+**Envelope:** `docs/research/implementation/RATIFICATION_2026-07-18_s2818_platform_inventory_authority_boost_pilot.md` (frozen at merge per PLAYBOOK-6.10.9)
 **Close cascade:** merged as [close-cascade PR] per PLAYBOOK-7.4.4.
-**Ledger state at close:** `logs/zoom_out_classifications.jsonl` — **114 rows** (unchanged all day).
+**Ledger state at close:** `logs/zoom_out_classifications.jsonl` — 114 rows unchanged this session (ledger appends deferred to Shape C arc where new folds become concrete triggers).
 
-**Arc state at S2817 close:**
+**Arc state at S2818 close:**
 - **Colorado Family Law** — Phases 0/1/2/2.1/3.0/3.1 P0/3.1a/3.1 P1 (Lesson-3 hardened)/3.2 (+attorney sub-form)/3.1 P1.b/4a ✅. All prior candidates queued.
-- **Group 2700 /docs/ restructuring — ARC CLOSED.** Parent ✅ + T1-T6 ✅ + 2799 ✅ + twin-pointer ✅. Migration executes post-close per 2799 §7+§8 in follow-up sessions.
+- **Group 2700 /docs/ restructuring — ARC CLOSED** (S2817). Follow-on queue advancing: **item #1 SHIPPED** (with limitation); Shape C follow-on now #1 in queue.
 
 ---
 
-## S2818 CANDIDATES — ARC CLOSED; SELECT FROM 2799 §8 QUEUE
+## S2819 CANDIDATES — SHAPE C IS TOP OF QUEUE
 
-### ⭐ From 2799 §8 follow-on queue (ranked by architectural uncertainty × risk × unblocked flows)
+### ⭐ Chris-ratified next arc (from S2818 envelope §6)
 
-1. **⭐ Discovery-layer enforcement for DOC_LIFECYCLE §2c** — pilot 1-doc retrieval-weight boost for PLATFORM_INVENTORY.md; measure post-boost success@3 rate on T3 (c) scenarios. HIGH architectural leverage; addresses T3 C5 finding directly; smallest bounded scope (1-doc pilot with measurable outcome).
+1. **⭐ Shape C — query-intent gating** (recommended default). Direct next iteration of S2818 pilot. Smallest next mechanism: add count-intent heuristic (regex on "how many" / "count of" / "total" / "number of" / etc.) as a gate around `_authority_bonus` invocation in `core/rag.py`. Success criterion: Q1-Q4 counts queries still return PLATFORM_INVENTORY.md in top-3 AND Q5 "add a new spider to the network" returns `docs/topics/spider-network.md` to top-3 (the T3 B1 intended target). Same 5-query batch as S2818 pre/post measurements — direct comparison possible.
+
+### From 2799 §8 remaining queue
+
 2. **HIGH-DRIFT rule canonicalization** (Rules #4/#5/#14 per T6) — pilot MQ-T6-8 actionable standard on S1300 §3F (genuinely stale). MEDIUM scope.
-3. **Playbook v0.9 amendment (OP3 codification)** — 7/7 triggers over-corroborated; short-scope proposal-only arc.
+3. **Playbook v0.9 amendment (OP3 codification)** — 8/8 triggers now including S2818 first cross-shape datapoint. Well past codification threshold.
 4. **Parent §4 T5 clause update** per T5 MQ-T5-8 — requires Chris re-ratification per parent §5 Chris-lock. LOW scope.
 5. **File moves per 2799 §3 target tree** — pilot `docs/adr/` → `docs/decisions/` (smallest scope + real convention collision per T3 B3).
 6. **Per-handoff citation_health verification for S2500-2600 range** — 10-doc pilot.
@@ -43,31 +47,31 @@
 - **Phase 5.1** — un-punt Session 534 spider AJAX
 - **GPT fallback for form-selection** on low-confidence
 
-### Non-Colorado / non-2700 arcs
+### Non-2700/non-Colorado
 
 - **BettingPage first-user trace**
-- **Stock Intelligence**
+- **Stock Intelligence** — end-to-end verify
 
-**Recommended default:** Item #1 discovery-layer enforcement — highest architectural leverage; smallest bounded pilot; directly addresses T3 C5's catastrophic finding (archived Oct 2025 morning report outranks canonical PLATFORM_INVENTORY.md for count queries).
+**Recommended default:** Shape C. It closes the loop on S2818's known regression before compounding more discovery-layer work; Chris explicitly ratified it as this pilot's follow-on; substrate is fresh in context; same measurement batch reusable for direct pre/post comparison.
 
 ---
 
-## SESSION PIN — S2817 RETIRED (fresh mint required at S2818 open)
+## SESSION PIN — S2818 RETIRED (fresh mint required at S2819 open)
 
-**Pin history (S2817):**
+**Pin history (S2818):**
 
-- `pa-fee015be9a424576` (label `s2817-group-2700-2799-canonical-summary`) minted at S2817 open; **retired at S2817 close (`force=true`, forty-eighth consecutive per S2770+ pattern)**
+- `pa-43db3c9851764ee7` (label `s2818-discovery-layer-pilot`) minted at S2818 open; **retired at S2818 close (`force=true`, forty-ninth consecutive per S2770+ pattern)**
 
-**Wrapper `tools/pa_local.sh` still points at retired pin** — intended failure mode forces S2818 first-action fresh mint.
+**Wrapper `tools/pa_local.sh` still points at retired pin** — intended failure mode forces S2819 first-action fresh mint.
 
-**S2818 open sequence:**
+**S2819 open sequence:**
 
 ```
 context-kit orient
 
 # Read this file end-to-end
-# Read S2817 handoff — §3 (novel-precedent), §6 (candidates)
-# If continuing 2799 follow-on queue: also read 2799 §7+§8
+# Read S2818 handoff — §3 (novel-precedent — first pilot-shape OP3 + first measured-regression ratification), §5 (ledger + provenance), §6 (candidates for S2819)
+# If continuing Shape C: also read S2818 envelope §5 (Limitations) + §6 (Follow-On Queue)
 
 # Sanity checks
 brew services list | grep postgres
@@ -81,98 +85,89 @@ assert r['total_rows']==114, r
 print('OK — 114 rows, counts:', r['counts_by_classification'])
 "
 
-python manage.py session_lifecycle open --label s2818-<direction>
+python manage.py session_lifecycle open --label s2819-<direction>
 grep '^python tools/pa_chat.py' tools/pa_local.sh
 ```
 
-**S2817 lessons to carry:**
+**S2818 lessons to carry:**
 
-1. **Group 2700 arc closed in ONE DAY** — parent + all children + canonical summary. First multi-child arc to close in a single day. Enabled by: OP3 two-SIGN pattern catching errors early, Rigby-as-first-class-evidence-source methodology, precision-qualifier discipline, sustained scope discipline (zero folds persisted).
-2. **OP3 pattern is 7/7 across ENTIRE arc.** Empirically saturated across every possible session shape. Playbook v0.9 amendment WELL over-corroborated.
-3. **Twin-pointer discipline executed live in-session** via ORM-direct bypass. Prior arcs deferred workspace deliverable to post-arc; S2817 created UUID `37d6ca76-...` during close cascade.
-4. **Canonical summary is SYNTHESIS not re-audit.** Per Playbook §10 anti-scope: don't re-litigate T1-T6 evidence; don't create implementation plan; don't invent new taxonomies without anchors. 2799 respected all three per Rigby SIGN Q3 zoom-out.
-5. **PROPOSED, not RATIFIED.** Rigby SIGN Q4 caught status framing risk. 2799 is PROPOSED pending Chris ratification. Migration executes only after ratification cycle.
-6. **Compatibility-first for generator/runtime paths.** DOC_LIFECYCLE §2b + T2 FP-META HARD guardrail + 2799 §8 item #8 all interlock: no mass-move can proceed without per-PR verification that runtime-coupled + autogen invariants hold.
+1. **Static per-chunk magnitude on token-overlap RAG scorers is a compromise, not a solution.** PLATFORM_INVENTORY.md's 59 chunks × per-chunk bonus flooded the ranker at both +20 and +8. This ceiling is architectural — attempting further static-magnitude tuning is empirically closed.
+2. **OP3 empirical monoculture finding required post-authoring measurement** — open SIGN could not have surfaced it. Reinforces OP3 cross-shape value beyond audit sessions (first pilot-shape trigger).
+3. **Ratification of measured regressions is a valid pattern.** Envelope §5 Limitations codifies the trade-off explicitly rather than hiding it. Makes the follow-on well-motivated.
+4. **Rigby stop-condition prevented open-ended magnitude iteration.** When +8 failed the same criterion +20 failed, the escalation path fired immediately.
+5. **`make celery-recycle` between measurement iterations is clean** — no session freshness drift between +20 and +8 measurements; workers picked up code in both cycles.
+6. **Twin-pointer deliverable for pilots** — envelope in `docs/research/implementation/` + optional workspace mirror. S2818 workspace mirror deferred pending workspace-scoped ratification decision (pilots have lighter-weight workspace footprint than arc-scoped envelopes).
 
 ---
 
 ## Twin-pointer card
 
-📁 **Repo — S2817 artifacts:**
+📁 **Repo — S2818 artifacts:**
 
-- **PR (1, merged):** #3251 (2799 canonical summary · `4f67e9544`)
-- **Substrate change:** `docs/research/domains/docs_restructuring/2799_docs_restructuring_canonical_summary.md` — new (+390 LOC)
-- **Handoff:** `docs/handoffs/SESSION_2817_GROUP_2700_2799_CANONICAL_SUMMARY.md`
-- **Ledger:** `logs/zoom_out_classifications.jsonl` — **114 rows** (unchanged all day)
-- **Merge SHA:** `4f67e9544` (2799) → close-cascade SHA filled at merge
+- **Feature PR (1, merged):** #3253 (S2818 authority-boost pilot · `90ab139a9`)
+- **Close cascade PR:** #TBD (SHA at merge)
+- **Substrate changes:** `core/rag.py` (mod), `core/tests/test_rag_authority_boost_2818.py` (new), `docs/research/implementation/RATIFICATION_2026-07-18_s2818_platform_inventory_authority_boost_pilot.md` (new envelope)
+- **Handoff:** `docs/handoffs/SESSION_2818_DISCOVERY_LAYER_PILOT.md`
+- **Ledger:** `logs/zoom_out_classifications.jsonl` — 114 rows (unchanged this session)
+- **Merge SHA:** `90ab139a9` (feature) → close-cascade SHA filled at merge
 
-🖥️ **Workspace UI — twin-pointer deliverable:**
-
-- **Donkey Betz workspace** (`b4503364-2573-4401-9e28-61a739e0ce50`) contains twin-pointer deliverable **UUID `37d6ca76-89c3-4966-8f4c-decc52ce8169`**
-  - `deliverable_type: canonical_summary`
-  - `category: research`
-  - `diagnostic_status: (empty — ORM-direct bypass of pa_deliverables_tool bug)`
-  - Discoverable via `deliverable_tool.list workspace_id=b4503364-...` OR ORM `Deliverable.objects.get(id='37d6ca76-...')`
+🖥️ **Workspace UI — S2818 has NO twin-pointer workspace deliverable this session** — pilots with `authority: ratification-record` in `docs/research/implementation/` are already discoverable via the envelope's frontmatter; separate workspace mirror deferred per lighter-footprint pilot pattern. Group 2700 arc's workspace deliverable (`37d6ca76-89c3-4966-8f4c-decc52ce8169`) remains authoritative for the whole /docs/ restructuring arc; this pilot is a §8 item execution under that arc.
 
 ---
 
-## Current repository state (S2817 close)
+## Current repository state (S2818 close)
 
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | S2817 close cascade — advances at cascade PR merge |
-| Playbook version | v0.8.0 (unchanged; **v0.9 amendment WELL past threshold — 7/7 OP3 triggers**) |
+| HEAD | S2818 close cascade — advances at cascade PR merge |
+| Playbook version | v0.8.0 (unchanged; **v0.9 amendment 8/8 corroborated across shapes**) |
 | Playbook rule count | 205 (unchanged) |
 | Colorado arc state | Phases 0/1/2/2.1/3.0/3.1 P0/3.1a/3.1 P1 (Lesson-3 hardened)/3.2 (+attorney sub-form)/3.1 P1.b/4a ✅. All prior candidates queued. |
-| **Group 2700 arc state** | **ARC CLOSED.** Parent ✅ / T1 ✅ / T2 ✅ / T3 ✅ / T4 ✅ / T5 ✅ / T6 ✅ / **2799 ✅** / twin-pointer ✅. Migration executes post-close per 2799 §7+§8. |
-| Emergent candidates | 2799 §8 has 8-item follow-on queue; Playbook v0.9 amendment separate arc; parent §4 T5 clause update requires Chris re-ratification |
-| Session pin | `pa-fee015be9a424576` (retired at S2817 close, force=true, forty-eighth consecutive) |
-| Wrapper default pin | `tools/pa_local.sh` — retired pin (forces fresh mint at S2818 open) |
+| **Group 2700 arc state** | **ARC CLOSED (S2817).** §8 follow-on queue item #1 SHIPPED at S2818 with documented limitation. Shape C queued as next arc from envelope §6. |
+| Emergent candidates | Shape C intent-gating (top); Playbook v0.9 amendment (8/8); remaining 2799 §8 items |
+| Session pin | `pa-43db3c9851764ee7` (retired at S2818 close, force=true, forty-ninth consecutive) |
+| Wrapper default pin | `tools/pa_local.sh` — retired pin (forces fresh mint at S2819 open) |
 | Postgres :5432 | pg15 (July DB) — brew launchd `started` |
-| Freshness log | `logs/session_freshness.jsonl` — grew by 1 at S2817 open |
-| Recycle log | `logs/recycle_events.jsonl` — +18 today across S2809-S2817 (2 per session) |
-| Zoom-out ledger | `logs/zoom_out_classifications.jsonl` — **114 rows** (unchanged all day) |
-| /docs/ restructuring | **ARC CLOSED.** Twin-pointer created. Migration queue queued for post-close sessions. |
-| Next move | Chris picks from 2799 §8 follow-on queue OR Colorado / non-2700 candidates at S2818 open |
+| Freshness log | `logs/session_freshness.jsonl` — grew by 1 at S2818 open |
+| Recycle log | `logs/recycle_events.jsonl` — +2 in-session iterations (+20 tune / +8 tune) + 1 post-merge recycle + 1 close-cascade recycle to come |
+| Zoom-out ledger | `logs/zoom_out_classifications.jsonl` — 114 rows (unchanged this session) |
+| /docs/ restructuring | **ARC CLOSED (S2817).** Item #1 SHIPPED at S2818. Item #1 follow-on (Shape C) at top of S2819 queue. |
+| Next move | Chris picks direction at S2819 open — Shape C is Chris-ratified default from S2818 envelope §6 |
 
 ---
 
-## Recommended session-open protocol (S2818, fresh open)
+## Recommended session-open protocol (S2819, fresh open)
 
 1. `context-kit orient`
 2. Read this file end-to-end
-3. Read S2817 handoff §3 + §6
-4. **If continuing 2799 follow-on queue:** read 2799 §7 (anchor updates) + §8 (queue) for prioritization context
-5. Sanity checks (brew postgres + curl /health/ping/)
-6. Freshness + ledger 114 verify
-7. `git log --oneline -10` to see full day's PR run (18 PRs / 9 features/audits + 9 cascades)
-8. **Chris picks direction** — see §S2818 CANDIDATES
-9. Mint fresh pin scoped `s2818-<Chris's-direction>`
-10. **Anti-rubber-stamp check on first SIGN** — verify `tool_runs` non-empty
-11. Route scope through Rigby joint SIGN before authoring
-12. **For any arc-shape work:** OP3 two-SIGN pattern (7/7 across Group 2700; empirically saturated)
-13. **UPPER BOUND / precision qualifiers** required for count claims
-14. **PLAYBOOK-6.10.7 + 6.10.8 + 6.10.9 constitutional** at v0.8.0
-15. **Anchor-verify at every scope decision point** (15-session trend)
-16. **BEFORE any user-facing content:** read `docs/PLATFORM_WHAT_IT_IS.md`
+3. Read S2818 handoff §3 + §6
+4. **If continuing Shape C (default):** read S2818 envelope §5 (Limitations — regression concrete evidence) + §6 (Follow-On Queue) for design context
+5. Sanity checks (brew postgres + ledger 114 verify)
+6. `git log --oneline -5` — should show S2818 feature + cascade + S2817 chain
+7. **Chris picks direction** — Shape C is default; can override to Colorado / non-2700 / other
+8. Mint fresh pin scoped `s2819-<Chris's-direction>`
+9. **Anti-rubber-stamp check on first SIGN** — verify `tool_runs` non-empty
+10. Route scope through Rigby joint SIGN before authoring
+11. **For any implementation-shape work:** OP3 two-SIGN pattern (8/8 across shapes now; Shape C is another pilot-shape → tenth cross-shape datapoint)
+12. **UPPER BOUND / precision qualifiers** required for count claims
+13. **PLAYBOOK-6.10.7 + 6.10.8 + 6.10.9 constitutional** at v0.8.0
+14. **Anchor-verify at every scope decision point** (16-session trend)
+15. **BEFORE any user-facing content:** read `docs/PLATFORM_WHAT_IT_IS.md`
 
 ---
 
 ## Reference documents
 
-Ordered by frequency of use at S2818:
+Ordered by frequency of use at S2819:
 
 1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap
-2. [`docs/handoffs/SESSION_2817_GROUP_2700_2799_CANONICAL_SUMMARY.md`](docs/handoffs/SESSION_2817_GROUP_2700_2799_CANONICAL_SUMMARY.md) — **S2817 handoff (current)**
-3. [`docs/research/domains/docs_restructuring/2799_docs_restructuring_canonical_summary.md`](docs/research/domains/docs_restructuring/2799_docs_restructuring_canonical_summary.md) — **arc-close deliverable; §7 anchor updates + §8 follow-on queue for post-close prioritization**
-4. [`docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md`](docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md) — parent (Chris-locked S2801)
-5. [`docs/research/domains/docs_restructuring/2701_docs_inventory_topology_audit.md`](docs/research/domains/docs_restructuring/2701_docs_inventory_topology_audit.md) — T1
-6. [`docs/research/domains/docs_restructuring/2702_docs_research_pattern_extraction_audit.md`](docs/research/domains/docs_restructuring/2702_docs_research_pattern_extraction_audit.md) — T2
-7. [`docs/research/domains/docs_restructuring/2703_docs_human_user_pain_points_audit.md`](docs/research/domains/docs_restructuring/2703_docs_human_user_pain_points_audit.md) — T3
-8. [`docs/research/domains/docs_restructuring/2704_docs_audience_segmentation_audit.md`](docs/research/domains/docs_restructuring/2704_docs_audience_segmentation_audit.md) — T4
-9. [`docs/research/domains/docs_restructuring/2705_docs_handoffs_audits_proliferation_audit.md`](docs/research/domains/docs_restructuring/2705_docs_handoffs_audits_proliferation_audit.md) — T5
-10. [`docs/research/domains/docs_restructuring/2706_docs_anchor_drift_audit.md`](docs/research/domains/docs_restructuring/2706_docs_anchor_drift_audit.md) — T6
-11. [`docs/research/DOMAIN_RESEARCH_PLAYBOOK.md`](docs/research/DOMAIN_RESEARCH_PLAYBOOK.md) — arc process framework (v2)
-12. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.8.0 (v0.9 amendment WELL past — 7/7 OP3 triggers)
-13. [`logs/zoom_out_classifications.jsonl`](logs/zoom_out_classifications.jsonl) — 114 rows at S2817 close (unchanged all day)
+2. [`docs/handoffs/SESSION_2818_DISCOVERY_LAYER_PILOT.md`](docs/handoffs/SESSION_2818_DISCOVERY_LAYER_PILOT.md) — **S2818 handoff (current)**
+3. [`docs/research/implementation/RATIFICATION_2026-07-18_s2818_platform_inventory_authority_boost_pilot.md`](docs/research/implementation/RATIFICATION_2026-07-18_s2818_platform_inventory_authority_boost_pilot.md) — **pilot envelope with empirical evidence + §5 Limitations + §6 Follow-On for Shape C**
+4. [`core/rag.py`](core/rag.py) — mechanism landing (AUTHORITY_FILE_BONUS + `_authority_bonus`)
+5. [`core/tests/test_rag_authority_boost_2818.py`](core/tests/test_rag_authority_boost_2818.py) — test scaffolding for Shape C to extend
+6. [`docs/research/domains/docs_restructuring/2799_docs_restructuring_canonical_summary.md`](docs/research/domains/docs_restructuring/2799_docs_restructuring_canonical_summary.md) — Group 2700 arc-close deliverable; §8 follow-on queue
+7. [`docs/research/domains/docs_restructuring/2703_docs_human_user_pain_points_audit.md`](docs/research/domains/docs_restructuring/2703_docs_human_user_pain_points_audit.md) — T3 C5 source evidence for the pilot
+8. [`docs/research/DOMAIN_RESEARCH_PLAYBOOK.md`](docs/research/DOMAIN_RESEARCH_PLAYBOOK.md) — arc process framework (v2)
+9. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.8.0 (v0.9 amendment 8/8 corroborated including cross-shape)
+10. [`logs/zoom_out_classifications.jsonl`](logs/zoom_out_classifications.jsonl) — 114 rows at S2818 close (unchanged this session)
