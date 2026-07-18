@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-18T17:31:32+00:00",
+    "generated": "2026-07-18T17:47:54+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "c1e1ceab3257",
-    "doc_count": 2639,
-    "commit_count": 8083,
+    "git_head": "6a9f2b000f86",
+    "doc_count": 2641,
+    "commit_count": 8087,
     "confidence_breakdown": {
-      "HIGH": 1675,
+      "HIGH": 1676,
       "MEDIUM": 405,
-      "LOW": 11,
+      "LOW": 12,
       "UNKNOWN": 548
     },
     "excludes": [
@@ -2593,7 +2593,7 @@
         2807,
         2808
       ],
-      "commit_count": 1348,
+      "commit_count": 1350,
       "prs": [
         10,
         11,
@@ -3212,7 +3212,8 @@
         3240,
         3242,
         3244,
-        3246
+        3246,
+        3248
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7560,7 +7561,7 @@
         2807,
         2808
       ],
-      "commit_count": 296,
+      "commit_count": 298,
       "prs": [
         2213,
         2219,
@@ -7782,7 +7783,8 @@
         3240,
         3242,
         3244,
-        3246
+        3246,
+        3248
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20671,6 +20673,21 @@
       "commit_count": 2,
       "prs": [
         3246
+      ]
+    },
+    "docs/handoffs/SESSION_2815_GROUP_2700_T5_HANDOFFS_AUDITS_PROLIFERATION.md": {
+      "originating_session": 2815,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "41cefe8c",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2815 close cascade \u2014 handoff + start-here + INDEX + provenance + pin rotation (#3248)",
+      "sessions_touched": [
+        2815
+      ],
+      "commit_count": 2,
+      "prs": [
+        3248
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36353,6 +36370,21 @@
       "commit_count": 2,
       "prs": [
         3247
+      ]
+    },
+    "docs/research/domains/docs_restructuring/2706_docs_anchor_drift_audit.md": {
+      "originating_session": 2816,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "6a9f2b00",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(research): S2816 Group 2700 T6 \u2014 /docs/ anchor drift audit (FINAL child audit) (#3249)",
+      "sessions_touched": [
+        2816
+      ],
+      "commit_count": 2,
+      "prs": [
+        3249
       ]
     },
     "docs/research/domains/event_integration_architecture/2000_event_integration_architecture_domain_scoping.md": {
