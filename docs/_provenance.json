@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-18T16:54:27+00:00",
+    "generated": "2026-07-18T17:31:32+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "bcc82a1a8ec2",
-    "doc_count": 2637,
-    "commit_count": 8079,
+    "git_head": "c1e1ceab3257",
+    "doc_count": 2639,
+    "commit_count": 8083,
     "confidence_breakdown": {
-      "HIGH": 1674,
+      "HIGH": 1675,
       "MEDIUM": 405,
-      "LOW": 10,
+      "LOW": 11,
       "UNKNOWN": 548
     },
     "excludes": [
@@ -2593,7 +2593,7 @@
         2807,
         2808
       ],
-      "commit_count": 1346,
+      "commit_count": 1348,
       "prs": [
         10,
         11,
@@ -3211,7 +3211,8 @@
         3238,
         3240,
         3242,
-        3244
+        3244,
+        3246
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7559,7 +7560,7 @@
         2807,
         2808
       ],
-      "commit_count": 294,
+      "commit_count": 296,
       "prs": [
         2213,
         2219,
@@ -7780,7 +7781,8 @@
         3238,
         3240,
         3242,
-        3244
+        3244,
+        3246
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20654,6 +20656,21 @@
       "commit_count": 2,
       "prs": [
         3244
+      ]
+    },
+    "docs/handoffs/SESSION_2814_GROUP_2700_T4_AUDIENCE_SEGMENTATION.md": {
+      "originating_session": 2814,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "386b16cf",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2814 close cascade \u2014 handoff + start-here + INDEX + provenance + pin rotation (#3246)",
+      "sessions_touched": [
+        2814
+      ],
+      "commit_count": 2,
+      "prs": [
+        3246
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36321,6 +36338,21 @@
       "commit_count": 2,
       "prs": [
         3245
+      ]
+    },
+    "docs/research/domains/docs_restructuring/2705_docs_handoffs_audits_proliferation_audit.md": {
+      "originating_session": 2815,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "c1e1ceab",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(research): S2815 Group 2700 T5 \u2014 /docs/ handoffs+audits proliferation audit (#3247)",
+      "sessions_touched": [
+        2815
+      ],
+      "commit_count": 2,
+      "prs": [
+        3247
       ]
     },
     "docs/research/domains/event_integration_architecture/2000_event_integration_architecture_domain_scoping.md": {
