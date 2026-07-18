@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-18T16:36:37+00:00",
+    "generated": "2026-07-18T16:54:27+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "82ae21a2b78e",
-    "doc_count": 2635,
-    "commit_count": 8075,
+    "git_head": "bcc82a1a8ec2",
+    "doc_count": 2637,
+    "commit_count": 8079,
     "confidence_breakdown": {
-      "HIGH": 1673,
+      "HIGH": 1674,
       "MEDIUM": 405,
-      "LOW": 9,
+      "LOW": 10,
       "UNKNOWN": 548
     },
     "excludes": [
@@ -2593,7 +2593,7 @@
         2807,
         2808
       ],
-      "commit_count": 1344,
+      "commit_count": 1346,
       "prs": [
         10,
         11,
@@ -3210,7 +3210,8 @@
         3236,
         3238,
         3240,
-        3242
+        3242,
+        3244
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7558,7 +7559,7 @@
         2807,
         2808
       ],
-      "commit_count": 292,
+      "commit_count": 294,
       "prs": [
         2213,
         2219,
@@ -7778,7 +7779,8 @@
         3236,
         3238,
         3240,
-        3242
+        3242,
+        3244
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20637,6 +20639,21 @@
       "commit_count": 2,
       "prs": [
         3242
+      ]
+    },
+    "docs/handoffs/SESSION_2813_GROUP_2700_T3_HUMAN_PAIN.md": {
+      "originating_session": 2813,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "a839e2ff",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2813 close cascade \u2014 handoff + start-here + INDEX + provenance + pin rotation (#3244)",
+      "sessions_touched": [
+        2813
+      ],
+      "commit_count": 2,
+      "prs": [
+        3244
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36289,6 +36306,21 @@
       "commit_count": 2,
       "prs": [
         3243
+      ]
+    },
+    "docs/research/domains/docs_restructuring/2704_docs_audience_segmentation_audit.md": {
+      "originating_session": 2814,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "bcc82a1a",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(research): S2814 Group 2700 T4 \u2014 /docs/ audience segmentation audit (#3245)",
+      "sessions_touched": [
+        2814
+      ],
+      "commit_count": 2,
+      "prs": [
+        3245
       ]
     },
     "docs/research/domains/event_integration_architecture/2000_event_integration_architecture_domain_scoping.md": {
