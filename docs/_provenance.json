@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-18T22:49:17+00:00",
+    "generated": "2026-07-18T22:55:43+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "9d89957ac5a7",
-    "doc_count": 2652,
-    "commit_count": 8107,
+    "git_head": "cc6527ff26cb",
+    "doc_count": 2659,
+    "commit_count": 8108,
     "confidence_breakdown": {
-      "HIGH": 1682,
+      "HIGH": 1683,
       "MEDIUM": 405,
       "LOW": 13,
-      "UNKNOWN": 552
+      "UNKNOWN": 558
     },
     "excludes": [
       "docs/archive/",
@@ -2593,7 +2593,7 @@
         2807,
         2808
       ],
-      "commit_count": 1360,
+      "commit_count": 1361,
       "prs": [
         10,
         11,
@@ -7566,7 +7566,7 @@
         2807,
         2808
       ],
-      "commit_count": 308,
+      "commit_count": 309,
       "prs": [
         2213,
         2219,
@@ -20789,6 +20789,19 @@
       "prs": [
         3259
       ]
+    },
+    "docs/handoffs/SESSION_2822_PHASE0_EXECUTION_OPTION_A_DUAL.md": {
+      "originating_session": 2822,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "cc6527ff",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2822 close cascade \u2014 PHASE-0 EXECUTED + OPTION A-DUAL RATIFIED + methodology-validation primary outcome",
+      "sessions_touched": [
+        2822
+      ],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
       "originating_session": 293,
@@ -35993,6 +36006,61 @@
       "commit_count": 1,
       "prs": []
     },
+    "docs/research/discovery_layer/PHASE_0/RECOMMENDATION_PHASE0_SUMMARY.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "cc6527ff",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2822 close cascade \u2014 PHASE-0 EXECUTED + OPTION A-DUAL RATIFIED + methodology-validation primary outcome",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/discovery_layer/PHASE_0/analysis_full.json": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "cc6527ff",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2822 close cascade \u2014 PHASE-0 EXECUTED + OPTION A-DUAL RATIFIED + methodology-validation primary outcome",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/discovery_layer/PHASE_0/corpus.json": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "cc6527ff",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2822 close cascade \u2014 PHASE-0 EXECUTED + OPTION A-DUAL RATIFIED + methodology-validation primary outcome",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/discovery_layer/PHASE_0/field_dictionary.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "cc6527ff",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2822 close cascade \u2014 PHASE-0 EXECUTED + OPTION A-DUAL RATIFIED + methodology-validation primary outcome",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
+    },
+    "docs/research/discovery_layer/PHASE_0/measurement_report.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "cc6527ff",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2822 close cascade \u2014 PHASE-0 EXECUTED + OPTION A-DUAL RATIFIED + methodology-validation primary outcome",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
+    },
     "docs/research/domains/api/2500_api_domain_scoping.md": {
       "originating_session": 2500,
       "confidence": "HIGH",
@@ -38116,6 +38184,17 @@
       "prs": [
         3259
       ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-18_s2822_phase0_methodology_ratified_r1_r6.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "cc6527ff",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2822 close cascade \u2014 PHASE-0 EXECUTED + OPTION A-DUAL RATIFIED + methodology-validation primary outcome",
+      "sessions_touched": [],
+      "commit_count": 1,
+      "prs": []
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
       "originating_session": null,
