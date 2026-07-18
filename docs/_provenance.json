@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-18T15:31:48+00:00",
+    "generated": "2026-07-18T15:59:43+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "7de622f24786",
-    "doc_count": 2629,
-    "commit_count": 8063,
+    "git_head": "8d5c8938600f",
+    "doc_count": 2631,
+    "commit_count": 8067,
     "confidence_breakdown": {
-      "HIGH": 1670,
+      "HIGH": 1671,
       "MEDIUM": 405,
-      "LOW": 6,
+      "LOW": 7,
       "UNKNOWN": 548
     },
     "excludes": [
@@ -2593,7 +2593,7 @@
         2807,
         2808
       ],
-      "commit_count": 1338,
+      "commit_count": 1340,
       "prs": [
         10,
         11,
@@ -3207,7 +3207,8 @@
         3230,
         3232,
         3234,
-        3236
+        3236,
+        3238
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7555,7 +7556,7 @@
         2807,
         2808
       ],
-      "commit_count": 286,
+      "commit_count": 288,
       "prs": [
         2213,
         2219,
@@ -7772,7 +7773,8 @@
         3230,
         3232,
         3234,
-        3236
+        3236,
+        3238
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20586,6 +20588,21 @@
       "prs": [
         2199,
         2241
+      ]
+    },
+    "docs/handoffs/SESSION_2810_ATTORNEY_SUBFORM_WIZARD.md": {
+      "originating_session": 2810,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "e9e4876f",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2810 close cascade \u2014 handoff + start-here + INDEX + provenance + pin rotation (#3238)",
+      "sessions_touched": [
+        2810
+      ],
+      "commit_count": 2,
+      "prs": [
+        3238
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36193,6 +36210,21 @@
       "commit_count": 2,
       "prs": [
         3216
+      ]
+    },
+    "docs/research/domains/docs_restructuring/2701_docs_inventory_topology_audit.md": {
+      "originating_session": 2811,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "8d5c8938",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(research): S2811 Group 2700 T1 \u2014 /docs/ inventory & topology audit (#3239)",
+      "sessions_touched": [
+        2811
+      ],
+      "commit_count": 2,
+      "prs": [
+        3239
       ]
     },
     "docs/research/domains/event_integration_architecture/2000_event_integration_architecture_domain_scoping.md": {
