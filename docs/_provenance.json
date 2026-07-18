@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-18T18:06:20+00:00",
+    "generated": "2026-07-18T18:44:04+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "4f67e9544dab",
-    "doc_count": 2643,
-    "commit_count": 8091,
+    "git_head": "90ab139a93ed",
+    "doc_count": 2645,
+    "commit_count": 8095,
     "confidence_breakdown": {
-      "HIGH": 1677,
+      "HIGH": 1678,
       "MEDIUM": 405,
       "LOW": 13,
-      "UNKNOWN": 548
+      "UNKNOWN": 549
     },
     "excludes": [
       "docs/archive/",
@@ -2593,7 +2593,7 @@
         2807,
         2808
       ],
-      "commit_count": 1352,
+      "commit_count": 1354,
       "prs": [
         10,
         11,
@@ -3214,7 +3214,8 @@
         3244,
         3246,
         3248,
-        3250
+        3250,
+        3252
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7562,7 +7563,7 @@
         2807,
         2808
       ],
-      "commit_count": 300,
+      "commit_count": 302,
       "prs": [
         2213,
         2219,
@@ -7786,7 +7787,8 @@
         3244,
         3246,
         3248,
-        3250
+        3250,
+        3252
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20705,6 +20707,21 @@
       "commit_count": 2,
       "prs": [
         3250
+      ]
+    },
+    "docs/handoffs/SESSION_2817_GROUP_2700_2799_CANONICAL_SUMMARY.md": {
+      "originating_session": 2817,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "0f417301",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2817 close cascade \u2014 GROUP 2700 ARC CLOSED (#3252)",
+      "sessions_touched": [
+        2817
+      ],
+      "commit_count": 2,
+      "prs": [
+        3252
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36408,15 +36425,16 @@
       "originating_session": 2817,
       "confidence": "LOW",
       "match_source": "frontmatter",
-      "first_commit_sha": "4f67e954",
+      "first_commit_sha": "0f417301",
       "first_commit_date": "2026-07-18",
-      "first_commit_subject": "docs(research): S2817 Group 2700 2799 \u2014 /docs/ restructuring canonical summary (ARC CLOSE) (#3251)",
+      "first_commit_subject": "docs(cascade): S2817 close cascade \u2014 GROUP 2700 ARC CLOSED (#3252)",
       "sessions_touched": [
         2817
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        3251
+        3251,
+        3252
       ]
     },
     "docs/research/domains/event_integration_architecture/2000_event_integration_architecture_domain_scoping.md": {
@@ -37979,6 +37997,19 @@
       "commit_count": 2,
       "prs": [
         3185
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-18_s2818_platform_inventory_authority_boost_pilot.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "90ab139a",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "feat(rag): S2818 authority-boost pilot for PLATFORM_INVENTORY.md (2799 \u00a78 item #1) (#3253)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3253
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
