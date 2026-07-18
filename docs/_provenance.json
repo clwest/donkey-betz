@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-18T18:44:04+00:00",
+    "generated": "2026-07-18T19:03:34+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "90ab139a93ed",
-    "doc_count": 2645,
-    "commit_count": 8095,
+    "git_head": "13844fc82b2c",
+    "doc_count": 2647,
+    "commit_count": 8099,
     "confidence_breakdown": {
-      "HIGH": 1678,
+      "HIGH": 1679,
       "MEDIUM": 405,
       "LOW": 13,
-      "UNKNOWN": 549
+      "UNKNOWN": 550
     },
     "excludes": [
       "docs/archive/",
@@ -2593,7 +2593,7 @@
         2807,
         2808
       ],
-      "commit_count": 1354,
+      "commit_count": 1356,
       "prs": [
         10,
         11,
@@ -3215,7 +3215,8 @@
         3246,
         3248,
         3250,
-        3252
+        3252,
+        3254
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7563,7 +7564,7 @@
         2807,
         2808
       ],
-      "commit_count": 302,
+      "commit_count": 304,
       "prs": [
         2213,
         2219,
@@ -7788,7 +7789,8 @@
         3246,
         3248,
         3250,
-        3252
+        3252,
+        3254
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20722,6 +20724,21 @@
       "commit_count": 2,
       "prs": [
         3252
+      ]
+    },
+    "docs/handoffs/SESSION_2818_DISCOVERY_LAYER_PILOT.md": {
+      "originating_session": 2818,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "2a01bc53",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2818 close cascade \u2014 discovery-layer pilot ship + Shape C queued (#3254)",
+      "sessions_touched": [
+        2818
+      ],
+      "commit_count": 2,
+      "prs": [
+        3254
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -38010,6 +38027,19 @@
       "commit_count": 2,
       "prs": [
         3253
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-18_s2819_shape_c_intent_gating.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "13844fc8",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "feat(rag): S2819 Shape C query-intent gating for AUTHORITY_FILE_BONUS (#3255)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3255
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
