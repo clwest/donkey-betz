@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-18T16:19:21+00:00",
+    "generated": "2026-07-18T16:36:37+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "a70b01265890",
-    "doc_count": 2633,
-    "commit_count": 8071,
+    "git_head": "82ae21a2b78e",
+    "doc_count": 2635,
+    "commit_count": 8075,
     "confidence_breakdown": {
-      "HIGH": 1672,
+      "HIGH": 1673,
       "MEDIUM": 405,
-      "LOW": 8,
+      "LOW": 9,
       "UNKNOWN": 548
     },
     "excludes": [
@@ -2593,7 +2593,7 @@
         2807,
         2808
       ],
-      "commit_count": 1342,
+      "commit_count": 1344,
       "prs": [
         10,
         11,
@@ -3209,7 +3209,8 @@
         3234,
         3236,
         3238,
-        3240
+        3240,
+        3242
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7557,7 +7558,7 @@
         2807,
         2808
       ],
-      "commit_count": 290,
+      "commit_count": 292,
       "prs": [
         2213,
         2219,
@@ -7776,7 +7777,8 @@
         3234,
         3236,
         3238,
-        3240
+        3240,
+        3242
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20620,6 +20622,21 @@
       "commit_count": 2,
       "prs": [
         3240
+      ]
+    },
+    "docs/handoffs/SESSION_2812_GROUP_2700_T2_PATTERN_EXTRACTION.md": {
+      "originating_session": 2812,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "1dacec39",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2812 close cascade \u2014 handoff + start-here + INDEX + provenance + pin rotation (#3242)",
+      "sessions_touched": [
+        2812
+      ],
+      "commit_count": 2,
+      "prs": [
+        3242
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36257,6 +36274,21 @@
       "commit_count": 2,
       "prs": [
         3241
+      ]
+    },
+    "docs/research/domains/docs_restructuring/2703_docs_human_user_pain_points_audit.md": {
+      "originating_session": 2813,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "82ae21a2",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(research): S2813 Group 2700 T3 \u2014 /docs/ human-user pain points audit (#3243)",
+      "sessions_touched": [
+        2813
+      ],
+      "commit_count": 2,
+      "prs": [
+        3243
       ]
     },
     "docs/research/domains/event_integration_architecture/2000_event_integration_architecture_domain_scoping.md": {
