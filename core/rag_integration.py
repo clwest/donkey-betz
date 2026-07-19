@@ -5,6 +5,7 @@ Connects to unified_embeddings table for context retrieval
 
 import logging
 import os
+import re
 import psycopg2
 from typing import List, Dict, Any, Optional
 
@@ -55,6 +56,53 @@ _RAG_EMBEDDINGS_ENV_ERRORS = (
 def _get_authority_weight(authority):
     """Return the authority-tier weight in [1.0, 2.0]; unknown → 1.0."""
     return _AUTHORITY_WEIGHTS.get(authority or '', 1.0)
+
+
+# S2826 Pattern B — intent-gated file-specific ranking bonus for the
+# embedding lane. Chris D-verdict 2026-07-19 (S2826 D1) after S2825
+# harvest showed 0/16 retrieval-strict-hit despite the S2818 authority-
+# boost pilot being live in the BM25 lane. Step 1a confirmed metadata
+# is correct FOR THE TARGET ROWS; Step 1b confirmed the tier-based
+# authority_weighted flag is a no-op when target and competitor share
+# the same repo_canonical tier. Step 1c decomposed the failure into two
+# patterns; Pattern B is "small-gap ranking" (canonical is in the
+# candidate pool but loses to same-tier competitors by a ~0.025
+# similarity margin). D1 mandates a NARROW intent gate + small bounded
+# file-specific bonus, distinct from the coarse tier weighting.
+# Sibling of core/rag.py `_COUNT_INTENT_PATTERNS` (BM25 lane substring
+# match). Rigby SIGN 2026-07-19 Q1: near-parity with BM25 phrase set;
+# intentional divergence on `total` (narrower regex `total\s+\w+` here
+# vs bare `total` in BM25) to avoid false positives on words like
+# "totally"/"totalitarian" — accepted as design decision, not
+# oversight. Do NOT collapse with the SELF_REFERENCE / INDEX_DISCOVERY
+# / IDENTITY / doc-class-precedence policy classes per D5 — each keeps
+# its own gate + mechanism.
+_COUNT_INTENT_PATTERNS = (
+    re.compile(r'\bhow\s+many\b', re.I),
+    re.compile(r'\bhow\s+much\b', re.I),  # Rigby Q1 parity refinement
+    re.compile(r'\bnumber\s+of\b', re.I),
+    re.compile(r'\bcount\s+of\b', re.I),
+    re.compile(r'\blist\s+all\b', re.I),
+    re.compile(r'\btotal\s+(?:number\s+of\s+)?\w+', re.I),
+)
+
+# File-specific similarity bonus applied only when the COUNT intent
+# gate fires. Value bounded to observed S2825 gaps: Q23 (chunk #28
+# celery-tasks) lost by 0.025 to RUNTIME_AUDIT #3; Q21 (chunk #15
+# spiders) lost by ~0.026 to PLATFORM_ARCHITECTURE_MAP. +0.05 flips
+# both without dominating unrelated retrieval. Do not raise without
+# evidence. Do not add other files here without confirming a distinct
+# small-gap ranking pattern via Step-1c-shape diagnostic.
+_COUNT_INTENT_BONUS = {
+    'docs/PLATFORM_INVENTORY.md': 0.05,
+}
+
+
+def _detect_count_intent(query: str) -> bool:
+    """Narrow COUNT / sole-authoritative-source intent gate (Pattern B)."""
+    if not query:
+        return False
+    return any(p.search(query) for p in _COUNT_INTENT_PATTERNS)
 
 
 def search_embeddings(
@@ -245,7 +293,11 @@ def search_embeddings(
         # Python and truncate to `limit`. The oversample is a
         # bounded implementation detail; downstream consumers see
         # exactly `limit` rows.
-        if authority_weighted:
+        # S2826 Pattern B — narrow COUNT intent gate fires oversample too,
+        # since the canonical target may sit at rank #2-#5 by raw distance
+        # and the bonus needs a deep enough pool to promote it.
+        count_intent_active = _detect_count_intent(query)
+        if authority_weighted or count_intent_active:
             candidate_qs = qs.order_by('distance')[:max(limit * 3, limit)]
             chunks = list(candidate_qs.select_related('document'))
         else:
@@ -274,12 +326,23 @@ def search_embeddings(
                 if math.isnan(similarity) or math.isinf(similarity):
                     similarity = 0.0
 
+            # S2826 Pattern B — compute per-row COUNT bonus INSIDE the
+            # loop so it composes naturally into both raw similarity
+            # ordering (default path) and weighted_score (when
+            # authority_weighted=True). Bonus is 0.0 when the intent
+            # gate did not fire or the file is not in the bonus map.
+            if count_intent_active:
+                count_intent_bonus = _COUNT_INTENT_BONUS.get(doc.file_path or '', 0.0)
+            else:
+                count_intent_bonus = 0.0
+            effective_similarity = similarity + count_intent_bonus
+
             # Cycle 1A KFI-3 (ADR-0130 §2.1): compute weighted_score when
             # authority_weighted=True. retrieval_boost remains
             # orthogonal per 0120 — NOT composed into weighted_score.
             if authority_weighted:
                 authority_weight = _get_authority_weight(doc.canonical_authority)
-                weighted_score = similarity * authority_weight
+                weighted_score = effective_similarity * authority_weight
             else:
                 authority_weight = None
                 weighted_score = None
@@ -308,6 +371,14 @@ def search_embeddings(
                 # D9/D10 retrieval_boost maps to legacy importance_score.
                 'importance_score': float(doc.retrieval_boost or 1.0),
                 'similarity_score': similarity,
+                # S2826 Pattern B diagnostic (per Chris D2 traceability
+                # + Rigby SIGN Q4 refinement) — surfaces gate + bonus
+                # provenance so consumers + tests can distinguish raw
+                # semantic rank from policy-boosted rank.
+                'intent_gate_fired': count_intent_active,
+                'intent_gate_name': 'count' if count_intent_active else None,
+                'count_intent_bonus': count_intent_bonus,
+                'effective_similarity': effective_similarity,
                 # Cycle 1A KFI-3: authority-aware retrieval fields.
                 # Top-level canonical_authority is always populated;
                 # authority_weight + weighted_score are populated only
@@ -340,6 +411,27 @@ def search_embeddings(
                 )
             documents.sort(key=_sort_key)
             documents = documents[:limit]
+        elif count_intent_active:
+            # S2826 Pattern B — when the COUNT intent gate fired and we
+            # oversampled the candidate pool, re-sort by (raw similarity +
+            # bonus) descending, tie-break identical to authority_weighted
+            # path (updated_at DESC then document.id ASC then chunk.id
+            # ASC) so downstream ordering stays deterministic even when
+            # the bonus creates ties.
+            def _count_sort_key(row):
+                meta = row['metadata']
+                effective_ts = meta.get('updated_at') or meta.get('created_at')
+                doc_id_str = str(meta.get('document_id') or '')
+                chunk_id_str = str(row.get('id') or '')
+                epoch = effective_ts.timestamp() if effective_ts else 0.0
+                return (
+                    -(row['similarity_score'] + row.get('count_intent_bonus', 0.0)),
+                    -epoch,
+                    doc_id_str,
+                    chunk_id_str,
+                )
+            documents.sort(key=_count_sort_key)
+            documents = documents[:limit]
 
         # Strip internal tie-break fields before returning to callers.
         for row in documents:
@@ -353,8 +445,42 @@ def search_embeddings(
             f"is_pinned={is_pinned} min_session={min_session} "
             f"include_superseded={include_superseded} "
             f"canonical_authority={canonical_authority} "
-            f"authority_weighted={authority_weighted})"
+            f"authority_weighted={authority_weighted} "
+            f"count_intent_active={count_intent_active})"
         )
+
+        # S2826 Pattern B drift-re-mask detection (Rigby SIGN Q5). WARN
+        # when the intent gate fired but none of the canonical targets
+        # in _COUNT_INTENT_BONUS surfaced in the returned candidate pool.
+        # Root causes the log surfaces: (a) target Document.status drifted
+        # from 'processed' back to 'archived' and got filtered by
+        # include_superseded=False; (b) target chunk similarity dropped
+        # below threshold; (c) target file was removed/renamed. Without
+        # this alert, future metadata drift silently erases the Pattern B
+        # benefit (the class of drift S2826 root-cause established).
+        if count_intent_active and _COUNT_INTENT_BONUS:
+            returned_paths = {
+                (d.get('metadata') or {}).get('file_path') for d in documents
+            }
+            missing_targets = [
+                p for p in _COUNT_INTENT_BONUS.keys() if p not in returned_paths
+            ]
+            if missing_targets and len(missing_targets) == len(_COUNT_INTENT_BONUS):
+                # ALL canonical targets absent — most likely the metadata
+                # drift class. Single-target-missing is expected on off-
+                # target queries; all-missing when the gate fires is the
+                # concerning shape.
+                logger.warning(
+                    "[S2826_PATTERN_B_DRIFT] count_intent_active=True but "
+                    "NONE of the mapped canonical targets are in the "
+                    "returned pool. targets=%s query=%r include_superseded=%s. "
+                    "Check Document.status='processed' for these paths; "
+                    "S2826 root-cause showed sync_docs_index_to_documents "
+                    "update path does not refresh status field.",
+                    list(_COUNT_INTENT_BONUS.keys()),
+                    query[:200],
+                    include_superseded,
+                )
         return documents
 
     except _RAG_EMBEDDINGS_ENV_ERRORS as e:
