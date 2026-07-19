@@ -834,6 +834,7 @@ from core.views_rag_observability import (
     rag_risk_distribution,
     rag_retrieval_channels,
     rag_run_classification,
+    rag_intent_gate_diagnostics,
 )
 
 # Session 449: Import Pipeline Learning views (Learning Loops for AI Series)
@@ -2136,6 +2137,8 @@ urlpatterns = [
     path('api/rag/observability/risk-distribution/', rag_risk_distribution, name='rag-observability-risk-distribution'),
     path('api/rag/observability/channels/', rag_retrieval_channels, name='rag-observability-channels'),
     path('api/rag/observability/classify/', rag_run_classification, name='rag-observability-classify'),
+    # S2831: thin observability tab for the S2830 DORMANT pointer-intent registry
+    path('api/rag/observability/intent-gate/', rag_intent_gate_diagnostics, name='rag-observability-intent-gate'),
 
     # Session 449: Pipeline Learning APIs (Learning Loops for AI Content Pipeline)
     path('api/pipeline-learning/feedback/', pipeline_record_feedback, name='pipeline-learning-feedback'),

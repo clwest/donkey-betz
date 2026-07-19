@@ -73,3 +73,6 @@ export { default as AppTab, hasApp } from './AppTab'
 
 // Session 1224: Outreach Inbox — Opportunity → OutreachDraft approval surface
 export { OutreachInboxTab } from './OutreachInboxTab'
+
+// S2831: RAG Intent-Gate Diagnostics — canary for S2830 pointer-intent registry
+export { RagDiagnosticsTab } from './RagDiagnosticsTab'
