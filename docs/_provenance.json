@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-19T19:19:44+00:00",
+    "generated": "2026-07-19T20:23:11+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "03158ad30479",
-    "doc_count": 2694,
-    "commit_count": 8154,
+    "git_head": "a0997466d7fc",
+    "doc_count": 2697,
+    "commit_count": 8158,
     "confidence_breakdown": {
-      "HIGH": 1696,
+      "HIGH": 1697,
       "MEDIUM": 408,
-      "LOW": 28,
+      "LOW": 30,
       "UNKNOWN": 562
     },
     "excludes": [
@@ -2594,7 +2594,7 @@
         2808,
         2830
       ],
-      "commit_count": 1385,
+      "commit_count": 1387,
       "prs": [
         10,
         11,
@@ -3233,7 +3233,9 @@
         3278,
         3279,
         3280,
-        3281
+        3281,
+        3282,
+        3283
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7601,7 +7603,7 @@
         2808,
         2830
       ],
-      "commit_count": 325,
+      "commit_count": 327,
       "prs": [
         2213,
         2219,
@@ -7839,7 +7841,9 @@
         3278,
         3279,
         3280,
-        3281
+        3281,
+        3282,
+        3283
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21049,16 +21053,32 @@
       "originating_session": 2835,
       "confidence": "HIGH",
       "match_source": "filename",
-      "first_commit_sha": "03158ad3",
+      "first_commit_sha": "13e0cc52",
       "first_commit_date": "2026-07-19",
-      "first_commit_subject": "docs(governance): S2835 \u2014 Ratify Group 2800 T2 reference-graph audit \u00b7 schema v1.1 unchanged \u00b7 ADR-0000 escalation (#3282)",
+      "first_commit_subject": "docs(cascade): S2835 close \u2014 docs cascade + rag corpus + provenance refresh + ADR-0000 escalation resolved (post-PR#3282) (#3283)",
       "sessions_touched": [
         128,
         2835
       ],
+      "commit_count": 4,
+      "prs": [
+        3282,
+        3283
+      ]
+    },
+    "docs/handoffs/SESSION_2836_T3A_DUPLICATE_CONTENT_AUDIT.md": {
+      "originating_session": 2836,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "a0997466",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2836 \u2014 Ratify Group 2800 T3a duplicate-content audit \u00b7 schema v1.1 unchanged \u00b7 escalate_to_chris deferral policy established (#3284)",
+      "sessions_touched": [
+        2836
+      ],
       "commit_count": 2,
       "prs": [
-        3282
+        3284
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36148,7 +36168,7 @@
         2499,
         2500
       ],
-      "commit_count": 116,
+      "commit_count": 118,
       "prs": [
         2773,
         2775,
@@ -36243,7 +36263,8 @@
         3268,
         3278,
         3280,
-        3282
+        3282,
+        3284
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -36920,15 +36941,31 @@
       "originating_session": 128,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "03158ad3",
+      "first_commit_sha": "13e0cc52",
       "first_commit_date": "2026-07-19",
-      "first_commit_subject": "docs(governance): S2835 \u2014 Ratify Group 2800 T2 reference-graph audit \u00b7 schema v1.1 unchanged \u00b7 ADR-0000 escalation (#3282)",
+      "first_commit_subject": "docs(cascade): S2835 close \u2014 docs cascade + rag corpus + provenance refresh + ADR-0000 escalation resolved (post-PR#3282) (#3283)",
       "sessions_touched": [
         128
       ],
+      "commit_count": 4,
+      "prs": [
+        3282,
+        3283
+      ]
+    },
+    "docs/research/domains/docs_content_audit/2803a_docs_content_duplicate_audit.md": {
+      "originating_session": 2836,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "a0997466",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2836 \u2014 Ratify Group 2800 T3a duplicate-content audit \u00b7 schema v1.1 unchanged \u00b7 escalate_to_chris deferral policy established (#3284)",
+      "sessions_touched": [
+        2836
+      ],
       "commit_count": 2,
       "prs": [
-        3282
+        3284
       ]
     },
     "docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md": {
@@ -38766,6 +38803,21 @@
       "commit_count": 2,
       "prs": [
         3282
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-19_2803a_docs_content_duplicate_audit.md": {
+      "originating_session": 2836,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "a0997466",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2836 \u2014 Ratify Group 2800 T3a duplicate-content audit \u00b7 schema v1.1 unchanged \u00b7 escalate_to_chris deferral policy established (#3284)",
+      "sessions_touched": [
+        2836
+      ],
+      "commit_count": 2,
+      "prs": [
+        3284
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
