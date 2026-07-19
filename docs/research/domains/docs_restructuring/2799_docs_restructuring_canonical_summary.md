@@ -1,6 +1,14 @@
 ---
 title: "S2817 /docs/ Restructuring — Canonical Summary (Group 2700 arc close)"
-status: active (canonical summary — arc close; proposed restructuring plan + twin-pointer workspace deliverable pending Chris ratification)
+status: ratified (§3 target tree ratified Chris D-verdict 2026-07-19 S2832; §7 anchor updates + §8 follow-on queue ratifiable separately; file-content-level audit opens as separate arc)
+ratification:
+  date: 2026-07-19
+  session: 2832
+  scope: §3 target /docs/ tree (destination shape; NOT a move-script; compatibility-first per-PR gating preserved)
+  record: docs/research/implementation/RATIFICATION_2026-07-19_2799_docs_restructuring.md
+  chris_directive_verbatim: "ratify §3 today, open file-level audit arc"
+  deferred: §7 anchor-update recommendations (bucket A + B) + §8 follow-on queue ordering — ratifiable separately at S2833+ open
+  clarification: Chris clarified at S2832 that Group 2700 arc did structural/statistical audit; a file-CONTENT-level audit (per-file read + flag stale/broken/duplicate/orphan) opens as separate arc — not blocking §3 ratification because §3 is structural
 authority: canonical summary for Group 2700 arc (closes 6-thread child-audit set T1-T6)
 session: 2817
 date: 2026-07-18
