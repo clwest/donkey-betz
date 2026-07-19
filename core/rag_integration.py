@@ -105,6 +105,156 @@ def _detect_count_intent(query: str) -> bool:
     return any(p.search(query) for p in _COUNT_INTENT_PATTERNS)
 
 
+# S2827 Pattern C — narrow SELF_REFERENCE intent gate + canonical-anchor
+# candidate injection. Chris D-verdict 2026-07-19 (S2827 D-Q1..D-Q5)
+# ratifying Rigby-reconciled v2 design after S2826 Phase-0.5 baseline
+# 6/18 = 33.3% strict top-1 identified 5 remaining SELF_REFERENCE class
+# misses (Q14/Q15/Q16/Q17/Q20). Q20 (literal-filename) explicitly ceded
+# to future Pattern D per Chris D5 distinct-mechanism-per-class + Chris
+# D-Q4 + Rigby SIGN Q3. Pattern C owns SEMANTIC pointer intent: "where
+# to begin / where to continue / session-start guidance / project rules".
+#
+# Design doc: docs/research/discovery_layer/PHASE_0_5/PATTERN_C_SELF_REFERENCE_DESIGN.md
+# Constitutional refinements from Chris:
+#   D-Q1: bonus value is a MEASURED hypothesis, not a fixed constitutional
+#         constant. Use the SMALLEST reliable adjustment that converts
+#         intended cases while preserving negative controls. Tested
+#         alternatives + margins recorded in the design doc §7.5.
+#   D-Q2: corpus label correction (Q14/Q15/Q16/Q20 strict+loose targets)
+#         landed in same PR — ground-truth repair, not benchmark tuning.
+#
+# Sibling to Pattern B `_COUNT_INTENT_PATTERNS` above; kept as distinct
+# mechanism per Chris D5. Chris D-Q3 forward-carry: after Pattern D also
+# ships (3-instance threshold), extract shared "pointer-intent registry"
+# primitive covering Pattern B/C/D — do NOT refactor in S2827.
+_SELF_REFERENCE_INTENT_PATTERNS = (
+    # Start-doc semantic pointer patterns (Q14/Q15/Q16)
+    re.compile(r'\bwhere\s+do\s+I\s+start\b', re.I),                                    # Q15
+    re.compile(r'\bstart\s+(here|next\s+session|new\s+session)\b', re.I),               # Q16 (narrow: next/new require session)
+    re.compile(r'\b(the\s+)?(next\s+)?session\s+start\s+(doc|file|page|md)\b', re.I),   # Q14 (Rigby Q1: required file-context word prevents false positive on handoff-doc "session start" mentions)
+    # Rules-doc semantic pointer patterns (Q17)
+    re.compile(r'\bproject\s+rules?\b', re.I),                                          # Q17 (accepts singular + plural per Rigby Q1)
+)
+
+# Canonical anchor file paths — REAL Document.file_path values (repo root,
+# no docs/ prefix). Corpus label correction (S2827 D-Q2 same-PR) aligns
+# corpus.json strict + loose targets with these paths.
+_SELF_REFERENCE_ANCHORS = {
+    'start_doc':     '00-START-NEXT-SESSION.md',
+    'project_rules': 'CLAUDE.md',
+}
+
+# Which pattern index in _SELF_REFERENCE_INTENT_PATTERNS maps to which
+# anchor key. Ordered to match the pattern tuple.
+_SELF_REFERENCE_PATTERN_TO_ANCHOR = (
+    'start_doc',      # pattern 0: where do I start
+    'start_doc',      # pattern 1: start (here|next session|new session)
+    'start_doc',      # pattern 2: session start (doc|file|page|md)
+    'project_rules',  # pattern 3: project rules?
+)
+
+# Bounded policy bonus (Chris D2 + D-Q1 refinement 2026-07-19).
+# Value tuned from measured margins on Q14/Q15/Q16/Q17 canonical anchor
+# raw similarities vs top-1 non-canonical competitor:
+#   Q14 anchor 0.4569 vs top-1 0.6816 → gap 0.2247 → min flip +0.225
+#   Q15 anchor 0.2605 vs top-1 0.3843 → gap 0.1238 → min flip +0.124
+#   Q16 anchor 0.3146 vs top-1 0.4422 → gap 0.1276 → min flip +0.128
+#   Q17 anchor 0.3833 vs top-1 0.4723 → gap 0.0889 → min flip +0.090
+# Smallest single-static bonus flipping all 4 = 0.23 (bounded above Q14
+# gap by epsilon 0.005). Alternative values tested + recorded in
+# design doc §7.5.
+_SELF_REFERENCE_INTENT_BONUS = 0.23
+
+
+def _detect_self_reference_intent(query):
+    """Narrow SELF_REFERENCE / semantic-pointer intent gate (Pattern C).
+
+    Returns a tuple of matched anchor keys (deduplicated, preserving
+    first-match order). Empty tuple when gate does not fire. Chris D5
+    distinct-mechanism-per-class discipline: this gate deliberately does
+    NOT overlap with Pattern B (COUNT) or the future Pattern D
+    (literal-filename) — literal filename patterns (`00-START-NEXT-SESSION`,
+    `CLAUDE.md`) are explicitly ceded to Pattern D per Chris D-Q4.
+    """
+    if not query:
+        return ()
+    matched = []
+    seen = set()
+    for idx, pattern in enumerate(_SELF_REFERENCE_INTENT_PATTERNS):
+        if pattern.search(query):
+            anchor_key = _SELF_REFERENCE_PATTERN_TO_ANCHOR[idx]
+            if anchor_key not in seen:
+                seen.add(anchor_key)
+                matched.append((anchor_key, idx))
+    return tuple(matched)
+
+
+def _fetch_self_reference_anchor_chunks(
+    anchor_matches,
+    base_qs,
+    exclude_chunk_ids,
+    query_embedding,
+):
+    """Fetch the highest-similarity DocumentEmbedding chunk for each
+    mapped canonical anchor, under the SAME filter chain as `base_qs`.
+
+    Preserves Chris D6 "no include_superseded relaxation" — if the
+    anchor Document has `status=archived`, it is filtered out by the
+    same clause `base_qs` inherits and the anchor is silently absent
+    from injection. The `[S2827_PATTERN_C_DRIFT]` WARN log downstream
+    surfaces the all-anchors-missing case.
+
+    Uses the SAME query embedding for CosineDistance so injected chunks
+    carry real similarity scores, not synthesized values (per Chris D-Q1
+    "retrieval must prove retrieval" — the injection is retrieval-layer
+    fetch, the bonus is bounded ranking adjustment).
+
+    Returns a list of DocumentEmbedding rows (may be empty).
+    """
+    from content.models import Document, DocumentEmbedding
+    from pgvector.django import CosineDistance
+
+    # Resolve anchor file_paths → Document ids under the same filter
+    # chain as base_qs. We fetch by file_path since the anchor map keys
+    # to a stable filesystem-relative path.
+    anchor_paths = {
+        _SELF_REFERENCE_ANCHORS[key] for key, _ in anchor_matches
+    }
+    anchor_docs = list(
+        Document.objects.filter(file_path__in=anchor_paths).only('id', 'file_path')
+    )
+    if not anchor_docs:
+        return []
+
+    injected = []
+    for doc in anchor_docs:
+        # Best chunk of THIS anchor under the base_qs filter chain.
+        # We rebuild the queryset per-anchor to inherit include_superseded
+        # exclusion + canonical_authority filter + orphan-chunk exclusion.
+        chunk_qs = (
+            DocumentEmbedding.objects
+            .filter(document=doc)
+            .annotate(distance=CosineDistance('embedding_vector', query_embedding))
+        )
+        # Mirror base_qs's document.status exclusion (production default
+        # include_superseded=False → exclude ARCHIVED). We don't have
+        # direct handle to base_qs's filter chain here, so we re-apply
+        # the same status exclusion the parent search_embeddings applies.
+        # If Document is archived, chunk skipped; drift WARN fires
+        # downstream when all anchors miss.
+        from content.models import ContentStatus
+        chunk_qs = chunk_qs.exclude(document__status=ContentStatus.ARCHIVED)
+        best = chunk_qs.order_by('distance').first()
+        if best is None:
+            continue
+        if best.id in exclude_chunk_ids:
+            # Already in the retrieved pool — no synthetic inject;
+            # the boost is applied in the composition loop.
+            continue
+        injected.append(best)
+    return injected
+
+
 def search_embeddings(
     query: str,
     limit: int = 5,
@@ -296,13 +446,39 @@ def search_embeddings(
         # S2826 Pattern B — narrow COUNT intent gate fires oversample too,
         # since the canonical target may sit at rank #2-#5 by raw distance
         # and the bonus needs a deep enough pool to promote it.
+        # S2827 Pattern C — SELF_REFERENCE intent gate fires oversample +
+        # candidate injection. Sibling shape to Pattern B; distinct gate
+        # + distinct anchor map per Chris D5.
         count_intent_active = _detect_count_intent(query)
-        if authority_weighted or count_intent_active:
+        self_reference_intent_matches = _detect_self_reference_intent(query)
+        self_reference_intent_active = bool(self_reference_intent_matches)
+        if authority_weighted or count_intent_active or self_reference_intent_active:
             candidate_qs = qs.order_by('distance')[:max(limit * 3, limit)]
             chunks = list(candidate_qs.select_related('document'))
         else:
             qs = qs.order_by('distance')[:limit]
             chunks = list(qs.select_related('document'))
+
+        # S2827 Pattern C — canonical-anchor injection. Fetch anchor
+        # chunks under the SAME filter chain (Chris D6 no-relaxation
+        # invariant). If anchor is already in oversample pool, skip inject
+        # and rely on bonus applied in the composition loop. If NOT in
+        # pool, inject as candidate carrying real CosineDistance similarity
+        # — the bonus applies in the composition loop identically.
+        # Injected chunks marked via chunk.id membership set consumed
+        # by the loop below (self_ref_injected diagnostic).
+        injected_chunk_ids = set()
+        if self_reference_intent_active:
+            existing_chunk_ids = {c.id for c in chunks}
+            injected = _fetch_self_reference_anchor_chunks(
+                self_reference_intent_matches,
+                qs,
+                existing_chunk_ids,
+                query_embedding,
+            )
+            for row in injected:
+                injected_chunk_ids.add(row.id)
+                chunks.append(row)
 
         documents = []
         encryption_service = get_encryption_service()
@@ -335,7 +511,32 @@ def search_embeddings(
                 count_intent_bonus = _COUNT_INTENT_BONUS.get(doc.file_path or '', 0.0)
             else:
                 count_intent_bonus = 0.0
-            effective_similarity = similarity + count_intent_bonus
+
+            # S2827 Pattern C — per-row SELF_REFERENCE bonus. Fires only
+            # when the intent gate matched AND this row's Document is
+            # one of the mapped canonical anchors. Composes additively
+            # with COUNT bonus (no query is expected to fire both gates
+            # simultaneously — they're distinct policy classes per
+            # Chris D5 — but the shape is deliberately compositional so
+            # the invariant holds if it ever does).
+            self_ref_intent_bonus = 0.0
+            self_ref_anchor_key = None
+            self_ref_matched_pattern_index = None
+            self_ref_injected = False
+            if self_reference_intent_active:
+                fp = doc.file_path or ''
+                for key, idx in self_reference_intent_matches:
+                    if _SELF_REFERENCE_ANCHORS.get(key) == fp:
+                        self_ref_intent_bonus = _SELF_REFERENCE_INTENT_BONUS
+                        self_ref_anchor_key = key
+                        self_ref_matched_pattern_index = idx
+                        break
+                # self_ref_injected = True if this chunk came from injection
+                # rather than the original oversample pool.
+                if chunk.id in injected_chunk_ids:
+                    self_ref_injected = True
+
+            effective_similarity = similarity + count_intent_bonus + self_ref_intent_bonus
 
             # Cycle 1A KFI-3 (ADR-0130 §2.1): compute weighted_score when
             # authority_weighted=True. retrieval_boost remains
@@ -371,13 +572,25 @@ def search_embeddings(
                 # D9/D10 retrieval_boost maps to legacy importance_score.
                 'importance_score': float(doc.retrieval_boost or 1.0),
                 'similarity_score': similarity,
-                # S2826 Pattern B diagnostic (per Chris D2 traceability
-                # + Rigby SIGN Q4 refinement) — surfaces gate + bonus
-                # provenance so consumers + tests can distinguish raw
-                # semantic rank from policy-boosted rank.
-                'intent_gate_fired': count_intent_active,
-                'intent_gate_name': 'count' if count_intent_active else None,
+                # S2826 Pattern B + S2827 Pattern C diagnostic (per Chris
+                # D2 traceability + Rigby SIGN Q4/Q5 refinements) —
+                # surfaces gate + bonus provenance so consumers + tests
+                # can distinguish raw semantic rank from policy-boosted
+                # rank AND natural retrieval from candidate injection.
+                'intent_gate_fired': count_intent_active or self_reference_intent_active,
+                'intent_gate_name': (
+                    'count' if count_intent_active else
+                    'self_reference' if self_reference_intent_active else
+                    None
+                ),
                 'count_intent_bonus': count_intent_bonus,
+                # S2827 Pattern C diagnostic fields (Chris D-Q1 acceptance
+                # requirement: injected candidates distinguishable from
+                # naturally-retrieved candidates).
+                'self_ref_intent_bonus': self_ref_intent_bonus,
+                'self_ref_anchor_key': self_ref_anchor_key,
+                'self_ref_matched_pattern_index': self_ref_matched_pattern_index,
+                'self_ref_injected': self_ref_injected,
                 'effective_similarity': effective_similarity,
                 # Cycle 1A KFI-3: authority-aware retrieval fields.
                 # Top-level canonical_authority is always populated;
@@ -411,26 +624,29 @@ def search_embeddings(
                 )
             documents.sort(key=_sort_key)
             documents = documents[:limit]
-        elif count_intent_active:
-            # S2826 Pattern B — when the COUNT intent gate fired and we
-            # oversampled the candidate pool, re-sort by (raw similarity +
-            # bonus) descending, tie-break identical to authority_weighted
-            # path (updated_at DESC then document.id ASC then chunk.id
-            # ASC) so downstream ordering stays deterministic even when
-            # the bonus creates ties.
-            def _count_sort_key(row):
+        elif count_intent_active or self_reference_intent_active:
+            # S2826 Pattern B + S2827 Pattern C — when either intent gate
+            # fires and we oversampled the candidate pool, re-sort by
+            # (raw similarity + all applied bonuses) descending. Tie-break
+            # identical to authority_weighted path (updated_at DESC then
+            # document.id ASC then chunk.id ASC) so downstream ordering
+            # stays deterministic even when bonuses create ties. Bonuses
+            # compose additively (row['effective_similarity'] already
+            # equals sim + count_bonus + self_ref_bonus per composition
+            # loop above).
+            def _intent_sort_key(row):
                 meta = row['metadata']
                 effective_ts = meta.get('updated_at') or meta.get('created_at')
                 doc_id_str = str(meta.get('document_id') or '')
                 chunk_id_str = str(row.get('id') or '')
                 epoch = effective_ts.timestamp() if effective_ts else 0.0
                 return (
-                    -(row['similarity_score'] + row.get('count_intent_bonus', 0.0)),
+                    -row.get('effective_similarity', row['similarity_score']),
                     -epoch,
                     doc_id_str,
                     chunk_id_str,
                 )
-            documents.sort(key=_count_sort_key)
+            documents.sort(key=_intent_sort_key)
             documents = documents[:limit]
 
         # Strip internal tie-break fields before returning to callers.
@@ -446,7 +662,8 @@ def search_embeddings(
             f"include_superseded={include_superseded} "
             f"canonical_authority={canonical_authority} "
             f"authority_weighted={authority_weighted} "
-            f"count_intent_active={count_intent_active})"
+            f"count_intent_active={count_intent_active} "
+            f"self_reference_intent_active={self_reference_intent_active})"
         )
 
         # S2826 Pattern B drift-re-mask detection (Rigby SIGN Q5). WARN
@@ -478,6 +695,36 @@ def search_embeddings(
                     "S2826 root-cause showed sync_docs_index_to_documents "
                     "update path does not refresh status field.",
                     list(_COUNT_INTENT_BONUS.keys()),
+                    query[:200],
+                    include_superseded,
+                )
+
+        # S2827 Pattern C drift-re-mask detection (Rigby SIGN Q5 caveat).
+        # WARN when the SELF_REFERENCE intent gate fired but NONE of the
+        # anchor keys matched by the gate produced a chunk in the returned
+        # pool. Same shape as Pattern B WARN — mirrors the fold class
+        # `sync_update_path_completeness` documented at S2826 §5.2. Only
+        # inspects anchor keys that the gate ACTUALLY matched (not the
+        # full anchor map), so an off-target SELF_REFERENCE query firing
+        # only one anchor doesn't over-alarm.
+        if self_reference_intent_active:
+            returned_paths = {
+                (d.get('metadata') or {}).get('file_path') for d in documents
+            }
+            matched_anchor_paths = {
+                _SELF_REFERENCE_ANCHORS[key] for key, _ in self_reference_intent_matches
+            }
+            missing = matched_anchor_paths - returned_paths
+            if missing and missing == matched_anchor_paths:
+                logger.warning(
+                    "[S2827_PATTERN_C_DRIFT] self_reference_intent_active=True "
+                    "but NONE of the mapped canonical anchors are retrievable "
+                    "under current filters. anchor_paths=%s query=%r "
+                    "include_superseded=%s. Check Document.status='processed' "
+                    "for these paths; S2826 root-cause showed "
+                    "sync_docs_index_to_documents update path may miss field "
+                    "refresh classes.",
+                    sorted(matched_anchor_paths),
                     query[:200],
                     include_superseded,
                 )
