@@ -687,6 +687,123 @@ CONCEPTUAL (Q9/Q12/Q13) + DISCOVERY (Q10/Q11) + PROCEDURAL (Q18) →
 semantic-general future arc; SELF_REFERENCE literal-filename (Q20) +
 IDENTITY literal-filename (Q24) → Pattern D next arc.
 
+## Pattern D Measured Boundary Summary (S2828 addendum — permanent architectural record)
+
+**Recorded per Chris close directive at S2828 close (2026-07-19).** Companion
+to the S2826 §retrieval-failure-diagnosis-order + S2827 §Pattern C Measured
+Boundary Summary above; documents Pattern D's measured empirical boundary
++ the constitutional invariants ratified during its D-verdict cycle.
+Belongs alongside those records as part of the permanent retrieval-
+architecture reference for future arcs.
+
+### Selected mechanism parameters (per-regex bonus tiers — Chris D-Q1 ratified)
+
+Strategy 3-B per-regex bonus tiers with per-gate sweep + ceilings per
+Rigby SIGN Q3 DISAGREE reconciliation (flat bonus rejected):
+
+| Gate | Regex shape | Selected bonus | First failing below | Ceiling | Headroom | Neg regs at sr |
+|---|---|:-:|:-:|:-:|:-:|:-:|
+| **P0** `.md` extension | `^\s*[\w\-]+\.md\s*$` | **0.07** | 0.06 (rank 2) | 0.35 | +0.28 | 0/20 |
+| **P1** uppercase snake (≥2 segs) | `^\s*[A-Z][A-Z0-9]+(?:_[A-Z][A-Z0-9]+)+\s*$` | **0.09** | 0.08 (rank 2) | 0.20 | +0.11 | 0/20 |
+| **P2** hyphen caps (≥3 segs) | `^\s*[A-Z0-9]+(?:-[A-Z0-9]+){2,}\s*$` | **0.32** | 0.31 (rank 2, margin −0.0019) | 0.35 | +0.03 | 0/20 |
+| **P3** numeric snake (≥3 segs) | `^\s*\d+[_\-][a-z0-9]+(?:[_\-][a-z0-9]+){2,}\s*$` | **0.03** | — (Q28 wins natively; MISS path) | 0.10 | +0.07 | 0/20 |
+
+Full sweep + evidence: design doc §7.5.
+
+### Q20 was the limiting case for P2
+
+- Q20 (`00-START-NEXT-SESSION` → `00-START-NEXT-SESSION.md`) had the
+  largest measured similarity gap: anchor raw sim 0.3979 vs top-1
+  non-anchor 0.7098 (`docs/handoffs/SESSION_1219_WATCHDOG_FIX_3_PHASE_SHIP.md`),
+  gap +0.3119. Selected P2 bonus 0.32 leaves only +0.03 headroom below
+  the ceiling — the tightest observed. Rigby SIGN Q3 caught this as a
+  load-bearing tension; the per-gate ceiling discipline (Chris D-Q1)
+  bounds it.
+
+### Whole-string `^...$` invariant is LOAD-BEARING
+
+- Disjointness of Pattern D vs Pattern B/C is guaranteed by
+  whole-string anchoring in P0-P3 patterns. Rigby SIGN Q1 nuance:
+  substring-relaxation would immediately introduce overlap with Pattern
+  B `\bhow\s+many\b` etc. or Pattern C `\bwhere\s+do\s+I\s+start\b`
+  etc. Any future author MUST re-run Rigby SIGN + Chris D-verdict
+  before relaxing. Pytest
+  `test_whole_string_holds_across_natural_language` guards this
+  invariant.
+
+### Strategy A curated map (6 entries) + Strategy C log-only miss path
+
+- Chris D-Q2 ratified: Strategy A curated `_LITERAL_FILENAME_ANCHORS`
+  (platform_inventory, platform_what_it_is, knowledge_pipeline,
+  engineering_playbook, 00_start_next_session, claude) + Strategy C
+  `[S2828_PATTERN_D_MISS]` INFO log for gate-fires-no-anchor cases.
+  Rejected Strategy B dynamic Document.file_path lookup because Rigby
+  SIGN Q2 tool_run #3 showed short/common stems (README, INDEX) surface
+  across many non-canonical Documents, breaking deterministic
+  resolution.
+
+### Chris D3 retrieval-integrity invariant preserved
+
+- Pattern D injection + bounded per-gate bonus does NOT force rank 1.
+  If a topic competitor's raw similarity + Pattern D bonus does not
+  exceed the competitor's raw similarity, the competitor legitimately
+  wins. Rigby SIGN Q4 DISAGREE with "force rank 1" was ratified by
+  Chris D-Q3. Architecturally identical to Pattern C N4 case.
+
+### Q28 no-perturb tolerance (Chris D-Q4)
+
+- Q28 (`2701_docs_inventory_topology_audit`) wins at rank 1 natively
+  (sim 0.5973) — a legitimate self-match. Pattern D's P3 gate fires
+  but Q28 is NOT in the curated map → MISS path → no synthetic
+  injection. P3 bonus 0.03 would apply if the row were in the pool,
+  but the MISS path skips this branch. Net effect: rank 1 preserved.
+  This is the tolerated over-fire case; Q28 is a permanent regression
+  control.
+
+### Zoom-out fold persisted `same_pr_mitigatable` (Chris D-Q6)
+
+- Rigby-proposed fold (design §0.1): "Literal-filename intent is not
+  the same as 'no competitor legitimately wins' in embedding space; it
+  is only 'high confidence of a canonical target existing.' Therefore
+  Pattern D must treat gate certainty as the knob that earns a higher
+  bonus ceiling, not treat 'literal' as an unconditional pin." The
+  mitigation IS the per-regex bonus tiers: bonus size proportional to
+  gate certainty (P0 strongest → P3 weakest). Persisted at S2828 close
+  cascade in `logs/zoom_out_classifications.jsonl`.
+
+### Drift re-mask protection extends to Pattern D
+
+- Companion to `[S2826_PATTERN_B_DRIFT]` + `[S2827_PATTERN_C_DRIFT]`:
+  `search_embeddings()` emits `[S2828_PATTERN_D_DRIFT]` WARN when the
+  LITERAL-FILENAME intent gate matched a curated anchor but NONE of
+  those anchors reached the returned pool. Guards against the same
+  metadata-drift-silently-re-masks-mechanism class that S2826 root-
+  caused. The three drift WARNs together provide comprehensive
+  metadata-drift alerting across all three retrieval mechanisms.
+
+### Post-Pattern-D 3-instance codification threshold met (Chris D-Q3)
+
+- Pattern B (S2826) + Pattern C (S2827) + Pattern D (S2828) all share
+  the same skeleton: gate → anchor resolution → injection → bonus →
+  diagnostics → drift WARN. Chris D-Q3 forward-carry: shared
+  "pointer-intent registry" primitive extraction is NOW a candidate
+  arc. Do NOT combine with Pattern D per Chris D-Q7 sequencing — open
+  as separate architectural arc post-S2828.
+
+### Measured baseline delta at S2828 close
+
+| Session | Strict top-1 hits | Mechanism family |
+|---|:-:|---|
+| S2825 (baseline) | 0/16 = 0.0% | none |
+| S2826 (post-repair) | 6/18 = 33.3% | 3× Pattern B COUNT + 3× metadata repair alone |
+| S2827 (Pattern C shipped) | 10/18 = 55.6% | +4× Pattern C SELF_REFERENCE |
+| **S2828 (Pattern D shipped)** | **12/18 = 66.7%** | **+2× Pattern D LITERAL-FILENAME (Q20 P2 + Q24 P1); Q28 preserved natively via MISS path** |
+
+Remaining 6 misses deferred per Chris D5 policy-class taxonomy:
+CONCEPTUAL (Q9/Q12/Q13) + DISCOVERY (Q10/Q11) + PROCEDURAL (Q18) →
+semantic-general future arc. All literal-filename + intent-based
+policy classes have shipped.
+
 ### References
 
 - S2827 handoff: [`docs/handoffs/SESSION_2827_PATTERN_C_SELF_REFERENCE_INJECTION.md`](handoffs/SESSION_2827_PATTERN_C_SELF_REFERENCE_INJECTION.md)
