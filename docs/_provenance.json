@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-19T21:39:41+00:00",
+    "generated": "2026-07-19T22:29:07+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "7bf42a9ba21c",
-    "doc_count": 2700,
-    "commit_count": 8166,
+    "git_head": "22d7ba71b590",
+    "doc_count": 2703,
+    "commit_count": 8170,
     "confidence_breakdown": {
-      "HIGH": 1698,
+      "HIGH": 1699,
       "MEDIUM": 408,
-      "LOW": 32,
+      "LOW": 34,
       "UNKNOWN": 562
     },
     "excludes": [
@@ -2594,7 +2594,7 @@
         2808,
         2830
       ],
-      "commit_count": 1391,
+      "commit_count": 1393,
       "prs": [
         10,
         11,
@@ -3239,7 +3239,9 @@
         3284,
         3285,
         3286,
-        3287
+        3287,
+        3288,
+        3289
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7607,7 +7609,7 @@
         2808,
         2830
       ],
-      "commit_count": 331,
+      "commit_count": 333,
       "prs": [
         2213,
         2219,
@@ -7851,7 +7853,9 @@
         3284,
         3285,
         3286,
-        3287
+        3287,
+        3288,
+        3289
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21102,6 +21106,22 @@
       "commit_count": 2,
       "prs": [
         3286
+      ]
+    },
+    "docs/handoffs/SESSION_2838_T4_HANDOFF_CITATION_INTEGRITY_AUDIT.md": {
+      "originating_session": 2838,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "22d7ba71",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(audit): S2838 T4 \u2014 Group 2800 handoff citation-integrity + retrieval-harm audit RATIFIED (#2804) (#3290)",
+      "sessions_touched": [
+        2838
+      ],
+      "commit_count": 2,
+      "prs": [
+        2804,
+        3290
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36191,7 +36211,7 @@
         2499,
         2500
       ],
-      "commit_count": 120,
+      "commit_count": 122,
       "prs": [
         2773,
         2775,
@@ -36212,6 +36232,7 @@
         2799,
         2801,
         2803,
+        2804,
         2805,
         2811,
         2813,
@@ -36288,7 +36309,8 @@
         3280,
         3282,
         3284,
-        3286
+        3286,
+        3290
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -37005,6 +37027,22 @@
       "commit_count": 2,
       "prs": [
         3286
+      ]
+    },
+    "docs/research/domains/docs_content_audit/2804_docs_content_handoff_audit.md": {
+      "originating_session": 2838,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "22d7ba71",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(audit): S2838 T4 \u2014 Group 2800 handoff citation-integrity + retrieval-harm audit RATIFIED (#2804) (#3290)",
+      "sessions_touched": [
+        2838
+      ],
+      "commit_count": 2,
+      "prs": [
+        2804,
+        3290
       ]
     },
     "docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md": {
@@ -38872,6 +38910,22 @@
       "commit_count": 2,
       "prs": [
         3286
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-19_2804_docs_content_handoff_audit.md": {
+      "originating_session": 2838,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "22d7ba71",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(audit): S2838 T4 \u2014 Group 2800 handoff citation-integrity + retrieval-harm audit RATIFIED (#2804) (#3290)",
+      "sessions_touched": [
+        2838
+      ],
+      "commit_count": 2,
+      "prs": [
+        2804,
+        3290
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
