@@ -51,6 +51,7 @@ import {
   Bot,
   Inbox,
   Wrench,
+  Radar,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi, authApi } from '@/lib/api'
@@ -99,6 +100,7 @@ import {
   hasApp,
   OutreachInboxTab,
   GovernanceTab,
+  RagDiagnosticsTab,
 } from './workspace/tabs'
 import { ZoomOutLedgerSection } from './workspace/tabs/ZoomOutLedgerSection'
 import { TenantBoundaryHealthSection } from './workspace/tabs/TenantBoundaryHealthSection'
@@ -162,6 +164,7 @@ const primaryTabs: PrimaryTab[] = [
       { id: 'dataintel', label: 'Data & Intel', icon: Radio },
       { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
       { id: 'consciousness', label: 'AI Mind', icon: Brain },
+      { id: 'rag-diagnostics', label: 'RAG Diagnostics', icon: Radar },
     ],
   },
   {
@@ -1250,6 +1253,10 @@ export default function WorkspacePage() {
           )}
           {activePrimary === 'intelligence' && activeSub === 'consciousness' && (
             <AIConsciousnessTab />
+          )}
+          {/* S2831: RAG intent-gate diagnostics — canary for S2830 registry */}
+          {activePrimary === 'intelligence' && activeSub === 'rag-diagnostics' && (
+            <RagDiagnosticsTab />
           )}
 
           {/* SYSTEM */}

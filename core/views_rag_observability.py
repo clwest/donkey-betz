@@ -347,3 +347,122 @@ def _classify_document(doc) -> tuple:
         risk_level = 'low'
 
     return doc_class, risk_level
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# S2831 — Pointer-Intent Registry Diagnostics (thin observability tab)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# GET /api/rag/observability/intent-gate/?query=...&limit=5&threshold=0.4
+#
+# Registry canary: computes matched_patterns via INTENT_MECHANISMS[*].detect
+# so a Step 2 refactor drift (search_embeddings changing intent-gate behavior)
+# surfaces here before shipping. Uses the DORMANT classes shipped at S2830.
+#
+# Contract discipline (Rigby SIGN cycle 1 verdicts):
+#   - Q1 STRENGTHEN: matched_patterns via INTENT_MECHANISMS[*].detect()
+#   - Q2 DISAGREE: no log capture; structured JSON only
+#   - Q3 DISAGREE: no persistence; ephemeral per-request only
+#   - Q4 DISAGREE: no drift-WARN surfacing (scope creep)
+#   - Q5 STRENGTHEN: schema_version present; filter_summary marked debug/
+#     best-effort NOT a stable contract; hard-cap limit + threshold; GET not POST
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def rag_intent_gate_diagnostics(request):
+    """
+    GET /api/rag/observability/intent-gate/
+
+    Thin observability surface for the pointer-intent registry (Pattern
+    B/C/D). Ships as a canary for the S2830 DORMANT substrate — if a
+    future Step 2 refactor of search_embeddings drifts the intent-gate
+    behavior, `matched_patterns` here diverges from `intent_gate_name` in
+    the results and this endpoint's response tells us.
+
+    Query params:
+        query       (required) search string
+        limit       (default 5, hard-capped 1..20)
+        threshold   (default 0.4, hard-capped 0.0..1.0)
+
+    Returns:
+        schema_version: '1'
+        query, limit, threshold: normalized inputs
+        matched_patterns: [mechanism.name] where detect(query) is truthy
+        intent_gates: {<name>_active: bool} for each mechanism
+        results: [{rank, file_path, intent_gate_name, similarity_score,
+                   chunk_id, category, chunk_index}]
+        filter_summary: debug/best-effort snapshot of filter dict; NOT a
+                        stable contract — subject to change without notice
+    """
+    if not request.user.is_authenticated:
+        return api_error("Authentication required", status=401)
+
+    query = (request.GET.get("query") or "").strip()
+    if not query:
+        return api_error("query parameter is required", status=400)
+
+    try:
+        limit = int(request.GET.get("limit") or 5)
+    except (TypeError, ValueError):
+        limit = 5
+    limit = max(1, min(limit, 20))
+
+    try:
+        threshold = float(request.GET.get("threshold") or 0.4)
+    except (TypeError, ValueError):
+        threshold = 0.4
+    threshold = max(0.0, min(threshold, 1.0))
+
+    from core.rag_integration import INTENT_MECHANISMS, search_embeddings
+
+    # Registry canary — call detect() once per mechanism.
+    detect_results = [(m.name, m.detect(query)) for m in INTENT_MECHANISMS]
+    matched_patterns = [name for name, hit in detect_results if hit]
+    intent_gates = {f"{name}_active": bool(hit) for name, hit in detect_results}
+
+    raw_results = search_embeddings(
+        query=query, limit=limit, similarity_threshold=threshold,
+    )
+
+    results = []
+    for rank, row in enumerate(raw_results, start=1):
+        md = row.get("metadata") or {}
+        results.append({
+            "rank": rank,
+            "file_path": md.get("file_path"),
+            "intent_gate_name": row.get("intent_gate_name"),
+            "intent_gate_fired": row.get("intent_gate_fired"),
+            "similarity_score": row.get("similarity_score"),
+            "chunk_id": row.get("chunk_id"),
+            "chunk_index": md.get("chunk_index"),
+            "category": md.get("category"),
+            "document_class": md.get("document_class"),
+            "title": md.get("title"),
+        })
+
+    filter_summary = {
+        "similarity_threshold": threshold,
+        "limit": limit,
+        "count_intent_active": intent_gates.get("count_active", False),
+        "self_reference_intent_active": intent_gates.get("self_reference_active", False),
+        "literal_filename_intent_active": intent_gates.get("literal_filename_active", False),
+        "include_superseded": False,
+        "authority_weighted": False,
+    }
+
+    return api_success({
+        "schema_version": "1",
+        "query": query,
+        "limit": limit,
+        "threshold": threshold,
+        "matched_patterns": matched_patterns,
+        "intent_gates": intent_gates,
+        "results": results,
+        "filter_summary": filter_summary,
+        "notice": (
+            "Thin observability surface. filter_summary is best-effort "
+            "debug snapshot, not a stable contract. schema_version bumps "
+            "on breaking changes."
+        ),
+    })
