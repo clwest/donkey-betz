@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-19T15:24:39+00:00",
+    "generated": "2026-07-19T16:26:35+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "095612efd6ad",
-    "doc_count": 2681,
-    "commit_count": 8136,
+    "git_head": "6a893db18728",
+    "doc_count": 2683,
+    "commit_count": 8140,
     "confidence_breakdown": {
       "HIGH": 1691,
-      "MEDIUM": 405,
-      "LOW": 23,
+      "MEDIUM": 406,
+      "LOW": 24,
       "UNKNOWN": 562
     },
     "excludes": [
@@ -2591,9 +2591,10 @@
         2749,
         2806,
         2807,
-        2808
+        2808,
+        2830
       ],
-      "commit_count": 1375,
+      "commit_count": 1377,
       "prs": [
         10,
         11,
@@ -3225,7 +3226,8 @@
         3264,
         3268,
         3270,
-        3272
+        3272,
+        3274
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7590,9 +7592,10 @@
         2749,
         2806,
         2807,
-        2808
+        2808,
+        2830
       ],
-      "commit_count": 315,
+      "commit_count": 317,
       "prs": [
         2213,
         2219,
@@ -7823,7 +7826,8 @@
         3258,
         3260,
         3261,
-        3264
+        3264,
+        3274
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20953,6 +20957,34 @@
       "prs": [
         3272
       ]
+    },
+    "docs/handoffs/SESSION_2830_POINTER_INTENT_REGISTRY_STEP_1.md": {
+      "originating_session": 2830,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "e4134c94",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(cascade): S2830 close \u2014 pointer-intent registry Step 1 shipped + design ratified + 15-case parity harness (#3274)",
+      "sessions_touched": [
+        2830
+      ],
+      "commit_count": 2,
+      "prs": [
+        3274
+      ]
+    },
+    "docs/handoffs/SESSION_2831_RAG_INTENT_GATE_DIAGNOSTICS_TAB.md": {
+      "originating_session": 2831,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2831
+      ],
+      "commit_count": 0,
+      "prs": []
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
       "originating_session": 293,
