@@ -480,6 +480,321 @@ def _fetch_literal_filename_anchor_chunks(
     return injected
 
 
+# ─────────────────────────────────────────────────────────────────────────
+# S2830 Step 1 — Pointer-Intent Registry (DORMANT)
+# ─────────────────────────────────────────────────────────────────────────
+#
+# Design: docs/research/discovery_layer/PHASE_0_5/POINTER_INTENT_REGISTRY_DESIGN.md
+# Ratified: 2026-07-19 (S2830) via joint Claude+Rigby SIGN 3 cycles +
+#           Chris D-verdict "ship step 1".
+#
+# HARD BOUNDARY (Rigby SIGN Q4 refinement): Step 1 does NOT change
+# runtime dispatch. The classes below are DORMANT — no code path in
+# search_embeddings() calls them. They exist as an alternative surface
+# that Step 2 (separate SIGN arc + separate Chris D-verdict) may wire
+# into search_embeddings() as a behavior-preserving refactor.
+#
+# Contract (Rigby SIGN Q2 refinement): mechanisms may shape-diverge.
+#   - Pattern B is non-injecting; injects_candidates() → False;
+#     fetch_candidate_chunks default no-op inherited.
+#   - Pattern C accepts base_qs (currently rebuilds inline); Pattern D
+#     drops base_qs entirely (also rebuilds inline). Both are legitimate.
+#   - Canonicalization (Pattern D) is mechanism-owned inside detect().
+#   - MISS log (Pattern D) is mechanism-owned via emit_miss_log().
+#
+# Anti-worship (Rigby SIGN Q5 §5.4): if a future mechanism (Pattern E)
+# needs a shape the protocol doesn't accommodate, that's the signal to
+# REFINE the protocol under new SIGN — NOT shoehorn.
+#
+# Each mechanism is a THIN WRAPPER over the existing standalone
+# functions (_detect_count_intent, _detect_self_reference_intent,
+# _detect_literal_filename_intent, _fetch_*_anchor_chunks, and the
+# associated bonus + diagnostic + WARN blocks in search_embeddings).
+# Delegation to existing functions is deliberate for Step 1: zero-
+# behavior-change is preserved by construction because the classes
+# call the exact same code paths search_embeddings currently uses.
+
+class IntentMechanism:
+    """Base contract for pointer-intent mechanisms in the
+    search_embeddings embedding lane. See §4.1 of the design doc for
+    the full method contract."""
+
+    name: str = ''
+    """Machine name — 'count', 'self_reference', 'literal_filename'.
+    Used for intent_gate_name query-level precedence + diagnostic
+    field routing."""
+
+    drift_warn_prefix: str = ''
+    """e.g. '[S2826_PATTERN_B_DRIFT]'. Preserved verbatim from current
+    log strings for grep continuity."""
+
+    def detect(self, query):
+        """Stage 1 — return truthy match record if gate fires, else
+        falsy. Shape is mechanism-owned (bool / tuple / etc)."""
+        raise NotImplementedError
+
+    def injects_candidates(self) -> bool:
+        """Whether this mechanism injects candidate chunks. Pattern B
+        returns False; Pattern C/D return True. Registry short-
+        circuits fetch_candidate_chunks when this is False."""
+        return False
+
+    def fetch_candidate_chunks(self, matches, base_qs, exclude_chunk_ids, query_embedding):
+        """Stage 2+3 — return list of DocumentEmbedding rows to inject.
+        Default no-op (returns []) — non-injecting mechanisms inherit
+        this via injects_candidates()=False short-circuit and do NOT
+        need to override.
+
+        `base_qs` semantics: Optional. Mechanism MAY ignore it and
+        rebuild filter chain inline. Registry MUST NOT assume any
+        mechanism consults base_qs."""
+        return []
+
+    def bonus_and_diagnostics_for_row(self, matches, doc, chunk_id, injected_chunk_ids):
+        """Stages 4+5 — return (bonus_amount, diagnostic_field_dict)
+        for this row. diagnostic_field_dict keys are mechanism-owned
+        literal names."""
+        raise NotImplementedError
+
+    def default_diagnostic_fields(self) -> dict:
+        """Diagnostic dict for rows on queries where gate did NOT
+        fire. Ensures schema stability across all responses."""
+        raise NotImplementedError
+
+    def canonical_target_paths(self) -> set:
+        """Set of file paths this mechanism claims as canonical. Used
+        by drift-WARN to detect all-targets-missing shape."""
+        raise NotImplementedError
+
+    def emit_drift_warn(self, matches, returned_doc_paths, query, include_superseded):
+        """Stage 6 — emit drift WARN if applicable. Preserves each
+        mechanism's current WARN log format verbatim."""
+        pass  # default no-op; each mechanism overrides
+
+    def emit_miss_log(self, query, matches):
+        """Emit Strategy-C-style INFO for gate-fires-but-no-anchor.
+        No-op default; Pattern D overrides."""
+        pass
+
+
+class CountMechanism(IntentMechanism):
+    """Pattern B (S2826) — COUNT intent gate + per-file bonus.
+    Non-injecting: bonus applies to naturally-retrieved rows only."""
+
+    name = 'count'
+    drift_warn_prefix = '[S2826_PATTERN_B_DRIFT]'
+
+    def detect(self, query):
+        return _detect_count_intent(query)
+
+    def injects_candidates(self) -> bool:
+        return False
+
+    def bonus_and_diagnostics_for_row(self, matches, doc, chunk_id, injected_chunk_ids):
+        # matches is a bool from _detect_count_intent
+        if matches:
+            bonus = _COUNT_INTENT_BONUS.get(doc.file_path or '', 0.0)
+        else:
+            bonus = 0.0
+        return bonus, {'count_intent_bonus': bonus}
+
+    def default_diagnostic_fields(self) -> dict:
+        return {'count_intent_bonus': 0.0}
+
+    def canonical_target_paths(self) -> set:
+        return set(_COUNT_INTENT_BONUS.keys())
+
+    def emit_drift_warn(self, matches, returned_doc_paths, query, include_superseded):
+        if not matches or not _COUNT_INTENT_BONUS:
+            return
+        missing_targets = [
+            p for p in _COUNT_INTENT_BONUS.keys() if p not in returned_doc_paths
+        ]
+        if missing_targets and len(missing_targets) == len(_COUNT_INTENT_BONUS):
+            logger.warning(
+                "[S2826_PATTERN_B_DRIFT] count_intent_active=True but "
+                "NONE of the mapped canonical targets are in the "
+                "returned pool. targets=%s query=%r include_superseded=%s. "
+                "Check Document.status='processed' for these paths; "
+                "update path does not refresh status field.",
+                list(_COUNT_INTENT_BONUS.keys()),
+                query[:200],
+                include_superseded,
+            )
+
+
+class SelfReferenceMechanism(IntentMechanism):
+    """Pattern C (S2827) — SELF_REFERENCE intent gate + candidate
+    injection + single-scalar bonus per anchor."""
+
+    name = 'self_reference'
+    drift_warn_prefix = '[S2827_PATTERN_C_DRIFT]'
+
+    def detect(self, query):
+        return _detect_self_reference_intent(query)
+
+    def injects_candidates(self) -> bool:
+        return True
+
+    def fetch_candidate_chunks(self, matches, base_qs, exclude_chunk_ids, query_embedding):
+        # matches is a tuple[(anchor_key, pattern_idx), ...]
+        return _fetch_self_reference_anchor_chunks(
+            matches, base_qs, exclude_chunk_ids, query_embedding,
+        )
+
+    def bonus_and_diagnostics_for_row(self, matches, doc, chunk_id, injected_chunk_ids):
+        # matches is a tuple[(anchor_key, pattern_idx), ...]
+        bonus = 0.0
+        anchor_key = None
+        matched_pattern_index = None
+        injected = False
+        if matches:
+            fp = doc.file_path or ''
+            for key, idx in matches:
+                if _SELF_REFERENCE_ANCHORS.get(key) == fp:
+                    bonus = _SELF_REFERENCE_INTENT_BONUS
+                    anchor_key = key
+                    matched_pattern_index = idx
+                    break
+            if chunk_id in injected_chunk_ids:
+                injected = True
+        return bonus, {
+            'self_ref_intent_bonus': bonus,
+            'self_ref_anchor_key': anchor_key,
+            'self_ref_matched_pattern_index': matched_pattern_index,
+            'self_ref_injected': injected,
+        }
+
+    def default_diagnostic_fields(self) -> dict:
+        return {
+            'self_ref_intent_bonus': 0.0,
+            'self_ref_anchor_key': None,
+            'self_ref_matched_pattern_index': None,
+            'self_ref_injected': False,
+        }
+
+    def canonical_target_paths(self) -> set:
+        return set(_SELF_REFERENCE_ANCHORS.values())
+
+    def emit_drift_warn(self, matches, returned_doc_paths, query, include_superseded):
+        if not matches:
+            return
+        matched_anchor_paths = {
+            _SELF_REFERENCE_ANCHORS[key] for key, _ in matches
+        }
+        missing = matched_anchor_paths - returned_doc_paths
+        if missing and missing == matched_anchor_paths:
+            logger.warning(
+                "[S2827_PATTERN_C_DRIFT] self_reference_intent_active=True "
+                "but NONE of the mapped canonical anchors are retrievable "
+                "under current filters. anchor_paths=%s query=%r "
+                "include_superseded=%s. Check Document.status='processed' "
+                "for these paths; S2826 root-cause: sync_docs_index_to_documents "
+                "update path does not refresh status field.",
+                list(matched_anchor_paths),
+                query[:200],
+                include_superseded,
+            )
+
+
+class LiteralFilenameMechanism(IntentMechanism):
+    """Pattern D (S2828) — LITERAL-FILENAME intent gate + candidate
+    injection + per-gate bonus tiers + Strategy C log-only MISS path."""
+
+    name = 'literal_filename'
+    drift_warn_prefix = '[S2828_PATTERN_D_DRIFT]'
+
+    def detect(self, query):
+        return _detect_literal_filename_intent(query)
+
+    def injects_candidates(self) -> bool:
+        return True
+
+    def fetch_candidate_chunks(self, matches, base_qs, exclude_chunk_ids, query_embedding):
+        # matches is a tuple[(canonical_key_or_None, pattern_idx, gate_name), ...]
+        # Filter out MISS records (anchor_key=None) — only pass curated hits
+        curated_matches = tuple(m for m in matches if m[0] is not None)
+        if not curated_matches:
+            return []
+        return _fetch_literal_filename_anchor_chunks(
+            curated_matches, exclude_chunk_ids, query_embedding,
+        )
+
+    def bonus_and_diagnostics_for_row(self, matches, doc, chunk_id, injected_chunk_ids):
+        # matches is a tuple[(canonical_key_or_None, pattern_idx, gate_name), ...]
+        bonus = 0.0
+        anchor_key = None
+        matched_pattern_index = None
+        gate_name = None
+        injected = False
+        if matches:
+            fp = doc.file_path or ''
+            for key, idx, gname in matches:
+                if key is None:
+                    continue  # MISS record
+                if _LITERAL_FILENAME_ANCHORS.get(key) == fp:
+                    bonus = _LITERAL_FILENAME_INTENT_BONUS.get(gname, 0.0)
+                    anchor_key = key
+                    matched_pattern_index = idx
+                    gate_name = gname
+                    break
+            if chunk_id in injected_chunk_ids:
+                injected = True
+        return bonus, {
+            'literal_filename_intent_bonus': bonus,
+            'literal_filename_anchor_key': anchor_key,
+            'literal_filename_matched_pattern_index': matched_pattern_index,
+            'literal_filename_gate_name': gate_name,
+            'literal_filename_injected': injected,
+        }
+
+    def default_diagnostic_fields(self) -> dict:
+        return {
+            'literal_filename_intent_bonus': 0.0,
+            'literal_filename_anchor_key': None,
+            'literal_filename_matched_pattern_index': None,
+            'literal_filename_gate_name': None,
+            'literal_filename_injected': False,
+        }
+
+    def canonical_target_paths(self) -> set:
+        return set(_LITERAL_FILENAME_ANCHORS.values())
+
+    def emit_miss_log(self, query, matches):
+        # Called only when gate fired but fetch returned []. Emit
+        # verbatim to preserve grep continuity with the current
+        # inline MISS log at search_embeddings line ~750.
+        if not matches:
+            return
+        # Find the miss record (anchor_key=None) if present
+        miss = next((m for m in matches if m[0] is None), None)
+        if miss is None:
+            return
+        logger.info(
+            "[S2828_PATTERN_D_MISS] gate fired but no curated anchor "
+            "matched. query=%r canonicalized=%r pattern_index=%d "
+            "gate=%s. Add to _LITERAL_FILENAME_ANCHORS if this is a "
+            "canonical doc; else safely ignore.",
+            query[:200],
+            _canonicalize_literal_filename_token(query),
+            miss[1],
+            miss[2],
+        )
+
+
+# Registry — order encodes precedence for intent_gate_name.
+# count > self_reference > literal_filename (matches current hardcoded
+# precedence at search_embeddings line ~894-902).
+#
+# Adding Pattern E: implement IntentMechanism subclass, append to this
+# tuple. No other code changes at Step 2+ time.
+INTENT_MECHANISMS = (
+    CountMechanism(),
+    SelfReferenceMechanism(),
+    LiteralFilenameMechanism(),
+)
+
+
 def search_embeddings(
     query: str,
     limit: int = 5,
