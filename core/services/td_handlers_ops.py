@@ -5951,22 +5951,115 @@ class OpsHandlersMixin:
                     payload.get('authority_weighted', False)
                 )
 
-                chunks = search_embeddings(
-                    query=query,
-                    limit=limit,
-                    similarity_threshold=sim_threshold,
-                    category=f_category,
-                    document_class=f_document_class,
-                    is_pinned=(f_is_pinned if f_is_pinned is True else None),
-                    min_session=_d14_resolve_min_session(f_min_session),
-                    include_superseded=include_superseded,
-                    canonical_authority=f_canonical_authority,
-                    authority_weighted=f_authority_weighted,
-                )
+                # ═══════════════════════════════════════════════════════════════
+                # Session 2824 — Phase-0.5 advisory-only dogfood router
+                # feature flag. Per S2823 constitutional package (Chris R1
+                # advisory-only): when the flag is off, the retrieval + envelope
+                # path below is BYTE-IDENTICAL to pre-flag behavior — no import,
+                # no logging, no envelope additions. When the flag is on, the
+                # router runs BEFORE search_embeddings, logs to durable JSONL
+                # SoT + mirror in `finally` (even on retrieval error per
+                # Rigby S2824 Q4 fix), and appends an additive `_router_advisory`
+                # v1 field to the envelope. `_parallel_both` is ALWAYS null in
+                # Phase-0.5 per §7 CRITICAL SCOPE DISTINCTION.
+                # See docs/research/discovery_layer/PHASE_0_5/
+                # ROUTER_SCAFFOLDING_DESIGN.md §15 for R1-R7 constraints.
+                # ═══════════════════════════════════════════════════════════════
+                from django.conf import settings as _p05_settings
+                if not getattr(_p05_settings, 'PHASE_0_5_ROUTER_ENABLED', False):
+                    # ── BYTE-IDENTICAL FLAG-OFF PATH — do not modify ──
+                    chunks = search_embeddings(
+                        query=query,
+                        limit=limit,
+                        similarity_threshold=sim_threshold,
+                        category=f_category,
+                        document_class=f_document_class,
+                        is_pinned=(f_is_pinned if f_is_pinned is True else None),
+                        min_session=_d14_resolve_min_session(f_min_session),
+                        include_superseded=include_superseded,
+                        canonical_authority=f_canonical_authority,
+                        authority_weighted=f_authority_weighted,
+                    )
+
+                    return _apply_limit_envelope({
+                        'action': 'semantic_search',
+                        'count': len(chunks),
+                        'applied_filters': {
+                            'query': query,
+                            'category': f_category,
+                            'document_class': f_document_class,
+                            'is_pinned': f_is_pinned if f_is_pinned is True else None,
+                            'min_session': _d14_resolve_min_session(f_min_session),
+                            'include_superseded': include_superseded,
+                            'similarity_threshold': sim_threshold,
+                            'canonical_authority': f_canonical_authority,
+                            'authority_weighted': f_authority_weighted,
+                        },
+                        'chunks': [{
+                            'id': c['id'],
+                            'similarity': c['similarity_score'],
+                            'importance': c['importance_score'],
+                            'content_preview': (c.get('content') or '')[:500],
+                            'file_path': c['metadata'].get('file_path'),
+                            'title': c['metadata'].get('title'),
+                            'category': c['metadata'].get('category'),
+                            'document_class': c['metadata'].get('document_class'),
+                            'is_pinned': c['metadata'].get('is_pinned'),
+                            'tags': c['metadata'].get('tags', []),
+                            'chunk_index': c['metadata'].get('chunk_index'),
+                            'citation': c['metadata'].get('citation'),
+                            # Cycle 1A KFI-3: authority-aware fields.
+                            'canonical_authority': c.get('canonical_authority'),
+                            'authority_weight': c.get('authority_weight'),
+                            'weighted_score': c.get('weighted_score'),
+                        } for c in chunks],
+                    })
+
+                # ── PHASE-0.5 INSTRUMENTED PATH (advisory-only) ──
+                from core.services.phase_0_5_router import get_router
+                _p05_router = get_router()
+                _p05_decision = _p05_router.classify(query)
+                _p05_retrieval_error = None
+                _p05_retrieval_exception_type = None
+                _p05_retrieval_count = 0
+                chunks = []
+                try:
+                    chunks = search_embeddings(
+                        query=query,
+                        limit=limit,
+                        similarity_threshold=sim_threshold,
+                        category=f_category,
+                        document_class=f_document_class,
+                        is_pinned=(f_is_pinned if f_is_pinned is True else None),
+                        min_session=_d14_resolve_min_session(f_min_session),
+                        include_superseded=include_superseded,
+                        canonical_authority=f_canonical_authority,
+                        authority_weighted=f_authority_weighted,
+                    )
+                    _p05_retrieval_count = len(chunks)
+                except Exception as _p05_exc:
+                    _p05_retrieval_error = str(_p05_exc)[:500]
+                    _p05_retrieval_exception_type = type(_p05_exc).__name__
+                    logger.error(
+                        "[PHASE_0_5_ROUTER] semantic_search raised; logging "
+                        "decision-with-error per Rigby Q4 fix: %s: %s",
+                        _p05_retrieval_exception_type,
+                        _p05_retrieval_error,
+                    )
+                finally:
+                    _p05_router.log_decision(
+                        query=query,
+                        decision=_p05_decision,
+                        chosen_substrate='semantic_search',
+                        actual_substrate='semantic_search',
+                        retrieval_count=_p05_retrieval_count,
+                        retrieval_error=_p05_retrieval_error,
+                        retrieval_exception_type=_p05_retrieval_exception_type,
+                    )
 
                 return _apply_limit_envelope({
                     'action': 'semantic_search',
-                    'count': len(chunks),
+                    'count': _p05_retrieval_count,
                     'applied_filters': {
                         'query': query,
                         'category': f_category,
@@ -5996,6 +6089,28 @@ class OpsHandlersMixin:
                         'authority_weight': c.get('authority_weight'),
                         'weighted_score': c.get('weighted_score'),
                     } for c in chunks],
+                    # Phase-0.5 advisory metadata (per B2 §7). Categorical
+                    # confidence only per Chris R4/§10.4. `_parallel_both`
+                    # ALWAYS null in Phase-0.5 per §7 CRITICAL SCOPE
+                    # DISTINCTION (advisory-only-vs-execution boundary).
+                    '_router_advisory': {
+                        'version': 'v1',
+                        'predicted_family': _p05_decision.predicted_family,
+                        'confidence_categorical': _p05_decision.confidence_categorical,
+                        'matched_rules': list(_p05_decision.matched_rules),
+                        'abstain_reason': _p05_decision.abstain_reason,
+                        'abstain_option': _p05_decision.abstain_option,
+                        'clarify_context_type': _p05_decision.clarify_context_type,
+                        'suggested_alternative_substrate': (
+                            _p05_decision.suggested_alternative_substrate
+                        ),
+                        'measurement_window_id': _p05_decision.measurement_window_id,
+                        'measurement_window_type': _p05_decision.measurement_window_type,
+                        'parallel_both_substrates': None,
+                        'integrity_stop': _p05_decision.integrity_stop_trigger,
+                        'integrity_stop_reason': _p05_decision.integrity_stop_reason,
+                        'retrieval_failed': _p05_retrieval_error is not None,
+                    },
                 })
 
             return {'error': f'Unknown kb_tool action: {action}. Valid: stats, documents, chunks, search_embeddings, semantic_search'}
