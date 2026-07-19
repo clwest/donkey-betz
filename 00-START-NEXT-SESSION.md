@@ -81,6 +81,41 @@ Bucket A auto-actionable ~1 session:
 
 ---
 
+## ⚡ AEP v0.1 STAGE 1 TRIAL AUTHORIZED — S2839 T5 CYCLE 1
+
+Chris ratified Agent Exchange Protocol (AEP) v0.1 design proposal at S2838 close-cycle extension (2026-07-19; verbatim `"Go ahead"`). **Stage 1 trial is authorized at S2839 T5 cycle 1 SIGN routing.**
+
+**Trial protocol at S2839 T5 cycle 1:**
+
+1. Claude Code emits SIGN routing in AEP v0.1 format per proposal §3 schema (envelope + paths dict + Q blocks + PROSE_FIELD zones + ARS gate)
+2. Ask Rigby to respond in AEP v0.1 format
+3. **Prose fallback authorized** if either agent can't parse — no verification-chain break; no arc delay
+4. Both formats produce identical downstream audit-doc content
+5. Post-cycle-1 evaluation measures 5 metrics:
+   - Token count outbound (CD→RGB) — target ≥50% reduction
+   - Token count inbound (RGB→CD) — target ≥50% reduction
+   - Verdict extraction accuracy — target 100% (zero misparse)
+   - ARS gate enforcement — target 100% (zero missing evidence on S|D verdicts)
+   - Fold ledger completeness — target 100% (parity vs prose format)
+6. Deliverable at post-trial:
+   - **PASS all 5 metrics** → propose Stage 2 authorization for S2839 T5 cycles 2+ and all future SIGN cycles
+   - **FAIL any metric** → author `docs/research/platform/AGENT_EXCHANGE_PROTOCOL_v0_1_evaluation.md` documenting failures + discard v0.1 without prejudice against v0.2 revision
+
+**Reference docs:**
+- `docs/research/platform/AGENT_EXCHANGE_PROTOCOL_v0_1_proposal.md` — ratified proposal (~500 lines; §3 mandatory schema; §7.2 sample AEP outbound; §7.4 sample AEP inbound; §9 risks)
+- `docs/research/implementation/RATIFICATION_2026-07-19_agent_exchange_protocol_v0_1.md` — ratification envelope
+
+**AEP is orthogonal to T5 audit content.** T5 opens with `2805_docs_content_reports_audits_triage.md` as usual; only the SIGN cycle 1 communication FORMAT changes to AEP. All downstream artifacts (audit doc, envelope, handoff, workspace mirrors, Chris routing) remain in current markdown/prose formats.
+
+**Hard boundaries during Stage 1 trial:**
+- DO NOT modify AEP v0.1 schema mid-trial (freeze until evaluation deliverable)
+- DO NOT extend AEP format to Chris-facing routing messages (permanent scope boundary)
+- DO NOT compress `PROSE_FIELD` zones under any circumstance
+- DO NOT reduce ARS gate strictness (protocol-layer enforcement is a strengthening, not a weakening)
+- DO NOT propose Stage 2 without post-Stage-1 evaluation showing ≥50% reduction + zero verification-check failures
+
+---
+
 ## SESSION PIN — S2838 RETIRED (fresh mint required at S2839 open)
 
 **Pin history (S2838):**
