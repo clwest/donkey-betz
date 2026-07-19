@@ -21,23 +21,39 @@ This command is the idempotent restoration side of the S2826 repair. It
 must ship in the same PR as the sync command fix (Chris D2) so there is
 no production window where restored metadata can immediately re-drift.
 
-Execution contract (per Chris D1):
+S2829 stop-writer hardening (Chris + Rigby joint SIGN 2026-07-19):
+    At S2829 open, sanity checks re-surfaced 870 rows in the same drift
+    class after S2828 close asserted 0 mismatches. The bulk-update
+    signature (866 rows sharing microsecond-identical updated_at =
+    2026-07-19T03:17:40.403387 UTC) matched THIS command's
+    fixed-timestamp `.update()` shape at the mid-flight `_index.json`
+    moment. Rigby SIGN D6.1: writer must not be reachable unattended.
+    D6.2: snapshot `_index.json` at start so mid-flight regeneration is
+    detectable. This module implements both.
+
+Execution contract (post-S2829):
     python manage.py backfill_document_status_from_docs_index --dry-run
     # verify counts match investigation
-    python manage.py backfill_document_status_from_docs_index
-    # execute
+    python manage.py backfill_document_status_from_docs_index --apply
+    # execute — --apply is REQUIRED for writes since S2829
     python manage.py backfill_document_status_from_docs_index --dry-run
     # must report zero remaining mismatches
+
+A bare invocation (`... backfill_document_status_from_docs_index` with
+neither --dry-run nor --apply) exits with an error. This closes the
+"unattended manual bulk sweep at the wrong _index.json moment" writer
+class that caused the S2829 recurrence.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections import Counter
 from pathlib import Path
 
 from django.conf import settings
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 from django.utils import timezone
 
@@ -68,6 +84,15 @@ class Command(BaseCommand):
             help='Report mismatches without writing changes.',
         )
         parser.add_argument(
+            '--apply',
+            action='store_true',
+            help=(
+                'Required for writes. S2829 stop-writer guard: prevents '
+                'unattended bulk sweeps. Bare invocations (no --dry-run, no '
+                '--apply) exit with an error.'
+            ),
+        )
+        parser.add_argument(
             '--limit',
             type=int,
             default=None,
@@ -76,7 +101,20 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         dry_run = options['dry_run']
+        apply = options['apply']
         limit = options.get('limit')
+
+        # S2829 stop-writer guard: must pick a mode explicitly.
+        if dry_run and apply:
+            raise CommandError(
+                "--dry-run and --apply are mutually exclusive. Pick one."
+            )
+        if not dry_run and not apply:
+            raise CommandError(
+                "Explicit mode required: pass --dry-run to preview or --apply "
+                "to write. Bare invocations rejected since S2829 to prevent "
+                "unattended bulk sweeps at mid-flight _index.json moments."
+            )
 
         index_path = Path(settings.BASE_DIR) / 'docs' / '_index.json'
         if not index_path.exists():
@@ -85,11 +123,20 @@ class Command(BaseCommand):
             ))
             return
 
-        with open(index_path) as f:
-            index = json.load(f)
+        # S2829 snapshot: read _index.json bytes ONCE, hash them, then parse.
+        # Any subsequent regeneration during this command's run is invisible
+        # to us — we operate on the frozen snapshot. Log the hash so
+        # divergence between what backfill saw and current disk is
+        # detectable in post-hoc audits.
+        index_bytes = index_path.read_bytes()
+        index_hash = hashlib.sha256(index_bytes).hexdigest()
+        index = json.loads(index_bytes)
 
         docs_by_path = {d['path']: d for d in index.get('documents', [])}
-        self.stdout.write(f"docs/_index.json loaded: {len(docs_by_path)} entries")
+        self.stdout.write(
+            f"docs/_index.json snapshot: {len(docs_by_path)} entries "
+            f"(sha256={index_hash[:16]}...)"
+        )
 
         # Walk every Document row; compare against index truth.
         mismatches = Counter()

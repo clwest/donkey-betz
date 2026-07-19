@@ -109,6 +109,7 @@ class Command(BaseCommand):
             'created': 0,
             'updated': 0,
             'skipped': 0,
+            'status_refreshed': 0,  # S2829: skip-branch status corrections
             'errors': 0
         }
 
@@ -139,10 +140,11 @@ class Command(BaseCommand):
         self.stdout.write("\n" + "=" * 50)
         self.stdout.write(self.style.SUCCESS("SYNC COMPLETE" if not dry_run else "DRY RUN COMPLETE"))
         self.stdout.write("=" * 50)
-        self.stdout.write(f"  Created:  {stats['created']}")
-        self.stdout.write(f"  Updated:  {stats['updated']}")
-        self.stdout.write(f"  Skipped:  {stats['skipped']}")
-        self.stdout.write(f"  Errors:   {stats['errors']}")
+        self.stdout.write(f"  Created:          {stats['created']}")
+        self.stdout.write(f"  Updated:          {stats['updated']}")
+        self.stdout.write(f"  Skipped:          {stats['skipped']}")
+        self.stdout.write(f"  Status refreshed: {stats['status_refreshed']}")
+        self.stdout.write(f"  Errors:           {stats['errors']}")
 
         # Embed if requested
         if options['embed'] and not dry_run and stats['created'] > 0:
@@ -265,6 +267,28 @@ class Command(BaseCommand):
         if existing:
             # Check if content changed
             if existing.content_hash == content_hash:
+                # S2829 skip-branch closure (Chris + Rigby joint SIGN 2026-07-19):
+                # S2826 fixed the update-branch to refresh Document.status from
+                # docs_index_status, but the skip-branch here returned early
+                # without touching status. When the S2826 backfill command ran
+                # against a mid-flight _index.json and wrote status='archived'
+                # to canonical anchors, every subsequent sync (typical case:
+                # content unchanged) hit this branch and left the incorrect
+                # status intact. Symptom re-manifested at S2829 open with 870
+                # mismatches after S2828 close asserted 0. Fix: even when
+                # content_hash matches, still verify + refresh Document.status
+                # against the docs_index_status ground truth. Save is scoped
+                # to (status, updated_at) so unrelated fields never drift here.
+                expected_status = STATUS_MAPPING.get(
+                    (doc_data.get('status') or 'active').strip().lower(),
+                    ContentStatus.PROCESSED,
+                )
+                if existing.status != expected_status:
+                    if not dry_run:
+                        existing.status = expected_status
+                        existing.updated_at = timezone.now()
+                        existing.save(update_fields=['status', 'updated_at'])
+                    return 'status_refreshed'
                 return 'skipped'
             else:
                 # Update existing document
