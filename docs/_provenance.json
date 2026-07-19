@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-19T17:23:50+00:00",
+    "generated": "2026-07-19T18:18:41+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "eaafdebc2b1e",
-    "doc_count": 2688,
-    "commit_count": 8146,
+    "git_head": "4317ce32cc38",
+    "doc_count": 2691,
+    "commit_count": 8150,
     "confidence_breakdown": {
-      "HIGH": 1694,
+      "HIGH": 1695,
       "MEDIUM": 406,
-      "LOW": 26,
+      "LOW": 28,
       "UNKNOWN": 562
     },
     "excludes": [
@@ -2594,7 +2594,7 @@
         2808,
         2830
       ],
-      "commit_count": 1381,
+      "commit_count": 1383,
       "prs": [
         10,
         11,
@@ -3229,7 +3229,9 @@
         3272,
         3274,
         3276,
-        3277
+        3277,
+        3278,
+        3279
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7597,7 +7599,7 @@
         2808,
         2830
       ],
-      "commit_count": 321,
+      "commit_count": 323,
       "prs": [
         2213,
         2219,
@@ -7831,7 +7833,9 @@
         3264,
         3274,
         3276,
-        3277
+        3277,
+        3278,
+        3279
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21020,6 +21024,21 @@
       "commit_count": 2,
       "prs": [
         3278
+      ]
+    },
+    "docs/handoffs/SESSION_2834_T1_ANCHOR_CONTENT_AUDIT.md": {
+      "originating_session": 2834,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "4317ce32",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2834 \u2014 Ratify Group 2800 T1 anchor content audit \u00b7 schema v1.1 locked (#3280)",
+      "sessions_touched": [
+        2834
+      ],
+      "commit_count": 2,
+      "prs": [
+        3280
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36108,7 +36127,7 @@
         2499,
         2500
       ],
-      "commit_count": 112,
+      "commit_count": 114,
       "prs": [
         2773,
         2775,
@@ -36201,7 +36220,8 @@
         3264,
         3266,
         3268,
-        3278
+        3278,
+        3280
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -36857,6 +36877,21 @@
       "commit_count": 2,
       "prs": [
         3278
+      ]
+    },
+    "docs/research/domains/docs_content_audit/2801_docs_content_anchors_audit.md": {
+      "originating_session": 2834,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "4317ce32",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2834 \u2014 Ratify Group 2800 T1 anchor content audit \u00b7 schema v1.1 locked (#3280)",
+      "sessions_touched": [
+        2834
+      ],
+      "commit_count": 2,
+      "prs": [
+        3280
       ]
     },
     "docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md": {
@@ -38664,6 +38699,21 @@
       "commit_count": 2,
       "prs": [
         3278
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-19_2801_docs_content_anchors_audit.md": {
+      "originating_session": 2834,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "4317ce32",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2834 \u2014 Ratify Group 2800 T1 anchor content audit \u00b7 schema v1.1 locked (#3280)",
+      "sessions_touched": [
+        2834
+      ],
+      "commit_count": 2,
+      "prs": [
+        3280
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
