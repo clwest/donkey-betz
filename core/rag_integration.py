@@ -255,6 +255,231 @@ def _fetch_self_reference_anchor_chunks(
     return injected
 
 
+# S2828 Pattern D — narrow LITERAL-FILENAME intent gate + canonical-anchor
+# candidate injection. Chris D-verdict 2026-07-19 (S2828 D-Q1..D-Q7)
+# ratifying Rigby-reconciled v2 design after S2827 Pattern C shipped
+# 10/18 = 55.6% strict top-1 baseline. Pattern D targets Q20 + Q24
+# (Phase-0.5 corpus rows) + adjacent `CLAUDE.md` literal per Chris D-Q4
+# S2827 explicit naming.
+#
+# Design doc: docs/research/discovery_layer/PHASE_0_5/PATTERN_D_LITERAL_FILENAME_DESIGN.md
+# Constitutional refinements from Chris D-Q1..D-Q7:
+#   D-Q1: per-regex bonus sweep + per-gate ceilings (P0/P2=0.35, P1=0.20,
+#         P3=0.10). Smallest reliable per gate; if ceiling exceeded,
+#         positive not converted this arc (do not raise ceiling).
+#   D-Q2: Strategy A curated map + Strategy C log-only miss path (no
+#         Strategy B dynamic Document.file_path lookup — over-match risk
+#         verified by Rigby SIGN Q2 tool_run #3 on `README`).
+#   D-Q3: retrieval-integrity invariant preserved. Bounded per-gate bonus
+#         is NOT rank-1 force-pin. Legitimate competitor may still win.
+#   D-Q4: Q28 no-perturb (Q28 wins natively at sim 0.5973; P3 bonus is
+#         additive on the winning row via dedupe → rank 1 preserved).
+#   D-Q5: `CLAUDE.md` literal in scope though not a corpus row.
+#   D-Q6: Rigby zoom-out fold persisted as `same_pr_mitigatable` — per-
+#         regex tiers ARE the mitigation.
+#   D-Q7: Atomic PR sequencing per S2827 D-Q5; NO shared "pointer-intent
+#         registry" refactor in S2828.
+#
+# Sibling to Pattern B `_COUNT_INTENT_PATTERNS` and Pattern C
+# `_SELF_REFERENCE_INTENT_PATTERNS`. Distinct mechanism per Chris D5.
+# LOAD-BEARING INVARIANT: whole-string `^...$` anchoring is the
+# disjointness guarantee vs Pattern B/C multi-word patterns. Any future
+# substring-relaxation MUST re-run Rigby SIGN + Chris D-verdict.
+
+# Regex patterns — whole-string anchored per LOAD-BEARING invariant.
+# Ordered P0..P3 by intent-signal determinism (strongest → weakest).
+_LITERAL_FILENAME_INTENT_PATTERNS = (
+    # P0 — explicit .md extension (case-insensitive)
+    #   fires: CLAUDE.md, README.md, PLATFORM_INVENTORY.md, claude.md
+    #   holds: multi-word ("open CLAUDE.md and check"), path form ("docs/CLAUDE.md")
+    re.compile(r'^\s*[\w\-]+\.md\s*$', re.I),
+
+    # P1 — uppercase-token filename stem (2+ uppercase segments joined by _)
+    #   fires: PLATFORM_INVENTORY, KNOWLEDGE_PIPELINE, SESSION_2827_PATTERN_C
+    #   holds: PLATFORM (single), README (single), lowercase platform_inventory
+    re.compile(r'^\s*[A-Z][A-Z0-9]+(?:_[A-Z][A-Z0-9]+)+\s*$'),
+
+    # P2 — hyphenated ALL-CAPS token (3+ segments joined by -; explicit
+    #   {2,} = 2+ additional segments after the first, i.e. 3+ total).
+    #   fires: 00-START-NEXT-SESSION
+    #   holds: ADR-0130 (2 segments, deliberately excluded — ticket-id
+    #          shape overlaps too many non-canonical patterns)
+    re.compile(r'^\s*[A-Z0-9]+(?:-[A-Z0-9]+){2,}\s*$'),
+
+    # P3 — numeric-prefix snake_case filename (3+ segments after numeric
+    #   prefix). Q28-shape.
+    #   fires: 2701_docs_inventory_topology_audit
+    #   holds: multi-word natural-language forms
+    re.compile(r'^\s*\d+[_\-][a-z0-9]+(?:[_\-][a-z0-9]+){2,}\s*$'),
+)
+
+# Gate name per pattern index — used in diagnostics + per-gate bonus lookup.
+_LITERAL_FILENAME_PATTERN_KEYS = (
+    'P0_md_extension',
+    'P1_uppercase_snake',
+    'P2_hyphen_caps',
+    'P3_numeric_snake',
+)
+
+# Curated canonical anchor map (Strategy A — Chris D-Q2 ratified).
+# Keys are CANONICALIZED (lowercase; `.md` stripped; `-` → `_`).
+# Values are REAL Document.file_path strings (verified 2026-07-19).
+# Adding an entry: verify the file_path resolves to a real Document via
+# `Document.objects.filter(file_path=<path>).exists()`. Wiring pytest
+# `test_all_anchors_resolve_to_real_documents` enforces this.
+_LITERAL_FILENAME_ANCHORS = {
+    'platform_inventory':    'docs/PLATFORM_INVENTORY.md',
+    'platform_what_it_is':   'docs/PLATFORM_WHAT_IT_IS.md',
+    'knowledge_pipeline':    'docs/KNOWLEDGE_PIPELINE.md',
+    'engineering_playbook':  'docs/ENGINEERING_PLAYBOOK.md',
+    '00_start_next_session': '00-START-NEXT-SESSION.md',
+    'claude':                'CLAUDE.md',
+}
+
+# Per-gate bonus tiers (Strategy 3-B — Chris D-Q1 ratified). Values
+# selected by per-gate sweep at S2828 implementation-time; smallest
+# reliable per gate that converts intended positives while preserving
+# ALL 20 negative controls. Full sweep + fine-grained margins recorded
+# in design doc §7 measurement evidence.
+#
+#   Sweep (coarse [0.03..0.35] → fine [smallest_flip..0.10]):
+#     P0 `.md`   : converts at 0.07 (first fail 0.06); anchor_eff 0.6063;
+#                  ceiling 0.35; headroom +0.28.
+#     P1 uppercase snake: converts at 0.09 (first fail 0.08); anchor_eff
+#                  0.5651; ceiling 0.20; headroom +0.11.
+#     P2 hyphen caps: converts at 0.32 (first fail 0.31 at margin -0.0019
+#                  which is the tightest margin observed — Q20's +0.31 raw
+#                  gap left almost no room); ceiling 0.35; headroom +0.03.
+#                  Rigby SIGN Q3 caught this as load-bearing tension; the
+#                  measured smallest is well under the ceiling.
+#     P3 numeric snake: 0.03 (Q28 wins natively, bonus is no-op because
+#                  Q28 is uncurated — MISS-path applies; value chosen for
+#                  minimal footprint). Ceiling 0.10.
+#
+# Chris D-Q1 discipline: if a positive requires a bonus > ceiling, it
+# is NOT converted this arc (do NOT raise ceiling to hit projection).
+# Wiring pytest asserts each selected value ≤ corresponding ceiling.
+_LITERAL_FILENAME_INTENT_BONUS = {
+    'P0_md_extension':    0.07,
+    'P1_uppercase_snake': 0.09,
+    'P2_hyphen_caps':     0.32,
+    'P3_numeric_snake':   0.03,
+}
+
+# Per-gate ceilings (Chris D-Q1). Enforced by pytest assertion; sweep
+# selection MUST NOT exceed these values.
+_LITERAL_FILENAME_INTENT_CEILING = {
+    'P0_md_extension':    0.35,
+    'P1_uppercase_snake': 0.20,
+    'P2_hyphen_caps':     0.35,
+    'P3_numeric_snake':   0.10,
+}
+
+
+def _canonicalize_literal_filename_token(query):
+    """Canonicalize a literal-filename query token for anchor-map lookup.
+
+    Spec (Chris D-Q2 ratified): strip whitespace → lowercase → strip
+    trailing `.md` (case-insensitive) → normalize `-` → `_`. Deterministic
+    and reversible-modulo-case. Used for anchor-map key generation AND
+    query-time resolution — both paths MUST use identical canonicalization
+    for miss-path pytest coverage to hold.
+    """
+    if not query:
+        return ''
+    t = query.strip().lower()
+    if t.endswith('.md'):
+        t = t[:-3]
+    t = t.replace('-', '_')
+    return t
+
+
+def _detect_literal_filename_intent(query):
+    """Narrow LITERAL-FILENAME intent gate (Pattern D).
+
+    Returns a tuple of (canonical_key, pattern_index, gate_name) matches,
+    deduplicated preserving first-match order. Empty tuple when gate does
+    not fire. Chris D5 distinct-mechanism-per-class discipline: this gate
+    deliberately does NOT overlap with Pattern B (COUNT) or Pattern C
+    (semantic SELF_REFERENCE) — whole-string `^...$` anchoring is the
+    disjointness guarantee.
+
+    Strategy A + Strategy C resolution: if a pattern fires but the
+    canonicalized token misses the curated anchor map, the caller emits
+    `[S2828_PATTERN_D_MISS]` INFO and Pattern D's injection + bonus paths
+    are skipped — natural retrieval unchanged.
+    """
+    if not query:
+        return ()
+    matched = []
+    seen_keys = set()
+    canonicalized = _canonicalize_literal_filename_token(query)
+    for idx, pattern in enumerate(_LITERAL_FILENAME_INTENT_PATTERNS):
+        if pattern.search(query):
+            gate_name = _LITERAL_FILENAME_PATTERN_KEYS[idx]
+            anchor_key = canonicalized if canonicalized in _LITERAL_FILENAME_ANCHORS else None
+            if anchor_key is not None and anchor_key not in seen_keys:
+                seen_keys.add(anchor_key)
+                matched.append((anchor_key, idx, gate_name))
+            elif anchor_key is None and not matched:
+                # First pattern to fire but no anchor resolves — record as
+                # (None, idx, gate_name) so caller can emit MISS log.
+                matched.append((None, idx, gate_name))
+                break  # only need one miss record
+    return tuple(matched)
+
+
+def _fetch_literal_filename_anchor_chunks(
+    anchor_matches,
+    exclude_chunk_ids,
+    query_embedding,
+):
+    """Fetch the highest-similarity DocumentEmbedding chunk for each
+    mapped canonical anchor, under the same status-exclusion filter chain
+    the parent search_embeddings applies (Chris D6 no-include_superseded
+    relaxation preserved). Skips (None, idx, gate) miss records.
+
+    Same shape as Pattern C `_fetch_self_reference_anchor_chunks` but
+    kept as a separate function per Chris D-Q7 "no shared refactor in
+    S2828." Post-Pattern-D "pointer-intent registry" primitive is a
+    separate arc.
+    """
+    from content.models import Document, DocumentEmbedding, ContentStatus
+    from pgvector.django import CosineDistance
+
+    # Resolve mapped-anchor file_paths (skip miss records where key is None)
+    anchor_paths = {
+        _LITERAL_FILENAME_ANCHORS[key]
+        for key, _, _ in anchor_matches
+        if key is not None
+    }
+    if not anchor_paths:
+        return []
+    anchor_docs = list(
+        Document.objects.filter(file_path__in=anchor_paths).only('id', 'file_path')
+    )
+    if not anchor_docs:
+        return []
+
+    injected = []
+    for doc in anchor_docs:
+        chunk_qs = (
+            DocumentEmbedding.objects
+            .filter(document=doc)
+            .exclude(document__status=ContentStatus.ARCHIVED)
+            .annotate(distance=CosineDistance('embedding_vector', query_embedding))
+        )
+        best = chunk_qs.order_by('distance').first()
+        if best is None:
+            continue
+        if best.id in exclude_chunk_ids:
+            # Already in the retrieved pool — no synthetic inject;
+            # the boost is applied in the composition loop.
+            continue
+        injected.append(best)
+    return injected
+
+
 def search_embeddings(
     query: str,
     limit: int = 5,
@@ -452,7 +677,24 @@ def search_embeddings(
         count_intent_active = _detect_count_intent(query)
         self_reference_intent_matches = _detect_self_reference_intent(query)
         self_reference_intent_active = bool(self_reference_intent_matches)
-        if authority_weighted or count_intent_active or self_reference_intent_active:
+        # S2828 Pattern D — LITERAL-FILENAME gate. Matches contain
+        # (anchor_key, pattern_index, gate_name); anchor_key may be None
+        # to signal a curated-map MISS (Strategy C log-only path). Active
+        # if any pattern fired regardless of anchor resolution — the
+        # oversample deepens the pool for the (rare) case where a
+        # curated-map hit lets injection promote the anchor.
+        literal_filename_intent_matches = _detect_literal_filename_intent(query)
+        literal_filename_intent_active = bool(literal_filename_intent_matches)
+        # Any curated-anchor resolution (excludes miss records)
+        literal_filename_anchor_matches = tuple(
+            m for m in literal_filename_intent_matches if m[0] is not None
+        )
+        if (
+            authority_weighted
+            or count_intent_active
+            or self_reference_intent_active
+            or literal_filename_intent_active
+        ):
             candidate_qs = qs.order_by('distance')[:max(limit * 3, limit)]
             chunks = list(candidate_qs.select_related('document'))
         else:
@@ -479,6 +721,42 @@ def search_embeddings(
             for row in injected:
                 injected_chunk_ids.add(row.id)
                 chunks.append(row)
+
+        # S2828 Pattern D — LITERAL-FILENAME candidate injection. Same
+        # shape as Pattern C but distinct anchor map + per-gate bonus.
+        # Chris D-Q4 tolerated Q28 no-perturb case handled by dedupe:
+        # if the natural top-N pool already contains the resolved anchor
+        # chunk, injection is skipped and the P3-tier bonus applies
+        # additively via the composition loop below (rank 1 preserved).
+        # Strategy C log-only miss path (Chris D-Q2): gate fires but
+        # anchor_key is None → no injection, INFO log surfaces the
+        # uncurated hit for future map-graduation consideration.
+        literal_filename_injected_chunk_ids = set()
+        if literal_filename_anchor_matches:
+            existing_chunk_ids = {c.id for c in chunks}
+            lf_injected = _fetch_literal_filename_anchor_chunks(
+                literal_filename_anchor_matches,
+                existing_chunk_ids,
+                query_embedding,
+            )
+            for row in lf_injected:
+                literal_filename_injected_chunk_ids.add(row.id)
+                chunks.append(row)
+        elif literal_filename_intent_active:
+            # Gate fired but no curated anchor resolved — Strategy C
+            # log-only path. Preserves auditability for future map
+            # graduation without runtime resolution to non-canonical Docs.
+            _miss = literal_filename_intent_matches[0]
+            logger.info(
+                "[S2828_PATTERN_D_MISS] gate fired but no curated anchor "
+                "matched. query=%r canonicalized=%r pattern_index=%d "
+                "gate=%s. Add to _LITERAL_FILENAME_ANCHORS if this is a "
+                "canonical doc; else safely ignore.",
+                query[:200],
+                _canonicalize_literal_filename_token(query),
+                _miss[1],
+                _miss[2],
+            )
 
         documents = []
         encryption_service = get_encryption_service()
@@ -536,7 +814,38 @@ def search_embeddings(
                 if chunk.id in injected_chunk_ids:
                     self_ref_injected = True
 
-            effective_similarity = similarity + count_intent_bonus + self_ref_intent_bonus
+            # S2828 Pattern D — per-row LITERAL-FILENAME bonus. Fires only
+            # when the gate matched AND this row's Document is one of the
+            # curated anchors. Per-regex tiered per Chris D-Q1: bonus value
+            # is per-gate-name (_LITERAL_FILENAME_INTENT_BONUS dict). Chris
+            # D3 retrieval-integrity invariant preserved — bounded per-gate
+            # bonus, NOT force-rank-1; a topic competitor with high enough
+            # raw sim can still legitimately win.
+            literal_filename_bonus = 0.0
+            literal_filename_anchor_key = None
+            literal_filename_matched_pattern_index = None
+            literal_filename_gate_name = None
+            literal_filename_injected = False
+            if literal_filename_anchor_matches:
+                fp = doc.file_path or ''
+                for key, idx, gate_name in literal_filename_anchor_matches:
+                    if _LITERAL_FILENAME_ANCHORS.get(key) == fp:
+                        literal_filename_bonus = _LITERAL_FILENAME_INTENT_BONUS.get(
+                            gate_name, 0.0
+                        )
+                        literal_filename_anchor_key = key
+                        literal_filename_matched_pattern_index = idx
+                        literal_filename_gate_name = gate_name
+                        break
+                if chunk.id in literal_filename_injected_chunk_ids:
+                    literal_filename_injected = True
+
+            effective_similarity = (
+                similarity
+                + count_intent_bonus
+                + self_ref_intent_bonus
+                + literal_filename_bonus
+            )
 
             # Cycle 1A KFI-3 (ADR-0130 §2.1): compute weighted_score when
             # authority_weighted=True. retrieval_boost remains
@@ -577,10 +886,18 @@ def search_embeddings(
                 # surfaces gate + bonus provenance so consumers + tests
                 # can distinguish raw semantic rank from policy-boosted
                 # rank AND natural retrieval from candidate injection.
-                'intent_gate_fired': count_intent_active or self_reference_intent_active,
+                'intent_gate_fired': (
+                    count_intent_active
+                    or self_reference_intent_active
+                    or literal_filename_intent_active
+                ),
+                # Precedence: count > self_reference > literal_filename.
+                # Documented precedence for determinism; disjoint by design
+                # (whole-string P0-P3 vs multi-word Pattern B/C patterns).
                 'intent_gate_name': (
                     'count' if count_intent_active else
                     'self_reference' if self_reference_intent_active else
+                    'literal_filename' if literal_filename_intent_active else
                     None
                 ),
                 'count_intent_bonus': count_intent_bonus,
@@ -591,6 +908,13 @@ def search_embeddings(
                 'self_ref_anchor_key': self_ref_anchor_key,
                 'self_ref_matched_pattern_index': self_ref_matched_pattern_index,
                 'self_ref_injected': self_ref_injected,
+                # S2828 Pattern D diagnostic fields (Chris D-Q1 acceptance
+                # requirement: per-gate name + bonus + anchor key + injection).
+                'literal_filename_intent_bonus': literal_filename_bonus,
+                'literal_filename_anchor_key': literal_filename_anchor_key,
+                'literal_filename_matched_pattern_index': literal_filename_matched_pattern_index,
+                'literal_filename_gate_name': literal_filename_gate_name,
+                'literal_filename_injected': literal_filename_injected,
                 'effective_similarity': effective_similarity,
                 # Cycle 1A KFI-3: authority-aware retrieval fields.
                 # Top-level canonical_authority is always populated;
@@ -624,16 +948,16 @@ def search_embeddings(
                 )
             documents.sort(key=_sort_key)
             documents = documents[:limit]
-        elif count_intent_active or self_reference_intent_active:
-            # S2826 Pattern B + S2827 Pattern C — when either intent gate
-            # fires and we oversampled the candidate pool, re-sort by
-            # (raw similarity + all applied bonuses) descending. Tie-break
-            # identical to authority_weighted path (updated_at DESC then
-            # document.id ASC then chunk.id ASC) so downstream ordering
-            # stays deterministic even when bonuses create ties. Bonuses
-            # compose additively (row['effective_similarity'] already
-            # equals sim + count_bonus + self_ref_bonus per composition
-            # loop above).
+        elif count_intent_active or self_reference_intent_active or literal_filename_intent_active:
+            # S2826 Pattern B + S2827 Pattern C + S2828 Pattern D — when
+            # any intent gate fires and we oversampled the candidate pool,
+            # re-sort by (raw similarity + all applied bonuses) descending.
+            # Tie-break identical to authority_weighted path (updated_at
+            # DESC then document.id ASC then chunk.id ASC) so downstream
+            # ordering stays deterministic even when bonuses create ties.
+            # Bonuses compose additively (row['effective_similarity']
+            # already equals sim + count_bonus + self_ref_bonus +
+            # literal_filename_bonus per composition loop above).
             def _intent_sort_key(row):
                 meta = row['metadata']
                 effective_ts = meta.get('updated_at') or meta.get('created_at')
@@ -663,7 +987,8 @@ def search_embeddings(
             f"canonical_authority={canonical_authority} "
             f"authority_weighted={authority_weighted} "
             f"count_intent_active={count_intent_active} "
-            f"self_reference_intent_active={self_reference_intent_active})"
+            f"self_reference_intent_active={self_reference_intent_active} "
+            f"literal_filename_intent_active={literal_filename_intent_active})"
         )
 
         # S2826 Pattern B drift-re-mask detection (Rigby SIGN Q5). WARN
@@ -724,6 +1049,33 @@ def search_embeddings(
                     "for these paths; S2826 root-cause showed "
                     "sync_docs_index_to_documents update path may miss field "
                     "refresh classes.",
+                    sorted(matched_anchor_paths),
+                    query[:200],
+                    include_superseded,
+                )
+
+        # S2828 Pattern D drift-re-mask detection. Companion to Pattern
+        # B/C WARNs; only fires when the LITERAL-FILENAME gate matched a
+        # curated anchor (not the Strategy C miss path — that already
+        # emitted its own INFO log).
+        if literal_filename_anchor_matches:
+            returned_paths = {
+                (d.get('metadata') or {}).get('file_path') for d in documents
+            }
+            matched_anchor_paths = {
+                _LITERAL_FILENAME_ANCHORS[key]
+                for key, _, _ in literal_filename_anchor_matches
+                if key is not None
+            }
+            missing = matched_anchor_paths - returned_paths
+            if missing and missing == matched_anchor_paths:
+                logger.warning(
+                    "[S2828_PATTERN_D_DRIFT] literal_filename_intent_active=True "
+                    "with curated anchor(s) resolved but NONE reached the "
+                    "returned pool. anchor_paths=%s query=%r "
+                    "include_superseded=%s. Check Document.status='processed' "
+                    "for these paths; future metadata drift may silently "
+                    "re-mask Pattern D.",
                     sorted(matched_anchor_paths),
                     query[:200],
                     include_superseded,
