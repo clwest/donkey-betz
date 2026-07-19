@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-19T16:26:35+00:00",
+    "generated": "2026-07-19T16:50:13+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "6a893db18728",
-    "doc_count": 2683,
-    "commit_count": 8140,
+    "git_head": "f29a892cfcc4",
+    "doc_count": 2685,
+    "commit_count": 8142,
     "confidence_breakdown": {
-      "HIGH": 1691,
+      "HIGH": 1692,
       "MEDIUM": 406,
-      "LOW": 24,
+      "LOW": 25,
       "UNKNOWN": 562
     },
     "excludes": [
@@ -2594,7 +2594,7 @@
         2808,
         2830
       ],
-      "commit_count": 1377,
+      "commit_count": 1379,
       "prs": [
         10,
         11,
@@ -3227,7 +3227,8 @@
         3268,
         3270,
         3272,
-        3274
+        3274,
+        3276
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7595,7 +7596,7 @@
         2808,
         2830
       ],
-      "commit_count": 317,
+      "commit_count": 319,
       "prs": [
         2213,
         2219,
@@ -7827,7 +7828,8 @@
         3260,
         3261,
         3264,
-        3274
+        3274,
+        3276
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20975,13 +20977,28 @@
     },
     "docs/handoffs/SESSION_2831_RAG_INTENT_GATE_DIAGNOSTICS_TAB.md": {
       "originating_session": 2831,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "f29a892c",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(cascade): S2831 close \u2014 RAG intent-gate diagnostics tab shipped (Step 2 anti-drift canary substrate) (#3276)",
+      "sessions_touched": [
+        2831
+      ],
+      "commit_count": 2,
+      "prs": [
+        3276
+      ]
+    },
+    "docs/handoffs/SESSION_2832_RATIFY_2799_DOCS_RESTRUCTURING.md": {
+      "originating_session": 2832,
       "confidence": "LOW",
       "match_source": "frontmatter",
       "first_commit_sha": null,
       "first_commit_date": null,
       "first_commit_subject": null,
       "sessions_touched": [
-        2831
+        2832
       ],
       "commit_count": 0,
       "prs": []
@@ -38582,6 +38599,19 @@
       "prs": [
         3261
       ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-19_2799_docs_restructuring.md": {
+      "originating_session": 2832,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2832
+      ],
+      "commit_count": 0,
+      "prs": []
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
       "originating_session": null,
