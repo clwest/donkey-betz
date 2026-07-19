@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-19T16:50:13+00:00",
+    "generated": "2026-07-19T17:23:50+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "f29a892cfcc4",
-    "doc_count": 2685,
-    "commit_count": 8142,
+    "git_head": "eaafdebc2b1e",
+    "doc_count": 2688,
+    "commit_count": 8146,
     "confidence_breakdown": {
-      "HIGH": 1692,
+      "HIGH": 1694,
       "MEDIUM": 406,
-      "LOW": 25,
+      "LOW": 26,
       "UNKNOWN": 562
     },
     "excludes": [
@@ -2594,7 +2594,7 @@
         2808,
         2830
       ],
-      "commit_count": 1379,
+      "commit_count": 1381,
       "prs": [
         10,
         11,
@@ -3228,7 +3228,8 @@
         3270,
         3272,
         3274,
-        3276
+        3276,
+        3277
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7596,7 +7597,7 @@
         2808,
         2830
       ],
-      "commit_count": 319,
+      "commit_count": 321,
       "prs": [
         2213,
         2219,
@@ -7829,7 +7830,8 @@
         3261,
         3264,
         3274,
-        3276
+        3276,
+        3277
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20992,16 +20994,33 @@
     },
     "docs/handoffs/SESSION_2832_RATIFY_2799_DOCS_RESTRUCTURING.md": {
       "originating_session": 2832,
-      "confidence": "LOW",
-      "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "9e986d57",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2832 \u2014 Ratify 2799 \u00a73 target /docs/ tree \u00b7 open file-content-level audit arc (#3277)",
       "sessions_touched": [
         2832
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3277
+      ]
+    },
+    "docs/handoffs/SESSION_2833_DOCS_CONTENT_AUDIT_PARENT_SCOPING.md": {
+      "originating_session": 2833,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "eaafdebc",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2833 \u2014 Open Group 2800 /docs/ content audit arc \u00b7 D1-D9 parent scoping ratified (#3278)",
+      "sessions_touched": [
+        2833
+      ],
+      "commit_count": 2,
+      "prs": [
+        3278
+      ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
       "originating_session": 293,
@@ -36089,7 +36108,7 @@
         2499,
         2500
       ],
-      "commit_count": 110,
+      "commit_count": 112,
       "prs": [
         2773,
         2775,
@@ -36181,7 +36200,8 @@
         3261,
         3264,
         3266,
-        3268
+        3268,
+        3278
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -36824,6 +36844,21 @@
         2831
       ]
     },
+    "docs/research/domains/docs_content_audit/2800_docs_content_audit_domain_scoping.md": {
+      "originating_session": 2833,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "eaafdebc",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2833 \u2014 Open Group 2800 /docs/ content audit arc \u00b7 D1-D9 parent scoping ratified (#3278)",
+      "sessions_touched": [
+        2833
+      ],
+      "commit_count": 2,
+      "prs": [
+        3278
+      ]
+    },
     "docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md": {
       "originating_session": 2801,
       "confidence": "LOW",
@@ -36939,10 +36974,11 @@
       "sessions_touched": [
         2817
       ],
-      "commit_count": 4,
+      "commit_count": 6,
       "prs": [
         3251,
-        3252
+        3252,
+        3277
       ]
     },
     "docs/research/domains/event_integration_architecture/2000_event_integration_architecture_domain_scoping.md": {
@@ -38604,14 +38640,31 @@
       "originating_session": 2832,
       "confidence": "LOW",
       "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "first_commit_sha": "9e986d57",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2832 \u2014 Ratify 2799 \u00a73 target /docs/ tree \u00b7 open file-content-level audit arc (#3277)",
       "sessions_touched": [
         2832
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3277
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-19_2800_docs_content_audit_parent.md": {
+      "originating_session": 2833,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "eaafdebc",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2833 \u2014 Open Group 2800 /docs/ content audit arc \u00b7 D1-D9 parent scoping ratified (#3278)",
+      "sessions_touched": [
+        2833
+      ],
+      "commit_count": 2,
+      "prs": [
+        3278
+      ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
       "originating_session": null,
