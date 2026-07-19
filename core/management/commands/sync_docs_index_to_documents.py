@@ -282,6 +282,22 @@ class Command(BaseCommand):
                     existing.document_class = enrich['document_class']
                     existing.is_pinned = enrich['is_pinned']
                     existing.retrieval_boost = enrich['retrieval_boost']
+                    # S2826 sync-defect repair (Chris D-verdict 2026-07-19,
+                    # 1A + 2A): refresh Document.status from the docs_index
+                    # source of truth. Pre-S2826 the update path refreshed
+                    # 12 fields but never `status`, so any doc that started
+                    # sync lifecycle as 'superseded' (→ ARCHIVED) and was
+                    # later promoted to 'active' in _index.json stayed
+                    # ARCHIVED forever, hiding it from every default-mode
+                    # retrieval call (include_superseded=False filter).
+                    # Corpus-wide drift at repair time: 881 rows (870
+                    # active-source but archived-db, 6+5 draft-source
+                    # mis-classifications). See S2826 root-cause report
+                    # + backfill_document_status_from_docs_index command.
+                    existing.status = STATUS_MAPPING.get(
+                        (doc_data.get('status') or 'active').strip().lower(),
+                        ContentStatus.PROCESSED,
+                    )
                     # Session 1235 P5#1: refresh extracted_metadata too.
                     # Mirrors the create-path's metadata block (line ~297)
                     # but merges into existing instead of overwriting so
