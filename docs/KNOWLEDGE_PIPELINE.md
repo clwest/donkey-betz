@@ -573,7 +573,130 @@ but no mapped canonical target reaches the returned pool — this alerts
 against future metadata drift silently re-masking Pattern B (or any
 similar intent-gated mechanism added later).
 
+## Pattern C Measured Boundary Summary (S2827 addendum — permanent architectural record)
+
+**Recorded per Chris close directive at S2827 close (2026-07-19).** Companion
+to the S2826 §retrieval-failure-diagnosis-order above; documents Pattern C's
+measured empirical boundary + the constitutional invariants ratified during
+its D-verdict cycle. Belongs alongside the S2826 record as part of the
+permanent retrieval-architecture reference for future arcs.
+
+### Selected mechanism parameter
+
+- **`_SELF_REFERENCE_INTENT_BONUS = +0.23`** — the smallest tested
+  static-bonus value converting all four intended semantic SELF_REFERENCE
+  rows (Q14/Q15/Q16/Q17) while preserving all negative controls (Chris
+  D-Q1 discipline: "smallest reliable adjustment; record tested
+  alternatives and margins"). Full sweep + evidence: design doc §7.5.2.
+
+### Q14 was the limiting case
+
+- Q14 (`the next session start doc` → `00-START-NEXT-SESSION.md`) had the
+  largest measured similarity gap: anchor raw sim 0.4569 vs top-1
+  non-anchor 0.6816 (`SESSION_1187_UTILIZATION_RECON.md`), gap +0.2247.
+  Q15/Q16/Q17 needed only 0.09–0.13 to flip. The +0.23 selection is
+  bounded by Q14's gap + epsilon; without Q14 in the target set, a
+  smaller bonus (~+0.15) would suffice.
+
+### All four positives required candidate injection
+
+- For all 4 rows, the canonical anchor was **absent from the natural
+  top-N candidate pool** at production `similarity_threshold=0.4` — the
+  raw similarity was below competitors' scores. Pattern C's injection
+  mechanism (`_fetch_self_reference_anchor_chunks`) fetches the anchor
+  under the SAME filter chain, so injected candidates preserve Chris D6
+  no-`include_superseded`-relaxation invariant. Bounded bonus applied
+  post-injection.
+
+### Pattern B COUNT regression remained clean
+
+- The composition additively stacks Pattern B `count_intent_bonus`
+  (from `_COUNT_INTENT_BONUS`) with Pattern C `self_ref_intent_bonus`
+  in `effective_similarity`, so the two mechanisms are architecturally
+  orthogonal even though they share the same oversample-and-rerank
+  code path. Post-implementation smoke test: `How many spiders` still
+  returns `docs/PLATFORM_INVENTORY.md` at rank 1 with `count_bonus=0.05`,
+  `gate=count`, no regression.
+
+### Negative controls remained clean, including ambiguous cases
+
+- **8 of 11 negative controls:** gate did not fire — regex-narrowness
+  is the primary anti-over-injection guardrail, not bonus size.
+- **N2 (`how many spiders`):** count gate fires (Pattern B territory);
+  self_reference gate correctly does NOT fire — Chris D5 distinct-
+  mechanism-per-class discipline holds.
+- **N4 (`where do I start with a new spider`) + N6 (`project rules
+  for spiders`):** semantic pointer-intent queries where the gate
+  correctly fires. N4 shows the retrieval-integrity invariant in
+  action — a topic-specific competitor (`docs/roadmap/06-SPIDER-HEALTH.md`)
+  outranks the anchor's raw + bounded bonus because its raw similarity
+  is naturally higher. Per Chris D3 ("retrieval must prove retrieval"),
+  the anchor injection + bounded bonus does NOT force the anchor to
+  rank 1 when a better semantic match exists. N6 shows the pointer
+  intent correctly overriding when the canonical anchor IS the intended
+  answer.
+
+### Literal-filename ownership is intentionally deferred to Pattern D
+
+- Pattern C v2 explicitly removed the two literal-filename patterns
+  (`\b00[-_]?start[-_]?next[-_]?session\b`, `\bclaude\.?md\b`) that
+  the S2827 v1 draft included. Rigby SIGN Q3 DISAGREE flagged them as
+  overlapping Chris D5's future Pattern D policy class; Chris D-Q4
+  ratified the deferral. Pattern C owns **semantic** pointer intent
+  ("where to begin / where to continue / session-start guidance /
+  project rules"). Pattern D will own **literal-filename** intent
+  (Q20 + Q24 + adjacent). This separation preserves the distinct-
+  mechanism-per-class discipline; a future author must NOT collapse
+  the two mechanisms without Chris ratification of a new abstraction.
+
+### Corpus label repair was ground-truth correction, not benchmark tuning
+
+- Same PR as Pattern C implementation, 4 SELF_REFERENCE rows had
+  strict + loose targets changed from `docs/00-START-NEXT-SESSION.md`
+  (a path that does not exist) to `00-START-NEXT-SESSION.md` (the
+  real repo-root path where the canonical file lives). 8-line
+  surgical edit; other corpus content untouched. Chris D-Q2 rule:
+  "This is a ground-truth repair, not benchmark tuning: the existing
+  label names a path that does not exist, while the intended
+  canonical file exists at the repository root." The post-correction
+  corpus is the authoritative baseline going forward. Future
+  re-measurements MUST NOT be described as "unchanged-corpus" without
+  disclosing this label repair (Chris D-Q2 directive).
+
+### Drift re-mask protection extends to Pattern C
+
+- Companion to `[S2826_PATTERN_B_DRIFT]`: `search_embeddings()` emits
+  `[S2827_PATTERN_C_DRIFT]` WARN when the SELF_REFERENCE intent gate
+  fires but none of the anchor keys matched by the gate produced a
+  chunk in the returned pool. Guards against the same
+  metadata-drift-silently-re-masks-mechanism class that S2826 root-
+  caused. The fold class `sync_update_path_completeness` at S2826 §5.2
+  is now 3-trigger corroborated (S1234/S1235/S2826) + Playbook v0.9
+  amendment candidate.
+
+### Measured baseline delta at S2827 close
+
+| Session | Strict top-1 hits | Mechanism family |
+|---|:-:|---|
+| S2825 (baseline) | 0/16 = 0.0% | none |
+| S2826 (post-repair) | 6/18 = 33.3% | 3× Pattern B COUNT + 3× metadata repair alone |
+| **S2827 (Pattern C shipped)** | **10/18 = 55.6%** | **+4× Pattern C SELF_REFERENCE** |
+
+Remaining 8 misses deferred per Chris D5 policy-class taxonomy:
+CONCEPTUAL (Q9/Q12/Q13) + DISCOVERY (Q10/Q11) + PROCEDURAL (Q18) →
+semantic-general future arc; SELF_REFERENCE literal-filename (Q20) +
+IDENTITY literal-filename (Q24) → Pattern D next arc.
+
 ### References
+
+- S2827 handoff: [`docs/handoffs/SESSION_2827_PATTERN_C_SELF_REFERENCE_INJECTION.md`](handoffs/SESSION_2827_PATTERN_C_SELF_REFERENCE_INJECTION.md)
+- Design + measurement evidence: [`docs/research/discovery_layer/PHASE_0_5/PATTERN_C_SELF_REFERENCE_DESIGN.md`](research/discovery_layer/PHASE_0_5/PATTERN_C_SELF_REFERENCE_DESIGN.md)
+- Merge SHA: `47f3650d1` · PR #3267
+- Pattern C implementation: `core/rag_integration.py:60-105 + :106-217` (patterns/anchors/gate/fetch) + `:377-395` (composition) + `:499-522` (drift WARN)
+- Corpus label repair: `docs/research/discovery_layer/PHASE_0_5/corpus.json` (Q14/Q15/Q16/Q20 strict + loose targets)
+- Pytest coverage: `tests/unit/test_s2827_pattern_c_self_reference_gate.py` (34 tests)
+
+### References (S2826 antecedent)
 
 - S2826 handoff: [`docs/handoffs/SESSION_2826_METADATA_SYNC_DRIFT_REPAIR_PATTERN_B_SHIPPED.md`](handoffs/SESSION_2826_METADATA_SYNC_DRIFT_REPAIR_PATTERN_B_SHIPPED.md)
 - S2825 measurement (0/16 baseline): [`docs/research/discovery_layer/PHASE_0_5/measurement_report.md`](research/discovery_layer/PHASE_0_5/measurement_report.md)
