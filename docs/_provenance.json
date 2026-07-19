@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-19T20:23:11+00:00",
+    "generated": "2026-07-19T21:17:24+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "a0997466d7fc",
-    "doc_count": 2697,
-    "commit_count": 8158,
+    "git_head": "fd6e17d63070",
+    "doc_count": 2700,
+    "commit_count": 8162,
     "confidence_breakdown": {
-      "HIGH": 1697,
+      "HIGH": 1698,
       "MEDIUM": 408,
-      "LOW": 30,
+      "LOW": 32,
       "UNKNOWN": 562
     },
     "excludes": [
@@ -2594,7 +2594,7 @@
         2808,
         2830
       ],
-      "commit_count": 1387,
+      "commit_count": 1389,
       "prs": [
         10,
         11,
@@ -3235,7 +3235,9 @@
         3280,
         3281,
         3282,
-        3283
+        3283,
+        3284,
+        3285
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7603,7 +7605,7 @@
         2808,
         2830
       ],
-      "commit_count": 327,
+      "commit_count": 329,
       "prs": [
         2213,
         2219,
@@ -7843,7 +7845,9 @@
         3280,
         3281,
         3282,
-        3283
+        3283,
+        3284,
+        3285
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21079,6 +21083,21 @@
       "commit_count": 2,
       "prs": [
         3284
+      ]
+    },
+    "docs/handoffs/SESSION_2837_T3B_ORPHAN_REACHABILITY_AUDIT.md": {
+      "originating_session": 2837,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "fd6e17d6",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2837 \u2014 Ratify Group 2800 T3b orphan-and-reachability audit \u00b7 schema v1.1 unchanged \u00b7 77 escalate rows accumulate to 2899 (#3286)",
+      "sessions_touched": [
+        2837
+      ],
+      "commit_count": 2,
+      "prs": [
+        3286
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36168,7 +36187,7 @@
         2499,
         2500
       ],
-      "commit_count": 118,
+      "commit_count": 120,
       "prs": [
         2773,
         2775,
@@ -36264,7 +36283,8 @@
         3278,
         3280,
         3282,
-        3284
+        3284,
+        3286
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -36966,6 +36986,21 @@
       "commit_count": 2,
       "prs": [
         3284
+      ]
+    },
+    "docs/research/domains/docs_content_audit/2803b_docs_content_orphan_audit.md": {
+      "originating_session": 2837,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "fd6e17d6",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2837 \u2014 Ratify Group 2800 T3b orphan-and-reachability audit \u00b7 schema v1.1 unchanged \u00b7 77 escalate rows accumulate to 2899 (#3286)",
+      "sessions_touched": [
+        2837
+      ],
+      "commit_count": 2,
+      "prs": [
+        3286
       ]
     },
     "docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md": {
@@ -38818,6 +38853,21 @@
       "commit_count": 2,
       "prs": [
         3284
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-19_2803b_docs_content_orphan_audit.md": {
+      "originating_session": 2837,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "fd6e17d6",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2837 \u2014 Ratify Group 2800 T3b orphan-and-reachability audit \u00b7 schema v1.1 unchanged \u00b7 77 escalate rows accumulate to 2899 (#3286)",
+      "sessions_touched": [
+        2837
+      ],
+      "commit_count": 2,
+      "prs": [
+        3286
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
