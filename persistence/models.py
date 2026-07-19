@@ -1336,3 +1336,160 @@ class DataPersistenceMetrics(UnifiedBaseModel):
             subsystem=subsystem,
             metadata=metadata or {},
         )
+
+
+# =============================================================================
+# SESSION 2824 — PHASE-0.5 ADVISORY-ONLY ROUTER EVENT MIRROR
+# =============================================================================
+# Per S2823 constitutional package (B2 §6 R4): JSONL at
+# `logs/phase_0_5_router.jsonl` is the SOURCE OF TRUTH. This Django model is
+# a DURABLE MIRROR for structured querying only. Divergence between JSONL
+# and this table raises an integrity event (per Chris D-verdict §15.4) —
+# never silent reconciliation.
+#
+# Retention: no automatic retention policy at this table's introduction —
+# Phase-0.5 pilot rows are load-bearing evidence for the balanced P1 harvest
+# + measurement report. Retention decision defers to Phase-0.5 close cascade
+# (per Rigby S2824 Q2 refinement: retention story explicit even if "later").
+class Phase0_5RouterEvent(models.Model):
+    """Mirror of a phase_0_5_router.jsonl row.
+
+    JSONL is SoT. See core/services/phase_0_5_router.py for the write path.
+    Downstream consumers MUST NOT read this table when the JSONL disagrees;
+    the analyze_router_log.py extraction script reads JSONL first + treats
+    this table as a query accelerator.
+    """
+
+    ROW_TYPE_CHOICES = [
+        ('router_decision', 'Router Decision'),
+        ('window_start', 'Window Start'),
+        ('window_end', 'Window End'),
+    ]
+
+    event_id = models.CharField(
+        max_length=64,
+        primary_key=True,
+        help_text="Idempotency key matching JSONL event_id (evt-*/WSTART-*/WEND-*).",
+    )
+    ts = models.DateTimeField(
+        db_index=True,
+        help_text="UTC timestamp of the router decision or window boundary event.",
+    )
+    row_type = models.CharField(
+        max_length=32,
+        choices=ROW_TYPE_CHOICES,
+        default='router_decision',
+        db_index=True,
+    )
+    session = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Session number if resolvable from context.",
+    )
+    measurement_window_id = models.CharField(
+        max_length=64,
+        db_index=True,
+        help_text="Bounds this event to a specific measurement window (R2 canonical unit).",
+    )
+    measurement_window_type = models.CharField(
+        max_length=32,
+        help_text="session | rolling_n | harvest_phase | dogfood_observation",
+    )
+    operator_style = models.CharField(
+        max_length=16,
+        default='unknown',
+        help_text="chris | claude | rigby | unknown",
+    )
+    original_query = models.TextField(
+        blank=True,
+        default='',
+        help_text="Verbatim query text as received.",
+    )
+    predicted_family = models.CharField(
+        max_length=32,
+        null=True,
+        blank=True,
+        help_text="COUNT | PROCEDURAL | DISCOVERY | IDENTITY | SELF-REFERENCE | CONCEPTUAL",
+    )
+    # Categorical only per B3 §10.4 substrate correction. NO numeric confidence
+    # column. Attempting to add one requires §12 T1 integrity-stop path.
+    confidence_categorical = models.CharField(
+        max_length=8,
+        blank=True,
+        default='',
+        help_text="HIGH | MEDIUM | LOW (categorical per Chris R4).",
+    )
+    matched_rules = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="classifier_a matched-rule names (replaces numeric family scores).",
+    )
+    abstain_reason = models.CharField(
+        max_length=32,
+        null=True,
+        blank=True,
+        help_text="AMBIGUOUS | UNCLASSIFIABLE | CONTEXT_NEEDED | INTEGRITY_STOP_<trigger>",
+    )
+    abstain_option = models.CharField(
+        max_length=8,
+        null=True,
+        blank=True,
+        help_text="(a) clarify | (b) default substrate | (c) parallel-both | (d) no-action",
+    )
+    clarify_context_type = models.CharField(
+        max_length=32,
+        null=True,
+        blank=True,
+        help_text="operational | conversational (populated when abstain_option == (a))",
+    )
+    chosen_substrate = models.CharField(
+        max_length=32,
+        blank=True,
+        default='',
+        help_text="Substrate the router advised.",
+    )
+    actual_substrate = models.CharField(
+        max_length=32,
+        blank=True,
+        default='',
+        help_text="Substrate actually run. Router is advisory so this equals the current-best substrate.",
+    )
+    retrieval_count = models.IntegerField(
+        default=0,
+        help_text="len(chunks) returned by search_embeddings; 0 on retrieval error.",
+    )
+    retrieval_error = models.TextField(
+        null=True,
+        blank=True,
+        help_text="Exception message if search_embeddings raised (Rigby S2824 Q4 log-on-error fix).",
+    )
+    retrieval_exception_type = models.CharField(
+        max_length=64,
+        null=True,
+        blank=True,
+        help_text="Exception class name if search_embeddings raised.",
+    )
+    router_recommendation_followed = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text="Did downstream follow the router's advisory? Null = unknown.",
+    )
+    integrity_stop_trigger = models.CharField(
+        max_length=16,
+        null=True,
+        blank=True,
+        help_text="Non-null iff window was aborted (§12 T1/T2/T3/MIRROR_DIVERGENCE).",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        app_label = 'persistence'
+        verbose_name = 'Phase-0.5 Router Event'
+        verbose_name_plural = 'Phase-0.5 Router Events'
+        ordering = ['-ts']
+        indexes = [
+            models.Index(fields=['measurement_window_id', '-ts']),
+            models.Index(fields=['row_type', '-ts']),
+            models.Index(fields=['predicted_family', 'confidence_categorical']),
+            models.Index(fields=['abstain_reason']),
+        ]

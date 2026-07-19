@@ -1763,3 +1763,39 @@ DELIVERABLE_APPEND_CANARY_AGENTS = [
     ).split(',')
     if name.strip()
 ]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Session 2824: Phase-0.5 advisory-only dogfood router feature flag.
+#
+# Per S2823 constitutional package (B1 + B3 + B2 D-RATIFIED). Router logs
+# categorical family-classification advisories on kb_tool.semantic_search
+# calls but MUST NOT alter retrieval behavior (Chris R1). When False,
+# `td_handlers_ops.py:5905` semantic_search action is byte-identical to
+# pre-flag main. When True, router.classify() runs before search_embeddings;
+# router.log_decision() runs in `finally` (guaranteed even on retrieval
+# error per Rigby S2824 Q4 fix); `_router_advisory` v1 field appended to
+# envelope; `_parallel_both` ALWAYS null (advisory-only-vs-execution
+# boundary per §7 CRITICAL SCOPE DISTINCTION).
+#
+# See docs/research/discovery_layer/PHASE_0_5/ROUTER_SCAFFOLDING_DESIGN.md
+# §15 for the R1-R7 build constraints.
+PHASE_0_5_ROUTER_ENABLED = (
+    os.environ.get('PHASE_0_5_ROUTER_ENABLED', 'false').lower() == 'true'
+)
+
+# Measurement window = CANONICAL UNIT OF OBSERVATION (Chris R2). Every
+# router event binds to the active measurement_window_id at decision
+# time; clarify-cap, trigger evaluation, and reporting all scope to the
+# window rather than the session.
+#
+# Enum values: 'session' | 'rolling_n' | 'harvest_phase' | 'dogfood_observation'
+PHASE_0_5_MEASUREMENT_WINDOW = os.environ.get(
+    'PHASE_0_5_MEASUREMENT_WINDOW', 'session'
+).strip().lower()
+
+# rolling_n window size (only consulted when
+# PHASE_0_5_MEASUREMENT_WINDOW='rolling_n'). Default matches abstain-policy
+# min-N gate (B3 §7 trigger evaluation floor).
+PHASE_0_5_MEASUREMENT_WINDOW_N = int(
+    os.environ.get('PHASE_0_5_MEASUREMENT_WINDOW_N', '20')
+)
