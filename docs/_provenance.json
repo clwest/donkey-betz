@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-19T02:21:47+00:00",
+    "generated": "2026-07-19T15:24:39+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "76ba9b03b7b1",
-    "doc_count": 2671,
-    "commit_count": 8116,
+    "git_head": "095612efd6ad",
+    "doc_count": 2681,
+    "commit_count": 8136,
     "confidence_breakdown": {
-      "HIGH": 1686,
+      "HIGH": 1691,
       "MEDIUM": 405,
-      "LOW": 21,
-      "UNKNOWN": 559
+      "LOW": 23,
+      "UNKNOWN": 562
     },
     "excludes": [
       "docs/archive/",
@@ -2593,7 +2593,7 @@
         2807,
         2808
       ],
-      "commit_count": 1367,
+      "commit_count": 1375,
       "prs": [
         10,
         11,
@@ -3221,7 +3221,11 @@
         3258,
         3260,
         3261,
-        3263
+        3263,
+        3264,
+        3268,
+        3270,
+        3272
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -3278,8 +3282,12 @@
         450,
         451
       ],
-      "commit_count": 1,
-      "prs": []
+      "commit_count": 7,
+      "prs": [
+        3266,
+        3268,
+        3270
+      ]
     },
     "docs/LAUNCH_READINESS_CHECKLIST.md": {
       "originating_session": 85,
@@ -7584,7 +7592,7 @@
         2807,
         2808
       ],
-      "commit_count": 313,
+      "commit_count": 315,
       "prs": [
         2213,
         2219,
@@ -7814,7 +7822,8 @@
         3256,
         3258,
         3260,
-        3261
+        3261,
+        3264
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20872,16 +20881,78 @@
     },
     "docs/handoffs/SESSION_2825_PHASE0_5_HARVEST_EXECUTED_METHODOLOGY_RETURN.md": {
       "originating_session": 2825,
-      "confidence": "LOW",
-      "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "51f2063c",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "research(discovery-layer): S2825 Phase-0.5 balanced P1 harvest executed + \u00a710.4 methodology-back-to-SIGN RATIFIED (#3264)",
       "sessions_touched": [
         2825
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3264
+      ]
+    },
+    "docs/handoffs/SESSION_2826_METADATA_SYNC_DRIFT_REPAIR_PATTERN_B_SHIPPED.md": {
+      "originating_session": 2826,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "69162c81",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2826 close \u2014 metadata sync-drift repair + Pattern B shipped (#3266)",
+      "sessions_touched": [
+        2826
+      ],
+      "commit_count": 2,
+      "prs": [
+        3266
+      ]
+    },
+    "docs/handoffs/SESSION_2827_PATTERN_C_SELF_REFERENCE_INJECTION.md": {
+      "originating_session": 2827,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "78095d68",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2827 close \u2014 Pattern C SELF_REFERENCE injection shipped + boundary summary as permanent architectural record (#3268)",
+      "sessions_touched": [
+        2827
+      ],
+      "commit_count": 2,
+      "prs": [
+        3268
+      ]
+    },
+    "docs/handoffs/SESSION_2828_PATTERN_D_LITERAL_FILENAME_INJECTION.md": {
+      "originating_session": 2828,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "9790ed2a",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2828 close \u2014 Pattern D LITERAL-FILENAME injection shipped + boundary summary as permanent architectural record",
+      "sessions_touched": [
+        2828
+      ],
+      "commit_count": 2,
+      "prs": [
+        3270
+      ]
+    },
+    "docs/handoffs/SESSION_2829_CANONICAL_ANCHOR_DRIFT_TRIAGE.md": {
+      "originating_session": 2829,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "13616934",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(cascade): S2829 close \u2014 canonical anchor drift triage shipped + S2826-class re-manifestation fixed at the substrate (#3272)",
+      "sessions_touched": [
+        2829
+      ],
+      "commit_count": 2,
+      "prs": [
+        3272
+      ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
       "originating_session": 293,
@@ -35969,7 +36040,7 @@
         2499,
         2500
       ],
-      "commit_count": 104,
+      "commit_count": 110,
       "prs": [
         2773,
         2775,
@@ -36058,7 +36129,10 @@
         2984,
         2985,
         3216,
-        3261
+        3261,
+        3264,
+        3266,
+        3268
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -36182,6 +36256,51 @@
         3261
       ]
     },
+    "docs/research/discovery_layer/PHASE_0_5/PATTERN_C_SELF_REFERENCE_DESIGN.md": {
+      "originating_session": 2827,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "47f3650d",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "feat(rag): S2827 Pattern C SELF_REFERENCE candidate injection + corpus label repair (#3267)",
+      "sessions_touched": [
+        2827
+      ],
+      "commit_count": 2,
+      "prs": [
+        3267
+      ]
+    },
+    "docs/research/discovery_layer/PHASE_0_5/PATTERN_D_LITERAL_FILENAME_DESIGN.md": {
+      "originating_session": 2828,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "94e186aa",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "feat(rag): S2828 Pattern D LITERAL-FILENAME candidate injection",
+      "sessions_touched": [
+        2828
+      ],
+      "commit_count": 2,
+      "prs": [
+        3269
+      ]
+    },
+    "docs/research/discovery_layer/PHASE_0_5/POINTER_INTENT_REGISTRY_DESIGN.md": {
+      "originating_session": 2830,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "095612ef",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "feat(rag): S2830 Step 1 \u2014 pointer-intent registry DORMANT (design ratification + parity harness) (#3273)",
+      "sessions_touched": [
+        2830
+      ],
+      "commit_count": 2,
+      "prs": [
+        3273
+      ]
+    },
     "docs/research/discovery_layer/PHASE_0_5/ROUTER_SCAFFOLDING_DESIGN.md": {
       "originating_session": 2823,
       "confidence": "LOW",
@@ -36197,31 +36316,75 @@
         3261
       ]
     },
+    "docs/research/discovery_layer/PHASE_0_5/corpus.json": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "47f3650d",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "feat(rag): S2827 Pattern C SELF_REFERENCE candidate injection + corpus label repair (#3267)",
+      "sessions_touched": [],
+      "commit_count": 4,
+      "prs": [
+        3264,
+        3267
+      ]
+    },
+    "docs/research/discovery_layer/PHASE_0_5/harvest_dispatch_results.json": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "51f2063c",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "research(discovery-layer): S2825 Phase-0.5 balanced P1 harvest executed + \u00a710.4 methodology-back-to-SIGN RATIFIED (#3264)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3264
+      ]
+    },
     "docs/research/discovery_layer/PHASE_0_5/harvest_verdict.md": {
       "originating_session": 2825,
       "confidence": "LOW",
       "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "first_commit_sha": "51f2063c",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "research(discovery-layer): S2825 Phase-0.5 balanced P1 harvest executed + \u00a710.4 methodology-back-to-SIGN RATIFIED (#3264)",
       "sessions_touched": [
         2825
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3264
+      ]
+    },
+    "docs/research/discovery_layer/PHASE_0_5/integrity_stops/evidence_integrity_stop_T2_20260719T015445_701+0000.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "51f2063c",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "research(discovery-layer): S2825 Phase-0.5 balanced P1 harvest executed + \u00a710.4 methodology-back-to-SIGN RATIFIED (#3264)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3264
+      ]
     },
     "docs/research/discovery_layer/PHASE_0_5/measurement_report.md": {
       "originating_session": 2825,
       "confidence": "LOW",
       "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "first_commit_sha": "51f2063c",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "research(discovery-layer): S2825 Phase-0.5 balanced P1 harvest executed + \u00a710.4 methodology-back-to-SIGN RATIFIED (#3264)",
       "sessions_touched": [
         2825
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3264
+      ]
     },
     "docs/research/domains/api/2500_api_domain_scoping.md": {
       "originating_session": 2500,
