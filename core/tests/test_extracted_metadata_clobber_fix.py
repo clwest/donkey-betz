@@ -205,10 +205,13 @@ class SyncUpdatePathRefreshesMetadataTests(TestCase):
         self.assertEqual(meta['encoding'], 'utf-8')
 
     def test_update_path_skip_when_content_unchanged(self):
-        """If content_hash matches, the update branch returns 'skipped'
-        and does NOT touch extracted_metadata — old behavior preserved
-        for the no-op case."""
+        """If content_hash matches AND status already matches
+        docs_index_status, the skip-branch returns 'skipped' and does
+        NOT touch extracted_metadata. Test doc is seeded with the
+        already-correct status so the S2829 skip-branch status-refresh
+        path stays dormant — this is the pure no-op case."""
         from core.management.commands.sync_docs_index_to_documents import Command
+        from content.models import ContentStatus
         import hashlib
 
         content = 'IDENTICAL CONTENT'
@@ -227,6 +230,7 @@ class SyncUpdatePathRefreshesMetadataTests(TestCase):
             file_path='docs/specs/STABLE.md',
             owner=self.user,
             source='imported',
+            status=ContentStatus.PROCESSED,  # matches doc_data['status']='active' → PROCESSED
             extracted_metadata=original_meta,
         )
 
