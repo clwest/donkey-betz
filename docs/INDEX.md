@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-07-19 15:15
+**Generated:** 2026-07-19 15:39
 **Current Session:** 2837
 **Total Documentation:** 3264 files | 979,378 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 9,244 |
+| Total cross-references | 9,216 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -38,7 +38,7 @@
 | `docs/PLATFORM_WHAT_IT_IS.md` | 207 | PLATFORM WHAT IT IS |
 | `docs/research/OPEN_ARCS.md` | 158 | OPEN ARCS |
 | `docs/research/ARCHITECTURE_INDEX.md` | 150 | ARCHITECTURE INDEX |
-| `docs/archive/old-structure/handoffs/README.md` | 138 | 🤝 Session Handoffs |
+| `docs/archive/old-structure/capabilities/10_Integration_APIs/README.md` | 139 | 🔌 INTEGRATION APIS - The Nervous System of AI |
 | `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` | 123 | DOMAIN RESEARCH PLAYBOOK |
 | `docs/00-START-HERE/DOC_LIFECYCLE.md` | 103 | DOC LIFECYCLE |
 | `docs/AGENTS.md` | 93 | AGENTS |
@@ -259,11 +259,11 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
+| INDEX.md | docs | 403 | 2026-07-19 15:18 |
 | RATIFICATION_2026-07-19_2803b_docs_content_orphan_audit.md | research | 179 | 2026-07-19 15:15 |
 | 2803b_docs_content_orphan_audit.md | research | 1,218 | 2026-07-19 15:15 |
 | OPEN_ARCS.md | research | 237 | 2026-07-19 15:15 |
 | SESSION_2837_T3B_ORPHAN_REACHABILITY_AUDIT.md | handoffs | 159 | 2026-07-19 15:15 |
-| INDEX.md | docs | 403 | 2026-07-19 14:23 |
 | RATIFICATION_2026-07-19_2803a_docs_content_duplicate_audit.md | research | 231 | 2026-07-19 14:19 |
 | 2803a_docs_content_duplicate_audit.md | research | 977 | 2026-07-19 14:19 |
 | SESSION_2836_T3A_DUPLICATE_CONTENT_AUDIT.md | handoffs | 246 | 2026-07-19 14:19 |
