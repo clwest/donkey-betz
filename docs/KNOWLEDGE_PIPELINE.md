@@ -473,3 +473,110 @@ print(stats)
 - [AGENTS.md](AGENTS.md) - Agent knowledge methods
 - [SCIFI_FEATURES.md](SCIFI_FEATURES.md) - Memory Palace, Evolution
 - [docs/handoffs/SESSION_400_AGENT_KNOWLEDGE_PIPELINE.md](handoffs/SESSION_400_AGENT_KNOWLEDGE_PIPELINE.md)
+
+---
+
+## Retrieval-Failure Diagnosis Order (S2826 addendum — LOAD-BEARING)
+
+**Recorded per Chris D5 directive at S2826 close (2026-07-19).** Load-bearing
+constitutional finding from the S2825 Phase-0.5 harvest + S2826 root-cause
+investigation:
+
+> **The primary Phase-0.5 retrieval failure was not caused by embedding
+> quality, semantic similarity, authority weighting, or ranking
+> composition. It was caused by a synchronization defect allowing
+> `Document.status` to diverge from `docs/_index.json`, excluding
+> authoritative documents from retrieval BEFORE ranking occurred.**
+
+This distinction changes how future retrieval failures must be diagnosed.
+When a canonical anchor fails to retrieve for a query it should answer,
+the diagnosis order is:
+
+1. **Metadata audit FIRST** — for each intended target doc:
+   - Is `Document.canonical_authority` set correctly (`repo_canonical` /
+     `workspace_canonical` / `derived`)?
+   - Is `Document.retrieval_boost` populated?
+   - Does `Document.status` say `processed` (not `archived`)?
+   - Are `DocumentEmbedding` rows present + `is_active=True`?
+   - Does `extracted_metadata.docs_index_status` match `docs/_index.json`
+     source truth?
+   - **Ground-truth check:** run `python manage.py backfill_document_status_from_docs_index --dry-run`
+     — expect 0 mismatches. Any non-zero result signals metadata drift.
+
+2. **Filter behavior** — under default retrieval settings:
+   - Does `include_superseded=False` eliminate the target because
+     `status='archived'`? (This was the S2826 root cause — a sync-defect
+     that stranded 881 rows in `ARCHIVED` state despite source truth
+     saying `active`.)
+   - Do any other pushdown filters (`category` / `document_class` /
+     `is_pinned` / `min_session` / `canonical_authority`) filter it out?
+
+3. **Candidate pool depth** — does the intended target chunk appear in
+   top-N by raw pgvector similarity? If not:
+   - Small-gap absence (competitor beats target by ~0.025-0.05 similarity)
+     → ranking-mechanism candidate (Pattern B shape)
+   - Large-gap absence (target sim <0.4 vs competitor >0.6) → candidate-
+     injection candidate (Pattern C shape) OR chunking/embedding rework
+
+4. **Ranking composition** — if target is in pool but not top-1:
+   - Is `authority_weighted=True` engaged? (Default is False in
+     `kb_tool.semantic_search`.)
+   - Is the 3-tier taxonomy (`workspace_canonical 2.0` /
+     `repo_canonical 1.5` / `derived 1.0`) fine-grained enough? If
+     target + competitor share `repo_canonical` — tier weighting is a
+     no-op. Move to intent-gated file-specific mechanism (Pattern B
+     shape).
+
+5. **Only then** — design intent-gated policy-class mechanisms per
+   the S2826 D5 policy-class taxonomy:
+   - COUNT / sole-authoritative-source
+   - SELF_REFERENCE / bootstrap
+   - INDEX_DISCOVERY
+   - literal filename or identity lookup
+   - document-class precedence
+
+**Load-bearing constitutional rule (Chris D3 first cycle, S2826):**
+
+> **"Retrieval must prove retrieval. Runtime injection cannot be used
+> to erase a retrieval-layer failure."**
+
+Runtime prompt injection (via CRITICAL_DOCS etc.) is a separate
+context-delivery channel from retrieval. A correct answer based on
+injected context is an answer-context success, not an authoritative-
+retrieval success. Do NOT add docs to universal runtime injection as a
+way to "fix" retrieval misses — that redefines the failure rather than
+addressing it.
+
+### Two-lane awareness
+
+The platform has TWO retrieval lanes with separate authority-boost
+mechanisms:
+
+- **BM25 lane** — `core/rag.py` `top_k()` → local file corpus at
+  `.rag/corpus.jsonl`. Uses `AUTHORITY_FILE_BONUS` (file-specific
+  additive bonus) gated by `_looks_like_count_query`.
+- **Embedding lane** — `core/rag_integration.py` `search_embeddings()`
+  → pgvector over `DocumentEmbedding`. Uses `_AUTHORITY_WEIGHTS`
+  (3-tier multiplicative weighting) gated by `authority_weighted=True`
+  flag. Plus `core/rag_integration.py` `_COUNT_INTENT_PATTERNS`
+  (S2826 Pattern B — file-specific additive bonus gated by COUNT
+  intent).
+
+**Do NOT claim a retrieval fix works in Lane X by citing evidence from
+Lane Y.** Both lanes must be exercised separately when validating a
+retrieval mechanism. Phase-0.5 measurement dispatches through
+`kb_tool.semantic_search` → embedding lane; the BM25 lane is separate.
+
+**Drift re-mask protection:** `search_embeddings()` emits a
+`[S2826_PATTERN_B_DRIFT]` WARN log when the COUNT intent gate fires
+but no mapped canonical target reaches the returned pool — this alerts
+against future metadata drift silently re-masking Pattern B (or any
+similar intent-gated mechanism added later).
+
+### References
+
+- S2826 handoff: [`docs/handoffs/SESSION_2826_METADATA_SYNC_DRIFT_REPAIR_PATTERN_B_SHIPPED.md`](handoffs/SESSION_2826_METADATA_SYNC_DRIFT_REPAIR_PATTERN_B_SHIPPED.md)
+- S2825 measurement (0/16 baseline): [`docs/research/discovery_layer/PHASE_0_5/measurement_report.md`](research/discovery_layer/PHASE_0_5/measurement_report.md)
+- Backfill command: `core/management/commands/backfill_document_status_from_docs_index.py`
+- Sync fix: `core/management/commands/sync_docs_index_to_documents.py:305-320`
+- Pattern B: `core/rag_integration.py:60-100` + `:242-296`
