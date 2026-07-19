@@ -617,7 +617,7 @@ trigger for this arc.
 | # | Source | Line | Change | Severity | Confidence |
 |---|---|---:|---|---|---|
 | 1 | `docs/PLATFORM_WHAT_IT_IS.md` | 46 | `SESSION_1099` citation → annotate as pre-registry gap per `docs/HANDOFF_NUMBERING_GAPS.md` convention OR update to closest surviving handoff | **P1** (Q3 downgrade — refresh-block context carries counts-drift disclaimer) | High |
-| 2 | (anywhere) | — | `ADR-0000` disposition → **escalate_to_chris** (Rigby cycle-1 Q1 DISAGREE — workspace deliverable NOT found; unclear whether ADR-0000 was ever ratified or is a numbering placeholder) | **P1** | High |
+| 2 | (anywhere) | — | `ADR-0000` disposition → **escalate_to_chris** (Rigby cycle-1 Q1 DISAGREE — workspace deliverable NOT found; unclear whether ADR-0000 was ever ratified or is a numbering placeholder) → **RESOLVED post-ratification 2026-07-19**: deliverable found under alternate title convention `0000_RAR_METHODOLOGY` (id `754cff78-473b-4822-bd54-af1b45ed5988`, workspace `a9a16593-...`, status DRAFT). Closes as `keep_as_is`. See handoff §9.5. | **P1 → P3 (post-followup)** | High |
 | 3 | `00-START-NEXT-SESSION.md` | 73 | `WorkspacePageNew.ts` → `WorkspacePageNew.tsx` (typo) | **P2** (Q3 downgrade — D-bucket "Latent bug hygiene" candidate list, not authoritative bug tracker) | High (typo) |
 
 ### 4.2 Batch `ref_graph_repair` — playbook-doc path-depth errors (P1)

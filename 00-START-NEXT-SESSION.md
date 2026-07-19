@@ -36,7 +36,7 @@ Per `feedback_engineering_bias_over_audit` — net-new engineering pivots listed
 1. **Colorado Phase 4 statute-citation quality pass** — Chris personal legal work; real capability
 2. **BettingPage first-user trace** — Chris IS the first user; wire the real path end-to-end
 3. **New spider / PA tool / Workspace tab** — pick a concrete gap
-4. **ADR-0000 disposition** — surfaced from T2 escalate_to_chris; small governance decision
+4. ~~ADR-0000 disposition~~ — **RESOLVED at S2835 post-ratification followup** (2026-07-19). Rigby workspace search found the deliverable under title `0000_RAR_METHODOLOGY` (id `754cff78-473b-4822-bd54-af1b45ed5988`) in workspace `a9a16593-...`. Status DRAFT. Both citations at `CLAUDE.md:7` and `docs/research/platform/engineering_playbook_architecture_specification.md:179` are VALID workspace-canonical refs — no migration-arc action needed. T2 §4.1 row 2 escalate_to_chris closes as `keep_as_is`. Methodology finding for §5.1: workspace-aware ADR resolver must search by **ID-number substring**, not by "ADR-" title prefix.
 
 ### B. ⭐ Ratified default — T3a duplicate-content audit (Group 2800 third child)
 
@@ -197,7 +197,7 @@ grep '^python tools/pa_chat.py' tools/pa_local.sh
 | Colorado arc state | Phases 0/1/2/2.1/3.0/3.1 P0/3.1a/3.1 P1/3.2/3.1 P1.b/4a ✅ (unchanged) |
 | PHASE_0_5_ROUTER_ENABLED | false (default; unchanged) |
 | Content-audit schema | §10.1 v1.1 (locked at S2834; unchanged at S2835 — v1.2 `coverage_refs`/`coverage_claims` split proposal recorded as §5.7 future_trigger for 2899 close) |
-| Chris escalation open | **ADR-0000 disposition** (§4.1 row 2 escalate_to_chris — workspace deliverable NOT found; options a/b/c pending) |
+| Chris escalation open | none — **ADR-0000 RESOLVED at S2835 post-ratification followup**: deliverable found under alternate title convention `0000_RAR_METHODOLOGY` (id `754cff78-473b-4822-bd54-af1b45ed5988`, workspace `a9a16593-...`, status DRAFT); T2 §4.1 row 2 closes as `keep_as_is`; T2 §5.1 methodology note updated to "resolve by ID-number substring, not by ADR- prefix" |
 | S2836 recommended lean | Open T3a duplicate-content audit as `2803a_docs_content_duplicate_audit.md`. Alternatives available if Chris pivots. |
 | Session pin | `pa-0de182aaedcf43f0` (retired at S2835 close, force=true, sixty-sixth consecutive) |
 | Wrapper default pin | `tools/pa_local.sh` — retired pin (forces fresh mint at S2836 open) |

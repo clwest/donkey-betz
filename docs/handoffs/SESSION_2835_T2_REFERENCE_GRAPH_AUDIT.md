@@ -247,6 +247,49 @@ additions:
   `feedback_pa_deliverables_tool_flags_ratifications_as_diagnostic` is
   post-Rigby-exercise, not primary create path.
 
+## 9.5 Post-ratification followup — ADR-0000 escalation RESOLVED (2026-07-19)
+
+Chris requested a courtesy check before treating ADR-0000 as absent per T2
+§4.1 row 2 escalate_to_chris. Fresh followup pin `pa-c7db85c0176e4fb3`
+(label `s2835-adr-0000-followup`) minted; Rigby dispatched with 3 Qs
+(workspace search by content/title keyword; kb_tool cross-source search;
+repo_tool.read on the 2 real citations for intent-context reading).
+
+**Finding:** Rigby's followup workspace search located a Deliverable at
+title `0000_RAR_METHODOLOGY` (id `754cff78-473b-4822-bd54-af1b45ed5988`,
+workspace `a9a16593-e0a4-44dc-8256-efc65d524b3c`, status DRAFT — Rotational
+Adversarial Reduction methodology, "read first in the foundational
+bootstrap sequence 0000 → 0010 → 0005 → 0020"). This IS the ADR-0000
+substrate the 2 citations point to. Rigby's cycle-1 Q1 enumeration
+missed it because her `deliverable_tool.list` search filtered by "ADR-"
+title prefix, and this deliverable uses the alternate `0000_...`
+naming convention.
+
+**Resolution:** Both citations at `CLAUDE.md:7` (Constitutional Governance
+block "Cycle 0 foundational ADRs (0000/0005/0010/0020)") and
+`docs/research/platform/engineering_playbook_architecture_specification.md:179`
+("Inputs: 2711 constitutional architecture; ADR 0000/0005/0010/0100")
+are VALID workspace-canonical references. T2 §4.1 row 2
+`escalate_to_chris` closes as `keep_as_is` — no citation edits needed.
+
+**Methodology-level finding carried to §5.1 (workspace-aware ADR
+resolver enhancement):** the resolver must search Deliverable rows by
+**ID-number substring** (e.g. `0000`, `0110`), NOT by title prefix
+match (`ADR-*`). Recorded for future T2-follow-up sub-arc + Rigby's
+next-cycle enumeration protocol.
+
+**Note on ratification integrity:** T2 was RATIFIED at S2835 close BEFORE
+this followup. Ratification stands as-is; this followup is a post-hoc
+resolution of the surfaced escalation, not a re-ratification. The T2
+doc §4.1 row 2 body remains as ratified (records ADR-0000 as
+escalate_to_chris) with an inline followup annotation added
+non-substantively pointing at this handoff §9.5 for the resolution.
+
+Followup pin `pa-c7db85c0176e4fb3` retired at followup close with
+`force=true` (sixty-seventh consecutive per S2770+ pattern).
+
+---
+
 ## 10. Provenance
 
 - **Session:** 2835
