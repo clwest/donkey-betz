@@ -1,15 +1,15 @@
 {
   "_meta": {
-    "generated": "2026-07-19T00:01:42+00:00",
+    "generated": "2026-07-19T02:21:47+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "5695896f8f6f",
-    "doc_count": 2664,
-    "commit_count": 8110,
+    "git_head": "76ba9b03b7b1",
+    "doc_count": 2671,
+    "commit_count": 8116,
     "confidence_breakdown": {
-      "HIGH": 1684,
+      "HIGH": 1686,
       "MEDIUM": 405,
-      "LOW": 17,
-      "UNKNOWN": 558
+      "LOW": 21,
+      "UNKNOWN": 559
     },
     "excludes": [
       "docs/archive/",
@@ -2593,7 +2593,7 @@
         2807,
         2808
       ],
-      "commit_count": 1363,
+      "commit_count": 1367,
       "prs": [
         10,
         11,
@@ -3219,7 +3219,9 @@
         3254,
         3256,
         3258,
-        3260
+        3260,
+        3261,
+        3263
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -4060,14 +4062,16 @@
       "originating_session": 2823,
       "confidence": "LOW",
       "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "first_commit_sha": "0c77f808",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2823 close \u2014 Phase-0.5 arc opened + triple Chris D-verdict on B1+B3+B2 constitutional package + build authorization granted (#3261)",
       "sessions_touched": [
         2823
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3261
+      ]
     },
     "docs/ROADMAP_IDEAS.md": {
       "originating_session": 457,
@@ -7580,7 +7584,7 @@
         2807,
         2808
       ],
-      "commit_count": 311,
+      "commit_count": 313,
       "prs": [
         2213,
         2219,
@@ -7809,7 +7813,8 @@
         3254,
         3256,
         3258,
-        3260
+        3260,
+        3261
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -20834,6 +20839,49 @@
       "prs": [
         3260
       ]
+    },
+    "docs/handoffs/SESSION_2823_PHASE0_5_ARC_OPEN_TRIPLE_D_RATIFIED.md": {
+      "originating_session": 2823,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "0c77f808",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2823 close \u2014 Phase-0.5 arc opened + triple Chris D-verdict on B1+B3+B2 constitutional package + build authorization granted (#3261)",
+      "sessions_touched": [
+        2823
+      ],
+      "commit_count": 2,
+      "prs": [
+        3261
+      ]
+    },
+    "docs/handoffs/SESSION_2824_PHASE0_5_B2_BUILD_SHIPPED.md": {
+      "originating_session": 2824,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "3ee44778",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "feat(rag): S2824 Phase-0.5 B2 advisory-only router shipped (flag-guarded, byte-identical when off) (#3262)",
+      "sessions_touched": [
+        2824
+      ],
+      "commit_count": 2,
+      "prs": [
+        3262
+      ]
+    },
+    "docs/handoffs/SESSION_2825_PHASE0_5_HARVEST_EXECUTED_METHODOLOGY_RETURN.md": {
+      "originating_session": 2825,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2825
+      ],
+      "commit_count": 0,
+      "prs": []
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
       "originating_session": 293,
@@ -35921,7 +35969,7 @@
         2499,
         2500
       ],
-      "commit_count": 102,
+      "commit_count": 104,
       "prs": [
         2773,
         2775,
@@ -36009,7 +36057,8 @@
         2983,
         2984,
         2985,
-        3216
+        3216,
+        3261
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -36107,37 +36156,69 @@
       "originating_session": 2823,
       "confidence": "LOW",
       "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "first_commit_sha": "0c77f808",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2823 close \u2014 Phase-0.5 arc opened + triple Chris D-verdict on B1+B3+B2 constitutional package + build authorization granted (#3261)",
       "sessions_touched": [
         2823
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3261
+      ]
     },
     "docs/research/discovery_layer/PHASE_0_5/BALANCED_P1_HARVEST_PLAN.md": {
       "originating_session": 2823,
       "confidence": "LOW",
       "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "first_commit_sha": "0c77f808",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2823 close \u2014 Phase-0.5 arc opened + triple Chris D-verdict on B1+B3+B2 constitutional package + build authorization granted (#3261)",
       "sessions_touched": [
         2823
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3261
+      ]
     },
     "docs/research/discovery_layer/PHASE_0_5/ROUTER_SCAFFOLDING_DESIGN.md": {
       "originating_session": 2823,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "0c77f808",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2823 close \u2014 Phase-0.5 arc opened + triple Chris D-verdict on B1+B3+B2 constitutional package + build authorization granted (#3261)",
+      "sessions_touched": [
+        2823
+      ],
+      "commit_count": 2,
+      "prs": [
+        3261
+      ]
+    },
+    "docs/research/discovery_layer/PHASE_0_5/harvest_verdict.md": {
+      "originating_session": 2825,
       "confidence": "LOW",
       "match_source": "frontmatter",
       "first_commit_sha": null,
       "first_commit_date": null,
       "first_commit_subject": null,
       "sessions_touched": [
-        2823
+        2825
+      ],
+      "commit_count": 0,
+      "prs": []
+    },
+    "docs/research/discovery_layer/PHASE_0_5/measurement_report.md": {
+      "originating_session": 2825,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2825
       ],
       "commit_count": 0,
       "prs": []
@@ -37710,6 +37791,21 @@
         2948
       ]
     },
+    "docs/research/implementation/IMPLEMENTATION_LOG_2026-07-19_s2824_phase0_5_b2_build_shipped.md": {
+      "originating_session": 2824,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "3ee44778",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "feat(rag): S2824 Phase-0.5 B2 advisory-only router shipped (flag-guarded, byte-identical when off) (#3262)",
+      "sessions_touched": [
+        2824
+      ],
+      "commit_count": 2,
+      "prs": [
+        3262
+      ]
+    },
     "docs/research/implementation/RATIFICATION_2026-07-06_first_queue.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -38277,6 +38373,19 @@
       "commit_count": 2,
       "prs": [
         3260
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-18_s2823_phase0_5_constitutional_package_b1_b2_b3.md": {
+      "originating_session": null,
+      "confidence": "UNKNOWN",
+      "match_source": null,
+      "first_commit_sha": "0c77f808",
+      "first_commit_date": "2026-07-18",
+      "first_commit_subject": "docs(cascade): S2823 close \u2014 Phase-0.5 arc opened + triple Chris D-verdict on B1+B3+B2 constitutional package + build authorization granted (#3261)",
+      "sessions_touched": [],
+      "commit_count": 2,
+      "prs": [
+        3261
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
