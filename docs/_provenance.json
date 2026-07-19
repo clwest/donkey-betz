@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-19T18:18:41+00:00",
+    "generated": "2026-07-19T19:19:44+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "4317ce32cc38",
-    "doc_count": 2691,
-    "commit_count": 8150,
+    "git_head": "03158ad30479",
+    "doc_count": 2694,
+    "commit_count": 8154,
     "confidence_breakdown": {
-      "HIGH": 1695,
-      "MEDIUM": 406,
+      "HIGH": 1696,
+      "MEDIUM": 408,
       "LOW": 28,
       "UNKNOWN": 562
     },
@@ -2594,7 +2594,7 @@
         2808,
         2830
       ],
-      "commit_count": 1383,
+      "commit_count": 1385,
       "prs": [
         10,
         11,
@@ -3231,7 +3231,9 @@
         3276,
         3277,
         3278,
-        3279
+        3279,
+        3280,
+        3281
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7599,7 +7601,7 @@
         2808,
         2830
       ],
-      "commit_count": 323,
+      "commit_count": 325,
       "prs": [
         2213,
         2219,
@@ -7835,7 +7837,9 @@
         3276,
         3277,
         3278,
-        3279
+        3279,
+        3280,
+        3281
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21039,6 +21043,22 @@
       "commit_count": 2,
       "prs": [
         3280
+      ]
+    },
+    "docs/handoffs/SESSION_2835_T2_REFERENCE_GRAPH_AUDIT.md": {
+      "originating_session": 2835,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "03158ad3",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2835 \u2014 Ratify Group 2800 T2 reference-graph audit \u00b7 schema v1.1 unchanged \u00b7 ADR-0000 escalation (#3282)",
+      "sessions_touched": [
+        128,
+        2835
+      ],
+      "commit_count": 2,
+      "prs": [
+        3282
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36037,13 +36057,14 @@
       ]
     },
     "docs/research/OPEN_ARCS.md": {
-      "originating_session": 727,
+      "originating_session": 128,
       "confidence": "MEDIUM",
       "match_source": "body",
       "first_commit_sha": "327e593f",
       "first_commit_date": "2026-07-01",
       "first_commit_subject": "docs(session-1500): Group 1500 Sports/DBAO/Intelligence arc open \u2014 parent scoping + Phase 0 methodology 2nd application (#2801)",
       "sessions_touched": [
+        128,
         727,
         862,
         990,
@@ -36127,7 +36148,7 @@
         2499,
         2500
       ],
-      "commit_count": 114,
+      "commit_count": 116,
       "prs": [
         2773,
         2775,
@@ -36221,7 +36242,8 @@
         3266,
         3268,
         3278,
-        3280
+        3280,
+        3282
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -36892,6 +36914,21 @@
       "commit_count": 2,
       "prs": [
         3280
+      ]
+    },
+    "docs/research/domains/docs_content_audit/2802_docs_content_reference_audit.md": {
+      "originating_session": 128,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "03158ad3",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2835 \u2014 Ratify Group 2800 T2 reference-graph audit \u00b7 schema v1.1 unchanged \u00b7 ADR-0000 escalation (#3282)",
+      "sessions_touched": [
+        128
+      ],
+      "commit_count": 2,
+      "prs": [
+        3282
       ]
     },
     "docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md": {
@@ -38714,6 +38751,21 @@
       "commit_count": 2,
       "prs": [
         3280
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-19_2802_docs_content_reference_audit.md": {
+      "originating_session": 128,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "03158ad3",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(governance): S2835 \u2014 Ratify Group 2800 T2 reference-graph audit \u00b7 schema v1.1 unchanged \u00b7 ADR-0000 escalation (#3282)",
+      "sessions_touched": [
+        128
+      ],
+      "commit_count": 2,
+      "prs": [
+        3282
       ]
     },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
