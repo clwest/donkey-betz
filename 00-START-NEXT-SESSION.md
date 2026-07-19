@@ -2,193 +2,197 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2822 CLOSED (2026-07-18 evening; picks up as S2823) — **PHASE-0 EXECUTED + CHRIS OPTION A-DUAL RATIFIED + METHODOLOGY-VALIDATION PRIMARY OUTCOME + PHASE-0.5 ARC AUTHORIZED**
+## READ THIS FIRST — SESSION 2823 CLOSED (2026-07-18 late evening; picks up as S2824) — **PHASE-0.5 ARC OPENED + TRIPLE CHRIS D-VERDICT ON B1+B3+B2 CONSTITUTIONAL PACKAGE + BUILD AUTHORIZATION GRANTED**
 
-**Refreshed 2026-07-18 evening (SESSION 2822 CLOSED — Chris R1-R6 methodology revisions ratified at open; full 8-step Phase-0 execution shipped; Rigby TWO substantive OP3 SIGN cycles (Q1 incorporation + Q3 measurement) with 10 refinements applied same-session; Chris close D-verdict OPTION A-DUAL authorizing Phase-0.5 P1 balanced-operator-style expansion + Phase-1 dogfood pilot (advisory-only). SIXTY-SEVENTH close-cycle post-PLAYBOOK-7.4.4. **NOVEL:** First arc where Chris explicitly framed methodology validation as primary outcome above technical performance; first Chris D-verdict authorizing "dual" execution path; first P1-vs-P3 accuracy gap large enough (60 points) to invalidate an aggregate metric; first Playbook-amendment trigger candidate for R1 provenance discipline promotion; first "PARTIALLY REFUTED" collapse candidate softened to "NOT SUPPORTED (n=3)" per small-sample discipline; first 4-item Phase-1 gate checklist attached to recommendation as novel deliverable pattern.**
+**Refreshed 2026-07-18 late evening (SESSION 2823 CLOSED — dual-track execution per bridge §5: Track A ~30% /docs/ audit reconnection + Track B ~70% Phase-0.5 evidence collection. Phase-0.5 arc opened as new architectural arc per Chris OPTION A-DUAL. Rigby FOUR SIGN cycles (B1 + B3 + B2 cycle 1 + B2 cycle 2 confirmation) with 48 refinements applied same-session + 2 F-BLOCKING both cleared same-session + 1 substrate correction (Q4 categorical-vs-numeric via classifier_a.py tool-verify). Chris TRIPLE D-verdict same-session (B1 RATIFY turn ~14 + B3 RATIFY turn ~18 + B2 RATIFY turn ~28) with 15 total R-ratifications + 4 constitutional elevations (§10.4 evidence-integrity LOAD-BEARING + R2 measurement window as CANONICAL UNIT OF OBSERVATION + R6 runtime-vs-post-hoc epistemic-integrity + R7 constitutional-package framing). SIXTY-EIGHTH close-cycle post-PLAYBOOK-7.4.4. **NOVEL:** first triple-D-verdict same-session in discovery-layer arc; first 4-round Rigby SIGN with 2 F-BLOCKING both cleared same-session; first Rigby F-BLOCKING catching Chris-discipline-weakening drift in subsequent design draft (cycle-2 `_parallel_both` catch); first substrate-reality correction via SIGN (Q4 categorical-vs-numeric); first Chris "constitutional package" multi-artifact framing; first Chris runtime-vs-post-hoc epistemic-integrity elevation.**
 
-**S2822 ship (0 feature PRs + 1 close cascade PR containing measurement package + governance envelope):**
+**S2823 ship (0 feature PRs + 1 close cascade PR — docs + design deliverables + governance envelope; no runtime code change; build authorized but implementation deferred to S2824 per design-vs-implementation separation discipline):**
 
 | Focus | PR | Merged to | Files |
 |---|---|---|---|
-| Close cascade (Phase-0 execution session — measurement package as docs + code, no runtime substrate change) | **#TBD** · (SHA at merge) | main | handoff + envelope (frozen) + Phase-0 working directory + 00-START update + zoom-out fold persistence + docs pipeline |
+| Close cascade (Phase-0.5 arc-open session — measurement package + design + envelope as docs, no runtime substrate change) | **#TBD** · (SHA at merge) | main | handoff + envelope (frozen) + Phase-0.5 working directory (3 design docs) + OPEN_ARCS refresh + RETRIEVAL_ASSUMPTIONS skeleton + 00-START update + fold persistence (14 folds A-N) + docs pipeline |
 
-**Handoff:** `docs/handoffs/SESSION_2822_PHASE0_EXECUTION_OPTION_A_DUAL.md`
-**Bridge deliverable (REQUIRED READING at S2823 open):** `docs/handoffs/SESSION_2822_PHASE0_TO_DOCS_AUDIT_BRIDGE.md` — reconnects Phase-0 findings to /docs/ audit arc; answers Chris's 5 bridge questions; provides dual-track S2823 first-session plan (Track A /docs/ audit + Track B Phase-0.5 evidence collection).
-**Envelope:** `docs/research/implementation/RATIFICATION_2026-07-18_s2822_phase0_methodology_ratified_r1_r6.md` (frozen at merge per PLAYBOOK-6.10.9)
-**Working directory:** `docs/research/discovery_layer/PHASE_0/` (corpus + classifiers + measurement report + recommendation summary)
-**Ledger state at close:** `logs/zoom_out_classifications.jsonl` — 122 rows unchanged pending +8 S2822 folds persisted at close cascade (Folds A-I documented in envelope §5.1). Post-cascade: 130 rows expected.
+**Handoff:** `docs/handoffs/SESSION_2823_PHASE0_5_ARC_OPEN_TRIPLE_D_RATIFIED.md`
+**Envelope:** `docs/research/implementation/RATIFICATION_2026-07-18_s2823_phase0_5_constitutional_package_b1_b2_b3.md` (frozen at merge per PLAYBOOK-6.10.9)
+**Working directory:** `docs/research/discovery_layer/PHASE_0_5/` (BALANCED_P1_HARVEST_PLAN + ABSTAIN_POLICY_PROPOSAL + ROUTER_SCAFFOLDING_DESIGN)
+**Ledger state at close:** `logs/zoom_out_classifications.jsonl` — 145 rows after 14 S2823 folds persisted (folds A-N documented in envelope §5.1).
 
-**Arc state at S2822 close:**
-- **Discovery-layer arc:** **Lexical branch FEATURE COMPLETE** (S2818/S2819/S2820); **semantic branch EVALUATED** (S2821); **routing-first Phase-0 METHODOLOGY VALIDATED** (S2822 — R1 provenance discipline validated as primary outcome; classifier F1 metrics available in measurement_report.md); **Phase-0.5 AUTHORIZED as new architectural arc** (OPTION A-DUAL: P1 balanced-operator-style expansion + Phase-1 dogfood pilot advisory-only).
-- **Colorado Family Law** — Phases 0/1/2/2.1/3.0/3.1 P0/3.1a/3.1 P1 (Lesson-3 hardened)/3.2 (+attorney sub-form)/3.1 P1.b/4a ✅. All prior candidates queued.
-- **Group 2700 /docs/ restructuring — ARC CLOSED** (S2817). §8 item #1 discovery-layer FULL: lexical SHIPPED + semantic EVALUATED + routing-first METHODOLOGY VALIDATED. Now transitions to Phase-0.5 (own arc) at S2823.
+**Arc state at S2823 close:**
+- **Discovery-layer arc:** **Phase-0.5 OPENED** as new architectural arc; **B1 + B3 + B2 constitutional package D-RATIFIED same-session** under Chris R7 framing; **build authorization GRANTED for S2824+** under R1-R7 constraints per B2 §13 build-gate spec. Lexical FEATURE COMPLETE + semantic EVALUATED + Phase-0 METHODOLOGY VALIDATED + Phase-0.5 DESIGN COMPLETE.
+- **Colorado Family Law** — Phases 0/1/2/2.1/3.0/3.1 P0/3.1a/3.1 P1 (Lesson-3 hardened)/3.2 (+attorney sub-form)/3.1 P1.b/4a ✅.
+- **Group 2700 /docs/ restructuring — ARC CLOSED** (S2817). §8 item #1 discovery-layer completed through Phase-0.5 design ratification; item #3 Playbook v0.9 OP3 amendment still queued (10/10 triggers ready).
 
 ---
 
-## S2823 CANDIDATES — SOLE RECOMMENDED DIRECTION
+## S2824 CANDIDATES — SOLE RECOMMENDED DIRECTION
 
-### ⭐ Chris-ratified Phase-0.5 arc — OPEN AS NEW ARCHITECTURAL ARC
+### ⭐ Chris R7 build-authorized — EXECUTE B2 BUILD PER §13 SPEC
 
-1. **⭐ Open Phase-0.5 arc + execute per §11.2 envelope spec** (SOLE recommended direction). Chris D-verdict OPTION A-DUAL explicitly authorized parallel Phase-0.5 P1 balanced-operator-style corpus expansion + Phase-1 dogfood pilot (advisory-only, feature-flag gated on 5 strong families, DISCOVERY defaults, full instrumentation logging).
-   - **Objective (Chris verbatim):** "Determine whether routing-from-query-text transfers from synthetic benchmarks to real operational work."
-   - **Concrete first steps for S2823 open:**
-     1. Chris D-verdict scope check at S2823 open (any revisions in S2822→S2823 interval)
-     2. Balanced P1 harvest plan (Chris + Claude + Rigby operator-style targets) — route via Rigby SIGN before harvest execution
-     3. Feature-flag dogfood router build (advisory-only; 5 strong families COUNT/PROCEDURAL/IDENTITY/SELF-REFERENCE/CONCEPTUAL; DISCOVERY defaults; log per envelope §9 R2: original query / predicted family / confidence / abstain / chosen substrate / fallback / operator correction / final successful substrate)
-     4. Abstain-policy proposal document — parallel to P1 expansion; author `docs/research/discovery_layer/PHASE_0_5/ABSTAIN_POLICY_PROPOSAL.md`; route via Rigby SIGN before Chris D-verdict
-     5. Phase-0.5 stop-condition Chris ratification — Rigby-endorsed default: n≥20 P1 with accuracy ≤30-40% → routing-from-text-alone NOT viable
-     6. Working directory: `docs/research/discovery_layer/PHASE_0_5/` mirroring PHASE_0 layout
-     7. Route findings to Chris only when BOTH stop-conditions per envelope §9 satisfied (balanced P1 collected + question answered)
-   - **Non-goals for S2823 Phase 0.5 (Chris R3 + envelope §11.3):** NO DISCOVERY fixes (preserve as-is; measure only); NO routing implementation as production decision path; NO taxonomy constitutionalization; NO context-feature classifier revision (R3 holds unless Chris re-opens).
+1. **⭐ Execute B2 build per §13 spec** (SOLE recommended direction — Chris R7 explicit authorization under R1-R7 constraints). Single PR containing:
+   - `core/services/phase_0_5_router.py` — new module (categorical routing + abstain policy + instrumentation dispatch)
+   - `core/settings.py` — PHASE_0_5_ROUTER_ENABLED + PHASE_0_5_MEASUREMENT_WINDOW enum
+   - `core/services/td_handlers_ops.py:5905` — flag-guarded pre-search instrumentation call
+   - `Phase0_5RouterEvent` Django model + migration
+   - `logs/phase_0_5_router.jsonl` — initial empty file
+   - `docs/research/discovery_layer/PHASE_0_5/analyze_router_log.py` — committed extraction script
+   - `core/tests/test_phase_0_5_router.py` — contract tests (off-behavior guarantee + advisory-only invariant + _parallel_both null-in-Phase-0.5 invariant + event_id idempotency + all 4 trigger classes)
+   - Handoff + envelope diff
+   - **Concrete first steps for S2824 open:**
+     1. Chris D-verdict scope check at S2824 open (any revisions in S2823→S2824 interval)
+     2. Review B1+B3+B2 ratified docs in Phase-0.5 working directory
+     3. Author `core/services/phase_0_5_router.py` skeleton with 4-class trigger dispatch + categorical routing
+     4. Author `Phase0_5RouterEvent` model + migration
+     5. Instrumentation diff at `td_handlers_ops.py:5905` — flag-guarded pre-search call, additive `_router_advisory` field per B2 §7
+     6. Contract tests — advisory-only invariant + _parallel_both null-in-Phase-0.5 + event_id idempotency
+     7. Wire committed extraction script `analyze_router_log.py`
+     8. Make recycle-all + local validation via kb_tool.semantic_search test call
+     9. Handoff + envelope + docs cascade
+   - **Non-goals per Chris R1-R7 constraints:** NO parallel-both execution (advisory only) / NO numeric confidence thresholds (categorical-only substrate reality) / NO adjacent-tool instrumentation (single-call-site) / NO ephemeral-logs-only (durable persistence hybrid required) / NO weakening of no-fusion / abstention / evidence-persistence / integrity-stop rules
 
-### Available if Chris pivots away from Phase-0.5
+### Available if Chris pivots
 
+- **Balanced P1 harvest execution** per B1 §6 (blocked on build — implementation dispatch runs harvest against instrumented endpoint)
+- **A3 pointer-discipline fix** (would require Chris R3 re-open — currently preserved per S2823 fold M)
 - **Colorado Phase 4** — statute-citation content quality
 - **BettingPage first-user trace** — real user-facing capability
 - **Stock Intelligence** — end-to-end verify (dashboard/brief/alert pipeline)
-- **Playbook v0.9 amendment** — 10/10 triggers now (well past codification threshold)
-- **Playbook v0.9-adjacent (evidence-first baseline capture)** — 2 triggers (S2819 + S2820); wait for third per §20
-- **Playbook v0.10-candidate (R1 provenance discipline promotion)** — 1 trigger (S2822 methodology-outcome framing); observe next arc that applies benchmark-corpus methodology before amendment
-- **Remaining 2799 §8 queue** (items #4-#8): T5 clause update, file moves, per-handoff citation_health, retrieval-frequency telemetry, generator/automation coordination
-- **LegalDocument.generation_context** blank=True (Phase 2 model quirk)
-- **GPT fallback for form-selection** on low-confidence
+- **Playbook v0.9 amendment authoring** — 10/10 triggers, well past codification threshold
+- **Playbook v0.10-candidate R1 provenance discipline** — now 2/2 triggers post-S2823 (S2822 methodology-outcome framing + S2823 §10.4 evidence-integrity elevation both instances — codification threshold met)
+- **Playbook v0.11-candidate epistemic-integrity discipline** — 1 trigger (Chris R6 runtime-vs-post-hoc elevation); watch for second
 
-**Recommended default:** Item #1 Phase-0.5 arc open. Chris directive explicit + no revisions requested.
+**Recommended default:** Item #1 build execution. Chris R7 explicit authorization + all 3 constitutional artifacts ratified.
 
 ---
 
-## SESSION PIN — S2822 RETIRED (fresh mint required at S2823 open)
+## SESSION PIN — S2823 RETIRED (fresh mint required at S2824 open)
 
-**Pin history (S2822):**
+**Pin history (S2823):**
 
-- `pa-fac188f02db24fcc` (label `s2822-phase0-verdict-ask`) minted at S2822 open; **retired at S2822 close (`force=true`, fifty-third consecutive per S2770+ pattern)**
+- `pa-d63796dde6404d0f` (label `s2823-phase0-5-dual-track`) minted at S2823 open; **retired at S2823 close (`force=true`, fifty-fourth consecutive per S2770+ pattern)**
 
-**Wrapper `tools/pa_local.sh` still points at retired pin** — intended failure mode forces S2823 first-action fresh mint.
+**Wrapper `tools/pa_local.sh` still points at retired pin** — intended failure mode forces S2824 first-action fresh mint.
 
-**S2823 open sequence:**
+**S2824 open sequence:**
 
 ```
 context-kit orient
 
 # Read this file end-to-end
-# Read S2822 handoff — §3 (novel precedent — first methodology-primary-outcome framing), §6 (S2823 direction), §7 (lessons)
-# Read S2822 envelope — §9 Chris D-verdict OPTION A-DUAL verbatim + §10 methodology-outcome primary framing + §11 Phase-0.5 arc direction
-# Read Phase-0 measurement_report.md + RECOMMENDATION_PHASE0_SUMMARY.md as context for Phase-0.5 methodology
+# Read S2823 handoff — §3 (novel precedent — first triple-D-verdict same-session + first Rigby F-BLOCKING catching Chris-discipline drift), §7 (S2824 direction), §8 (lessons)
+# Read S2823 envelope — §2 verbatim D-verdict text pointer + §3 R1 provenance discipline v0.10 candidate status + §7 S2824 arc direction
+# Read all 3 Phase-0.5 design docs (B1 §10 + B3 §10 + B2 §15) for R1-R7 constraint verbatim
+# Read Phase-0 measurement_report + RECOMMENDATION as context for build behavior
 
 # Sanity checks
 brew services list | grep postgres
 
-# Verify ledger baseline held after S2822 close (expect ~130 post-close)
-DJANGO_LOG_LEVEL=WARNING python manage.py zoom_out_streak_report --as-json 2>/dev/null | python -c "
-import json, sys
-d = sys.stdin.read()
-r = json.loads(d[d.find('{'):])
-print('Ledger rows:', r['total_rows'], '· counts:', r['counts_by_classification'])
-"
+# Verify ledger baseline (expect ~145 post-S2823-cascade)
+wc -l logs/zoom_out_classifications.jsonl
 
-python manage.py session_lifecycle open --label s2823-phase0-5-<direction>
+python manage.py session_lifecycle open --label s2824-phase0-5-b2-build
 grep '^python tools/pa_chat.py' tools/pa_local.sh
 ```
 
-**S2822 lessons to carry (also in handoff §7):**
+**S2823 lessons to carry (also in handoff §8):**
 
-1. **R1 provenance discipline is scientifically load-bearing.** Chris D-verdict elevated this from methodology detail to primary Phase-0 outcome. Apply R1 tier hierarchy (real / observed-failure / synthetic-with-gap-tag) to any classifier/routing/retrieval benchmark corpus.
-2. **Aggregate metrics conceal transfer-to-real-work failures.** Provenance-tier stratified accuracy is a mandatory measurement view — not optional.
-3. **Same-session multi-SIGN discipline scales.** Two substantive Rigby OP3 SIGN cycles both with 5 refinements each, all applied same-session before Chris routing.
-4. **Chris R1-R6 refinement pattern is a repeatable amendment mode.** RATIFY-WITH-REVISIONS supersedes proposal text where applicable but does not change scope.
-5. **Option A-dual is a novel arc shape template.** Parallel evidence-collection + advisory dogfood ships value without ratifying architecture.
-6. **Small-sample language calibration matters.** REFUTED vs NOT-SUPPORTED-n=X discipline calibrated to sample size.
-7. **4-item Phase-1 gate checklist as recommendation attachment** — Rigby-surfaced downstream gate questions travel with recommendation; prevents silent architectural commitments via implementation details.
-8. **Ledger discrepancy at session-open is a real audit gotcha.** Auto-refresh 00-START ledger field from actual jsonl count at cascade time is candidate automation.
+1. **Multi-round SIGN with F-BLOCKING catches is scalable and productive.** B2 3-round SIGN + 2 F-BLOCKING both cleared same-session.
+2. **Chris §10.4 evidence-integrity discipline paid off same-session.** Q4 categorical-vs-numeric substrate discovery would have shipped unimplementable spec; §10.4 required stop-and-route-back.
+3. **Rigby's tool-verify catches drift-vectors Chris shouldn't need to catch.** Cycle-2 `_parallel_both` catch prevented advisory-only-vs-execution boundary weakening.
+4. **Constitutional-package framing scales cleanly.** Chris R7 — 3 ratifications in one session compatible with careful individual SIGN discipline.
+5. **Substrate-reality verification is load-bearing at every SIGN cycle.** Q4 was invisible until Rigby read classifier_a.py source.
+6. **Reserved-shape data contracts protect future ratifications.** `_parallel_both` reserved shape lets future Phase-1+ SIGN adopt execution without envelope re-design.
+7. **Design-vs-implementation boundary should be preserved.** All 3 artifacts ratified this session are DESIGN specs; build ships in S2824 to preserve clean audit trail.
+8. **A3 pointer-discipline finding validates bridge-deliverable hypothesis.** Bridge §2.3 flagged pointer-chunk retrievability; A3 confirmed BROKEN for 3/4 natural queries. Feeds Phase-0.5 corpus + validates Track A feedback loop into Track B.
 
 ---
 
 ## Twin-pointer card
 
-📁 **Repo — S2822 artifacts:**
+📁 **Repo — S2823 artifacts:**
 
-- **Feature deliverable:** Phase-0 measurement package under `docs/research/discovery_layer/PHASE_0/` (corpus + classifiers + analysis + measurement_report + RECOMMENDATION)
+- **Feature deliverable:** Phase-0.5 design package (3 docs) under `docs/research/discovery_layer/PHASE_0_5/`
 - **Close cascade PR:** #TBD (SHA at merge)
-- **Substrate changes:** NONE (research/execution session — Phase-0 is docs + Python analysis code, not runtime substrate)
-- **Handoff:** `docs/handoffs/SESSION_2822_PHASE0_EXECUTION_OPTION_A_DUAL.md`
-- **Envelope:** `docs/research/implementation/RATIFICATION_2026-07-18_s2822_phase0_methodology_ratified_r1_r6.md` (frozen; §9 D-verdict + §10 methodology outcome + §11 Phase-0.5 direction)
-- **Ledger:** `logs/zoom_out_classifications.jsonl` — 122 rows at S2822 open; +8 S2822 folds persisted at close cascade (Folds A-I in envelope §5.1); post-cascade 130 rows expected
+- **Substrate changes:** NONE (design-only session; build authorized for S2824)
+- **Handoff:** `docs/handoffs/SESSION_2823_PHASE0_5_ARC_OPEN_TRIPLE_D_RATIFIED.md`
+- **Envelope:** `docs/research/implementation/RATIFICATION_2026-07-18_s2823_phase0_5_constitutional_package_b1_b2_b3.md` (frozen; §7 S2824 arc direction)
+- **Ledger:** `logs/zoom_out_classifications.jsonl` — 131 rows at S2823 open; +14 S2823 folds (A-N) persisted at close cascade; 145 rows post-cascade
 - **Merge SHA:** filled at cascade PR merge
-- **All 5 discovery-layer envelopes now live at:** `docs/research/implementation/RATIFICATION_2026-07-18_s2818_...md` + `s2819_shape_c_intent_gating.md` + `s2820_orientation_doc_exclusion_and_lexical_pilot_feature_complete.md` + `s2821_semantic_eval_routing_pivot_phase0_proposed.md` + `s2822_phase0_methodology_ratified_r1_r6.md`
+- **All discovery-layer envelopes now:** `docs/research/implementation/RATIFICATION_2026-07-18_s2818/s2819/s2820/s2821/s2822/s2823_*.md`
+- **New Phase-0.5 skeleton:** `docs/RETRIEVAL_ASSUMPTIONS.md` (4 findings from bridge §1 with "Phase-0.5 evidence pending" placeholders; full v1 authoring deferred post-Phase-0.5)
 
-🖥️ **Workspace UI — S2822 has NO twin-pointer workspace deliverable this session** — evaluation/execution sessions keep envelopes in `docs/research/implementation/` as authoritative; workspace mirror deferred per S2818/S2819/S2820/S2821 pattern. Group 2700 arc's workspace deliverable (`37d6ca76-89c3-4966-8f4c-decc52ce8169`) remains authoritative for the /docs/ restructuring arc under which S2818-S2822 are §8 executions.
+🖥️ **Workspace UI — S2823 has NO twin-pointer workspace deliverable this session** — design/ratification sessions keep envelopes in `docs/research/implementation/` as authoritative; workspace mirror deferred per S2818-S2822 pattern. Group 2700 arc's workspace deliverable (`37d6ca76-89c3-4966-8f4c-decc52ce8169`) remains authoritative for the /docs/ restructuring arc under which S2818-S2823 are §8 executions.
 
 ---
 
-## Current repository state (S2822 close)
+## Current repository state (S2823 close)
 
 | Field | Value |
 |---|---|
 | Branch | `main` |
-| HEAD | S2822 close cascade — advances at cascade PR merge |
-| Playbook version | v0.8.0 (unchanged; **v0.9 amendment 10/10 corroborated; v0.10 R1 provenance discipline 1/2 trigger candidate**) |
+| HEAD | S2823 close cascade — advances at cascade PR merge |
+| Playbook version | v0.8.0 (unchanged; **v0.9 amendment 10/10 corroborated; v0.10 R1 provenance discipline 2/2 triggers reached at S2823; v0.11 epistemic-integrity 1/2 triggers**) |
 | Playbook rule count | 205 (unchanged) |
-| Colorado arc state | Phases 0/1/2/2.1/3.0/3.1 P0/3.1a/3.1 P1 (Lesson-3 hardened)/3.2 (+attorney sub-form)/3.1 P1.b/4a ✅. All prior candidates queued. |
-| **Group 2700 arc state** | **ARC CLOSED (S2817).** §8 item #1 discovery-layer FULL: lexical SHIPPED (S2818-S2820) + semantic EVALUATED (S2821) + routing-first Phase-0 METHODOLOGY VALIDATED with OPTION A-DUAL (S2822). |
-| **Discovery-layer arc state** | Lexical FEATURE COMPLETE; semantic EVALUATED; Phase-0 EXECUTED + methodology-validated; **Phase-0.5 AUTHORIZED as new arc — opens at S2823** |
-| Emergent candidates | Phase-0.5 arc open (sole recommended); Playbook v0.9 (10/10); v0.9-adjacent evidence-first baseline (2/3 triggers); v0.10 R1 provenance discipline (1/2 triggers); Colorado / BettingPage / Stock Intelligence available |
-| Session pin | `pa-fac188f02db24fcc` (retired at S2822 close, force=true, fifty-third consecutive) |
-| Wrapper default pin | `tools/pa_local.sh` — retired pin (forces fresh mint at S2823 open) |
+| Colorado arc state | Phases 0/1/2/2.1/3.0/3.1 P0/3.1a/3.1 P1/3.2/3.1 P1.b/4a ✅ |
+| **Group 2700 arc state** | **ARC CLOSED (S2817).** §8 item #1 discovery-layer FULL through Phase-0.5 design ratification. |
+| **Discovery-layer arc state** | Lexical FEATURE COMPLETE; semantic EVALUATED; Phase-0 METHODOLOGY VALIDATED; **Phase-0.5 DESIGN COMPLETE (B1+B3+B2 D-RATIFIED); build authorized for S2824** |
+| Emergent candidates | S2824 B2 build execution (sole recommended); Playbook v0.9 (10/10); v0.10 R1 provenance (2/2 reached); v0.11 epistemic-integrity (1/2); Colorado / BettingPage / Stock Intelligence available |
+| Session pin | `pa-d63796dde6404d0f` (retired at S2823 close, force=true, fifty-fourth consecutive) |
+| Wrapper default pin | `tools/pa_local.sh` — retired pin (forces fresh mint at S2824 open) |
 | Postgres :5432 | pg15 (July DB) — brew launchd `started` |
-| Freshness log | `logs/session_freshness.jsonl` — grew by 1 at S2822 open (FRESH) |
+| Freshness log | `logs/session_freshness.jsonl` — grew by 1 at S2823 open (FRESH) |
 | Recycle log | `logs/recycle_events.jsonl` — +1 close-cascade recycle to come |
-| Zoom-out ledger | `logs/zoom_out_classifications.jsonl` — 122 rows at open; +8 S2822 folds persisted at close (130 expected post-cascade) |
-| /docs/ restructuring | **ARC CLOSED (S2817).** §8 item #1 discovery-layer FULL. Phase-0.5 continuation as own arc at S2823. |
-| Next move | S2823 opens Phase-0.5 arc per Chris OPTION A-DUAL directive. Balanced P1 harvest + feature-flag dogfood router + abstain-policy proposal + Phase-0.5 stop-condition ratification. |
+| Zoom-out ledger | `logs/zoom_out_classifications.jsonl` — 131 rows at open; +14 S2823 folds persisted at close (145 post-cascade) |
+| /docs/ restructuring | **ARC CLOSED (S2817).** §8 item #1 discovery-layer through Phase-0.5 design. |
+| Next move | S2824 opens B2 build phase per Chris R7 authorization + B2 §13 build-gate spec. Single PR with module + settings + handler diff + model + tests + extraction script + handoff. |
 
 ---
 
-## Recommended session-open protocol (S2823, fresh open)
+## Recommended session-open protocol (S2824, fresh open)
 
 1. `context-kit orient`
 2. Read this file end-to-end
-3. Read S2822 handoff §3 + §6 + §7
-4. **Read S2822 bridge deliverable end-to-end** (`docs/handoffs/SESSION_2822_PHASE0_TO_DOCS_AUDIT_BRIDGE.md`) — required for /docs/-audit reconnection + dual-track first-session plan
-5. Read S2822 envelope §9 D-verdict + §10 methodology outcome + §11 Phase-0.5 arc direction
-6. Read Phase-0 measurement_report.md + RECOMMENDATION_PHASE0_SUMMARY.md as context
-7. Sanity checks (brew postgres + ledger row count verify — expect ~131 post-S2822-cascade)
-8. `git log --oneline -6` — should show S2822 close cascade + S2821 close + S2820 chain
-9. Mint fresh pin scoped `s2823-phase0-5-dual-track` (per bridge §5.1)
-10. **Anti-rubber-stamp check on first SIGN** — verify `tool_runs` non-empty (S2822 pattern: both OP3 SIGN cycles had 4+ tool_runs each)
-11. **DUAL-TRACK EXECUTION** per bridge §5 — Track A /docs/ audit reconnection (~30% budget) + Track B Phase-0.5 evidence collection (~70% budget) — feedback loop per §5.4
-12. **R1 PROVENANCE DISCIPLINE MANDATORY** for Phase-0.5 corpus expansion — apply tier hierarchy to every row
-13. **BALANCED OPERATOR-STYLE HARVEST** — Chris + Claude + Rigby minimum; do NOT just collect 20 arbitrary rows
-14. **FEATURE-FLAG GATE** required for dogfood router — advisory-only per Chris R2
-15. **NO DISCOVERY FIXES** during Phase-0.5 — Chris R3 explicit preserve directive
-16. **ABSTAIN-POLICY PROPOSAL REQUIRED** before any Phase-1 impl — AMBIGUOUS/UNCLASSIFIABLE/CONTEXT_NEEDED canonical fallthrough per Chris R4
-17. Route Phase-0.5 execution scope through Rigby joint SIGN before authoring corpus expansion
-18. **For any implementation-shape work:** OP3 two-SIGN pattern (10/10 across shapes now including IN-LOOP variant)
+3. Read S2823 handoff §3 novel precedent + §7 S2824 direction + §8 lessons
+4. Read S2823 envelope §2 D-verdict pointer + §3 v0.10 candidate status + §7 S2824 arc direction
+5. Read all 3 Phase-0.5 design docs (B1 §10 + B3 §10 + B2 §15) for R1-R7 constraint verbatim
+6. Read Phase-0 measurement_report + RECOMMENDATION_PHASE0_SUMMARY as context
+7. Sanity checks (brew postgres + ledger row count verify — expect ~145 post-S2823-cascade)
+8. `git log --oneline -8` — should show S2823 close cascade + S2822 close + S2821 close + S2820 chain
+9. Mint fresh pin scoped `s2824-phase0-5-b2-build` (per §7 recommended direction)
+10. **Anti-rubber-stamp check on first SIGN** — verify `tool_runs` non-empty
+11. **BUILD EXECUTION EXECUTED UNDER R1-R7 CONSTRAINTS** per Chris R7 downstream discipline
+12. **R1 ADVISORY-ONLY** — router LOGS but does NOT alter retrieval behavior; `_parallel_both` field ALWAYS NULL in Phase-0.5
+13. **R2 MEASUREMENT WINDOW = CANONICAL UNIT OF OBSERVATION** — all trigger evaluation + clarify-cap + reporting scoped to window_id, not session
+14. **R3 SINGLE INSTRUMENTATION SURFACE** — kb_tool.semantic_search only; adjacent-tool expansion requires new SIGN + new D-verdict
+15. **R4 DURABLE EVIDENCE** — JSONL SoT + Django model mirror + event_id idempotency + committed extraction script; divergence raises integrity event
+16. **R5 ADVISORY CONTRACT ADDITIVE-NON-BREAKING** — `_router_advisory` v1 versioned; categorical-only; matches live handler `chunks` key
+17. **R6 EPISTEMIC-INTEGRITY** — runtime checks ONLY on observable signals; post-hoc conclusions never as runtime facts; T4/T5 downgrade to Class D if proxies unavailable
+18. **R7 DOWNSTREAM DISCIPLINE** — any implementation weakening returns through SIGN + new D-verdict; no silent adaptation
 19. **UPPER BOUND / precision qualifiers** required for count claims
 20. **PLAYBOOK-6.10.7 + 6.10.8 + 6.10.9 constitutional** at v0.8.0
-21. **Anchor-verify at every scope decision point** (20-session trend)
-22. **BEFORE any user-facing content:** read `docs/PLATFORM_WHAT_IT_IS.md`
-23. **DO NOT patch the frozen lexical `top_k` policy** (per Chris directive at S2820 close)
-24. **DO NOT auto-adopt semantic default flips** (per S2821 non-recommendation)
-25. **DO NOT build RRF or global fusion during Phase-0.5** (per Chris R6 from S2821 + Phase-0 execution non-goals)
-26. **DO NOT delegate production routing decisions** to feature-flag dogfood router — advisory only per Chris R2
+21. **Anchor-verify at every scope decision point** (21-session trend)
+22. **DO NOT patch the frozen lexical `top_k` policy** (per Chris S2820)
+23. **DO NOT auto-adopt semantic default flips** (per S2821)
+24. **DO NOT build RRF or global fusion during Phase-0.5** (per Chris R6 from S2821 + B2 R1 advisory-only)
+25. **DO NOT delegate production routing decisions** — advisory only per Chris R2
+26. **DO NOT patch A3 pointer-discipline finding** — Chris R3 preserve during Phase-0.5 holds
 
 ---
 
 ## Reference documents
 
-Ordered by frequency of use at S2823:
+Ordered by frequency of use at S2824:
 
 1. [`CLAUDE.md`](CLAUDE.md) — repo bootstrap
-2. [`docs/handoffs/SESSION_2822_PHASE0_EXECUTION_OPTION_A_DUAL.md`](docs/handoffs/SESSION_2822_PHASE0_EXECUTION_OPTION_A_DUAL.md) — **S2822 handoff (current)**
-3. [`docs/handoffs/SESSION_2822_PHASE0_TO_DOCS_AUDIT_BRIDGE.md`](docs/handoffs/SESSION_2822_PHASE0_TO_DOCS_AUDIT_BRIDGE.md) — **S2822 bridge deliverable (REQUIRED READING at S2823 open) — Phase-0 → /docs/ audit reconnection + dual-track first-session plan**
-4. [`docs/research/implementation/RATIFICATION_2026-07-18_s2822_phase0_methodology_ratified_r1_r6.md`](docs/research/implementation/RATIFICATION_2026-07-18_s2822_phase0_methodology_ratified_r1_r6.md) — **S2822 envelope frozen; §9 Chris OPTION A-DUAL D-verdict + §10 methodology-outcome primary + §11 Phase-0.5 arc direction**
-4. [`docs/research/discovery_layer/PHASE_0/RECOMMENDATION_PHASE0_SUMMARY.md`](docs/research/discovery_layer/PHASE_0/RECOMMENDATION_PHASE0_SUMMARY.md) — Phase-0 recommendation (Options + calibration + 4-item Phase-1 gate checklist)
-5. [`docs/research/discovery_layer/PHASE_0/measurement_report.md`](docs/research/discovery_layer/PHASE_0/measurement_report.md) — Phase-0 evidence (per-family + confusion + wrong-but-plausible + context-needed + provenance-tier stratified)
-6. [`docs/research/discovery_layer/PHASE_0/corpus.json`](docs/research/discovery_layer/PHASE_0/corpus.json) — Phase-0 33-row corpus (5 P1 + 10 P2 + 18 P3)
-7. [`docs/research/discovery_layer/PHASE_0/field_dictionary.md`](docs/research/discovery_layer/PHASE_0/field_dictionary.md) — schema v0 (frozen at Step 1.5)
-8. [`docs/research/implementation/RATIFICATION_2026-07-18_s2821_semantic_eval_routing_pivot_phase0_proposed.md`](docs/research/implementation/RATIFICATION_2026-07-18_s2821_semantic_eval_routing_pivot_phase0_proposed.md) — S2821 predecessor (Chris routing-first + §7 Phase-0 methodology proposal)
-9. [`docs/research/implementation/RATIFICATION_2026-07-18_s2820_orientation_doc_exclusion_and_lexical_pilot_feature_complete.md`](docs/research/implementation/RATIFICATION_2026-07-18_s2820_orientation_doc_exclusion_and_lexical_pilot_feature_complete.md) — S2820 lexical pilot FEATURE COMPLETE
-10. [`core/rag.py`](core/rag.py) — **FROZEN lexical policy** (do NOT patch during Phase-0.5)
-11. [`core/rag_integration.py`](core/rag_integration.py) — semantic search entry point
-12. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.8.0 (v0.9 10/10 corroborated; v0.10 R1 provenance 1/2 trigger candidate)
-13. [`logs/zoom_out_classifications.jsonl`](logs/zoom_out_classifications.jsonl) — 122 rows at S2822 open; ~130 post-close-cascade
+2. [`docs/handoffs/SESSION_2823_PHASE0_5_ARC_OPEN_TRIPLE_D_RATIFIED.md`](docs/handoffs/SESSION_2823_PHASE0_5_ARC_OPEN_TRIPLE_D_RATIFIED.md) — **S2823 handoff (current)**
+3. [`docs/research/implementation/RATIFICATION_2026-07-18_s2823_phase0_5_constitutional_package_b1_b2_b3.md`](docs/research/implementation/RATIFICATION_2026-07-18_s2823_phase0_5_constitutional_package_b1_b2_b3.md) — **S2823 envelope frozen; §2 D-verdicts + §3 R1 discipline + §7 S2824 direction**
+4. [`docs/research/discovery_layer/PHASE_0_5/BALANCED_P1_HARVEST_PLAN.md`](docs/research/discovery_layer/PHASE_0_5/BALANCED_P1_HARVEST_PLAN.md) — **B1 D-RATIFIED §10** (harvest plan for post-build execution)
+5. [`docs/research/discovery_layer/PHASE_0_5/ABSTAIN_POLICY_PROPOSAL.md`](docs/research/discovery_layer/PHASE_0_5/ABSTAIN_POLICY_PROPOSAL.md) — **B3 D-RATIFIED §10** (5 R-ratifications + 2 Chris reframings; abstain policy the router implements)
+6. [`docs/research/discovery_layer/PHASE_0_5/ROUTER_SCAFFOLDING_DESIGN.md`](docs/research/discovery_layer/PHASE_0_5/ROUTER_SCAFFOLDING_DESIGN.md) — **B2 D-RATIFIED §15** (7 R-ratifications + build gate)
+7. [`docs/RETRIEVAL_ASSUMPTIONS.md`](docs/RETRIEVAL_ASSUMPTIONS.md) — S2823 skeleton (4 findings; Phase-0.5 evidence pending)
+8. [`docs/research/discovery_layer/PHASE_0/classifier_a.py`](docs/research/discovery_layer/PHASE_0/classifier_a.py) — decision engine substrate (categorical HIGH/MEDIUM/LOW)
+9. [`docs/handoffs/SESSION_2822_PHASE0_TO_DOCS_AUDIT_BRIDGE.md`](docs/handoffs/SESSION_2822_PHASE0_TO_DOCS_AUDIT_BRIDGE.md) — S2823 dual-track first-session plan (executed)
+10. [`docs/research/implementation/RATIFICATION_2026-07-18_s2822_phase0_methodology_ratified_r1_r6.md`](docs/research/implementation/RATIFICATION_2026-07-18_s2822_phase0_methodology_ratified_r1_r6.md) — S2822 predecessor Phase-0 methodology
+11. [`core/services/td_handlers_ops.py`](core/services/td_handlers_ops.py) — kb_tool.semantic_search handler at :5905 (B2 instrumentation call-site)
+12. [`core/settings.py`](core/settings.py) — feature-flag pattern (B2 PHASE_0_5_ROUTER_ENABLED + PHASE_0_5_MEASUREMENT_WINDOW additions)
+13. [`docs/ENGINEERING_PLAYBOOK.md`](docs/ENGINEERING_PLAYBOOK.md) — v0.8.0 (v0.9 10/10; v0.10 R1 provenance 2/2 reached; v0.11 epistemic-integrity 1/2)
+14. [`logs/zoom_out_classifications.jsonl`](logs/zoom_out_classifications.jsonl) — 145 rows at S2823 close
