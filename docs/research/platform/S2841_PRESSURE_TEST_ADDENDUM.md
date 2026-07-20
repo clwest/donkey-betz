@@ -377,7 +377,7 @@ Ratified by Chris via terminal on 2026-07-19 (S2842). Verbatim capture:
 ### 11.2 Session metadata
 
 - **Session:** S2842 (this addendum authored in-session after Chris D0–D6 verdicts)
-- **PA conversation pin:** `pa-9729e4f9925445c2` (S2841 strategic CTO assessment pin; carried through S2842)
+- **PA conversation pin:** `pa-9729e4f9925445c2` (S2841 strategic CTO assessment pin) — **RETIRED at S2842 close** (force=true; seventy-second consecutive per S2770+ pattern)
 - **Chat message ID (Rigby's Q1-Q3 response):** ChatConversation.id=3725 (2026-07-20 05:06:55 UTC; 7,941 chars)
 - **Git HEAD at authoring:** `3b5d9a489`
 - **Playbook version:** v0.8.0 (205 rules; unchanged this session)

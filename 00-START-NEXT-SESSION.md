@@ -12,7 +12,7 @@
 
 **"Why hasn't Atlas v1 shipped?" partial answer:** Chris HAS been shipping — in character-os, not DBZ. 214+ character-os sessions parallel the ~1,700 DBZ sessions.
 
-**Session pin `pa-9729e4f9925445c2`** carries through S2843 for wedge selection. **Docs:** parent doc `docs/research/platform/S2841_STRATEGIC_DISCOVERY_WHAT_DBZ_ACTUALLY_IS.md` (updated with ratification banner + §6.7 supersedure notice); canonical companion `docs/research/platform/S2841_PRESSURE_TEST_ADDENDUM.md` (new, 11 sections); handoff `docs/handoffs/SESSION_2842_S2841_RATIFIED_D0_D6.md`. **Workspace mirror:** deliverable `d8e093a1-0d27-4829-aa34-92f3a9b774bd` (parent) + addendum + ratification envelope in Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50` (Rigby-authored per `feedback_rigby_writes_workspace_deliverables`).
+**Session pin `pa-9729e4f9925445c2` RETIRED at S2842 close** (force=true; seventy-second consecutive per S2770+ pattern). Fresh mint required at S2843 open with label reflecting chosen wedge. **Docs:** parent doc `docs/research/platform/S2841_STRATEGIC_DISCOVERY_WHAT_DBZ_ACTUALLY_IS.md` (updated with ratification banner + §6.7 supersedure notice); canonical companion `docs/research/platform/S2841_PRESSURE_TEST_ADDENDUM.md` (new, 11 sections); handoff `docs/handoffs/SESSION_2842_S2841_RATIFIED_D0_D6.md`. **Workspace mirror:** deliverable `d8e093a1-0d27-4829-aa34-92f3a9b774bd` (parent) + addendum + ratification envelope in Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50` (Rigby-authored per `feedback_rigby_writes_workspace_deliverables`).
 
 ---
 
@@ -32,7 +32,7 @@
 
 ### Step 2 — Pin decision
 
-- Retire `pa-9729e4f9925445c2` at S2843 open (force=true; seventy-second consecutive per S2770+ pattern).
+- **S2842 close already retired `pa-9729e4f9925445c2`** (seventy-second consecutive per S2770+ pattern) — S2843 has no live pin at open.
 - Fresh mint required at S2843 open with label reflecting chosen wedge (e.g. `s2843-wedge-a-rigby-standalone`, `s2843-wedge-c-characteros-launch`).
 
 ### Step 3 — Execute the wedge

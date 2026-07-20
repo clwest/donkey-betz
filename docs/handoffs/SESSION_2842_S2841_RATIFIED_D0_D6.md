@@ -113,7 +113,7 @@ Governance work (Playbook amendments, ratification cadence, docs cascades) conti
 
 ### PA conversation pin
 
-- **`pa-9729e4f9925445c2`** (S2841 strategic CTO assessment pin, carried through S2842) — still live for S2843 open; Chris can rotate at wedge-selection time if desired.
+- **`pa-9729e4f9925445c2`** (S2841 strategic CTO assessment pin) — **RETIRED at S2842 close** (force=true; seventy-second consecutive retirement per S2770+ pattern). S2843 opens with no live pin; fresh mint required at wedge selection.
 
 ---
 
