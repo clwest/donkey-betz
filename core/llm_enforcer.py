@@ -238,6 +238,49 @@ class LLMEnforcer:
         except Exception:
             pass  # Never block LLM calls due to budget check errors
 
+        # Session 2846 (A1 W1 Phase 2) — per-workspace freeze check.
+        # Same guard shape as the global freeze above, scoped to the
+        # caller's active workspace. Critical purposes / agents bypass
+        # workspace freezes too, matching global behavior. Fold 4:
+        # no caching in W1; every call hits SystemConfiguration.
+        if user is not None:
+            try:
+                from core.services.workspace_resolver import get_active_workspace
+                _ws = get_active_workspace(user)
+                if _ws is not None:
+                    from core.services.ops_autopilot.budget import BudgetController
+                    if BudgetController().is_workspace_frozen(_ws.id):
+                        _critical_purposes = {
+                            'governance', 'auth', 'incident_response', 'pa_chat',
+                        }
+                        _critical_agents = {'PersonalAssistant'}
+                        if (
+                            task_type not in _critical_purposes
+                            and agent_name not in _critical_agents
+                        ):
+                            logger.warning(
+                                f"[BudgetController] WORKSPACE FROZEN: "
+                                f"blocking {agent_name}/{task_type} for "
+                                f"workspace {_ws.name} ({_ws.id})"
+                            )
+                            return {
+                                'success': False,
+                                'response': (
+                                    f'[BLOCKED: Workspace {_ws.name!r} budget '
+                                    f'freeze active — non-critical calls paused]'
+                                ),
+                                'error': 'Workspace budget freeze active',
+                                'blocked_by_budget': True,
+                                'blocked_by_workspace_budget': True,
+                                'workspace_id': str(_ws.id),
+                                'agent': agent_name,
+                                'call_id': hashlib.md5(
+                                    f"{agent_name}_{datetime.now()}".encode()
+                                ).hexdigest()[:8],
+                            }
+            except Exception:
+                pass  # Never block LLM calls due to workspace check errors
+
         # Session 1088: ROI throttle check — cooldown for low-ROI agents
         try:
             from core.services.ops_autopilot import ROIEnforcer
