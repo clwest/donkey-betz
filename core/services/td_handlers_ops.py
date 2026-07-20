@@ -3910,6 +3910,7 @@ class OpsHandlersMixin:
             spend = controller.compute_workspace_spend(now, workspace_id=workspace.id)
             cap = controller.get_workspace_daily_cap(workspace.id)
             is_frozen = controller.is_workspace_frozen(workspace.id)
+            is_downgraded = controller.is_workspace_downgraded(workspace.id)
             return {
                 'action': action,
                 'workspace_id': str(workspace.id),
@@ -3920,7 +3921,8 @@ class OpsHandlersMixin:
                 'hourly_total': spend['hourly_total'],
                 'hourly_calls': spend['hourly_calls'],
                 'is_frozen': is_frozen,
-                'enforcement_tier': 'freeze_only',
+                'is_downgraded': is_downgraded,
+                'enforcement_tier': 'downgrade_and_freeze',
                 'window_note': (
                     'daily = last 24h sliding window (not calendar day)'
                 ),
@@ -3945,12 +3947,13 @@ class OpsHandlersMixin:
                     'cap': row['cap'],
                     'daily_total': spend['daily_total'],
                     'is_frozen': controller.is_workspace_frozen(wid),
+                    'is_downgraded': controller.is_workspace_downgraded(wid),
                 })
             return {
                 'action': action,
                 'count': len(enriched),
                 'workspaces': enriched,
-                'enforcement_tier': 'freeze_only',
+                'enforcement_tier': 'downgrade_and_freeze',
                 'window_note': (
                     'daily = last 24h sliding window (not calendar day)'
                 ),
@@ -4036,11 +4039,35 @@ class OpsHandlersMixin:
                 ),
             }
 
+        if action == 'clear_downgrade':
+            workspace, err = _resolve_workspace(workspace_id)
+            if err is not None:
+                return {'action': action, **err}
+            auth_err = _authorize_mutation(workspace)
+            if auth_err is not None:
+                return {'action': action, **auth_err}
+            cleared = controller.clear_workspace_downgrade(
+                workspace.id, actor_user_id=user_id,
+            )
+            return {
+                'action': action,
+                'workspace_id': str(workspace.id),
+                'workspace_name': workspace.name,
+                'cleared': cleared,
+                'note': (
+                    'downgrade cleared — LLM calls resume on the requested '
+                    'model. Autopilot may re-flag if spend crosses 70% of '
+                    'cap on the next budget cycle'
+                    if cleared else 'workspace was not downgraded (no-op)'
+                ),
+            }
+
         return {
             'action': action,
             'error': (
                 f'Unknown workspace_budget_tool action: {action!r}. '
-                f'Valid: set_cap, get_status, clear_freeze, list_caps, clear_cap.'
+                f'Valid: set_cap, get_status, clear_freeze, clear_downgrade, '
+                f'list_caps, clear_cap.'
             ),
         }
 
