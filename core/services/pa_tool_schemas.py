@@ -3411,7 +3411,7 @@ PA_TOOL_SCHEMAS = [
                         "stocks_*: stock alerts, predictions, SEC filings. "
                         "stock_briefs: latest stock brief summaries. "
                         "ml_predictions: ML model predictions with accuracy. "
-                        "signal_clusters: signal aggregation patterns. Supports query (keyword match on name+keywords), pattern_type, min_confidence, source (spider name), window_hours. "
+                        "signal_clusters: signal aggregation patterns. Supports query (keyword match on name+keywords), pattern_type, min_confidence, source_spider (spider name filter on source_breakdown JSONField, e.g. 'hackernews' / 'huggingface' / 'devto'), window_hours. "
                         "sports_*: predictions, arbs, wagers, record_wager. "
                         "sports_sharp_signals: sharp money/line movement signals. "
                         "legislation_*: search bills, get summaries. "
@@ -3422,6 +3422,7 @@ PA_TOOL_SCHEMAS = [
                 },
                 "desk": {"type": "string", "enum": ["stocks", "sports", "legislation", "all"], "description": "Desk for briefs action (default: all)"},
                 "source": {"type": "string", "enum": ["kb", "spider", "web"], "description": "Search source for search action (default: kb)"},
+                "source_spider": {"type": "string", "description": "Spider name filter for signal_clusters (matches source_breakdown JSONField key, e.g. 'hackernews', 'huggingface', 'devto', 'producthunt', 'techcrunch_startups'). Distinct from `source` which is enum-restricted for the search action."},
                 "query": {"type": "string", "description": "Search query for search/legislation_search/legislation_summary/signal_clusters (signal_clusters: keyword match against cluster name + keywords)"},
                 "pattern_type": {"type": "string", "enum": ["demand_spike", "trend_emergence", "sentiment_shift", "opportunity_window", "knowledge_gap", "competitive_signal", "market_movement", "skill_demand", "content_gap", "user_need"], "description": "Filter signal_clusters by pattern type"},
                 "min_confidence": {"type": "number", "description": "Filter signal_clusters by confidence >= this value (0.0-1.0)"},
