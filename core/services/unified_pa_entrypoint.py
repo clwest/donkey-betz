@@ -247,7 +247,7 @@ def _build_tool_args_malformed_envelope(
         },
         'retry_hint': {
             'recommended_action': retry_hint_action,
-            'max_chunk_chars_suggestion': 2000,
+            'max_chunk_chars_suggestion': 8000,
         },
     }
 
@@ -297,9 +297,16 @@ class UnifiedPAEntrypoint:
 
     @staticmethod
     def _estimate_max_tokens(message: str) -> int:
+        # S2839 T5 close: raised from 2000/3500 → 8000/16000 per Chris directive
+        # after Rigby hit output-token truncation writing an 850-line workspace
+        # deliverable. GPT-5.2 supports 32K+ output; prior values were highly
+        # conservative and forced ~60 chunked appends for large content writes.
+        # The retry-hint chunk suggestion at _build_tool_args_malformed_envelope
+        # was moved in step (2000 → 8000) so a retry-after-parse-failure fits
+        # within the raised budget.
         if UnifiedPAEntrypoint._LONG_RESPONSE_SIGNALS.search(message):
-            return 3500
-        return 2000
+            return 16000
+        return 8000
 
     # Session 959: Intent-to-enrichment mapping
     # Determines which intelligence services fire for each intent
