@@ -1105,13 +1105,18 @@ class BudgetController:
                 f"default_cap must be > 0, got {default_cap}"
             )
 
+        # Empty list from OpenAI function-calling (models often pass [] for
+        # optional array params rather than omitting) is treated as "no
+        # filter" — the alternative (empty-set = match-none) blocks every
+        # workspace and produces zero writes, which is never what the
+        # operator wants when they didn't specify an allowlist.
         include_set = (
             {str(w) for w in include_workspace_ids}
-            if include_workspace_ids is not None else None
+            if include_workspace_ids else None
         )
         exclude_set = (
             {str(w) for w in exclude_workspace_ids}
-            if exclude_workspace_ids is not None else set()
+            if exclude_workspace_ids else set()
         )
 
         result = {
