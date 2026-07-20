@@ -3484,12 +3484,17 @@ RESEARCH DATA:
                     except (TypeError, ValueError):
                         pass
 
-                source = payload.get('source')
-                # Ignore search-context enum values ('kb', 'spider', 'web') that GPT-5.2
-                # auto-injects from the shared schema param; only apply real spider names.
-                if source and source not in ('kb', 'spider', 'web'):
-                    qs = qs.filter(source_breakdown__has_key=source)
-                    applied_source = source
+                # source_spider is the dedicated signal_clusters filter (no enum restriction);
+                # fall back to `source` for callers that pass a spider name through the shared
+                # param, skipping the search-action enum values GPT-5.2 auto-injects.
+                source_spider = payload.get('source_spider')
+                if not source_spider:
+                    src = payload.get('source')
+                    if src and src not in ('kb', 'spider', 'web'):
+                        source_spider = src
+                if source_spider:
+                    qs = qs.filter(source_breakdown__has_key=source_spider)
+                    applied_source = source_spider
                 else:
                     applied_source = None
 
@@ -3509,7 +3514,7 @@ RESEARCH DATA:
                         'query': query or None,
                         'pattern_type': pattern_type,
                         'min_confidence': min_conf,
-                        'source': applied_source,
+                        'source_spider': applied_source,
                         'window_hours': window_hours,
                     },
                     'clusters': [{
