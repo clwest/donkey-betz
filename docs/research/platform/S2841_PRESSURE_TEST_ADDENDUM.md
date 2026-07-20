@@ -499,4 +499,104 @@ This §12 is a **refinement of already-ratified D4**, decomposing a single flat 
 
 ---
 
-*End of addendum. Ratified 2026-07-19 (S2842) by Chris via D0–D6 terminal verdicts, then refined 2026-07-20 (S2843) via §12 D4 decomposition ratification. Canonical companion to S2841_STRATEGIC_DISCOVERY_WHAT_DBZ_ACTUALLY_IS.md. All future references to S2841 discovery should cite BOTH docs; all future references to D4 execution structure should cite §12 of this doc.*
+## 13. D4 Picks Ratification (S2844, 2026-07-20)
+
+**Status:** ✅ **RATIFIED** (Chris D-verdicts verbatim in §13.3)
+**Session:** S2844 (opened 2026-07-20; ratification + code fix in-session; closed same day)
+**Companion handoff:** `docs/handoffs/SESSION_2844_D4_PICKS_RATIFIED.md`
+**Ratifies:** the three D4 sub-decisions against the §12 architecture.
+
+### 13.1 What §13 ratifies
+
+Per §12, D4 was decomposed into three ratifiable sub-decisions:
+- D4-A — Execution Wedge (pick ONE from A1/A2/A3/A4)
+- D4-B — Ledger Bet Gate (YES / NO)
+- D4-C — Foundry Phase 2C Trigger (RUN / DEFER)
+
+§13 records Chris's picks against the ratified architecture. It does NOT modify §12.
+
+### 13.2 SIGN cycle summary
+
+Full SIGN cycle in `docs/handoffs/SESSION_2844_D4_PICKS_RATIFIED.md` §2. Key inflection points:
+
+1. Claude preliminary D4-A pick: **A2** (CharacterOS to first paying customer).
+2. Rigby independent SIGN (task `545c23e0-7330-420f-a8b4-c84df72be08f`; 8+ tool calls, non-empty tool_runs): **DISAGREE**, alternative **A4+A1**. Decisive evidence: Atlas parking rule against A2 as framed (`docs/24_7_GLOBAL_AI_APP_ATLAS.md#48`); quantified cost-attribution blocker for A1 (`docs/narratives/STRATEGY_247_GLOBAL_AI.md#24`); Employee OS activation gate for A3.
+3. Claude accepted evidence; joint recommendation A4+A1 with F-BLOCKING customer-prospect question.
+4. Chris pushback reframed the question: *"can you and Rigby use Donkey Betz help me get customers?"* — flipped GTM from external assumption to testable platform capability.
+5. Capability probe (task `a3c1399b-3d76-42cd-87c0-1196a2242ec7`; 8+ tool calls): empty across all three wedges. SignalCluster endpoint returned generic top clusters regardless of query.
+6. Rigby zoom-out identified fastest-fix hypothesis: API-contract bug (option (c) of three).
+7. Chris D-verdicts issued.
+8. SignalCluster fix shipped in-session; two same-session bug catches; verified working via ORM probe.
+
+### 13.3 Chris D-verdicts (verbatim)
+
+> pair with A1, defer D4-C, run the diagnostic
+
+> yes, D4-B YES and run the fix
+
+### 13.4 Ratified picks (final)
+
+#### D4-A — A4 paired with A1
+
+- **Primary wedge (A4):** Governance Consulting engagement #1 — mid-size AI startups / enterprise AI ops teams; $10–100k engagements; 4–8 wks to first revenue.
+- **Paired compounding product (A1):** Rigby standalone SaaS — solopreneurs; $30/mo; 6–10 wks (extended by D4-B fold).
+- **Sequencing note (per §12.4):** execution sequencing between A4 and A1 (concurrent / sequential / gated) is deferred to S2845+ planning and is NOT a D4-A commitment.
+
+#### D4-B — YES
+
+Ledger Bet fold activated. `LLMCallLog.workspace` FK + per-workspace cost cap + OpsRun/OpsRunEvent/ToolCallRecord as public API + Ledger export becomes A1's weeks 1–2 substrate. Motivated by Rigby's cited blocker (`docs/narratives/STRATEGY_247_GLOBAL_AI.md#24`): external SaaS launch is explicitly threatened by 4 `✗` rows in `docs/COST_SURVIVAL_AUDIT.md` §A.
+
+#### D4-C — DEFER
+
+Foundry Phase 2C does not directly accelerate A4 consulting engagements within the same month. Re-gated at next natural trigger (first revenue event OR when A4 case study demands multi-tenant platform).
+
+### 13.5 Same-session code shipped
+
+**Files:**
+- `core/services/td_handlers_core.py:3456-3524` — signal_clusters handler now honors `query` / `pattern_type` / `min_confidence` / `source` / `window_hours` filters
+- `core/services/pa_tool_schemas.py` — schema advertises new params + guards `source` param semantics
+
+**Bug catch turns:**
+1. Initial patch returned 0 rows across probes; investigation found GPT-5.2 auto-injecting `source="kb"` from shared search-action schema default.
+2. Guard added for search-context enum values (`kb`/`spider`/`web`); verified working via ORM (8 clusters returned for `query='remote contract'` + injected `source='kb'`).
+
+**Recycles:** two `make recycle-all` cycles (one per patch) per PLAYBOOK-7.4.4.
+
+### 13.6 Honest finding: SignalCluster data content is separate gap
+
+The interface fix works. Underlying cluster data does NOT contain AI-agent / governance / solopreneur / SMB relevant signals. The spiders feeding cluster aggregation are sports (kalshi, theodds), news (axios, reuters_rss, google_news), gaming (variety, polygon_gaming), and generic-jobs (adzuna, weworkremotely, remoteok) — not the AI-community sources (github, devto, hackernews, medium, substack, producthunt for AI-tagged content). Building the AI-source SIGNAL cluster pipeline is a separate 3–5 day project, deferred until A4/A1 wedge execution needs it.
+
+For A4+A1 leadgen today, the wired substrate is spider-content search (`spider_status_tool.search`), knowledge-base research (`kb_tool`), deliverable drafting (`deliverable_tool`), and Chief-of-Staff Employee OS job orchestration.
+
+### 13.7 D6 moratorium check
+
+- No new discovery arc opened.
+- No new evaluation framework introduced.
+- No portfolio expansion (still A1–A4 + Foundry).
+- No layer-boundary design arc opened.
+- §12 architecture unchanged; §13 records picks against it.
+
+**D6 moratorium remains in force through S2845 and beyond.**
+
+### 13.8 What §13 supersedes / what §13 does NOT change
+
+**Supersedes:** any framing of D4 execution as "still to be decided." D4 is now fully ratified end-to-end: architecture (§12) + picks (§13).
+
+**Does NOT change:**
+- §5 evaluation dimensions (SA + CA) — unchanged.
+- §6.7 revised OPP-7 classification — unchanged.
+- §7 layered architecture — unchanged.
+- §9 D0–D6 verdicts — unchanged.
+- §12 D4 architecture — unchanged.
+
+### 13.9 Provenance
+
+- **SIGN cycles:** three (D4-A SIGN `545c23e0-7330-420f-a8b4-c84df72be08f`; capability probe `a3c1399b-3d76-42cd-87c0-1196a2242ec7`; fix verification `2b277e9d-16ef-432d-a5dd-a353be2813bb`).
+- **Session pin:** `pa-4a5f86ef64c24366` (S2844; minted via atomic close from `pa-c31c6a2dd90d4307`; retired at S2844 close).
+- **Git HEAD at authoring:** `3cc325135`.
+- **Playbook version:** v0.8.0 (unchanged; no amendment).
+- **Workspace mirrors:** content mirror + ratification envelope to be Rigby-authored in Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50` per `feedback_rigby_writes_workspace_deliverables`.
+
+---
+
+*End of addendum. Ratified 2026-07-19 (S2842) by Chris via D0–D6 terminal verdicts, then refined 2026-07-20 (S2843) via §12 D4 decomposition ratification, then D4 picks ratified 2026-07-20 (S2844) via §13. Canonical companion to S2841_STRATEGIC_DISCOVERY_WHAT_DBZ_ACTUALLY_IS.md. All future references to S2841 discovery should cite BOTH docs; all future references to D4 execution structure should cite §12 + §13 of this doc.*
