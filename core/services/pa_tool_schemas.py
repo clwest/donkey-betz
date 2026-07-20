@@ -3314,34 +3314,46 @@ PA_TOOL_SCHEMAS = [
     },
 
     # ── Session 2847 A1 W1 Phase 3 + Session 2848 A1 W1.5 downgrade tier ────
+    # ── Session 2849 A1 W2 #2a: defaults + backfill for per-workspace caps ──
     {
         "type": "function",
         "name": "workspace_budget_tool",
         "description": (
             "Manage per-workspace LLM spend caps, downgrade state, and freeze state "
-            "(A1 W1 Phase 3 + W1.5). Complements autopilot_tool.budget_report (global "
-            "spend) and llm_enforcer's per-workspace freeze + downgrade hooks: caps are "
-            "stored in SystemConfiguration under 'workspace_daily_cap:<uuid>' and "
-            "enforced by BudgetController against the last-24h LLMCallLog spend for that "
-            "workspace (sliding window, NOT calendar day — spend at 09:15 today is "
+            "(A1 W1 Phase 3 + W1.5 + W2 #2a). Complements autopilot_tool.budget_report "
+            "(global spend) and llm_enforcer's per-workspace freeze + downgrade hooks: "
+            "caps are stored in SystemConfiguration under 'workspace_daily_cap:<uuid>' "
+            "and enforced by BudgetController against the last-24h LLMCallLog spend for "
+            "that workspace (sliding window, NOT calendar day — spend at 09:15 today is "
             "measured against 09:15 yesterday). Two enforcement tiers: at 70% of cap the "
             "workspace is DOWNGRADED (routed to BUDGET_DOWNGRADE_MODEL, currently "
             "gpt-5-mini) with hysteresis auto-clear at 60%; at 100% of cap the workspace "
             "is FROZEN (non-critical LLM calls blocked). Freeze wins over downgrade. "
-            "Actions: 'set_cap' writes a cap ($ USD); 'get_status' returns cap + last-24h "
-            "spend + is_frozen + is_downgraded + enforcement_tier for one workspace; "
-            "'clear_freeze' removes an active freeze flag; 'clear_downgrade' removes an "
-            "active downgrade flag (autopilot may re-flag on next cycle if spend still "
-            "over 70%); 'list_caps' shows every workspace with a configured cap plus its "
-            "current spend + freeze + downgrade state; 'clear_cap' removes the cap "
-            "entirely (workspace falls back to global protection only). "
-            "MUTATIONS (set_cap, clear_cap, clear_freeze, clear_downgrade) require the "
-            "caller to be workspace owner OR staff, and are logged as AutopilotAction "
-            "rows with policy='workspace_budget_tool' for symmetric visibility with the "
-            "automatic enforce_workspace_freeze + enforce_workspace_downgrade audit "
-            "trail. Use this tool when asked to set/change/clear a workspace budget cap, "
-            "unfreeze or un-downgrade a workspace, check a workspace's spend vs cap, or "
-            "inventory configured caps."
+            "S2849 W2 #2a adds a global default cap (workspace_default_daily_cap in "
+            "SystemConfiguration) that surfaces via get_status/list_caps as an effective "
+            "cap when the workspace has no explicit row; because autopilot enforcement "
+            "iterates only workspaces with explicit caps, 'backfill_defaults' writes the "
+            "default to unconfigured workspaces so enforcement actually fires. "
+            "NOTE: workspace caps apply only to workspace-attributed LLMCallLog rows "
+            "(currently the PA path); the NULL-bucket (agents, spiders, embeddings, "
+            "background tasks) is governed by GLOBAL budget controls, not per-workspace. "
+            "Actions: 'set_cap' writes a per-workspace cap; 'get_status' returns cap + "
+            "spend + freeze + downgrade + cap_source for one workspace; 'clear_freeze' "
+            "removes an active freeze flag; 'clear_downgrade' removes an active downgrade "
+            "flag; 'list_caps' shows configured caps (or all workspaces with effective "
+            "caps when include_defaults=true); 'clear_cap' removes an explicit cap; "
+            "'get_default_cap' returns the current global default; 'set_default_cap' "
+            "writes/updates the global default (staff only); 'backfill_defaults' writes "
+            "the default to all/selected workspaces missing an explicit cap. "
+            "MUTATIONS (set_cap, clear_cap, clear_freeze, clear_downgrade, "
+            "set_default_cap, backfill_defaults) require caller to own the workspace OR "
+            "be staff (default-cap + backfill require staff), and are logged as "
+            "AutopilotAction rows with policy='workspace_budget_tool' for symmetric "
+            "visibility with the automatic enforce_workspace_freeze + "
+            "enforce_workspace_downgrade audit trail. Use this tool when asked to "
+            "set/change/clear a workspace budget cap, unfreeze or un-downgrade a "
+            "workspace, check a workspace's spend vs cap, inventory configured caps, or "
+            "roll out a default cap across workspaces."
         ),
         "parameters": {
             "type": "object",
@@ -3355,6 +3367,9 @@ PA_TOOL_SCHEMAS = [
                         "clear_downgrade",
                         "list_caps",
                         "clear_cap",
+                        "get_default_cap",
+                        "set_default_cap",
+                        "backfill_defaults",
                     ],
                     "description": (
                         "set_cap: write/update a per-workspace daily cap ($ USD). "
@@ -3362,43 +3377,97 @@ PA_TOOL_SCHEMAS = [
                         "value returns changed=false. Response warns when the target "
                         "workspace is currently frozen and the new cap now exceeds "
                         "24h spend (operator should call clear_freeze to resume). "
-                        "get_status: return {cap, spend, is_frozen, is_downgraded, "
-                        "enforcement_tier} for one workspace. cap is null if unset. "
-                        "spend is a sliding 24h + 1h window over LLMCallLog rows keyed "
-                        "by workspace_id. enforcement_tier is 'downgrade_and_freeze' "
-                        "(W1.5 tier is live). "
-                        "clear_freeze: delete the workspace_freeze_active:<uuid> flag, "
-                        "which allows non-critical LLM calls to resume. Idempotent — "
-                        "no-op if the workspace isn't currently frozen. "
+                        "get_status: return {cap, effective_cap, cap_source, "
+                        "default_cap, spend, is_frozen, is_downgraded, "
+                        "enforcement_tier} for one workspace. cap is null when no "
+                        "explicit row exists; cap_source is 'explicit'|'default'|"
+                        "'unset'; effective_cap is what an operator surface should "
+                        "display. spend is a sliding 24h + 1h window over LLMCallLog. "
+                        "clear_freeze: delete the workspace_freeze_active:<uuid> flag. "
+                        "Idempotent — no-op if the workspace isn't currently frozen. "
                         "clear_downgrade: delete the workspace_downgrade_active:<uuid> "
-                        "flag, which restores routing to the requested model. "
-                        "Idempotent — no-op if the workspace isn't currently downgraded. "
-                        "Note: autopilot's periodic budget cycle may re-flag on the next "
-                        "iteration if spend is still above 70% of cap (hysteresis "
-                        "auto-clear is at 60%). "
-                        "list_caps: return every workspace with a configured cap, "
-                        "joined against ProjectWorkspace for the human-readable name "
-                        "and enriched with current 24h spend + freeze + downgrade status. "
-                        "clear_cap: delete the workspace_daily_cap:<uuid> row. The "
-                        "workspace falls back to global-tier budget protection only. "
-                        "Does NOT clear an existing freeze or downgrade — call "
-                        "clear_freeze / clear_downgrade explicitly if intended."
+                        "flag. Idempotent. Autopilot may re-flag on next cycle if "
+                        "spend still above 70% (hysteresis clears at 60%). "
+                        "list_caps: return every workspace with a configured explicit "
+                        "cap by default. When include_defaults=true, returns every "
+                        "ProjectWorkspace with its effective cap + cap_source so "
+                        "'default'/'unset' workspaces are visible alongside explicit "
+                        "ones. Enriched with current 24h spend + freeze + downgrade. "
+                        "clear_cap: delete the workspace_daily_cap:<uuid> row. Does "
+                        "NOT clear an existing freeze or downgrade. "
+                        "get_default_cap: return {default_cap} for the global default "
+                        "(null if unset). Read-only; no auth. "
+                        "set_default_cap: write/update the global default cap. "
+                        "Requires daily_cap_usd > 0. STAFF ONLY. Idempotent. Does NOT "
+                        "backfill existing workspaces — call backfill_defaults to "
+                        "apply. "
+                        "backfill_defaults: write the default cap to workspaces "
+                        "without an explicit cap. STAFF ONLY. Defaults to dry_run=true "
+                        "(returns plan only); pass dry_run=false to actually write. "
+                        "force=false (default) skips workspaces that already have an "
+                        "explicit cap; force=true overwrites them. Optional "
+                        "include_workspace_ids / exclude_workspace_ids allowlist. "
+                        "Fail-soft per-workspace — one bad row doesn't abort the "
+                        "batch. Returns per-workspace details + counts."
                     ),
                 },
                 "workspace_id": {
                     "type": "string",
                     "description": (
                         "UUID of the ProjectWorkspace being managed. Required for "
-                        "set_cap, get_status, clear_freeze, clear_cap. Ignored for "
-                        "list_caps."
+                        "set_cap, get_status, clear_freeze, clear_downgrade, "
+                        "clear_cap. Ignored for list_caps, get_default_cap, "
+                        "set_default_cap, backfill_defaults."
                     ),
                 },
                 "daily_cap_usd": {
                     "type": "number",
                     "description": (
-                        "For set_cap: the new daily cap in USD. Must be > 0. Applied "
-                        "against the sliding last-24h spend from LLMCallLog. Ignored "
-                        "for all other actions."
+                        "For set_cap and set_default_cap: the new cap in USD. Must be "
+                        "> 0. Applied against the sliding last-24h spend from "
+                        "LLMCallLog. For backfill_defaults, if omitted, reads the "
+                        "currently-configured global default; if passed, uses that "
+                        "value for the run without changing the stored default."
+                    ),
+                },
+                "include_defaults": {
+                    "type": "boolean",
+                    "description": (
+                        "For list_caps: when true, include every ProjectWorkspace "
+                        "with its effective cap (explicit or default) and cap_source. "
+                        "Defaults to false (explicit-only, preserving legacy shape)."
+                    ),
+                },
+                "dry_run": {
+                    "type": "boolean",
+                    "description": (
+                        "For backfill_defaults: when true (default), plan only — no "
+                        "writes. Response includes the per-workspace 'would_write' "
+                        "list. Pass false to actually write."
+                    ),
+                },
+                "force": {
+                    "type": "boolean",
+                    "description": (
+                        "For backfill_defaults: when true, overwrite workspaces that "
+                        "already have an explicit cap. Defaults to false (skip "
+                        "existing)."
+                    ),
+                },
+                "include_workspace_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "For backfill_defaults: optional allowlist of workspace UUIDs. "
+                        "When omitted, considers all workspaces."
+                    ),
+                },
+                "exclude_workspace_ids": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "For backfill_defaults: optional skiplist of workspace UUIDs "
+                        "(applied after include_workspace_ids filter)."
                     ),
                 },
             },

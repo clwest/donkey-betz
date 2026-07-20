@@ -538,6 +538,8 @@ class AutopilotAction(models.Model):
         ('workspace_cap_cleared', 'Workspace Cap Cleared'),
         ('workspace_downgrade_set', 'Workspace Downgrade Set (auto)'),
         ('workspace_downgrade_cleared', 'Workspace Downgrade Cleared'),
+        # S2849 W2 #2a — global default cap operator writes.
+        ('workspace_default_cap_set', 'Workspace Default Cap Set'),
     ]
 
     VERIFICATION_STATES = [
