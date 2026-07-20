@@ -2,40 +2,39 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2845 CLOSE → S2844 MISDIAGNOSIS CORRECTED + SIGNALCLUSTER SOURCE-FILTER FIX SHIPPED (2026-07-20; picks up as S2846) — **S2846 OPENS ON A4↔A1 SEQUENCING (deferred from S2845 open) · D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2846 CLOSE → A4↔A1 SEQUENCING RATIFIED + A1 W1 PHASE 1 + PHASE 2 SHIPPED (2026-07-20; picks up as S2847) — **S2847 OPENS ON PHASE 3 (PA TOOL EXPOSURE + W1.5 DOWNGRADE-TIER) · D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-20 (S2845 close).** S2845 opened on the deferred A4↔A1 sequencing decision (§12.4 of S2841 Pressure-Test Addendum). Claude preliminary lean: sequential A1-first + light-touch A4 pipeline warm-up. Routed to Rigby for joint SIGN with tool-grounded substrate verification. Rigby verdict: AGREE with sequential A1-first, refined to "A4 pipeline warm-up (prospect list + intro emails) in parallel BUT NOT full engagement packaging until A1 Week 1 substrate ships." Substrate verification confirmed `LLMCallLog.workspace` FK is NOT present, per-workspace cost cap is global not workspace-scoped, Ledger export not shipped — all consistent with the ~1–5 day Week 1 estimate holding.
+**Refreshed 2026-07-20 (S2846 close).** Five PRs shipped in-session (four merged, one merged during close ceremony):
+- **PR #3303** — drift-lint (`check_pa_tool_drift` mgmt command; 114 tools scanned; 69 DRIFT / 43 CLEAN / 1 MISSING / 1 SOURCE_UNAVAILABLE)
+- **PR #3304** — A4↔A1 sequencing RATIFIED (Chris D-verdict option (a): all 4 zoom-out folds accepted + 6-line constraints block codified)
+- **PR #3305** — docs cascade refresh after #3304
+- **PR #3306** — A1 W1 Phase 1: `LLMCallLog.workspace` FK + composite index + PA-path auto-attribution
+- **PR #3307** — A1 W1 Phase 2: BudgetController per-workspace caps + `llm_enforcer` freeze hook
 
-**Mid-session pivot.** Chris interrupted before ratifying sequencing to reopen the S2844 SignalCluster finding: "did we conclude 'no data' correctly, or were we looking in the wrong spot?" Four-layer investigation dispatched (spider ingest / raw items / aggregation pipeline / SignalCluster surface). **Rigby's tool surface (`spider_status_tool`) reads the LEGACY plane (`LegacySpiderData` 15k rows) and returns empty `preview` fields.** ORM-direct probe found:
-- Real content IS in `LegacySpiderData.raw_data['items'][*].title` — samples included "Claude Code uses Bun in Rust", "GPT-5.6 30-year proof", "Anthropic Mythos", "Chinese Deepseek"
-- 140 of 619 SignalCluster rows in 30d (22.6%) have AI-adjacent sources in `source_breakdown` — including "Anthropic, Mythos demand spike" mixing hackernews + wired + theverge + techcrunch + government
-- **S2844 conclusion was WRONG.** Data exists, is being clustered, and is reachable via `source_breakdown__has_key` filter
+**A1 W1 SaaS substrate now demonstrably ships end-to-end for the PA path:**
+- Attribution: PA dispatch → LLMCallLog row with `workspace=Donkey Betz [ACTIVE]` (verified live, S2846)
+- Enforcement: frozen workspace blocks non-critical `TestAgent/general`; critical `PersonalAssistant/pa_chat` bypasses (verified live via `LLMEnforcer` runtime hook)
+- Fold 2/3/4 guardrails applied inline (cap-keying policy documented in `budget.py` module comment; null-bucket handling explicit in `compute_workspace_spend`; no caching in W1)
 
-**Root cause of the S2844 miss:** `intelligence_tool` schema restricted the shared `source` param to enum `["kb", "spider", "web"]` (for the search action). The `signal_clusters` handler at `td_handlers_core.py:3487` already supported filtering `source_breakdown__has_key=<spider_name>`, but GPT-5.2 could never call it with a spider name because the schema wouldn't accept one. Description at line 3414 said "source (spider name)" but the enum contradicted it.
+**Working loop validated multiple times during S2846:**
+- Rigby SIGN #1 (sequencing) — tool-grounded via `LLMCallLog.workspace` FK check + BudgetController.compute_spend signature read
+- Rigby SIGN #2 (drift triage) — rubber-stamped; Claude re-fired with tool-grounded directive → Rigby SIGN #3 tool-grounded
+- Claude verified Rigby's counter-claim on `active_repo_tool` → real drift-lint blind spot (`(payload or {}).get()` idiom) → fixed in-branch
+- Claude verified Rigby's counter-claim on `autopilot_tool` → she was wrong (shallow read of 1800-line function); lint was correct
 
-**Fix shipped in-session (~15 lines, 2 files, ~1 hour):**
-- `core/services/pa_tool_schemas.py` — added dedicated `source_spider` param (no enum) to intelligence_tool schema; updated `signal_clusters` description
-- `core/services/td_handlers_core.py:3487` — reads `source_spider` first; falls back to `source` for backward-compat (still guards against enum values `kb`/`spider`/`web`)
-
-**E2E verified live** via post-recycle PA dispatch: `intelligence_tool` `signal_clusters` with `source_spider='hackernews'` returned 8 clusters (matches ORM ~10), sample cluster "Anthropic, Mythos demand spike" with mixed AI-adjacent + broader sources. `filters_applied.source_spider='hackernews'` echoed correctly.
-
-**New memory recorded** — `feedback_verify_at_raw_orm_before_trusting_tool_no_data`: When a PA tool-surface probe returns thin/empty results, verify at raw ORM layer before concluding data doesn't exist. Extends `feedback_verify_rigby_tool_runs_before_trusting_sign`. S2844 close would have queued a 5-day AI-source-pipeline build on a phantom problem; ORM probe caught it at S2845 with a 15-line fix.
-
-**Session pin `pa-e0053042f1ad40ca` RETIRED at S2845 close** (seventy-fifth consecutive per S2770+ pattern). Fresh mint required at S2846 open.
+**Session pin `pa-5eec7b14a3a5482b` RETIRES at S2846 close** (seventy-sixth consecutive per S2770+ pattern). Fresh mint required at S2847 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
 
 ---
 
-## S2846 open sequence
-
-**S2846 opens on A4↔A1 sequencing decision (deferred from S2845).** D6 discovery moratorium still in force.
+## S2847 open sequence
 
 ### Step 1 — Session-open atomic mint (per `feedback_session_open_atomic_mint_before_pa_dispatch`)
 
-`pa-e0053042f1ad40ca` retired at S2845 close. Run atomic close BEFORE any PA dispatch:
+`pa-5eec7b14a3a5482b` retired at S2846 close. Run atomic close BEFORE any PA dispatch:
 
 ```bash
-python manage.py session_lifecycle close --label s2846-<first-action-context>
-# e.g. s2846-a1-ledger-week1, s2846-a4-prospect-list
+python manage.py session_lifecycle close --label s2847-<first-action-context>
+# e.g. s2847-a1w15-downgrade-tier, s2847-a1-pa-tool-exposure
 ```
 
 Verify:
@@ -43,96 +42,100 @@ Verify:
 grep "^python tools/pa_chat.py" tools/pa_local.sh
 ```
 
-### Step 2 — A4↔A1 sequencing RATIFIED (S2846) + open Week 1 substrate
+### Step 2 — Continue A1 lane (Phase 3 or W1.5)
 
-**Ratified 2026-07-20 (S2846):** Chris D-verdict = **option (a)** — sequential A1-first + A4 pipeline warm-up (prospect list + 3–5 intro emails) in parallel; full A4 engagement packaging BLOCKED until A1 Week 1 substrate demonstrably ships. All four of Rigby's zoom-out folds (spend / evidence / narrative / operational coupling) accepted; her 6-line constraints block codified below as slate discipline (no renegotiation midstream).
+**A1 W1 substrate is complete for the PA path.** Two natural next chunks:
 
-**A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified):**
+**Option A — Phase 3: PA tool exposure for cap management (~2–3 hours)**
+Currently workspace caps + freezes are set only via Django shell. A `workspace_budget_tool` PA schema + handler would let Chris/Rigby manage caps conversationally:
+- `set_cap(workspace_id, daily_cap_usd)` — creates `SystemConfiguration workspace_daily_cap:<uuid>`
+- `get_status(workspace_id)` — returns compute_workspace_spend + cap + freeze status
+- `clear_freeze(workspace_id)` — calls `BudgetController.clear_workspace_freeze`
+- `list_workspaces_with_caps()` — inventory of configured caps
+Add to `pa_tool_schemas.py` + `td_handlers_ops.py` (or new `td_handlers_budget.py`). Ship as separate PR; drift-lint should show it CLEAN.
+
+**Option B — W1.5: downgrade-tier (~half day)**
+Add `enforce_workspace_downgrade(spend, now, workspace_id)` — mirrors global downgrade-tier. When cap crosses soft threshold (say 70% of daily cap), set `workspace_downgrade_active:<uuid>` flag; `llm_enforcer._call_openai` reads flag + routes to cheaper model instead of blocking. Complements Phase 2's freeze-tier.
+
+**Recommended sequence (Claude lean):** Phase 3 first (PA tool exposure — direct user-value, unblocks Rigby-driven testing of cap management), then W1.5 downgrade-tier. Chris to ratify at S2847 open.
+
+### Step 3 — A4 warm-up under ratified constraints
+
+Slate discipline from S2846 still in force (6-line constraints block below). Once A1 W1 substrate is demonstrably live for real (not just live E2E for one PA call), A4 warm-up work can start:
+- Prospect list (5–15 named mid-size AI startups / enterprise AI ops teams)
+- 3–5 pilot/concierge intro emails (constraints 4 + 5)
+- Discovery via `intelligence_tool signal_clusters(source_spider=<name>)` — unblocked by S2845 fix
+
+**A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force):**
 
 1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 Week 1 shipping spend.
-2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth" until drift-lint is shipped (S2846 ✓) AND A1 workspace attribution exists.
-3. **No capability claims:** A4 outreach must make ZERO claims about per-workspace caps, cost reporting, invoicing, or audit trails until A1 Week 1 ships.
+2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth" until drift-lint is shipped (S2846 ✓) AND A1 workspace attribution exists (S2846 ✓ — constraint now RELAXABLE if used carefully).
+3. **No capability claims:** A4 outreach must make ZERO claims about per-workspace caps, cost reporting, invoicing, or audit trails until A1 Week 1 ships (S2846 ✓ — enforcement layer in place, but no PA tool exposure yet).
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only (no "productized offering" language during the parallel period).
 5. **Hard throttle:** A4 warm-up is constrained to a fixed timebox and fixed send count (3–5 total intros); no expansion without explicit slate change.
 6. **No bespoke follow-ups:** A4 warm-up prohibits custom follow-ups / custom research / custom deliverables; allowed responses are one standard reply + optional meeting link only.
 
-Substrate verification findings (from S2845 Rigby SIGN §2, tool-grounded, still standing):
-- `LLMCallLog.workspace` FK: NOT present in `core/models_llm_routing.py:297`; no partial migration
-- Per-workspace cost cap: GLOBAL cap machinery exists (`core/services/ops_autopilot/budget.py:238–506` three-tier controller), no `workspace_daily_cap` / `workspace_budget` symbols; Week 1 must extend not just wire
-- Ledger export: NOT shipped (planned for Week 2–3)
-- Duration reality check: `docs/COST_SURVIVAL_AUDIT.md` §A effort table quotes ~1 working day for FK + ExternalAPICallLog telemetry — real Week 1 could collapse to ~2–3 days if scoped tight (FK + workspace-aware cost cap only; defer Ledger export to Week 2)
+### Net-new engineering candidates for S2847
 
-**Next S2846 action:** open A1 Ledger Bet Week 1 with `LLMCallLog.workspace` FK migration + per-workspace cost cap extension (following IOS Existing Implementation Analysis discipline per `feedback_cycle_1a_verify_before_build`).
+Per `feedback_engineering_bias_over_audit`, list net-new first at every session open.
 
-### Step 3 — Concurrent A4 pipeline warm-up (light-touch)
+0. **[SLATED FOR S2847] PA tool exposure for workspace budget management** (Option A above, ~2–3 hours). Highest-leverage next step — unblocks Rigby-driven cap testing + gives Chris conversational surface for what's currently shell-only.
 
-- Prospect list construction (5–15 named mid-size AI startups / enterprise AI ops teams)
-- **Now unblocked by S2845 fix:** `intelligence_tool` `signal_clusters` with `source_spider='hackernews'` / `'devto'` / `'techcrunch_startups'` / `'producthunt'` / `'huggingface'` / `'mit_tech_review'` / `'arstechnica'` returns AI-tooling market signals as discovery substrate
-- Combine with `kb_tool` research on named companies + Chris-known network
-- Draft 3–5 cold intro emails framed as "we're shipping the audit substrate this week; want to be a design partner?"
+1. **W1.5 downgrade-tier** (Option B above, ~half day). Mirrors global downgrade pattern; complements Phase 2's freeze-tier.
 
-### Net-new engineering candidates for S2846
+2. **Handler/schema drift-lint triage** — 69 DRIFT entries flagged in S2846. Rigby's SIGN bucketed some (REAL_BUG / SUB_HANDLER_FP / ALIAS_TOLERANT), but only 4/10 sampled were tool-verified before her timebox expired. A tight ~2-3 day arc could bucket + fix the top 10–15 REAL_BUG entries. (Chris interest signal at S2847 open determines priority.)
 
-Per `feedback_engineering_bias_over_audit`, list net-new candidates first at every session open. Chris directive S2845 close 2026-07-20: promote (0) to first slate item; treat Rigby's tool-surface gaps as first-class product work per new memory rule `feedback_rigby_tool_gap_ledger`.
+3. **Additional Rigby Tool Gap Ledger entries surfaced at S2846:**
+   - `repo_tool` handler-body-locate timebox limitation (Rigby couldn't find 6/10 handler bodies within her tool timebox during drift triage)
+   - Other tool-surface gaps as they surface
 
-0. **[SHIPPED S2846 · PR #3303]** Handler/schema drift lint — `python manage.py check_pa_tool_drift`. Static AST analysis of every `PA_TOOL_SCHEMAS` entry against its registered `ToolDispatcher` handler; reports HANDLER_ONLY_PARAM / SCHEMA_ONLY_PARAM / HANDLER_ONLY_ACTION / SCHEMA_ONLY_ACTION / MISSING_HANDLER / SOURCE_UNAVAILABLE. First-run scan: 114 tools · **69 DRIFT · 43 CLEAN · 1 MISSING (run_agent) · 1 SOURCE_UNAVAILABLE (research_and_create_tool)**. Documented LIMITATIONS: sub-handler-routing false-positive class (`sp = dict(payload); return self._handle_other(sp)` — MVP doesn't chase). Real bugs surfaced already: `autopilot_tool` (6 hp params handler reads, schema hides), `active_priority_tool` (hp=`trigger_source`), and others. Triage of the 69 DRIFT entries deferred to a separate arc / drip via the Rigby Tool Gap Ledger.
-
-Additional candidates queued (deferred; ledger tracks all Rigby tool gaps — see workspace `b4503364-2573-4401-9e28-61a739e0ce50` deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` "Rigby Tool Gap Ledger"):
-
-1. **SignalCluster naming rewrite** — current cluster names use top-2 frequent tokens ("Comments, Score emerging trend"), producing semantically opaque labels even when underlying signals are strong. `signal_aggregation_service.py:312` already extracts `_extract_entity_tokens`; naming should prefer entity tokens over raw frequency. ~1 day. Would materially improve `intelligence_tool` `signal_clusters` discovery UX.
-
-2. **Multi-source `source_spider` filter** — S2845 shipped single-source filter. Multi-source (`has_any_keys`) would let one call return "all AI-adjacent clusters" in one shot instead of Rigby looping 14x. ~1 hour. Ship when A4 prospect research needs it. (Ledger entry.)
-
-3. **`huggingface` returns 0 SignalCluster rows despite 24 spider runs/7d** — aggregation pipeline drops it somewhere (likely `is_processed=False` + `embedding_text=''` combo per `_fetch_recent_spider_data` at line 262). ~half day. Wait until A4 prospect research needs it. (Ledger entry.)
-
-4. **`spider_status_tool.search` returns empty `preview` field** — reads `LegacySpiderData` but doesn't surface `raw_data['items'][*].title`. Rigby has no way to keyword-check spider items. ~2 hours. Consider bundling with (1). (Ledger entry.)
-
-5. **`spider_status_tool.list` pagination** — returns 44/88 spiders with no offset param; drove false-negative "spider not found" reporting in S2845 Layer 1 probe. ~2 hours. (Ledger entry.)
-
-Two-plane audit (`LegacySpiderData` 15k rows vs `SpiderData` 111k rows — one gets writes, the other is dead substrate for AI-adjacent content) is a real problem but bigger. Probably 3–5 day arc when ready. Not queued as candidate; parked for post-A1-Week-1.
-
-### What's forbidden at S2846 (D6 moratorium still in force)
+### What's forbidden at S2847 (D6 moratorium still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No new evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 
 ### What's queued but deferred (do NOT open unless Chris directs)
 
 - Docs restructuring arc (`project_docs_restructuring_arc_queued`) — behind wedge execution
-- AI-source SignalCluster pipeline as originally scoped (3–5 days) — **RETIRED at S2845 as based on the S2844 misdiagnosis.** Real gap was tool-surface, now fixed. If aggregation coverage needs expanding, candidates (1)/(3)/(4) above are the actual work.
+- Multi-source `source_spider` filter (Ledger candidate; ~1 hour)
+- SignalCluster naming rewrite (Ledger candidate; ~1 day)
+- `huggingface` returns 0 SignalCluster rows (Ledger candidate; ~half day)
+- `spider_status_tool.search` empty preview field (Ledger candidate; ~2 hours)
+- `spider_status_tool.list` pagination (Ledger candidate; ~2 hours)
 
 ---
 
-## S2845 close — what shipped
+## S2846 close — what shipped (five PRs)
 
-**Repo canonical (Claude-authored):**
-- `core/services/pa_tool_schemas.py` (intelligence_tool schema — `source_spider` param added)
-- `core/services/td_handlers_core.py` (signal_clusters handler — reads `source_spider` first, falls back to `source`)
-- `00-START-NEXT-SESSION.md` (this file — rewritten for S2846 open)
+**Repo canonical (Claude-authored, in merge order):**
+- **PR #3303** `81cde1d37` — `core/management/commands/check_pa_tool_drift.py` (drift-lint mgmt command, 404 lines; also rotates tools/pa_local.sh to S2846 pin)
+- **PR #3304** `6c350a19b` — `00-START-NEXT-SESSION.md` refresh with A4↔A1 sequencing RATIFIED + 6-line constraints block codified + drift-lint promoted to SHIPPED
+- **PR #3305** `7ee53e206` — `docs/INDEX.md` cascade refresh
+- **PR #3306** `d6bdfe6cb` — A1 W1 Phase 1: LLMCallLog workspace FK + migration `0389_llmcalllog_workspace_fk_s2846` + threading via optional `user` kwarg + Fold 1 fallback logging in `workspace_resolver`
+- **PR #3307** `d8ccd56d4` — A1 W1 Phase 2: BudgetController per-workspace caps (5 new methods) + `llm_enforcer` freeze hook + Fold 2/3/4 guardrails
 
-**Memory (Claude-authored):**
-- `feedback_verify_at_raw_orm_before_trusting_tool_no_data.md` — new feedback rule; indexed in `MEMORY.md`
-- `feedback_rigby_tool_gap_ledger.md` — new feedback rule (Chris directive S2845 close): Rigby tool-limitation flags become ledger entries in workspace `b4503364-...` "Rigby Tool Gap Ledger" deliverable, NOT silent workarounds; her tool surface IS the A1/A4 product substrate
+**Memory (Claude-authored):** No new memory entries needed at S2846; existing rules (`feedback_verify_at_raw_orm_before_trusting_tool_no_data`, `feedback_rigby_tool_gap_ledger`, `feedback_verify_rigby_tool_runs_before_trusting_sign`, `feedback_read_full_rigby_response_not_just_tail`) all reinforced by session evidence.
 
-**Workspace canonical (Rigby-authored per `feedback_rigby_writes_workspace_deliverables`):**
-- "Rigby Tool Gap Ledger" deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` in Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50` (`deliverable_type='engineering_backlog'`, `category='platform'`) with 5 seed entries from S2845 discoveries. Post-create ORM cleanup applied (stripped "Rigby: " title prefix, cleared `diagnostic_status`/`diagnostic_code` per known `deliverable_tool.create` gotchas).
+**Workspace canonical:** No new workspace deliverables. A1 W1 is engineering work, not a ratifiable IOS arc close (per twin-canonical rule — ratifiable = IOS-scoped ADR ratifications, not shipping engineering).
 
-**Runtime impact:** `intelligence_tool` `signal_clusters` now accepts spider-name filter. Post-merge `make recycle-all` per PLAYBOOK-7.4.4 / `feedback_recycle_after_merge`. Docs cascade run at close per `feedback_docs_cascade_at_every_close`.
+**Runtime impact:**
+- LLMCallLog rows from PA-path calls now carry workspace FK (verified live: `chris → Donkey Betz`)
+- BudgetController.compute_workspace_spend + enforce_workspace_freeze + is_workspace_frozen wired
+- `llm_enforcer.enforce_real_ai` gains freeze hook (verified live: `TestAgent/general` blocked, `PersonalAssistant/pa_chat` bypasses)
 
-**Not shipped at S2845 close (deferred to S2846):**
-- No workspace mirror — this is an engineering bug fix, not a ratifiable arc close (per twin-canonical rule)
-- No A4↔A1 sequencing D-verdict — Chris pivoted to SignalCluster investigation before ratifying
-- No PR merge yet — pending Chris greenlight at close
+**Not shipped at S2846 close (deferred to S2847):**
+- Phase 3 PA tool exposure for cap management (Django-shell-only today)
+- W1.5 downgrade-tier for workspaces (Phase 2 shipped freeze-tier only)
+- Drift-lint triage of the 69 DRIFT entries beyond the 4 Rigby sampled
 
 ---
 
-## For fuller S2841 discovery + D4 execution context
+## For fuller A4↔A1 + S2841 discovery context
 
 See:
-- Parent: `docs/research/platform/S2841_STRATEGIC_DISCOVERY_WHAT_DBZ_ACTUALLY_IS.md` (§0–§10)
-- Addendum: `docs/research/platform/S2841_PRESSURE_TEST_ADDENDUM.md` (§0–§13; §12 = D4 architecture, §13 = D4 picks)
-- S2841 handoff: `docs/handoffs/SESSION_2841_STRATEGIC_DISCOVERY.md`
-- S2842 handoff: `docs/handoffs/SESSION_2842_S2841_RATIFIED_D0_D6.md`
-- S2843 handoff: `docs/handoffs/SESSION_2843_D4_DECOMPOSITION_RATIFIED.md`
-- S2844 handoff: `docs/handoffs/SESSION_2844_D4_PICKS_RATIFIED.md`
+- **A4↔A1 ratification:** current `00-START-NEXT-SESSION.md` Step 2 (this file, above)
+- **S2846 handoff:** `docs/handoffs/SESSION_2846_A1_W1_PHASE1_PHASE2_SHIPPED.md`
+- **Parent strategic discovery:** `docs/research/platform/S2841_STRATEGIC_DISCOVERY_WHAT_DBZ_ACTUALLY_IS.md` (§0–§10)
+- **Pressure-test addendum:** `docs/research/platform/S2841_PRESSURE_TEST_ADDENDUM.md` (§0–§13; §12 = D4 architecture, §13 = D4 picks)
+- **Prior session handoffs:** `SESSION_2841_STRATEGIC_DISCOVERY.md`, `SESSION_2842_S2841_RATIFIED_D0_D6.md`, `SESSION_2843_D4_DECOMPOSITION_RATIFIED.md`, `SESSION_2844_D4_PICKS_RATIFIED.md`, `SESSION_2845_S2844_MISDIAGNOSIS_CORRECTED.md`
 
-For older session history (S1–S2840 series), see `docs/handoffs/` + `docs/research/OPEN_ARCS.md`.
+For older session history (S1–S2840), see `docs/handoffs/` + `docs/research/OPEN_ARCS.md`.
