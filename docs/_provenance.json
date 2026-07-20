@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-20T02:29:18+00:00",
+    "generated": "2026-07-20T05:35:05+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "63306c21005a",
-    "doc_count": 2711,
-    "commit_count": 8175,
+    "git_head": "3b5d9a4894c9",
+    "doc_count": 2713,
+    "commit_count": 8177,
     "confidence_breakdown": {
-      "HIGH": 1701,
-      "MEDIUM": 408,
+      "HIGH": 1702,
+      "MEDIUM": 409,
       "LOW": 40,
       "UNKNOWN": 562
     },
@@ -2595,7 +2595,7 @@
         2808,
         2830
       ],
-      "commit_count": 1398,
+      "commit_count": 1400,
       "prs": [
         10,
         11,
@@ -3245,7 +3245,8 @@
         3289,
         3291,
         3292,
-        3293
+        3293,
+        3294
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7557,13 +7558,14 @@
       ]
     },
     "docs/_provenance.json": {
-      "originating_session": 1145,
+      "originating_session": 1116,
       "confidence": "MEDIUM",
       "match_source": "body",
       "first_commit_sha": "67501981",
       "first_commit_date": "2026-05-25",
       "first_commit_subject": "feat(session-1156-provenance): P3.5 round 9 \u2014 FINAL pass (71 handoffs, pool exhausted) (#2241)",
       "sessions_touched": [
+        1116,
         1145,
         1147,
         1148,
@@ -7613,7 +7615,7 @@
         2808,
         2830
       ],
-      "commit_count": 338,
+      "commit_count": 340,
       "prs": [
         2213,
         2219,
@@ -7862,7 +7864,8 @@
         3289,
         3291,
         3292,
-        3293
+        3293,
+        3294
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21159,6 +21162,22 @@
       "commit_count": 2,
       "prs": [
         3293
+      ]
+    },
+    "docs/handoffs/SESSION_2841_STRATEGIC_DISCOVERY.md": {
+      "originating_session": 2841,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "3b5d9a48",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(discovery): S2841 \u2014 Strategic Discovery \u00b7 Chris D0-D6 pending \u00b7 Atlas v1 unshipped ~1,700 sessions \u00b7 9-opportunity portfolio + Ledger Bet proposal (#3294)",
+      "sessions_touched": [
+        1116,
+        2841
+      ],
+      "commit_count": 2,
+      "prs": [
+        3294
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36169,6 +36188,7 @@
         862,
         990,
         1077,
+        1116,
         1171,
         1275,
         1276,
@@ -36248,7 +36268,7 @@
         2499,
         2500
       ],
-      "commit_count": 125,
+      "commit_count": 127,
       "prs": [
         2773,
         2775,
@@ -36349,7 +36369,8 @@
         3286,
         3290,
         3292,
-        3293
+        3293,
+        3294
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -39463,6 +39484,21 @@
       "commit_count": 1,
       "prs": [
         3056
+      ]
+    },
+    "docs/research/platform/S2841_STRATEGIC_DISCOVERY_WHAT_DBZ_ACTUALLY_IS.md": {
+      "originating_session": 1116,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "3b5d9a48",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(discovery): S2841 \u2014 Strategic Discovery \u00b7 Chris D0-D6 pending \u00b7 Atlas v1 unshipped ~1,700 sessions \u00b7 9-opportunity portfolio + Ledger Bet proposal (#3294)",
+      "sessions_touched": [
+        1116
+      ],
+      "commit_count": 2,
+      "prs": [
+        3294
       ]
     },
     "docs/research/platform/constitutional_ecosystem_inventory.md": {
