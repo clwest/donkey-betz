@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-20T19:55:17+00:00",
+    "generated": "2026-07-20T21:24:10+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "60ec5f75e3a8",
-    "doc_count": 2721,
-    "commit_count": 8219,
+    "git_head": "c9396276e9ea",
+    "doc_count": 2723,
+    "commit_count": 8229,
     "confidence_breakdown": {
-      "HIGH": 1708,
+      "HIGH": 1710,
       "MEDIUM": 411,
       "LOW": 40,
       "UNKNOWN": 562
@@ -2597,7 +2597,7 @@
         2830,
         2847
       ],
-      "commit_count": 1418,
+      "commit_count": 1422,
       "prs": [
         10,
         11,
@@ -3257,7 +3257,9 @@
         3305,
         3308,
         3310,
-        3312
+        3312,
+        3314,
+        3317
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7628,7 +7630,7 @@
         2830,
         2847
       ],
-      "commit_count": 352,
+      "commit_count": 354,
       "prs": [
         2213,
         2219,
@@ -7884,7 +7886,8 @@
         3299,
         3302,
         3310,
-        3312
+        3312,
+        3314
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21303,6 +21306,36 @@
       "commit_count": 2,
       "prs": [
         3312
+      ]
+    },
+    "docs/handoffs/SESSION_2849_A1_W2_DEFAULTS_BACKFILL_SHIPPED.md": {
+      "originating_session": 2849,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "55d91090",
+      "first_commit_date": "2026-07-20",
+      "first_commit_subject": "docs(session): S2849 close \u2014 A1 W2 #2a shipped; slate for S2850 W2 #3 Reporting scoping (#3314)",
+      "sessions_touched": [
+        2849
+      ],
+      "commit_count": 2,
+      "prs": [
+        3314
+      ]
+    },
+    "docs/handoffs/SESSION_2850_A1_W2_ENFORCEMENT_CORRECTNESS_LEG.md": {
+      "originating_session": 2850,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "e1cafb68",
+      "first_commit_date": "2026-07-20",
+      "first_commit_subject": "docs(session): S2850 close \u2014 A1 W2 enforcement-correctness leg shipped; #3.1 slated (#3317)",
+      "sessions_touched": [
+        2850
+      ],
+      "commit_count": 2,
+      "prs": [
+        3317
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
