@@ -3432,6 +3432,11 @@ PA_TOOL_SCHEMAS = [
                         "same window. Optional include_null_bucket adds the "
                         "null-workspace bucket (system tasks, embeddings, "
                         "background — spend that workspace caps don't govern). "
+                        "Optional include_downgrade_savings adds per-workspace "
+                        "and top-level downgrade-model usage + estimated "
+                        "savings vs pre-downgrade gpt-5.2 rates (diagnostic "
+                        "estimate — over-reports because natively-mini calls "
+                        "cannot yet be distinguished from enforcer-forced). "
                         "READ-ONLY. Auto-scoped to caller's owned workspaces "
                         "for non-staff; staff sees all workspaces. Optional "
                         "workspace_id narrows to a single workspace (must be "
@@ -3484,6 +3489,28 @@ PA_TOOL_SCHEMAS = [
                         "window. This is the substrate that per-workspace "
                         "caps do NOT govern (governed by global budget "
                         "controls instead). Pass false to omit."
+                    ),
+                },
+                "include_downgrade_savings": {
+                    "type": "boolean",
+                    "description": (
+                        "For enforcement_report: when true, per-workspace "
+                        "rows gain downgrade_model_calls_count, "
+                        "downgrade_model_actual_cost_usd, "
+                        "downgrade_model_would_have_cost_usd, and "
+                        "downgrade_model_estimated_savings_usd — actual "
+                        "cost of in-window calls that ran on the downgrade "
+                        "model (currently gpt-5-mini) versus what those "
+                        "calls would have cost at pre-downgrade gpt-5.2 "
+                        "uncached rates. Response also gains "
+                        "downgrade_model_totals aggregate + explanatory "
+                        "downgrade_savings_note. Counts ALL calls to the "
+                        "downgrade model — natively-mini calls are not yet "
+                        "distinguishable from enforcer-forced downgrades, "
+                        "so the estimate OVER-reports true policy savings. "
+                        "Diagnostic estimate only; LLMCallLog.cost remains "
+                        "the authoritative per-call cost ledger. Defaults "
+                        "to false."
                     ),
                 },
                 "daily_cap_usd": {

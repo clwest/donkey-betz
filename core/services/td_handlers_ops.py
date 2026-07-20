@@ -4288,6 +4288,7 @@ class OpsHandlersMixin:
             from datetime import timedelta
             from core.models_diagnostic_pipeline import AutopilotAction
             from core.models_llm_routing import LLMCallLog
+            from core.services.ops_autopilot import AutopilotConfig
             from django.db.models import Sum, Count
 
             window = payload.get('window', '24h')
@@ -4304,6 +4305,9 @@ class OpsHandlersMixin:
             include_spend = bool(payload.get('include_spend', False))
             include_null_bucket = bool(
                 payload.get('include_null_bucket', True)
+            )
+            include_downgrade_savings = bool(
+                payload.get('include_downgrade_savings', False)
             )
 
             # Auth scope (Rigby SIGN Q3: option c). Non-staff sees only own
@@ -4400,6 +4404,62 @@ class OpsHandlersMixin:
                         'calls': row['calls'] or 0,
                     }
 
+            # S2853 W2 #3.2: optional per-workspace downgrade-model usage +
+            # savings estimate. "downgrade_model_*" names (Rigby zoom-out
+            # Q4.4) — the report can only detect a call ran on the
+            # downgrade model, not that it was FORCED there by the
+            # enforcer (LLMCallLog has no was_downgraded flag; that's a
+            # deferred field). When the flag lands, additive
+            # "forced_downgrade_*" fields can be added without breaking
+            # semantics of these fields.
+            from core.services.ops_autopilot.pricing import (
+                MODEL_PRICES,
+                estimate_uncached_cost,
+            )
+            from decimal import Decimal
+            per_ws_downgrade: Dict[str, Dict[str, Any]] = {}
+            downgrade_model_id = AutopilotConfig.BUDGET_DOWNGRADE_MODEL
+            gpt52_priced = 'gpt-5.2' in MODEL_PRICES
+            downgrade_priced = downgrade_model_id in MODEL_PRICES
+            if include_downgrade_savings and scoped_ids:
+                dg_qs = (
+                    LLMCallLog.objects
+                    .filter(
+                        workspace_id__in=list(scoped_ids),
+                        model_id=downgrade_model_id,
+                        created_at__gte=cutoff,
+                    )
+                    .values('workspace_id')
+                    .annotate(
+                        calls=Count('id'),
+                        sum_prompt=Sum('prompt_tokens'),
+                        sum_completion=Sum('completion_tokens'),
+                        actual=Sum('cost'),
+                    )
+                )
+                for row in dg_qs:
+                    wid = str(row['workspace_id'])
+                    prompt = int(row['sum_prompt'] or 0)
+                    completion = int(row['sum_completion'] or 0)
+                    actual = Decimal(row['actual'] or 0)
+                    # Would-have cost at pre-downgrade model (gpt-5.2)
+                    # uncached rates. estimate_uncached_cost returns None
+                    # if gpt-5.2 pricing is missing from MODEL_PRICES.
+                    would_have = (
+                        estimate_uncached_cost('gpt-5.2', prompt, completion)
+                        if gpt52_priced else None
+                    )
+                    savings = (
+                        (would_have - actual)
+                        if would_have is not None else None
+                    )
+                    per_ws_downgrade[wid] = {
+                        'calls': row['calls'] or 0,
+                        'actual': actual,
+                        'would_have': would_have,
+                        'savings': savings,
+                    }
+
             rows = []
             for ws in scoped_workspaces:
                 wid = str(ws.id)
@@ -4427,6 +4487,30 @@ class OpsHandlersMixin:
                 else:
                     row_out['attributed_spend_usd'] = None
                     row_out['calls'] = None
+                if include_downgrade_savings:
+                    dg = per_ws_downgrade.get(wid)
+                    if dg is None:
+                        row_out['downgrade_model_calls_count'] = 0
+                        row_out['downgrade_model_actual_cost_usd'] = 0.0
+                        row_out['downgrade_model_would_have_cost_usd'] = (
+                            0.0 if gpt52_priced else None
+                        )
+                        row_out['downgrade_model_estimated_savings_usd'] = (
+                            0.0 if gpt52_priced else None
+                        )
+                    else:
+                        row_out['downgrade_model_calls_count'] = dg['calls']
+                        row_out['downgrade_model_actual_cost_usd'] = float(
+                            dg['actual']
+                        )
+                        row_out['downgrade_model_would_have_cost_usd'] = (
+                            float(dg['would_have'])
+                            if dg['would_have'] is not None else None
+                        )
+                        row_out['downgrade_model_estimated_savings_usd'] = (
+                            float(dg['savings'])
+                            if dg['savings'] is not None else None
+                        )
                 rows.append(row_out)
 
             # Deterministic order — highest enforcement activity first,
@@ -4460,6 +4544,50 @@ class OpsHandlersMixin:
                     'attributed_spend_usd is the workspace-attributed '
                     'subset only (currently the PA path); NULL-bucket is '
                     'governed by GLOBAL budget controls, not per-workspace'
+                )
+            if include_downgrade_savings:
+                # Top-level summary (per Rigby Q4 sign-off): sum
+                # per-workspace fields once here so operators / clients
+                # don't have to re-aggregate. Preserves Decimal math up
+                # to the final float() serialization.
+                total_calls = 0
+                total_actual = Decimal('0')
+                total_would_have = Decimal('0')
+                any_priced = False
+                for dg in per_ws_downgrade.values():
+                    total_calls += dg['calls']
+                    total_actual += dg['actual']
+                    if dg['would_have'] is not None:
+                        total_would_have += dg['would_have']
+                        any_priced = True
+                response['downgrade_model_totals'] = {
+                    'model_id': downgrade_model_id,
+                    'calls': total_calls,
+                    'actual_cost_usd': float(total_actual),
+                    'would_have_cost_usd': (
+                        float(total_would_have) if any_priced else None
+                    ),
+                    'estimated_savings_usd': (
+                        float(total_would_have - total_actual)
+                        if any_priced else None
+                    ),
+                }
+                response['downgrade_savings_note'] = (
+                    'Counts ALL calls to '
+                    f'{downgrade_model_id} in-window per workspace — '
+                    'LLMCallLog has no was_downgraded flag yet, so natively-'
+                    f'{downgrade_model_id} calls are indistinguishable from '
+                    'enforcer-forced downgrades and OVER-estimate true '
+                    'policy savings. would_have_cost is UNCACHED math at '
+                    'gpt-5.2 pre-downgrade rates ($1.75/1M input, '
+                    '$14/1M output — llm_enforcer.py:606-627); actual_cost '
+                    'comes from LLMCallLog.cost. Diagnostic estimate only; '
+                    'as-of query time, not a reconciled billing ledger.'
+                    if downgrade_priced and gpt52_priced else
+                    'Pricing table missing entry for '
+                    f'{downgrade_model_id!r} or gpt-5.2 in '
+                    'core/services/ops_autopilot/pricing.py — savings '
+                    'fields will be None until wired.'
                 )
             if include_null_bucket:
                 null_qs = LLMCallLog.objects.filter(
