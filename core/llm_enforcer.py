@@ -243,13 +243,17 @@ class LLMEnforcer:
         # caller's active workspace. Critical purposes / agents bypass
         # workspace freezes too, matching global behavior. Fold 4:
         # no caching in W1; every call hits SystemConfiguration.
+        # Session 2848 (A1 W1.5) — per-workspace downgrade check follows
+        # freeze block. Freeze wins: a frozen workspace never gets the
+        # model-swap (freeze return-blocks before this check runs).
         if user is not None:
             try:
                 from core.services.workspace_resolver import get_active_workspace
                 _ws = get_active_workspace(user)
                 if _ws is not None:
                     from core.services.ops_autopilot.budget import BudgetController
-                    if BudgetController().is_workspace_frozen(_ws.id):
+                    _bc = BudgetController()
+                    if _bc.is_workspace_frozen(_ws.id):
                         _critical_purposes = {
                             'governance', 'auth', 'incident_response', 'pa_chat',
                         }
@@ -278,6 +282,23 @@ class LLMEnforcer:
                                     f"{agent_name}_{datetime.now()}".encode()
                                 ).hexdigest()[:8],
                             }
+                    # S2848 W1.5 — workspace downgrade (soft tier): route
+                    # to BUDGET_DOWNGRADE_MODEL if flagged and not using
+                    # Claude (global downgrade block at ~228 has same guard).
+                    if not use_claude and _bc.is_workspace_downgraded(_ws.id):
+                        from core.services.ops_autopilot.config import AutopilotConfig
+                        _downgrade_model = (
+                            AutopilotConfig.get('BUDGET_DOWNGRADE_MODEL')
+                            or AutopilotConfig.BUDGET_DOWNGRADE_MODEL
+                        )
+                        if not hasattr(self, '_budget_downgrade_model'):
+                            self._budget_downgrade_model = None
+                        self._budget_downgrade_model = _downgrade_model
+                        logger.info(
+                            f"[BudgetController] Workspace {_ws.name!r} "
+                            f"downgraded — routing {agent_name}/{task_type} "
+                            f"to {_downgrade_model}"
+                        )
             except Exception:
                 pass  # Never block LLM calls due to workspace check errors
 

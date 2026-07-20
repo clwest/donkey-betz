@@ -458,6 +458,12 @@ class BudgetController:
 
     _WORKSPACE_CAP_KEY_PREFIX = 'workspace_daily_cap:'
     _WORKSPACE_FREEZE_KEY_PREFIX = 'workspace_freeze_active:'
+    _WORKSPACE_DOWNGRADE_KEY_PREFIX = 'workspace_downgrade_active:'
+
+    # S2848 W1.5: hysteresis threshold — auto-clear downgrade when spend
+    # drops below 60% of cap (set at 70%, clear at 60%). Prevents flap on
+    # small caps where a single call could cross 70% and drop back.
+    _WORKSPACE_DOWNGRADE_CLEAR_PCT = 0.60
 
     def compute_workspace_spend(self, now, workspace_id=None) -> dict:
         """Per-workspace spend from LLMCallLog.
@@ -638,6 +644,164 @@ class BudgetController:
                     evidence={
                         'workspace_id': str(workspace_id),
                         'actor_user_id': str(actor_user_id),
+                    },
+                    result={'cleared': True},
+                )
+        return bool(deleted)
+
+    # ─────────────────────────────────────────────────────────────────
+    # S2848 A1 W1.5 — per-workspace soft downgrade tier.
+    #
+    # Mirrors freeze plumbing above but at BUDGET_SOFT_LIMIT_PCT (70%)
+    # instead of the hard cap. On trigger, writes flag at
+    # workspace_downgrade_active:<uuid>. llm_enforcer hot-path reads
+    # is_workspace_downgraded and swaps to BUDGET_DOWNGRADE_MODEL
+    # (gpt-5-mini) before the API call. Freeze wins over downgrade —
+    # a frozen workspace never gets the model-swap.
+    #
+    # Hysteresis policy: set at 70% of cap, auto-clear at 60% (see
+    # _WORKSPACE_DOWNGRADE_CLEAR_PCT). Prevents flap on small caps.
+    # Manual clear via clear_workspace_downgrade (operator override).
+    # ─────────────────────────────────────────────────────────────────
+
+    def enforce_workspace_downgrade(self, spend, now, workspace_id):
+        """Set/clear the downgrade flag based on the workspace's daily spend.
+
+        Called from _policy_budget_controller cycle per-workspace. Idempotent
+        with hysteresis: set at BUDGET_SOFT_LIMIT_PCT of cap, clear at
+        _WORKSPACE_DOWNGRADE_CLEAR_PCT (60%). Returns action dict when
+        state changes; None on no-op.
+        """
+        if workspace_id is None:
+            return None
+        cap = self.get_workspace_daily_cap(workspace_id)
+        if cap is None:
+            return None
+
+        set_threshold = cap * AutopilotConfig.BUDGET_SOFT_LIMIT_PCT
+        clear_threshold = cap * self._WORKSPACE_DOWNGRADE_CLEAR_PCT
+        currently_downgraded = self.is_workspace_downgraded(workspace_id)
+
+        from core.models.system import SystemConfiguration
+        key = f"{self._WORKSPACE_DOWNGRADE_KEY_PREFIX}{workspace_id}"
+
+        # Auto-clear when spend drops below hysteresis floor
+        if currently_downgraded and spend['daily_total'] < clear_threshold:
+            SystemConfiguration.objects.filter(key=key).delete()
+            AutopilotAction.objects.create(
+                action_type='workspace_downgrade_cleared',
+                agent_name='BudgetController',
+                policy='workspace_budget_controller',
+                dry_run=False,
+                evidence={**spend, 'cap': cap, 'clear_threshold': clear_threshold},
+                result={
+                    'workspace_id': str(workspace_id),
+                    'reason': 'auto_hysteresis',
+                },
+            )
+            logger.info(
+                f"[BudgetController] Workspace downgrade auto-cleared — "
+                f"workspace_id={workspace_id} spend "
+                f"${spend['daily_total']:.4f} < clear threshold "
+                f"${clear_threshold:.4f} ({self._WORKSPACE_DOWNGRADE_CLEAR_PCT:.0%})"
+            )
+            return {
+                'type': 'workspace_downgrade_cleared',
+                'workspace_id': str(workspace_id),
+                'daily_spend': round(spend['daily_total'], 4),
+                'cap': cap,
+            }
+
+        # Set on cross-up (idempotent — no-op if already downgraded)
+        if spend['daily_total'] >= set_threshold and not currently_downgraded:
+            SystemConfiguration.objects.update_or_create(
+                key=key,
+                defaults={
+                    'value': True,
+                    'description': (
+                        f'WORKSPACE DOWNGRADE: workspace_id={workspace_id} '
+                        f'daily spend ${spend["daily_total"]:.2f} '
+                        f'>= ${set_threshold:.2f} '
+                        f'({AutopilotConfig.BUDGET_SOFT_LIMIT_PCT:.0%} of cap ${cap:.2f}) '
+                        f'(Session 2848 A1 W1.5)'
+                    ),
+                    'category': 'performance',
+                },
+            )
+            AutopilotAction.objects.create(
+                action_type='workspace_downgrade_set',
+                agent_name='BudgetController',
+                policy='workspace_budget_controller',
+                dry_run=False,
+                evidence={**spend, 'cap': cap, 'set_threshold': set_threshold},
+                result={
+                    'workspace_id': str(workspace_id),
+                    'daily_spend': round(spend['daily_total'], 4),
+                    'downgrade_model': AutopilotConfig.BUDGET_DOWNGRADE_MODEL,
+                },
+            )
+            logger.warning(
+                f"[BudgetController] WORKSPACE DOWNGRADE activated — "
+                f"workspace_id={workspace_id} spend "
+                f"${spend['daily_total']:.2f} >= "
+                f"${set_threshold:.2f} ({AutopilotConfig.BUDGET_SOFT_LIMIT_PCT:.0%} of cap)"
+            )
+            return {
+                'type': 'workspace_downgrade_set',
+                'workspace_id': str(workspace_id),
+                'daily_spend': round(spend['daily_total'], 4),
+                'cap': cap,
+                'downgrade_model': AutopilotConfig.BUDGET_DOWNGRADE_MODEL,
+            }
+
+        return None
+
+    def is_workspace_downgraded(self, workspace_id) -> bool:
+        """Hot-path check — is this workspace currently in downgrade tier?
+
+        Called from llm_enforcer BEFORE the LLM call to decide whether to
+        swap to BUDGET_DOWNGRADE_MODEL. No caching (matches Phase 2 Fold 4).
+        """
+        if workspace_id is None:
+            return False
+        from core.models.system import SystemConfiguration
+        key = f"{self._WORKSPACE_DOWNGRADE_KEY_PREFIX}{workspace_id}"
+        entry = (
+            SystemConfiguration.objects
+            .filter(key=key)
+            .values_list('value', flat=True)
+            .first()
+        )
+        return bool(entry)
+
+    def clear_workspace_downgrade(self, workspace_id, actor_user_id=None) -> bool:
+        """Clear the downgrade flag for a specific workspace.
+
+        Symmetric with clear_workspace_freeze. actor_user_id (S2848 Phase 3
+        pattern) writes an AutopilotAction row when passed from a manual
+        PA-tool clear so operator overrides are as auditable as auto-hysteresis.
+        """
+        if workspace_id is None:
+            return False
+        from core.models.system import SystemConfiguration
+        key = f"{self._WORKSPACE_DOWNGRADE_KEY_PREFIX}{workspace_id}"
+        deleted, _ = SystemConfiguration.objects.filter(key=key).delete()
+        if deleted:
+            logger.info(
+                "[BudgetController] Cleared workspace downgrade for "
+                "workspace_id=%s (actor=%s)",
+                workspace_id, actor_user_id,
+            )
+            if actor_user_id is not None:
+                AutopilotAction.objects.create(
+                    action_type='workspace_downgrade_cleared',
+                    agent_name='workspace_budget_tool',
+                    policy='workspace_budget_tool',
+                    dry_run=False,
+                    evidence={
+                        'workspace_id': str(workspace_id),
+                        'actor_user_id': str(actor_user_id),
+                        'reason': 'manual_operator_clear',
                     },
                     result={'cleared': True},
                 )

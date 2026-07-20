@@ -1433,6 +1433,72 @@ class OpsAutopilot:
                 f"tier={result.get('tier', 'unknown')}"
             )
 
+            # S2848 A1 W1.5 — per-workspace enforcement cycle.
+            # Back-wires Phase 2's enforce_workspace_freeze (previously had
+            # no automatic caller — required Django shell to trigger) AND
+            # the new W1.5 enforce_workspace_downgrade. Per-workspace fail-
+            # soft: one bad row does not abort the whole policy cycle.
+            # Zombie-safe: caps outliving their workspace row are skipped.
+            ws_result = {
+                'evaluated': 0,
+                'skipped_zombie': 0,
+                'freeze_actions': 0,
+                'downgrade_actions': 0,
+                'errors': 0,
+            }
+            try:
+                from core.models_skin_layer import ProjectWorkspace
+                caps = controller.list_workspace_caps()
+                for row in caps:
+                    wid = row['workspace_id']
+                    try:
+                        if not ProjectWorkspace.objects.filter(id=wid).exists():
+                            ws_result['skipped_zombie'] += 1
+                            logger.warning(
+                                f"[OpsAutopilot] Skipping orphaned "
+                                f"workspace_daily_cap:{wid} — "
+                                f"ProjectWorkspace row missing"
+                            )
+                            continue
+                        ws_spend = controller.compute_workspace_spend(
+                            now, workspace_id=wid,
+                        )
+                        if not self.dry_run:
+                            freeze_action = controller.enforce_workspace_freeze(
+                                ws_spend, now, wid,
+                            )
+                            if freeze_action:
+                                ws_result['freeze_actions'] += 1
+                                self.actions_taken.append(freeze_action)
+                            downgrade_action = controller.enforce_workspace_downgrade(
+                                ws_spend, now, wid,
+                            )
+                            if downgrade_action:
+                                ws_result['downgrade_actions'] += 1
+                                self.actions_taken.append(downgrade_action)
+                        ws_result['evaluated'] += 1
+                    except Exception as ws_err:
+                        ws_result['errors'] += 1
+                        logger.error(
+                            f"[OpsAutopilot] workspace budget iteration "
+                            f"failed for workspace_id={wid}: {ws_err}"
+                        )
+                result['workspaces'] = ws_result
+                if ws_result['freeze_actions'] or ws_result['downgrade_actions']:
+                    logger.warning(
+                        f"[OpsAutopilot] Workspace budget cycle: "
+                        f"evaluated={ws_result['evaluated']}, "
+                        f"freeze={ws_result['freeze_actions']}, "
+                        f"downgrade={ws_result['downgrade_actions']}, "
+                        f"zombies_skipped={ws_result['skipped_zombie']}, "
+                        f"errors={ws_result['errors']}"
+                    )
+            except Exception as e:
+                logger.error(
+                    f"[OpsAutopilot] workspace budget cycle setup error: {e}"
+                )
+                result['workspaces_error'] = str(e)
+
         except Exception as e:
             logger.error(f"[OpsAutopilot] budget controller error: {e}")
             result['error'] = str(e)
