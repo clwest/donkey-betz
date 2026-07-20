@@ -43,17 +43,26 @@ Verify:
 grep "^python tools/pa_chat.py" tools/pa_local.sh
 ```
 
-### Step 2 — Ratify sequencing decision + kick off Week 1 substrate
+### Step 2 — A4↔A1 sequencing RATIFIED (S2846) + open Week 1 substrate
 
-**Pending ratification from S2845:** Claude+Rigby joint recommendation is **sequential A1-first with A4 pipeline warm-up (prospect list + 3–5 intro emails) in parallel; full A4 engagement packaging waits until A1 Week 1 substrate is demonstrably in place.**
+**Ratified 2026-07-20 (S2846):** Chris D-verdict = **option (a)** — sequential A1-first + A4 pipeline warm-up (prospect list + 3–5 intro emails) in parallel; full A4 engagement packaging BLOCKED until A1 Week 1 substrate demonstrably ships. All four of Rigby's zoom-out folds (spend / evidence / narrative / operational coupling) accepted; her 6-line constraints block codified below as slate discipline (no renegotiation midstream).
 
-Substrate verification findings (from S2845 Rigby SIGN §2, tool-grounded):
+**A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified):**
+
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 Week 1 shipping spend.
+2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth" until drift-lint is shipped (S2846 ✓) AND A1 workspace attribution exists.
+3. **No capability claims:** A4 outreach must make ZERO claims about per-workspace caps, cost reporting, invoicing, or audit trails until A1 Week 1 ships.
+4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only (no "productized offering" language during the parallel period).
+5. **Hard throttle:** A4 warm-up is constrained to a fixed timebox and fixed send count (3–5 total intros); no expansion without explicit slate change.
+6. **No bespoke follow-ups:** A4 warm-up prohibits custom follow-ups / custom research / custom deliverables; allowed responses are one standard reply + optional meeting link only.
+
+Substrate verification findings (from S2845 Rigby SIGN §2, tool-grounded, still standing):
 - `LLMCallLog.workspace` FK: NOT present in `core/models_llm_routing.py:297`; no partial migration
 - Per-workspace cost cap: GLOBAL cap machinery exists (`core/services/ops_autopilot/budget.py:238–506` three-tier controller), no `workspace_daily_cap` / `workspace_budget` symbols; Week 1 must extend not just wire
 - Ledger export: NOT shipped (planned for Week 2–3)
 - Duration reality check: `docs/COST_SURVIVAL_AUDIT.md` §A effort table quotes ~1 working day for FK + ExternalAPICallLog telemetry — real Week 1 could collapse to ~2–3 days if scoped tight (FK + workspace-aware cost cap only; defer Ledger export to Week 2)
 
-**S2846 first action once ratified:** open A1 Ledger Bet Week 1 with `LLMCallLog.workspace` FK migration + per-workspace cost cap extension (following IOS Existing Implementation Analysis discipline per `feedback_cycle_1a_verify_before_build`).
+**Next S2846 action:** open A1 Ledger Bet Week 1 with `LLMCallLog.workspace` FK migration + per-workspace cost cap extension (following IOS Existing Implementation Analysis discipline per `feedback_cycle_1a_verify_before_build`).
 
 ### Step 3 — Concurrent A4 pipeline warm-up (light-touch)
 
@@ -66,7 +75,7 @@ Substrate verification findings (from S2845 Rigby SIGN §2, tool-grounded):
 
 Per `feedback_engineering_bias_over_audit`, list net-new candidates first at every session open. Chris directive S2845 close 2026-07-20: promote (0) to first slate item; treat Rigby's tool-surface gaps as first-class product work per new memory rule `feedback_rigby_tool_gap_ledger`.
 
-0. **[SLATED FOR S2846] Handler/schema drift lint** — ~2 hour script that walks every gateway-tool handler and every `pa_tool_schemas.py` entry, flags where handler action-params exist that the schema doesn't advertise (or vice versa). Root cause of S2844 misdiagnosis was exactly this — `signal_clusters` handler supported `source_breakdown__has_key=<spider>` but schema enum-restricted the `source` param, and the description at line 3414 lied by saying "source (spider name)." Highest-leverage single fix from S2845 learnings; prevents recurring class of false-negative "no data" conclusions across the entire tool surface. Ship as first work of S2846.
+0. **[SHIPPED S2846 · PR #3303]** Handler/schema drift lint — `python manage.py check_pa_tool_drift`. Static AST analysis of every `PA_TOOL_SCHEMAS` entry against its registered `ToolDispatcher` handler; reports HANDLER_ONLY_PARAM / SCHEMA_ONLY_PARAM / HANDLER_ONLY_ACTION / SCHEMA_ONLY_ACTION / MISSING_HANDLER / SOURCE_UNAVAILABLE. First-run scan: 114 tools · **69 DRIFT · 43 CLEAN · 1 MISSING (run_agent) · 1 SOURCE_UNAVAILABLE (research_and_create_tool)**. Documented LIMITATIONS: sub-handler-routing false-positive class (`sp = dict(payload); return self._handle_other(sp)` — MVP doesn't chase). Real bugs surfaced already: `autopilot_tool` (6 hp params handler reads, schema hides), `active_priority_tool` (hp=`trigger_source`), and others. Triage of the 69 DRIFT entries deferred to a separate arc / drip via the Rigby Tool Gap Ledger.
 
 Additional candidates queued (deferred; ledger tracks all Rigby tool gaps — see workspace `b4503364-2573-4401-9e28-61a739e0ce50` deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` "Rigby Tool Gap Ledger"):
 
