@@ -3903,12 +3903,22 @@ class OpsHandlersMixin:
                 ),
             }
 
+        # S2849 W2 #2a — NULL-bucket copy included in read responses so
+        # operators know workspace caps only govern attributed calls.
+        _null_bucket_note = (
+            'workspace caps apply only to workspace-attributed LLMCallLog '
+            'rows (currently PA path); NULL-bucket is governed by GLOBAL '
+            'budget controls'
+        )
+
         if action == 'get_status':
             workspace, err = _resolve_workspace(workspace_id)
             if err is not None:
                 return {'action': action, **err}
             spend = controller.compute_workspace_spend(now, workspace_id=workspace.id)
             cap = controller.get_workspace_daily_cap(workspace.id)
+            effective = controller.get_effective_workspace_daily_cap(workspace.id)
+            default_cap = controller.get_workspace_default_cap()
             is_frozen = controller.is_workspace_frozen(workspace.id)
             is_downgraded = controller.is_workspace_downgraded(workspace.id)
             return {
@@ -3916,6 +3926,9 @@ class OpsHandlersMixin:
                 'workspace_id': str(workspace.id),
                 'workspace_name': workspace.name,
                 'cap': cap,
+                'effective_cap': effective['cap'],
+                'cap_source': effective['source'],
+                'default_cap': default_cap,
                 'daily_total': spend['daily_total'],
                 'daily_calls': spend['daily_calls'],
                 'hourly_total': spend['hourly_total'],
@@ -3926,37 +3939,64 @@ class OpsHandlersMixin:
                 'window_note': (
                     'daily = last 24h sliding window (not calendar day)'
                 ),
+                'null_bucket_note': _null_bucket_note,
             }
 
         if action == 'list_caps':
-            rows = controller.list_workspace_caps()
+            include_defaults = bool(payload.get('include_defaults', False))
+            default_cap = controller.get_workspace_default_cap()
             enriched = []
-            for row in rows:
-                wid = row['workspace_id']
-                try:
-                    ws = ProjectWorkspace.objects.get(id=wid)
-                    name = ws.name
-                except (ProjectWorkspace.DoesNotExist, ValueError):
-                    name = None
-                spend = controller.compute_workspace_spend(
-                    now, workspace_id=wid,
-                )
-                enriched.append({
-                    'workspace_id': wid,
-                    'workspace_name': name,
-                    'cap': row['cap'],
-                    'daily_total': spend['daily_total'],
-                    'is_frozen': controller.is_workspace_frozen(wid),
-                    'is_downgraded': controller.is_workspace_downgraded(wid),
-                })
+            if include_defaults:
+                for ws in ProjectWorkspace.objects.all().only('id', 'name'):
+                    effective = controller.get_effective_workspace_daily_cap(ws.id)
+                    if effective['cap'] is None:
+                        continue
+                    spend = controller.compute_workspace_spend(
+                        now, workspace_id=ws.id,
+                    )
+                    enriched.append({
+                        'workspace_id': str(ws.id),
+                        'workspace_name': ws.name,
+                        'cap': controller.get_workspace_daily_cap(ws.id),
+                        'effective_cap': effective['cap'],
+                        'cap_source': effective['source'],
+                        'daily_total': spend['daily_total'],
+                        'is_frozen': controller.is_workspace_frozen(ws.id),
+                        'is_downgraded': controller.is_workspace_downgraded(ws.id),
+                    })
+            else:
+                rows = controller.list_workspace_caps()
+                for row in rows:
+                    wid = row['workspace_id']
+                    try:
+                        ws = ProjectWorkspace.objects.get(id=wid)
+                        name = ws.name
+                    except (ProjectWorkspace.DoesNotExist, ValueError):
+                        name = None
+                    spend = controller.compute_workspace_spend(
+                        now, workspace_id=wid,
+                    )
+                    enriched.append({
+                        'workspace_id': wid,
+                        'workspace_name': name,
+                        'cap': row['cap'],
+                        'effective_cap': row['cap'],
+                        'cap_source': 'explicit',
+                        'daily_total': spend['daily_total'],
+                        'is_frozen': controller.is_workspace_frozen(wid),
+                        'is_downgraded': controller.is_workspace_downgraded(wid),
+                    })
             return {
                 'action': action,
                 'count': len(enriched),
                 'workspaces': enriched,
+                'default_cap': default_cap,
+                'include_defaults': include_defaults,
                 'enforcement_tier': 'downgrade_and_freeze',
                 'window_note': (
                     'daily = last 24h sliding window (not calendar day)'
                 ),
+                'null_bucket_note': _null_bucket_note,
             }
 
         if action == 'set_cap':
@@ -4062,12 +4102,115 @@ class OpsHandlersMixin:
                 ),
             }
 
+        # S2849 W2 #2a — global default cap + backfill actions. These are
+        # staff-only (no workspace to own).
+        def _authorize_staff():
+            """None on ok / error dict on deny — staff-only gate."""
+            if user_id is None:
+                return {'error': 'authentication required for this action'}
+            try:
+                User = get_user_model()
+                actor = User.objects.get(id=user_id)
+            except Exception:
+                return {'error': f'actor user_id={user_id} not found'}
+            if not getattr(actor, 'is_staff', False):
+                return {
+                    'error': (
+                        f'user_id={user_id} is not staff — this action '
+                        f'requires staff privileges'
+                    ),
+                }
+            return None
+
+        if action == 'get_default_cap':
+            default_cap = controller.get_workspace_default_cap()
+            return {
+                'action': action,
+                'default_cap': default_cap,
+                'note': (
+                    'workspace_default_daily_cap is unset — new workspaces '
+                    'have no effective cap until an operator sets a default '
+                    'via set_default_cap and backfill_defaults'
+                    if default_cap is None
+                    else (
+                        'default is a LAZY fallback for get_status/list_caps '
+                        'display. Autopilot enforcement iterates only '
+                        'workspaces with EXPLICIT caps — call '
+                        'backfill_defaults to bring workspaces under '
+                        'enforcement'
+                    )
+                ),
+            }
+
+        if action == 'set_default_cap':
+            auth_err = _authorize_staff()
+            if auth_err is not None:
+                return {'action': action, **auth_err}
+            if daily_cap_usd is None:
+                return {
+                    'action': action,
+                    'error': 'daily_cap_usd is required for set_default_cap',
+                }
+            try:
+                result = controller.set_workspace_default_cap(
+                    daily_cap_usd, actor_user_id=user_id,
+                )
+            except ValueError as e:
+                return {'action': action, 'error': str(e)}
+            return {
+                'action': action,
+                **result,
+                'note': (
+                    'default cap updated. Existing workspaces WITHOUT '
+                    'explicit caps now show this value in get_status/'
+                    'list_caps (cap_source=default) but autopilot '
+                    'enforcement still requires explicit caps — call '
+                    'backfill_defaults to apply.'
+                ),
+            }
+
+        if action == 'backfill_defaults':
+            auth_err = _authorize_staff()
+            if auth_err is not None:
+                return {'action': action, **auth_err}
+            dry_run = payload.get('dry_run')
+            if dry_run is None:
+                dry_run = True
+            dry_run = bool(dry_run)
+            force = bool(payload.get('force', False))
+            include_ids = payload.get('include_workspace_ids')
+            exclude_ids = payload.get('exclude_workspace_ids')
+            try:
+                result = controller.backfill_workspace_defaults(
+                    default_cap=daily_cap_usd,
+                    include_workspace_ids=include_ids,
+                    exclude_workspace_ids=exclude_ids,
+                    force=force,
+                    dry_run=dry_run,
+                    actor_user_id=user_id,
+                )
+            except ValueError as e:
+                return {'action': action, 'error': str(e)}
+            return {
+                'action': action,
+                **result,
+                'note': (
+                    'DRY RUN — no writes performed. Pass dry_run=false to '
+                    'apply.' if dry_run else
+                    f'wrote {result["wrote"]} caps '
+                    f'(planned={result["planned"]}, '
+                    f'skipped_existing={result["skipped_existing"]}, '
+                    f'errors={result["errors"]})'
+                ),
+            }
+
         return {
             'action': action,
             'error': (
                 f'Unknown workspace_budget_tool action: {action!r}. '
                 f'Valid: set_cap, get_status, clear_freeze, clear_downgrade, '
-                f'list_caps, clear_cap.'
+                f'list_caps, clear_cap, get_default_cap, set_default_cap, '
+                f'backfill_defaults.'
             ),
         }
 
