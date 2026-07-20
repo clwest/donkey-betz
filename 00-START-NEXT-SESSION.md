@@ -30,10 +30,23 @@
 | **(d) Governance Consulting engagements** | Mid-size AI startups, enterprise AI ops | $10–100k engagements | 4–8 wks | NO (Chris-time bounded; Ledger Bet decoupled) |
 | **(e) Employee OS OSS release** | LangChain/AutoGen users | OSS wedge → SaaS tier | 3–4 wks OSS + 8–12 wks first pilot | NO (OSS surface decoupled from FK) |
 
-### Step 2 — Pin decision
+### Step 2 — Pin decision — **FIRST-ACTION FRESH MINT BEFORE ANY OTHER PA DISPATCH**
 
-- **S2842 close already retired `pa-9729e4f9925445c2`** (seventy-second consecutive per S2770+ pattern) — S2843 has no live pin at open.
-- Fresh mint required at S2843 open with label reflecting chosen wedge (e.g. `s2843-wedge-a-rigby-standalone`, `s2843-wedge-c-characteros-launch`).
+**S2842 close retired `pa-9729e4f9925445c2` in the DB, but the wrapper still points at it** (`tools/pa_local.sh:563`). This is the intended failure mode — it forces S2843 to mint fresh before any other PA dispatch. **Do NOT skip this step**; posting to the retired pin silently accretes new `session_active=True` rows on the retired ID (S2843 open discovered this pattern; substrate fix deferred).
+
+Run the atomic close command (retires current wrapper pin + mints fresh + rewrites wrapper line 563 — all in one transaction):
+
+```bash
+python manage.py session_lifecycle close --label s2843-wedge-<pick>
+# e.g. s2843-wedge-a-rigby-standalone, s2843-wedge-c-characteros-launch, s2843-wedge-selection
+```
+
+Verify:
+```bash
+grep "^python tools/pa_chat.py" tools/pa_local.sh   # should show new pin
+```
+
+Only THEN route messages via `bash tools/pa_local.sh "<msg>"`. If you route before running the atomic close, the message goes to the retired pin and Rigby's response won't be scoped to the fresh session.
 
 ### Step 3 — Execute the wedge
 
