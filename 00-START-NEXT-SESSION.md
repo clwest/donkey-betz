@@ -62,17 +62,25 @@ Substrate verification findings (from S2845 Rigby SIGN §2, tool-grounded):
 - Combine with `kb_tool` research on named companies + Chris-known network
 - Draft 3–5 cold intro emails framed as "we're shipping the audit substrate this week; want to be a design partner?"
 
-### Net-new engineering candidates queued (deferred, not blocking A1/A4)
+### Net-new engineering candidates for S2846
 
-Per `feedback_engineering_bias_over_audit`, list net-new candidates first at every session open.
+Per `feedback_engineering_bias_over_audit`, list net-new candidates first at every session open. Chris directive S2845 close 2026-07-20: promote (0) to first slate item; treat Rigby's tool-surface gaps as first-class product work per new memory rule `feedback_rigby_tool_gap_ledger`.
 
-1. **SignalCluster naming rewrite** — current cluster names use top-2 frequent tokens ("Comments, Score emerging trend"), producing semantically opaque labels even when underlying signals are strong (e.g. "Anthropic, Mythos" naming works — "Comments, Score" naming doesn't). `signal_aggregation_service.py:312` already extracts `_extract_entity_tokens`; naming should prefer entity tokens over raw frequency. ~1 day. Would materially improve `intelligence_tool` `signal_clusters` discovery UX.
+0. **[SLATED FOR S2846] Handler/schema drift lint** — ~2 hour script that walks every gateway-tool handler and every `pa_tool_schemas.py` entry, flags where handler action-params exist that the schema doesn't advertise (or vice versa). Root cause of S2844 misdiagnosis was exactly this — `signal_clusters` handler supported `source_breakdown__has_key=<spider>` but schema enum-restricted the `source` param, and the description at line 3414 lied by saying "source (spider name)." Highest-leverage single fix from S2845 learnings; prevents recurring class of false-negative "no data" conclusions across the entire tool surface. Ship as first work of S2846.
 
-2. **Multi-source `source_spider` filter** — S2845 shipped single-source filter (`source_breakdown__has_key`). Multi-source (`has_any_keys`) would let one call return "all AI-adjacent clusters" in one shot instead of Rigby looping 14x. ~1 hour. Ship when A4 prospect research needs it.
+Additional candidates queued (deferred; ledger tracks all Rigby tool gaps — see workspace `b4503364-2573-4401-9e28-61a739e0ce50` deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` "Rigby Tool Gap Ledger"):
 
-3. **`huggingface` returns 0 SignalCluster rows despite 24 spider runs/7d** — aggregation pipeline drops it somewhere (likely `is_processed=False` + `embedding_text=''` combo per `_fetch_recent_spider_data` at line 262). Investigate + fix if we want the huggingface signal (which is high-value for AI-tooling discovery). ~half day. Wait until A4 prospect research needs it to prioritize.
+1. **SignalCluster naming rewrite** — current cluster names use top-2 frequent tokens ("Comments, Score emerging trend"), producing semantically opaque labels even when underlying signals are strong. `signal_aggregation_service.py:312` already extracts `_extract_entity_tokens`; naming should prefer entity tokens over raw frequency. ~1 day. Would materially improve `intelligence_tool` `signal_clusters` discovery UX.
 
-4. **`spider_status_tool.search` returns empty `preview` field** — the tool at core reads `LegacySpiderData` but doesn't surface `raw_data['items'][*].title`. Rigby has no way to keyword-check spider items. Would make Rigby's investigation capability materially better. ~2 hours. Consider bundling with (1).
+2. **Multi-source `source_spider` filter** — S2845 shipped single-source filter. Multi-source (`has_any_keys`) would let one call return "all AI-adjacent clusters" in one shot instead of Rigby looping 14x. ~1 hour. Ship when A4 prospect research needs it. (Ledger entry.)
+
+3. **`huggingface` returns 0 SignalCluster rows despite 24 spider runs/7d** — aggregation pipeline drops it somewhere (likely `is_processed=False` + `embedding_text=''` combo per `_fetch_recent_spider_data` at line 262). ~half day. Wait until A4 prospect research needs it. (Ledger entry.)
+
+4. **`spider_status_tool.search` returns empty `preview` field** — reads `LegacySpiderData` but doesn't surface `raw_data['items'][*].title`. Rigby has no way to keyword-check spider items. ~2 hours. Consider bundling with (1). (Ledger entry.)
+
+5. **`spider_status_tool.list` pagination** — returns 44/88 spiders with no offset param; drove false-negative "spider not found" reporting in S2845 Layer 1 probe. ~2 hours. (Ledger entry.)
+
+Two-plane audit (`LegacySpiderData` 15k rows vs `SpiderData` 111k rows — one gets writes, the other is dead substrate for AI-adjacent content) is a real problem but bigger. Probably 3–5 day arc when ready. Not queued as candidate; parked for post-A1-Week-1.
 
 ### What's forbidden at S2846 (D6 moratorium still in force)
 
@@ -94,6 +102,10 @@ Per `feedback_engineering_bias_over_audit`, list net-new candidates first at eve
 
 **Memory (Claude-authored):**
 - `feedback_verify_at_raw_orm_before_trusting_tool_no_data.md` — new feedback rule; indexed in `MEMORY.md`
+- `feedback_rigby_tool_gap_ledger.md` — new feedback rule (Chris directive S2845 close): Rigby tool-limitation flags become ledger entries in workspace `b4503364-...` "Rigby Tool Gap Ledger" deliverable, NOT silent workarounds; her tool surface IS the A1/A4 product substrate
+
+**Workspace canonical (Rigby-authored per `feedback_rigby_writes_workspace_deliverables`):**
+- "Rigby Tool Gap Ledger" deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` in Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50` (`deliverable_type='engineering_backlog'`, `category='platform'`) with 5 seed entries from S2845 discoveries. Post-create ORM cleanup applied (stripped "Rigby: " title prefix, cleared `diagnostic_status`/`diagnostic_code` per known `deliverable_tool.create` gotchas).
 
 **Runtime impact:** `intelligence_tool` `signal_clusters` now accepts spider-name filter. Post-merge `make recycle-all` per PLAYBOOK-7.4.4 / `feedback_recycle_after_merge`. Docs cascade run at close per `feedback_docs_cascade_at_every_close`.
 
