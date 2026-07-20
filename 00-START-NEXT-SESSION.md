@@ -2,34 +2,31 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2848 CLOSE → A1 W1 SUBSTRATE COMPLETE (2026-07-20; picks up as S2849) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2849 CLOSE → A1 W2 #2a SHIPPED; W2 SLATE OPEN (2026-07-20; picks up as S2850) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-20 (S2848 close).** One code PR shipped:
-- **PR #3311** — A1 W1.5: workspace downgrade-tier + Phase 2 auto-wire back-fill. `enforce_workspace_downgrade` at 70% cap with 60% hysteresis; back-wires Phase 2's `enforce_workspace_freeze` (which had no automatic caller since S2846); operator `clear_downgrade` action; 6 new AutopilotAction types (2 W1.5 + 4 Phase 2/3 backfill).
+**Refreshed 2026-07-20 (S2849 close).** One code PR shipped:
+- **PR #3313** — A1 W2 #2a: workspace default cap + backfill. `set_default_cap`/`get_default_cap`/`backfill_defaults` PA tool actions; `get_effective_workspace_daily_cap()` in BudgetController with `explicit|default|unset` source tag; `list_caps include_defaults=true` shows every workspace with effective cap. Ship state: **16/16 workspaces now under enforcement at $5/day**, default_cap=$5.0, autopilot cycle iterates all 16 explicit caps (was 0 before).
 
-**A1 W1 SaaS substrate is now feature-complete for the PA path.** Four phases shipped across three sessions:
-- **Phase 1 (S2846)** — attribution: `LLMCallLog.workspace` FK + PA-path auto-attribution
-- **Phase 2 (S2846)** — enforcement plumbing: per-workspace freeze methods + `llm_enforcer` hot-path
-- **Phase 3 (S2847)** — operator surface: `workspace_budget_tool` with 5 actions + auth + audit
-- **Phase W1.5 (S2848)** — soft downgrade tier + Phase 2 auto-wire back-fill + `clear_downgrade` action
+**A1 W2 leg opens.** #2a completes the enforcement-substrate leg — every existing workspace has an explicit cap so autopilot's caps-only iteration (`_policy_budget_controller` at `core/services/ops_autopilot/core.py:1451`) actually fires per-workspace freeze/downgrade for the 16-workspace population.
 
-**Working loop validated at S2848:**
-- Rigby SIGN #1 pre-code (task `984fe4c2`) — tool-grounded via 4 `repo_tool` calls (T1-T4); F-BLOCKING DISAGREE on Q4 (per-workspace `downgrade_pct`) adopted verbatim; 5 zoom-out folds, 3 shipped in-branch (hysteresis + fail-soft + zombie-safe)
-- Live E2E via Rigby (task `1400c384`) — exercised 6 tool actions + audit trail verification; caught 1 Phase 3 designed-behavior observation (set_cap is config-only)
-- Zero rubber-stamps; one F-BLOCKING pushback + one anomaly-pause (Rigby correctly halted at STEP 2 for design-question observation before continuing)
+**Working loop validated at S2849:**
+- Rigby SIGN #1-#4 pre-code (12+ `repo_tool` calls; 3 substantive zoom-out folds; 1 F-BLOCKING adopted then withdrawn on evidence)
+- Reframe A signed after ORM revealed 0.1% attribution rate: W1 complete as-designed (PA-path only + NULL-bucket global); W2 re-ordered to `#2a defaults+backfill → #3 reporting → #1 UX polish → #4 A4`
+- Live E2E via Rigby caught 2 GPT function-calling bugs (empty include list + zero cap coercion); both fixed same-PR
+- Zero rubber-stamps; audit trail verified via ORM cross-check (1× `workspace_default_cap_set` + 16× `workspace_cap_set`)
 
-**Session pin `pa-1a4d45c9a947423d` RETIRES at S2848 close** (seventy-eighth consecutive per S2770+ pattern). Fresh mint required at S2849 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
+**Session pin `pa-507d1264765f4bf3` RETIRES at S2849 close** (seventy-ninth consecutive per S2770+ pattern). Fresh mint required at S2850 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
 
 ---
 
-## S2849 open sequence
+## S2850 open sequence
 
 ### Step 1 — Session-open atomic mint (per `feedback_session_open_atomic_mint_before_pa_dispatch`)
 
-`pa-1a4d45c9a947423d` retired at S2848 close. Run atomic close BEFORE any PA dispatch:
+`pa-507d1264765f4bf3` retired at S2849 close. Run atomic close BEFORE any PA dispatch:
 
 ```bash
-python manage.py session_lifecycle close --label s2849-<first-action-context>
+python manage.py session_lifecycle close --label s2850-<first-action-context>
 ```
 
 Verify:
@@ -37,87 +34,91 @@ Verify:
 grep "^python tools/pa_chat.py" tools/pa_local.sh
 ```
 
-### Step 2 — A1 W2 scoping (recommended lean)
+### Step 2 — W2 #3 Reporting scoping (recommended lean)
 
-**A1 W1 substrate is COMPLETE.** The next natural leap is A1 W2 — but W2 was defined in the S2841 pressure-test addendum as a scope block that depends on W1 being finished. Time to un-shelve W2 scope.
+**#2a substrate is COMPLETE.** Rigby's ranked W2 slate has **#3 Reporting** as the next natural leap: daily/weekly per-workspace spend rollups. Reframed at S2849 as "budget status & enforcement reporting" (not "spend analytics") because attribution is still ~0.1% platform-wide.
 
-**W2 candidates in rough priority order** (need Rigby SIGN before ratifying):
-1. **Operator UX polish** — dashboard/status surface for workspace budget state (a Workspace tab, per `feedback_workspace_over_command_center_for_new_ui`, showing spend + cap + tier per workspace with quick actions)
-2. **Multi-workspace policy** — cap templates, default cap for new workspaces, ownership transfer semantics
-3. **Reporting** — daily/weekly per-workspace spend rollups (queryable via new PA tool action or new tool)
-4. **A4 warm-up execution** — under S2846-ratified constraints, now that operator surface + auto-enforce are both live
+**Concrete shape candidates for #3 (need Rigby SIGN before ratifying):**
+- New PA tool action `workspace_budget_tool.spend_report` — args: `workspace_id | all`, `window: '24h'|'7d'|'30d'`, returns `[{workspace_id, name, spend, cap, effective_cap, cap_source, is_frozen, is_downgraded, enforcement_events_count}]`
+- Or: new tool `workspace_reporting_tool` with actions `daily_rollup`, `weekly_rollup`, `enforcement_history` (audit trail slicing)
+- Or: extend `autopilot_tool.budget_report` (existing global-spend report) with a per-workspace section
 
-Recommend opening S2849 with a scoping SIGN dispatch on the W2 candidate slate: Rigby ranks by leverage-per-day + risk, joint recommendation to Chris. Do NOT jump into implementation without ratification.
+Recommend opening S2850 with a scoping SIGN dispatch on the #3 shape: Rigby ranks by (a) does it need new schema/index? (b) query-cost, (c) does it duplicate any existing `LLMCallLog` aggregation. Do NOT jump into implementation without ratification.
 
-### Step 3 — Net-new engineering candidates for S2849
+### Step 3 — Net-new engineering candidates for S2850
 
 Per `feedback_engineering_bias_over_audit`, list net-new first at every session open.
 
-0. **[SLATED FOR S2849] A1 W2 scoping** (Step 2 above). Highest-leverage next step — opens the W2 leg with proper Rigby pressure-test before code.
+0. **[SLATED FOR S2850] W2 #3 Reporting scoping** (Step 2 above). Highest-leverage next step — reporting is what makes enforcement observable.
 
-1. **Drift-lint triage** — 69 DRIFT entries flagged in S2846; still un-bucketed beyond the 4 Rigby sampled + workspace_budget_tool (which is CLEAN after Phase 3 and W1.5). ~2-3 day arc if Chris directs.
+1. **PA tool for AutopilotAction querying** (Rigby E2E STEP 13 gap from S2849) — no PA surface for `AutopilotAction.filter(policy='workspace_budget_tool')`; operators drop to Django shell to see "who did what." Small addition (~2 hours) as `governance_tool` extension or new `ops_audit_tool` action.
 
-2. **`set_cap` immediate enforcement** (Rigby E2E STEP 2 observation, S2848) — currently config-only; operator setting a tight cap on already-over-spend workspace has to wait ~10 min for autopilot cycle to fire the flag. Small addition (~1 hour): call `enforce_workspace_freeze` + `enforce_workspace_downgrade` immediately after `set_workspace_daily_cap` in the handler. Only ship if Chris directs.
+2. **Live E2E of llm_enforcer hot-path model swap** — verify a downgraded workspace routes non-critical LLM calls to `gpt-5-mini` in a single Rigby session (requires orchestrating the periodic cycle or manual override + live dispatch). ~1 hour. Deferred at S2848 close and S2849 close.
 
-3. **Live E2E of llm_enforcer hot-path model swap** — verify a downgraded workspace routes non-critical LLM calls to `gpt-5-mini` in a single Rigby session (requires orchestrating the periodic cycle or manual override + live dispatch). ~1 hour. Deferred at S2848 close.
+3. **`set_cap` immediate enforcement** (S2848 STEP 2 observation) — currently config-only; operator setting a tight cap on already-over-spend workspace has to wait ~10 min for autopilot cycle. Small addition (~1 hour): call `enforce_workspace_freeze` + `enforce_workspace_downgrade` immediately after `set_workspace_daily_cap` in the handler. Only ship if Chris directs.
 
-4. **A4 warm-up under ratified constraints** — S2846 6-line block still in force. A1 W1 substrate is now demonstrably complete end-to-end; A4 outreach can start claiming operator surface + auto-enforce + audit trail accurately. See §A4 Constraints below.
+4. **A4 warm-up under ratified constraints** — S2846 6-line block still in force. A1 W1 substrate is now demonstrably complete AND per-workspace enforcement is live for 16/16 workspaces at $5/day. A4 outreach can start claiming enforcement substrate + operator surface + audit trail accurately. See §A4 Constraints below.
 
-### What's forbidden at S2849 (D6 moratorium still in force)
+### What's forbidden at S2850 (D6 moratorium still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No new evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 
 ### What's queued but deferred (do NOT open unless Chris directs)
 
 - Docs restructuring arc (`project_docs_restructuring_arc_queued`) — behind wedge execution
+- W2 #1 UX polish / #2b cap templates / #2c ownership transfer — pending #3 completion or Chris re-slate
+- W2-2b bounded attribution expansion — Chris explicitly skipped at S2849
 - Multi-source `source_spider` filter (Ledger candidate; ~1 hour)
 - SignalCluster naming rewrite (Ledger candidate; ~1 day)
 - `huggingface` returns 0 SignalCluster rows (Ledger candidate; ~half day)
 - `spider_status_tool.search` empty preview field (Ledger candidate; ~2 hours)
 - `spider_status_tool.list` pagination (Ledger candidate; ~2 hours)
-- Bulk `workspace_budget_tool` operations (Ledger candidate from S2847)
+- Bulk `workspace_budget_tool` operations (S2847 ledger candidate)
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2848 close for W1.5 accuracy)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2849 close for #2a accuracy)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **After W1.5:** operator can now cap A4-workspace directly via `workspace_budget_tool.set_cap` AND expect auto-enforcement at 70% (downgrade) / 100% (freeze) on the next periodic cycle.
-2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth" until drift-lint is shipped (S2846 ✓) AND A1 workspace attribution exists (S2846 ✓). **After W1.5:** full A1 W1 substrate is live — enforcement + attribution + operator surface all demonstrably shipped end-to-end.
-3. **No capability claims:** A4 outreach must make ZERO claims about invoicing, cost export, or SLA guarantees until A1 W2 ships. **After W1.5 (2026-07-20):** claims about "per-workspace daily caps with owner/staff-gated management + auto-enforcement at 70% soft / 100% hard tiers with hysteresis + full audit trail" are now accurate.
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **After #2a:** every workspace including A4 now has $5/day default; operator can raise/lower via `set_cap` OR change the default via `set_default_cap` + `backfill_defaults`.
+2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth" until drift-lint is shipped (S2846 ✓) AND A1 workspace attribution exists (S2846 ✓). **After #2a:** enforcement is now demonstrably live for all 16 existing workspaces at ratified default cap.
+3. **No capability claims:** A4 outreach must make ZERO claims about invoicing, cost export, or SLA guarantees until further W2 items ship. **After #2a (2026-07-20):** claims about "per-workspace daily caps at operator-configurable default with backfill, auto-enforcement at 70% soft / 100% hard tiers with hysteresis, and full audit trail" are now accurate.
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only (no "productized offering" language during the parallel period).
 5. **Hard throttle:** A4 warm-up is constrained to a fixed timebox and fixed send count (3-5 total intros); no expansion without explicit slate change.
 6. **No bespoke follow-ups:** A4 warm-up prohibits custom follow-ups / custom research / custom deliverables; allowed responses are one standard reply + optional meeting link only.
 
 ---
 
-## S2848 close — what shipped (one code PR + one docs cascade)
+## S2849 close — what shipped (one code PR + one docs cascade)
 
-**Repo canonical (Claude-authored, in merge order):**
-- **PR #3311** `b5e7b3e98` — A1 W1.5 downgrade-tier + Phase 2 auto-wire back-fill
-- **PR `<this docs cascade>`** — S2848 handoff + docs cascade refresh
+**Repo canonical (Claude-authored):**
+- **PR #3313** `60ec5f75e` — A1 W2 #2a defaults + backfill (squash of `a74a9bdbc` + `167a9b34d`)
+- **PR `<this docs cascade>`** — S2849 handoff + docs cascade refresh
 
-**Memory (Claude-authored):** No new memory entries needed at S2848; existing rules all reinforced by session evidence (see handoff §Memory hits + adherence).
+**Memory (Claude-authored):** No new memory entries needed at S2849; existing rules all reinforced by session evidence.
 
-**Workspace canonical:** Twin workspace mirror (content mirror + ratification envelope for this engineering ship) — Rigby writes via PA tool per `feedback_rigby_writes_workspace_deliverables` at close.
+**Workspace canonical:** Twin workspace mirror (content mirror + ratification envelope) — Rigby writes via PA tool per `feedback_rigby_writes_workspace_deliverables` at close.
 
 **Runtime impact:**
-- 158 tool handlers still (workspace_budget_tool action count went from 5 → 6 but is one handler); schema description grew
-- SystemConfiguration `workspace_downgrade_active:*` prefix keys now first-class managed via PA tool + autopilot cycle
-- 6 new AutopilotAction.ACTION_TYPES registered (2 W1.5 + 4 Phase 2/3 backfill)
-- New autopilot cycle iteration: per-workspace-cap loop in `_policy_budget_controller`
+- 3 new `workspace_budget_tool` actions (schema action-set grows 6 → 9); 1 handler surface additions
+- 4 new `BudgetController` methods (default cap get/set, effective cap resolver, backfill orchestrator)
+- 1 new `AutopilotAction` type (`workspace_default_cap_set`); 1 migration (`0391`)
+- 16/16 workspaces now enforce at $5/day (was 0/16)
+- Default cap `workspace_default_daily_cap=$5.0` in SystemConfiguration
 
-**Not shipped at S2848 close (deferred to S2849 or later):**
-- W2 scope (Step 2 above)
-- Drift-lint triage of the 69 DRIFT entries
-- Immediate-enforcement variant of set_cap (Rigby E2E observation)
+**Not shipped at S2849 close (deferred to S2850 or later):**
+- W2 #3 Reporting (Step 2 above)
+- PA tool for AutopilotAction querying (Rigby E2E STEP 13 gap)
+- Immediate-enforcement variant of set_cap (S2848 observation still open)
 - Live E2E of llm_enforcer hot-path model swap
+- W2 #1 UX polish / #2b templates / #2c ownership transfer / #4 A4 warm-up
 
 ---
 
-## For fuller A1 W1 arc context (spans S2846 → S2848)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2849)
 
 See:
-- **S2848 handoff (current):** `docs/handoffs/SESSION_2848_A1_W1_5_DOWNGRADE_TIER_SHIPPED.md`
+- **S2849 handoff (current):** `docs/handoffs/SESSION_2849_A1_W2_DEFAULTS_BACKFILL_SHIPPED.md`
+- **S2848 handoff:** `docs/handoffs/SESSION_2848_A1_W1_5_DOWNGRADE_TIER_SHIPPED.md`
 - **S2847 handoff:** `docs/handoffs/SESSION_2847_A1_W1_PHASE3_SHIPPED.md`
 - **S2846 handoff:** `docs/handoffs/SESSION_2846_A1_W1_PHASE1_PHASE2_SHIPPED.md`
 - **A4↔A1 ratification:** current `00-START-NEXT-SESSION.md` §A4 Constraints (this file, above)
