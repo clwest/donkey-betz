@@ -348,7 +348,11 @@ class LLMEnforcer:
                 # Use Claude
                 response = self._call_claude(full_prompt, max_tokens, temperature)
                 provider = "anthropic"
-                model = "claude-3-haiku"
+                # S2850 #3.0c: read effective_model from response so any
+                # provider-side reroute is recorded truthfully. Claude
+                # currently always returns 'claude-3-haiku' but the same
+                # channel is available if that changes.
+                model = response.get('effective_model', 'claude-3-haiku')
             elif self.openai_client:
                 # Session 129: Pass context separately so GPT can see project assets
                 # Session 129: Pass previous_response_id for chain of thought
@@ -356,7 +360,15 @@ class LLMEnforcer:
                 # Session 1036: Pass input_messages for structured Responses API input
                 response = self._call_openai(prompt, max_tokens, temperature, task_type, tools, context, previous_response_id, tool_choice, input_messages)
                 provider = "openai"
-                model = "gpt-5.2"  # Restored — outage resolved
+                # S2850 #3.0c: read effective_model from response instead
+                # of hardcoding 'gpt-5.2'. Semantic shift: model_id now
+                # reflects the ACTUAL model called (post budget/policy
+                # downgrade), not the originally-requested model. Prior
+                # behavior silently under-reported downgrade activity to
+                # zero in LLMCallLog + CostTracking. If a future report
+                # needs the requested-vs-effective split, add a
+                # requested_model_id field (migration required).
+                model = response.get('effective_model', 'gpt-5.2')
             else:
                 raise Exception("No LLM client available")
 
@@ -634,10 +646,17 @@ class LLMEnforcer:
             logger.warning(f"⚠️ Response likely truncated (heuristic): {output_tokens} output tokens (max: {max_tokens})")
 
         # Build response dict
+        # S2850 #3.0c: surface the ACTUAL model used (effective_model, which
+        # reflects any budget/policy downgrade) so the caller can persist it
+        # to LLMCallLog + CostTracking. Before this, model_id was hardcoded
+        # to 'gpt-5.2' by the caller regardless of what actually went out
+        # on the wire — silent tracking failure on every downgraded call
+        # since S2848 W1.5.
         result = {
             'content': content,
             'tokens': total_tokens,
             'cost': cost,
+            'effective_model': effective_model,
             'truncated': truncated,  # Session 266: Flag for continuation handling
             # Session 802: Add detailed token breakdown for CostTracking
             'input_tokens': input_tokens if usage else 0,
@@ -711,6 +730,9 @@ class LLMEnforcer:
             'content': content,
             'tokens': tokens,
             'cost': cost,
+            # S2850 #3.0c: surface the actual model used for LLMCallLog
+            # attribution symmetry with _call_openai's effective_model.
+            'effective_model': 'claude-3-haiku',
             # Session 802: Add detailed token breakdown for CostTracking
             'input_tokens': input_tokens,
             'output_tokens': output_tokens,
