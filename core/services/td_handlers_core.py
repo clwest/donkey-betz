@@ -3457,17 +3457,69 @@ RESEARCH DATA:
         if action == 'signal_clusters':
             try:
                 from core.models import SignalCluster
+                from django.db.models import Q
+                from django.utils import timezone
+                from datetime import timedelta
+
                 limit = min(int(payload.get('limit', 10)), 30)
-                clusters = SignalCluster.objects.order_by('-detected_at')[:limit]
+                qs = SignalCluster.objects.all()
+
+                query = (payload.get('query') or '').strip()
+                if query:
+                    terms = [t for t in query.split() if len(t) >= 3]
+                    q_filter = Q()
+                    for t in terms:
+                        q_filter |= Q(name__icontains=t) | Q(keywords__icontains=t)
+                    if q_filter:
+                        qs = qs.filter(q_filter)
+
+                pattern_type = payload.get('pattern_type')
+                if pattern_type:
+                    qs = qs.filter(pattern_type=pattern_type)
+
+                min_conf = payload.get('min_confidence')
+                if min_conf is not None:
+                    try:
+                        qs = qs.filter(confidence__gte=float(min_conf))
+                    except (TypeError, ValueError):
+                        pass
+
+                source = payload.get('source')
+                # Ignore search-context enum values ('kb', 'spider', 'web') that GPT-5.2
+                # auto-injects from the shared schema param; only apply real spider names.
+                if source and source not in ('kb', 'spider', 'web'):
+                    qs = qs.filter(source_breakdown__has_key=source)
+                    applied_source = source
+                else:
+                    applied_source = None
+
+                window_hours = payload.get('window_hours') or payload.get('hours')
+                if window_hours:
+                    try:
+                        cutoff = timezone.now() - timedelta(hours=int(window_hours))
+                        qs = qs.filter(detected_at__gte=cutoff)
+                    except (TypeError, ValueError):
+                        pass
+
+                clusters = qs.order_by('-detected_at')[:limit]
                 return _tag({
                     'action': 'signal_clusters',
                     'count': len(clusters),
+                    'filters_applied': {
+                        'query': query or None,
+                        'pattern_type': pattern_type,
+                        'min_confidence': min_conf,
+                        'source': applied_source,
+                        'window_hours': window_hours,
+                    },
                     'clusters': [{
                         'id': str(c.id),
                         'name': c.name,
                         'pattern_type': c.pattern_type,
                         'signal_count': len(c.spider_data_ids) if c.spider_data_ids else 0,
                         'confidence': c.confidence if hasattr(c, 'confidence') else None,
+                        'keywords': c.keywords[:5] if c.keywords else [],
+                        'source_breakdown': c.source_breakdown or {},
                         'detected_at': c.detected_at.isoformat() if c.detected_at else None,
                     } for c in clusters],
                 })
