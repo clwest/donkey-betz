@@ -831,6 +831,12 @@ class UnifiedPAEntrypoint:
         ``execution_id`` (satisfies §3.3 verification query #3 —
         retry chain).
         """
+        # Session 2846 (A1 W1) — auto-inject the PA user so the enforcer
+        # can resolve workspace via workspace_resolver and attach it to
+        # LLMCallLog for per-workspace attribution. Callers that already
+        # pass `user` explicitly (rare) win via setdefault semantics.
+        enforcer_kwargs.setdefault("user", getattr(self, "user", None))
+
         if pa_execution is None:
             # Flag OFF — bypass the wrapper (rollback contract).
             return await asyncio.to_thread(
