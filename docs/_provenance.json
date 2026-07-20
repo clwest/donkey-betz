@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-19T23:52:08+00:00",
+    "generated": "2026-07-20T01:13:35+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "6f0db5879cf7",
-    "doc_count": 2707,
-    "commit_count": 8172,
+    "git_head": "8e5af892ed93",
+    "doc_count": 2711,
+    "commit_count": 8173,
     "confidence_breakdown": {
-      "HIGH": 1699,
+      "HIGH": 1700,
       "MEDIUM": 408,
-      "LOW": 38,
+      "LOW": 41,
       "UNKNOWN": 562
     },
     "excludes": [
@@ -416,9 +416,10 @@
         1137,
         1142
       ],
-      "commit_count": 3,
+      "commit_count": 4,
       "prs": [
-        2178
+        2178,
+        3292
       ]
     },
     "docs/AGENTS.md": {
@@ -2594,7 +2595,7 @@
         2808,
         2830
       ],
-      "commit_count": 1395,
+      "commit_count": 1396,
       "prs": [
         10,
         11,
@@ -3242,7 +3243,8 @@
         3287,
         3288,
         3289,
-        3291
+        3291,
+        3292
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7610,7 +7612,7 @@
         2808,
         2830
       ],
-      "commit_count": 335,
+      "commit_count": 336,
       "prs": [
         2213,
         2219,
@@ -7857,7 +7859,8 @@
         3287,
         3288,
         3289,
-        3291
+        3291,
+        3292
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21125,6 +21128,34 @@
         2804,
         3290
       ]
+    },
+    "docs/handoffs/SESSION_2839_T5_REPORTS_AUDITS_TRIAGE.md": {
+      "originating_session": 2839,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "8e5af892",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(audit): S2839 T5 \u2014 Group 2800 /docs/ reports+audits triage RATIFIED \u00b7 arc COMPLETE 7/7 \u00b7 AEP v0.1 Stage 2 authorized \u00b7 PA output-token cap raised (#3292)",
+      "sessions_touched": [
+        2839
+      ],
+      "commit_count": 1,
+      "prs": [
+        3292
+      ]
+    },
+    "docs/handoffs/SESSION_2840_2899_CANONICAL_SUMMARY_RATIFIED.md": {
+      "originating_session": 2840,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2840
+      ],
+      "commit_count": 0,
+      "prs": []
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
       "originating_session": 293,
@@ -36213,7 +36244,7 @@
         2499,
         2500
       ],
-      "commit_count": 122,
+      "commit_count": 123,
       "prs": [
         2773,
         2775,
@@ -36312,7 +36343,8 @@
         3282,
         3284,
         3286,
-        3290
+        3290,
+        3292
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -37051,11 +37083,26 @@
       "originating_session": 2839,
       "confidence": "LOW",
       "match_source": "frontmatter",
+      "first_commit_sha": "8e5af892",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(audit): S2839 T5 \u2014 Group 2800 /docs/ reports+audits triage RATIFIED \u00b7 arc COMPLETE 7/7 \u00b7 AEP v0.1 Stage 2 authorized \u00b7 PA output-token cap raised (#3292)",
+      "sessions_touched": [
+        2839
+      ],
+      "commit_count": 1,
+      "prs": [
+        3292
+      ]
+    },
+    "docs/research/domains/docs_content_audit/2899_docs_content_canonical_summary.md": {
+      "originating_session": 2840,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
       "first_commit_sha": null,
       "first_commit_date": null,
       "first_commit_subject": null,
       "sessions_touched": [
-        2839
+        2840
       ],
       "commit_count": 0,
       "prs": []
@@ -38947,11 +38994,26 @@
       "originating_session": 2839,
       "confidence": "LOW",
       "match_source": "frontmatter",
+      "first_commit_sha": "8e5af892",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(audit): S2839 T5 \u2014 Group 2800 /docs/ reports+audits triage RATIFIED \u00b7 arc COMPLETE 7/7 \u00b7 AEP v0.1 Stage 2 authorized \u00b7 PA output-token cap raised (#3292)",
+      "sessions_touched": [
+        2839
+      ],
+      "commit_count": 1,
+      "prs": [
+        3292
+      ]
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-19_2899_docs_content_canonical_summary.md": {
+      "originating_session": 2840,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
       "first_commit_sha": null,
       "first_commit_date": null,
       "first_commit_subject": null,
       "sessions_touched": [
-        2839
+        2840
       ],
       "commit_count": 0,
       "prs": []
