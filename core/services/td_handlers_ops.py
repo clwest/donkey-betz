@@ -3838,6 +3838,212 @@ class OpsHandlersMixin:
                 f"backfill_failure_reasons"
             )
 
+    def _handle_workspace_budget(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str,
+    ) -> Dict[str, Any]:
+        """S2847 A1 W1 Phase 3 — per-workspace budget cap management.
+
+        Actions: set_cap / get_status / clear_freeze / list_caps / clear_cap.
+        Mutations require caller to own the workspace or be staff, and are
+        recorded as AutopilotAction rows for symmetric visibility with the
+        automatic enforce_workspace_freeze audit trail.
+        """
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone as tz
+        from core.services.ops_autopilot.budget import BudgetController
+        from core.models_skin_layer import ProjectWorkspace
+
+        action = payload.get('action', 'get_status')
+        workspace_id = payload.get('workspace_id')
+        daily_cap_usd = payload.get('daily_cap_usd')
+
+        controller = BudgetController()
+        now = tz.now()
+
+        def _resolve_workspace(wid):
+            """Return ProjectWorkspace or an error dict — never raises."""
+            if not wid:
+                return None, {
+                    'error': 'workspace_id is required for this action',
+                }
+            try:
+                return ProjectWorkspace.objects.get(id=wid), None
+            except (ProjectWorkspace.DoesNotExist, ValueError):
+                return None, {
+                    'error': f'workspace_id {wid!r} not found',
+                }
+
+        def _authorize_mutation(workspace):
+            """True/error dict — caller must own workspace or be staff."""
+            if user_id is None:
+                return {
+                    'error': (
+                        'authentication required for workspace_budget mutations'
+                    ),
+                }
+            if workspace.user_id == user_id:
+                return None
+            try:
+                User = get_user_model()
+                actor = User.objects.get(id=user_id)
+            except Exception:
+                return {
+                    'error': f'actor user_id={user_id} not found',
+                }
+            if getattr(actor, 'is_staff', False):
+                return None
+            return {
+                'error': (
+                    f'user_id={user_id} is not owner of workspace '
+                    f'{workspace.id} and is not staff — mutation denied'
+                ),
+            }
+
+        if action == 'get_status':
+            workspace, err = _resolve_workspace(workspace_id)
+            if err is not None:
+                return {'action': action, **err}
+            spend = controller.compute_workspace_spend(now, workspace_id=workspace.id)
+            cap = controller.get_workspace_daily_cap(workspace.id)
+            is_frozen = controller.is_workspace_frozen(workspace.id)
+            return {
+                'action': action,
+                'workspace_id': str(workspace.id),
+                'workspace_name': workspace.name,
+                'cap': cap,
+                'daily_total': spend['daily_total'],
+                'daily_calls': spend['daily_calls'],
+                'hourly_total': spend['hourly_total'],
+                'hourly_calls': spend['hourly_calls'],
+                'is_frozen': is_frozen,
+                'enforcement_tier': 'freeze_only',
+                'window_note': (
+                    'daily = last 24h sliding window (not calendar day)'
+                ),
+            }
+
+        if action == 'list_caps':
+            rows = controller.list_workspace_caps()
+            enriched = []
+            for row in rows:
+                wid = row['workspace_id']
+                try:
+                    ws = ProjectWorkspace.objects.get(id=wid)
+                    name = ws.name
+                except (ProjectWorkspace.DoesNotExist, ValueError):
+                    name = None
+                spend = controller.compute_workspace_spend(
+                    now, workspace_id=wid,
+                )
+                enriched.append({
+                    'workspace_id': wid,
+                    'workspace_name': name,
+                    'cap': row['cap'],
+                    'daily_total': spend['daily_total'],
+                    'is_frozen': controller.is_workspace_frozen(wid),
+                })
+            return {
+                'action': action,
+                'count': len(enriched),
+                'workspaces': enriched,
+                'enforcement_tier': 'freeze_only',
+                'window_note': (
+                    'daily = last 24h sliding window (not calendar day)'
+                ),
+            }
+
+        if action == 'set_cap':
+            workspace, err = _resolve_workspace(workspace_id)
+            if err is not None:
+                return {'action': action, **err}
+            auth_err = _authorize_mutation(workspace)
+            if auth_err is not None:
+                return {'action': action, **auth_err}
+            if daily_cap_usd is None:
+                return {
+                    'action': action,
+                    'error': 'daily_cap_usd is required for set_cap',
+                }
+            try:
+                result = controller.set_workspace_daily_cap(
+                    workspace.id, daily_cap_usd, actor_user_id=user_id,
+                )
+            except ValueError as e:
+                return {'action': action, 'error': str(e)}
+            spend = controller.compute_workspace_spend(now, workspace_id=workspace.id)
+            is_frozen = controller.is_workspace_frozen(workspace.id)
+            warning = None
+            if is_frozen and result['cap'] > spend['daily_total']:
+                warning = (
+                    'workspace is currently frozen but cap now exceeds 24h '
+                    'spend — call clear_freeze to resume non-critical calls'
+                )
+            return {
+                'action': action,
+                'workspace_id': str(workspace.id),
+                'workspace_name': workspace.name,
+                **result,
+                'daily_total': spend['daily_total'],
+                'is_frozen': is_frozen,
+                'warning': warning,
+            }
+
+        if action == 'clear_cap':
+            workspace, err = _resolve_workspace(workspace_id)
+            if err is not None:
+                return {'action': action, **err}
+            auth_err = _authorize_mutation(workspace)
+            if auth_err is not None:
+                return {'action': action, **auth_err}
+            cleared = controller.clear_workspace_daily_cap(
+                workspace.id, actor_user_id=user_id,
+            )
+            return {
+                'action': action,
+                'workspace_id': str(workspace.id),
+                'workspace_name': workspace.name,
+                'cleared': cleared,
+                'note': (
+                    'freeze flag (if any) is NOT cleared — call '
+                    'clear_freeze explicitly to unfreeze'
+                    if cleared else 'no cap was configured for this workspace'
+                ),
+            }
+
+        if action == 'clear_freeze':
+            workspace, err = _resolve_workspace(workspace_id)
+            if err is not None:
+                return {'action': action, **err}
+            auth_err = _authorize_mutation(workspace)
+            if auth_err is not None:
+                return {'action': action, **auth_err}
+            cleared = controller.clear_workspace_freeze(
+                workspace.id, actor_user_id=user_id,
+            )
+            return {
+                'action': action,
+                'workspace_id': str(workspace.id),
+                'workspace_name': workspace.name,
+                'cleared': cleared,
+                'note': (
+                    'freeze cleared — non-critical LLM calls resume for '
+                    'this workspace'
+                    if cleared else 'workspace was not frozen (no-op)'
+                ),
+            }
+
+        return {
+            'action': action,
+            'error': (
+                f'Unknown workspace_budget_tool action: {action!r}. '
+                f'Valid: set_cap, get_status, clear_freeze, list_caps, clear_cap.'
+            ),
+        }
+
     def _handle_ops_digest(
         self,
         tool_name: str,
