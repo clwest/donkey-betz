@@ -465,6 +465,13 @@ class BudgetController:
     # small caps where a single call could cross 70% and drop back.
     _WORKSPACE_DOWNGRADE_CLEAR_PCT = 0.60
 
+    # S2849 W2 #2a — global default cap key. Lazy fallback: workspaces
+    # without an explicit workspace_daily_cap:<uuid> row use this value
+    # via get_effective_workspace_daily_cap(). Autopilot enforcement is
+    # still caps-only (iterates list_workspace_caps), so backfill_defaults
+    # is required to bring existing workspaces under enforcement.
+    _WORKSPACE_DEFAULT_CAP_KEY = 'workspace_default_daily_cap'
+
     def compute_workspace_spend(self, now, workspace_id=None) -> dict:
         """Per-workspace spend from LLMCallLog.
 
@@ -503,9 +510,11 @@ class BudgetController:
     def get_workspace_daily_cap(self, workspace_id):
         """Look up the per-workspace daily cap ($ USD) from SystemConfiguration.
 
-        Returns float or None (no cap set). Falls back to global cap
-        semantics — a workspace without an explicit cap gets only the
-        global protection tier.
+        Returns the EXPLICIT cap (float) or None (no per-workspace cap
+        row). Does NOT fall back to the global default — that's what
+        get_effective_workspace_daily_cap is for. Autopilot enforcement
+        and the existing operator surfaces intentionally read explicit
+        caps only.
         """
         if workspace_id is None:
             return None
@@ -528,6 +537,96 @@ class BudgetController:
                 workspace_id, entry,
             )
             return None
+
+    def get_workspace_default_cap(self):
+        """Read the global default per-workspace daily cap ($ USD).
+
+        S2849 W2 #2a. Returns float or None when unset. Operator
+        configurable via workspace_budget_tool.set_default_cap.
+        """
+        from core.models.system import SystemConfiguration
+        entry = (
+            SystemConfiguration.objects
+            .filter(key=self._WORKSPACE_DEFAULT_CAP_KEY)
+            .values_list('value', flat=True)
+            .first()
+        )
+        if entry is None:
+            return None
+        try:
+            return float(entry)
+        except (TypeError, ValueError):
+            logger.warning(
+                "BudgetController: workspace_default_daily_cap value=%r "
+                "is not a valid float — treating as unset",
+                entry,
+            )
+            return None
+
+    def set_workspace_default_cap(self, cap, actor_user_id=None):
+        """Write/update the global default per-workspace daily cap.
+
+        S2849 W2 #2a. cap must be > 0. Writes an AutopilotAction row
+        when actor_user_id is provided so operator changes are audit-
+        trailed alongside set_workspace_daily_cap events.
+        """
+        try:
+            cap = float(cap)
+        except (TypeError, ValueError):
+            raise ValueError(f"default cap must be a float, got {cap!r}")
+        if cap <= 0:
+            raise ValueError(f"default cap must be > 0, got {cap}")
+        from core.models.system import SystemConfiguration
+        previous = self.get_workspace_default_cap()
+        SystemConfiguration.objects.update_or_create(
+            key=self._WORKSPACE_DEFAULT_CAP_KEY,
+            defaults={
+                'value': cap,
+                'description': (
+                    'Global default per-workspace daily cap ($ USD). '
+                    'Lazy fallback for workspaces without an explicit '
+                    'workspace_daily_cap:<uuid>. Enforcement still '
+                    'requires backfill_defaults to write explicit rows.'
+                ),
+                'category': 'performance',
+            },
+        )
+        changed = previous != cap
+        logger.info(
+            "[BudgetController] Set workspace default daily cap — "
+            "cap=$%.2f (previous=%s, changed=%s)",
+            cap, previous, changed,
+        )
+        if actor_user_id is not None and changed:
+            AutopilotAction.objects.create(
+                action_type='workspace_default_cap_set',
+                agent_name='workspace_budget_tool',
+                policy='workspace_budget_tool',
+                dry_run=False,
+                evidence={
+                    'actor_user_id': str(actor_user_id),
+                    'previous_cap': previous,
+                },
+                result={'cap': cap, 'previous_cap': previous},
+            )
+        return {'cap': cap, 'previous_cap': previous, 'changed': changed}
+
+    def get_effective_workspace_daily_cap(self, workspace_id):
+        """Return {cap, source} where source is 'explicit', 'default', or 'unset'.
+
+        S2849 W2 #2a. Read-only view combining the explicit per-workspace
+        cap with the global default fallback. Used by operator surfaces
+        (get_status, list_caps with include_defaults=True) to make the
+        distinction visible. Autopilot enforcement does NOT read this —
+        the cycle only iterates workspaces with explicit caps set.
+        """
+        explicit = self.get_workspace_daily_cap(workspace_id)
+        if explicit is not None:
+            return {'cap': explicit, 'source': 'explicit'}
+        default = self.get_workspace_default_cap()
+        if default is not None:
+            return {'cap': default, 'source': 'default'}
+        return {'cap': None, 'source': 'unset'}
 
     def enforce_workspace_freeze(self, spend, now, workspace_id):
         """Freeze the given workspace when its daily spend crosses its cap.
@@ -934,6 +1033,178 @@ class BudgetController:
                 continue
             out.append({'workspace_id': workspace_id, 'cap': cap})
         return out
+
+    def backfill_workspace_defaults(
+        self,
+        default_cap=None,
+        include_workspace_ids=None,
+        exclude_workspace_ids=None,
+        force=False,
+        dry_run=True,
+        actor_user_id=None,
+    ) -> dict:
+        """Write the default cap to workspaces missing an explicit cap.
+
+        S2849 W2 #2a. Autopilot enforcement iterates only workspaces with
+        explicit workspace_daily_cap:<uuid> rows (see _policy_budget_
+        controller in core.py). Lazy defaults alone do not bring
+        unconfigured workspaces under enforcement; this method makes the
+        default explicit for the current 16-workspace population.
+
+        Args:
+            default_cap: cap value ($ USD) to write. When None, reads
+                get_workspace_default_cap(). Raises ValueError if both
+                are unset.
+            include_workspace_ids: iterable of workspace UUIDs to touch.
+                When None, considers all ProjectWorkspace rows.
+            exclude_workspace_ids: iterable of workspace UUIDs to skip.
+                Applied after include filter.
+            force: when False (default), skip workspaces that already
+                have an explicit cap. When True, overwrite them with
+                default_cap.
+            dry_run: when True (default), plan only — no writes. Return
+                shape includes 'planned' list.
+            actor_user_id: staff/owner id for audit. Passed through to
+                set_workspace_daily_cap so per-workspace writes emit
+                workspace_cap_set actions with the actor.
+
+        Returns:
+            dict with counts + per-workspace details:
+              {
+                'dry_run': bool,
+                'default_cap': float,
+                'total_workspaces': int,
+                'planned': int,        # would-write count
+                'wrote': int,          # actual writes (0 when dry_run)
+                'skipped_existing': int,
+                'skipped_excluded': int,
+                'skipped_not_included': int,
+                'errors': int,
+                'details': [{workspace_id, workspace_name, action,
+                             previous_cap, new_cap, error?}],
+              }
+        """
+        from core.models_skin_layer import ProjectWorkspace
+
+        if default_cap is None:
+            default_cap = self.get_workspace_default_cap()
+        if default_cap is None:
+            raise ValueError(
+                "backfill_workspace_defaults: no default_cap passed and "
+                "workspace_default_daily_cap is unset — set the global "
+                "default first or pass default_cap explicitly"
+            )
+        try:
+            default_cap = float(default_cap)
+        except (TypeError, ValueError):
+            raise ValueError(
+                f"default_cap must be a float, got {default_cap!r}"
+            )
+        if default_cap <= 0:
+            raise ValueError(
+                f"default_cap must be > 0, got {default_cap}"
+            )
+
+        # Empty list from OpenAI function-calling (models often pass [] for
+        # optional array params rather than omitting) is treated as "no
+        # filter" — the alternative (empty-set = match-none) blocks every
+        # workspace and produces zero writes, which is never what the
+        # operator wants when they didn't specify an allowlist.
+        include_set = (
+            {str(w) for w in include_workspace_ids}
+            if include_workspace_ids else None
+        )
+        exclude_set = (
+            {str(w) for w in exclude_workspace_ids}
+            if exclude_workspace_ids else set()
+        )
+
+        result = {
+            'dry_run': bool(dry_run),
+            'default_cap': default_cap,
+            'total_workspaces': 0,
+            'planned': 0,
+            'wrote': 0,
+            'skipped_existing': 0,
+            'skipped_excluded': 0,
+            'skipped_not_included': 0,
+            'errors': 0,
+            'details': [],
+        }
+
+        for ws in ProjectWorkspace.objects.all().only('id', 'name'):
+            result['total_workspaces'] += 1
+            wid = str(ws.id)
+
+            if include_set is not None and wid not in include_set:
+                result['skipped_not_included'] += 1
+                continue
+            if wid in exclude_set:
+                result['skipped_excluded'] += 1
+                result['details'].append({
+                    'workspace_id': wid,
+                    'workspace_name': ws.name,
+                    'action': 'skipped_excluded',
+                })
+                continue
+
+            existing = self.get_workspace_daily_cap(ws.id)
+            if existing is not None and not force:
+                result['skipped_existing'] += 1
+                result['details'].append({
+                    'workspace_id': wid,
+                    'workspace_name': ws.name,
+                    'action': 'skipped_existing',
+                    'previous_cap': existing,
+                })
+                continue
+
+            result['planned'] += 1
+            if dry_run:
+                result['details'].append({
+                    'workspace_id': wid,
+                    'workspace_name': ws.name,
+                    'action': 'would_write',
+                    'previous_cap': existing,
+                    'new_cap': default_cap,
+                })
+                continue
+
+            try:
+                write_result = self.set_workspace_daily_cap(
+                    ws.id, default_cap, actor_user_id=actor_user_id,
+                )
+                result['wrote'] += 1
+                result['details'].append({
+                    'workspace_id': wid,
+                    'workspace_name': ws.name,
+                    'action': 'wrote',
+                    'previous_cap': write_result['previous_cap'],
+                    'new_cap': write_result['cap'],
+                    'changed': write_result['changed'],
+                })
+            except Exception as e:
+                result['errors'] += 1
+                result['details'].append({
+                    'workspace_id': wid,
+                    'workspace_name': ws.name,
+                    'action': 'error',
+                    'error': f'{type(e).__name__}: {e}',
+                })
+                logger.error(
+                    "[BudgetController] backfill_workspace_defaults error "
+                    "for workspace_id=%s: %s", wid, e,
+                )
+
+        logger.info(
+            "[BudgetController] backfill_workspace_defaults complete: "
+            "dry_run=%s, planned=%d, wrote=%d, skipped_existing=%d, "
+            "skipped_excluded=%d, errors=%d",
+            dry_run, result['planned'], result['wrote'],
+            result['skipped_existing'], result['skipped_excluded'],
+            result['errors'],
+        )
+        return result
 
     def clear_budget_flags(self):
         """Clear downgrade/freeze flags when spend is back to normal."""
