@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-20T01:13:35+00:00",
+    "generated": "2026-07-20T02:29:18+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "8e5af892ed93",
+    "git_head": "63306c21005a",
     "doc_count": 2711,
-    "commit_count": 8173,
+    "commit_count": 8175,
     "confidence_breakdown": {
-      "HIGH": 1700,
+      "HIGH": 1701,
       "MEDIUM": 408,
-      "LOW": 41,
+      "LOW": 40,
       "UNKNOWN": 562
     },
     "excludes": [
@@ -2595,7 +2595,7 @@
         2808,
         2830
       ],
-      "commit_count": 1396,
+      "commit_count": 1398,
       "prs": [
         10,
         11,
@@ -3244,7 +3244,8 @@
         3288,
         3289,
         3291,
-        3292
+        3292,
+        3293
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7612,7 +7613,7 @@
         2808,
         2830
       ],
-      "commit_count": 336,
+      "commit_count": 338,
       "prs": [
         2213,
         2219,
@@ -7860,7 +7861,8 @@
         3288,
         3289,
         3291,
-        3292
+        3292,
+        3293
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21146,16 +21148,18 @@
     },
     "docs/handoffs/SESSION_2840_2899_CANONICAL_SUMMARY_RATIFIED.md": {
       "originating_session": 2840,
-      "confidence": "LOW",
-      "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "63306c21",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(audit): S2840 \u2014 Group 2800 arc close \u00b7 2899 canonical summary RATIFIED \u00b7 \u00a710.1 v1.2 adopted \u00b7 4 Playbook v0.9 candidates queued \u00b7 post-2899 execution arc scoped (#3293)",
       "sessions_touched": [
         2840
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3293
+      ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
       "originating_session": 293,
@@ -36244,7 +36248,7 @@
         2499,
         2500
       ],
-      "commit_count": 123,
+      "commit_count": 125,
       "prs": [
         2773,
         2775,
@@ -36344,7 +36348,8 @@
         3284,
         3286,
         3290,
-        3292
+        3292,
+        3293
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -37098,14 +37103,16 @@
       "originating_session": 2840,
       "confidence": "LOW",
       "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "first_commit_sha": "63306c21",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(audit): S2840 \u2014 Group 2800 arc close \u00b7 2899 canonical summary RATIFIED \u00b7 \u00a710.1 v1.2 adopted \u00b7 4 Playbook v0.9 candidates queued \u00b7 post-2899 execution arc scoped (#3293)",
       "sessions_touched": [
         2840
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3293
+      ]
     },
     "docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md": {
       "originating_session": 2801,
@@ -39009,14 +39016,16 @@
       "originating_session": 2840,
       "confidence": "LOW",
       "match_source": "frontmatter",
-      "first_commit_sha": null,
-      "first_commit_date": null,
-      "first_commit_subject": null,
+      "first_commit_sha": "63306c21",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(audit): S2840 \u2014 Group 2800 arc close \u00b7 2899 canonical summary RATIFIED \u00b7 \u00a710.1 v1.2 adopted \u00b7 4 Playbook v0.9 candidates queued \u00b7 post-2899 execution arc scoped (#3293)",
       "sessions_touched": [
         2840
       ],
-      "commit_count": 0,
-      "prs": []
+      "commit_count": 2,
+      "prs": [
+        3293
+      ]
     },
     "docs/research/implementation/RATIFICATION_2026-07-19_agent_exchange_protocol_v0_1.md": {
       "originating_session": 2838,
