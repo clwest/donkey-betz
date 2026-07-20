@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "generated": "2026-07-19T22:29:07+00:00",
+    "generated": "2026-07-19T23:52:08+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "22d7ba71b590",
-    "doc_count": 2703,
-    "commit_count": 8170,
+    "git_head": "6f0db5879cf7",
+    "doc_count": 2707,
+    "commit_count": 8172,
     "confidence_breakdown": {
       "HIGH": 1699,
       "MEDIUM": 408,
-      "LOW": 34,
+      "LOW": 38,
       "UNKNOWN": 562
     },
     "excludes": [
@@ -2594,7 +2594,7 @@
         2808,
         2830
       ],
-      "commit_count": 1393,
+      "commit_count": 1395,
       "prs": [
         10,
         11,
@@ -3241,7 +3241,8 @@
         3286,
         3287,
         3288,
-        3289
+        3289,
+        3291
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7609,7 +7610,7 @@
         2808,
         2830
       ],
-      "commit_count": 333,
+      "commit_count": 335,
       "prs": [
         2213,
         2219,
@@ -7855,7 +7856,8 @@
         3286,
         3287,
         3288,
-        3289
+        3289,
+        3291
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -37045,6 +37047,19 @@
         3290
       ]
     },
+    "docs/research/domains/docs_content_audit/2805_docs_content_reports_audits_triage.md": {
+      "originating_session": 2839,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2839
+      ],
+      "commit_count": 0,
+      "prs": []
+    },
     "docs/research/domains/docs_restructuring/2700_docs_restructuring_domain_scoping.md": {
       "originating_session": 2801,
       "confidence": "LOW",
@@ -38928,6 +38943,34 @@
         3290
       ]
     },
+    "docs/research/implementation/RATIFICATION_2026-07-19_2805_docs_content_reports_audits_triage.md": {
+      "originating_session": 2839,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": null,
+      "first_commit_date": null,
+      "first_commit_subject": null,
+      "sessions_touched": [
+        2839
+      ],
+      "commit_count": 0,
+      "prs": []
+    },
+    "docs/research/implementation/RATIFICATION_2026-07-19_agent_exchange_protocol_v0_1.md": {
+      "originating_session": 2838,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "6f0db587",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(architecture): AEP v0.1 design proposal RATIFIED (Chris commission + Chris D-verdict; Stage 1 trial authorized at S2839 T5 cycle 1) (#3291)",
+      "sessions_touched": [
+        2838
+      ],
+      "commit_count": 2,
+      "prs": [
+        3291
+      ]
+    },
     "docs/research/implementation/observability_spine_mission_evidence_substrate/I-010099_observability_spine_implementation_close.md": {
       "originating_session": null,
       "confidence": "UNKNOWN",
@@ -39287,6 +39330,21 @@
       "prs": [
         3082,
         3083
+      ]
+    },
+    "docs/research/platform/AGENT_EXCHANGE_PROTOCOL_v0_1_proposal.md": {
+      "originating_session": 2838,
+      "confidence": "LOW",
+      "match_source": "frontmatter",
+      "first_commit_sha": "6f0db587",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(architecture): AEP v0.1 design proposal RATIFIED (Chris commission + Chris D-verdict; Stage 1 trial authorized at S2839 T5 cycle 1) (#3291)",
+      "sessions_touched": [
+        2838
+      ],
+      "commit_count": 2,
+      "prs": [
+        3291
       ]
     },
     "docs/research/platform/CDR_001_notification_fanout_receiver_driven_pattern.md": {

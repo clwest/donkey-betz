@@ -51,38 +51,38 @@
 
 ## Domain specialists (30)
 
-| Name | Title | Domain | Expertise | Years |
-|---|---|---|:-:|---:|
-| AI & Machine Learning Strategist | AI & Machine Learning Strategist | `ai_ml_strategy` | `legend` | 12 |
-| AI & Startup Strategy Expert | AI & Startup Strategy Expert | `ai_ml_strategy` | `legend` | 15 |
-| Strategic Business Advisor | Strategic Business Advisor | `business_strategy` | `expert` | 14 |
-| Executive Career Strategist | Executive Career Strategist | `career_coaching` | `master` | 18 |
-| Creator Economy Strategist | Creator Economy Strategist | `content_strategy` | `legend` | 10 |
-| Blockchain & Crypto Strategist | Blockchain & Crypto Strategist | `crypto_analysis` | `master` | 8 |
-| Cybersecurity Operations Expert | Cybersecurity Operations Expert | `cybersecurity` | `legend` | 30 |
-| Data Strategy & ML Practitioner | Data Strategy & ML Practitioner | `data_strategy` | `legend` | 25 |
-| Education Technology Pioneer | Education Technology Pioneer | `education_strategy` | `legend` | 15 |
-| Senior Financial Strategist | Senior Financial Strategist | `financial_planning` | `expert` | 12 |
-| Longevity & Healthcare Strategist | Longevity & Healthcare Strategist | `healthcare_strategy` | `legend` | 20 |
-| Senior Intellectual Property Counsel | Senior Intellectual Property Counsel | `intellectual_property` | `master` | 17 |
-| Innovation Investment Strategist | Innovation Investment Strategist | `investment_strategy` | `legend` | 40 |
-| Value Investing Strategist | Value Investing Strategist | `investment_strategy` | `legend` | 60 |
-| Executive Leadership Coach | Executive Leadership Coach | `leadership_development` | `master` | 22 |
-| Corporate Legal Strategist | Corporate Legal Strategist | `legal_counsel` | `expert` | 13 |
-| Digital Marketing & Brand Strategist | Digital Marketing & Brand Strategist | `marketing_strategy` | `legend` | 20 |
-| Master Negotiation Specialist | Master Negotiation Specialist | `negotiation_strategy` | `legend` | 24 |
-| Operations & Supply-Chain Strategist | Operations & Supply-Chain Strategist | `operations_management` | `legend` | 35 |
-| Options Trading Master | Options Trading Master | `options_trading` | `legend` | 18 |
-| First-Principles Engineering Advisor | First-Principles Engineering Advisor | `product_development` | `legend` | 25 |
-| Real Estate Investment Strategist | Real Estate Investment Strategist | `real_estate` | `legend` | 25 |
-| Regulatory & Compliance Strategist | Regulatory & Compliance Strategist | `regulatory_compliance` | `master` | 19 |
-| Macro Economic Strategist | Macro Economic Strategist | `risk_management` | `legend` | 45 |
-| Sales & Real Estate Strategist | Sales & Real Estate Strategist | `sales_optimization` | `legend` | 30 |
-| Sports Analytics & Betting Expert | Sports Analytics & Betting Expert | `sports_analytics` | `master` | 10 |
-| Sports Analytics Pioneer | Sports Analytics Pioneer | `sports_analytics` | `legend` | 30 |
-| Sports Betting Quant | Sports Betting Quant | `sports_analytics` | `legend` | 20 |
-| Startup & Venture Advisor | Startup & Venture Advisor | `startup_consulting` | `master` | 16 |
-| Chief Technology Architect | Chief Technology Architect | `technical_architecture` | `master` | 15 |
+| Name                                 | Title                                | Domain                   | Expertise | Years |
+| ------------------------------------ | ------------------------------------ | ------------------------ | :-------: | ----: |
+| AI & Machine Learning Strategist     | AI & Machine Learning Strategist     | `ai_ml_strategy`         | `legend`  |    12 |
+| AI & Startup Strategy Expert         | AI & Startup Strategy Expert         | `ai_ml_strategy`         | `legend`  |    15 |
+| Strategic Business Advisor           | Strategic Business Advisor           | `business_strategy`      | `expert`  |    14 |
+| Executive Career Strategist          | Executive Career Strategist          | `career_coaching`        | `master`  |    18 |
+| Creator Economy Strategist           | Creator Economy Strategist           | `content_strategy`       | `legend`  |    10 |
+| Blockchain & Crypto Strategist       | Blockchain & Crypto Strategist       | `crypto_analysis`        | `master`  |     8 |
+| Cybersecurity Operations Expert      | Cybersecurity Operations Expert      | `cybersecurity`          | `legend`  |    30 |
+| Data Strategy & ML Practitioner      | Data Strategy & ML Practitioner      | `data_strategy`          | `legend`  |    25 |
+| Education Technology Pioneer         | Education Technology Pioneer         | `education_strategy`     | `legend`  |    15 |
+| Senior Financial Strategist          | Senior Financial Strategist          | `financial_planning`     | `expert`  |    12 |
+| Longevity & Healthcare Strategist    | Longevity & Healthcare Strategist    | `healthcare_strategy`    | `legend`  |    20 |
+| Senior Intellectual Property Counsel | Senior Intellectual Property Counsel | `intellectual_property`  | `master`  |    17 |
+| Innovation Investment Strategist     | Innovation Investment Strategist     | `investment_strategy`    | `legend`  |    40 |
+| Value Investing Strategist           | Value Investing Strategist           | `investment_strategy`    | `legend`  |    60 |
+| Executive Leadership Coach           | Executive Leadership Coach           | `leadership_development` | `master`  |    22 |
+| Corporate Legal Strategist           | Corporate Legal Strategist           | `legal_counsel`          | `expert`  |    13 |
+| Digital Marketing & Brand Strategist | Digital Marketing & Brand Strategist | `marketing_strategy`     | `legend`  |    20 |
+| Master Negotiation Specialist        | Master Negotiation Specialist        | `negotiation_strategy`   | `legend`  |    24 |
+| Operations & Supply-Chain Strategist | Operations & Supply-Chain Strategist | `operations_management`  | `legend`  |    35 |
+| Options Trading Master               | Options Trading Master               | `options_trading`        | `legend`  |    18 |
+| First-Principles Engineering Advisor | First-Principles Engineering Advisor | `product_development`    | `legend`  |    25 |
+| Real Estate Investment Strategist    | Real Estate Investment Strategist    | `real_estate`            | `legend`  |    25 |
+| Regulatory & Compliance Strategist   | Regulatory & Compliance Strategist   | `regulatory_compliance`  | `master`  |    19 |
+| Macro Economic Strategist            | Macro Economic Strategist            | `risk_management`        | `legend`  |    45 |
+| Sales & Real Estate Strategist       | Sales & Real Estate Strategist       | `sales_optimization`     | `legend`  |    30 |
+| Sports Analytics & Betting Expert    | Sports Analytics & Betting Expert    | `sports_analytics`       | `master`  |    10 |
+| Sports Analytics Pioneer             | Sports Analytics Pioneer             | `sports_analytics`       | `legend`  |    30 |
+| Sports Betting Quant                 | Sports Betting Quant                 | `sports_analytics`       | `legend`  |    20 |
+| Startup & Venture Advisor            | Startup & Venture Advisor            | `startup_consulting`     | `master`  |    16 |
+| Chief Technology Architect           | Chief Technology Architect           | `technical_architecture` | `master`  |    15 |
 
 ## Detail appendix
 
