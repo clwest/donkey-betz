@@ -70,7 +70,7 @@ class ToolArgsMalformedEnvelopeTests(SimpleTestCase):
     def test_retry_hint_points_at_append_for_tool_names(self):
         env = self._build(tool_name='deliverable_tool', raw_args='{not valid')
         self.assertEqual(env['retry_hint']['recommended_action'], 'deliverable_tool.append')
-        self.assertEqual(env['retry_hint']['max_chunk_chars_suggestion'], 2000)
+        self.assertEqual(env['retry_hint']['max_chunk_chars_suggestion'], 8000)
 
     def test_retry_hint_none_for_non_tool_suffix_names(self):
         # Some PA entries (e.g. agent dispatches like `research_agent`) don't
