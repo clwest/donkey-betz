@@ -404,4 +404,99 @@ Ratified by Chris via terminal on 2026-07-19 (S2842). Verbatim capture:
 
 ---
 
-*End of addendum. Ratified 2026-07-19 (S2842) by Chris via D0–D6 terminal verdicts. Canonical companion to S2841_STRATEGIC_DISCOVERY_WHAT_DBZ_ACTUALLY_IS.md. All future references to S2841 discovery should cite BOTH docs.*
+## 12. D4 Refinement Ratification (S2843, 2026-07-20)
+
+**Status:** ✅ **RATIFIED WITH REFINEMENT** (Chris D-verdict verbatim in §12.3)
+**Session:** S2843 (opened 2026-07-20; ratification in-session; closed on architecture-refinement only per Chris "Path A")
+**Companion handoff:** `docs/handoffs/SESSION_2843_D4_DECOMPOSITION_RATIFIED.md`
+**Supersedes:** The five-row wedge table under `00-START-NEXT-SESSION.md` `S2843 open sequence` as originally shipped at S2842 close. All future references to D4 execution structure should cite this §12.
+
+### 12.1 What triggered the refinement
+
+S2843 opened with Chris challenging the decision-architecture level of D4 as framed in the S2842-close wedge table. Chris asked: is the wedge table a correctly-scoped single-pick decision, or does it improperly combine customer/buyer, commercialization motion, product/application, internal infrastructure, and platform investment into one flattened choice? Chris routed the verification through Claude's preliminary analysis (concluded conflated), then to Rigby for independent SIGN (returned AGREE with 8+ real tool calls; non-empty tool_runs verified per `feedback_verify_rigby_tool_runs_before_trusting_sign`; independent reasoning reached before comparison to Claude's).
+
+### 12.2 The load-bearing findings
+
+Two constitutional smells drove the AGREE verdict:
+
+1. **Framework mismatch.** D4 is defined in the S2842 handoff (line 63–65) as "REQUIRE commercialization wedge before more restructuring." Yet the wedge table includes **(b) Fleet foundry Phase 2C**, explicitly annotated "internal / no direct revenue." An internal-infra investment cannot be a commercialization wedge. Placing it on the single-pick menu forces a category error and directly reintroduces the "restructuring ≠ shipping" failure mode this addendum's Concern #1 warns against.
+
+2. **Ledger Bet demoted to a column.** The S2842 handoff (line 81–82) explicitly calls the Ledger Bet "load-bearing under (a), (b), (c) — FK is the multi-tenant / cost-attribution blocker for all three." Yet the wedge table encodes it as a boolean `folded?` column rather than a first-class gate decision. Result: picking (c) still leaves week-1 in ambiguity between marketing/launch work and Ledger FK/cost-cap infra work.
+
+Secondary findings:
+
+- **(d) Governance Consulting** is a Chris-time cash-motion choice orthogonal to product engineering — could run alongside any product wedge, not against it.
+- **(e) Employee OS OSS release** rolls three sub-decisions into one bundle (extract from DBZ / packaging boundary / OSS distribution strategy / SaaS follow-on).
+- **No Playbook rule** in Ch 6 or Ch 10 (which is amendment mechanics) legitimizes axis-mixing at the D4 level.
+
+### 12.3 Chris D-verdict (verbatim)
+
+> RATIFY WITH REFINEMENT
+>
+> Ratify the decomposition of D4 into:
+>
+> * D4-A: Execution Wedge
+> * D4-B: Ledger Bet Gate
+> * D4-C: Foundry Trigger
+>
+> Refine D4-A so that selection of A4 (Governance Consulting) requires designation of one primary compounding product (A1–A3), while explicitly leaving execution sequencing to subsequent planning rather than implying concurrent implementation.
+
+### 12.4 Ratified D4 structure (final form)
+
+#### D4-A — Execution Wedge (pick ONE)
+
+- **A1** Rigby standalone (subscription SaaS)
+- **A2** CharacterOS to first paying customer (subscription SaaS; billing wired)
+- **A3** Employee OS packaged to a pilot customer
+- **A4** Governance Consulting engagement #1 (Chris-time cash bridge)
+
+**A4 rule (Chris refinement):** Selection of A4 requires simultaneous designation of one primary compounding product from A1–A3 as the paired long-term wedge. **Execution sequencing between A4 and the paired product (concurrent / sequential / gated) is explicitly deferred to subsequent planning and is NOT determined by the D4 decision.**
+
+**Design intent of the A4 rule:** Preserve the anti-shipping-avoidance guarantee (A4 alone cannot count as wedge selection — that would reintroduce Concern #1) while removing any implicit "parallel burn" commitment. A4 might run before the paired product, alongside it, gated on capacity, or as a funding bridge. That choice is a planning decision downstream of D4, not a D4 commitment.
+
+#### D4-B — Ledger Bet Gate (YES / NO)
+
+- Default **YES** if wedge is A1 or A2 (multi-tenant cost attribution required)
+- Default **NO** for A3 (packaging-dependent; explicit override required)
+- For A4-only interim work: N/A until the paired product wedge activates
+
+**Design intent:** Elevate the "Ledger Bet folded?" column into a first-class ratified decision so week-1 execution is unambiguous between launch/marketing work and Ledger FK/cost-cap infra work.
+
+#### D4-C — Foundry Phase 2C Trigger (RUN / DEFER)
+
+- **RUN now** only if it directly accelerates the chosen wedge within the same month
+- **DEFER** until after first revenue event
+
+**Design intent:** Remove Fleet Phase 2C from the wedge menu entirely and reclassify it as its own gated infrastructure track. Foundry remains real work but is not a commercialization wedge.
+
+### 12.5 D6 moratorium check
+
+- No new discovery arc opened.
+- No new evaluation framework introduced (SA + CA remain the codified additions per §5 / D2).
+- No portfolio expansion (still same 4 candidate wedges A1–A4 + Foundry).
+- No layer-boundary design arc opened.
+
+This §12 is a **refinement of already-ratified D4**, decomposing a single flat pick into three ratified decisions that name the same option surface with the axes made explicit. **D6 moratorium remains in force through S2844 and beyond.**
+
+### 12.6 What §12 supersedes
+
+- The five-row wedge table under `00-START-NEXT-SESSION.md` `S2843 open sequence` (as shipped at S2842 close). That section has been rewritten at S2843 close to reflect the D4-A/D4-B/D4-C architecture.
+- Any framing (in-memory or in-doc) that treats "wedge selection" as a single flat pick. Wedge selection is now three ratified picks against a decomposed architecture.
+
+### 12.7 What §12 does NOT change
+
+- §5 evaluation dimensions (SA + CA) — unchanged.
+- §6.7 revised OPP-7 classification — unchanged.
+- §9 D0–D6 verdicts — unchanged (D4 is refined, not overturned; D0/D1/D2/D3/D5/D6 unchanged).
+- §7 layered architecture — unchanged.
+
+### 12.8 Provenance
+
+- **SIGN cycle:** Claude preliminary analysis → Rigby independent SIGN (task_id `d69ab0bc-5bfe-4c1d-adaa-27e75323a65f`; conversation `pa-c31c6a2dd90d4307`; verdict AGREE with 8+ tool calls verified non-empty) → Claude+Rigby joint recommendation → Chris D-verdict.
+- **Session pin:** `pa-c31c6a2dd90d4307` (S2843; minted via atomic close from `pa-a71aef7d8e9e4638`; retired at S2843 close per convention).
+- **Git HEAD at authoring:** `993f06b1d`.
+- **Playbook version:** v0.8.0 (unchanged; no amendment).
+
+---
+
+*End of addendum. Ratified 2026-07-19 (S2842) by Chris via D0–D6 terminal verdicts, then refined 2026-07-20 (S2843) via §12 D4 decomposition ratification. Canonical companion to S2841_STRATEGIC_DISCOVERY_WHAT_DBZ_ACTUALLY_IS.md. All future references to S2841 discovery should cite BOTH docs; all future references to D4 execution structure should cite §12 of this doc.*
