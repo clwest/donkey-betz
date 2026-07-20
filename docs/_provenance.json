@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-20T22:41:46+00:00",
+    "generated": "2026-07-20T23:48:14+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "fcffd2dd99be",
-    "doc_count": 2725,
-    "commit_count": 8237,
+    "git_head": "73ed79281783",
+    "doc_count": 2726,
+    "commit_count": 8241,
     "confidence_breakdown": {
-      "HIGH": 1712,
+      "HIGH": 1713,
       "MEDIUM": 411,
       "LOW": 40,
       "UNKNOWN": 562
@@ -2597,7 +2597,7 @@
         2830,
         2847
       ],
-      "commit_count": 1426,
+      "commit_count": 1428,
       "prs": [
         10,
         11,
@@ -3261,7 +3261,8 @@
         3314,
         3317,
         3319,
-        3321
+        3321,
+        3323
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7632,7 +7633,7 @@
         2830,
         2847
       ],
-      "commit_count": 358,
+      "commit_count": 360,
       "prs": [
         2213,
         2219,
@@ -7891,7 +7892,8 @@
         3312,
         3314,
         3319,
-        3321
+        3321,
+        3323
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21370,6 +21372,21 @@
       "commit_count": 2,
       "prs": [
         3321
+      ]
+    },
+    "docs/handoffs/SESSION_2853_W2_3_2_DOWNGRADE_SAVINGS_SHIPPED.md": {
+      "originating_session": 2853,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "7309a3a3",
+      "first_commit_date": "2026-07-20",
+      "first_commit_subject": "docs(session): S2853 close \u2014 W2 #3.2 downgrade-savings shipped + docs cascade (#3323)",
+      "sessions_touched": [
+        2853
+      ],
+      "commit_count": 2,
+      "prs": [
+        3323
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
