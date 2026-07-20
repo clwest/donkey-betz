@@ -2,7 +2,7 @@
 
 # Unified Donkey Betz - Documentation Index
 
-**Generated:** 2026-07-20 16:38
+**Generated:** 2026-07-20 17:47
 **Current Session:** 2853
 **Total Documentation:** 3290 files | 987,164 lines
 
@@ -24,7 +24,7 @@
 
 | Metric | Count |
 |--------|-------|
-| Total cross-references | 9,433 |
+| Total cross-references | 9,447 |
 | Orphan documents | 50 |
 | Broken links | 100 |
 
@@ -38,7 +38,7 @@
 | `docs/PLATFORM_WHAT_IT_IS.md` | 209 | PLATFORM WHAT IT IS |
 | `docs/research/OPEN_ARCS.md` | 173 | OPEN ARCS |
 | `docs/research/ARCHITECTURE_INDEX.md` | 151 | ARCHITECTURE INDEX |
-| `docs/archive/experimental/super_system/README.md` | 142 | 🌐 THE SUPER SYSTEM |
+| `docs/archive/old-structure/audits/README.md` | 143 | AUDITS |
 | `docs/research/DOMAIN_RESEARCH_PLAYBOOK.md` | 124 | DOMAIN RESEARCH PLAYBOOK |
 | `docs/00-START-HERE/DOC_LIFECYCLE.md` | 106 | DOC LIFECYCLE |
 | `docs/AGENTS.md` | 94 | AGENTS |
@@ -259,9 +259,9 @@
 
 | File | Folder | Lines | Modified |
 |------|--------|-------|----------|
-| SESSION_2853_W2_3_2_DOWNGRADE_SAVINGS_SHIPPED.md | handoffs | 130 | 2026-07-20 16:37 |
+| SESSION_2853_W2_3_2_DOWNGRADE_SAVINGS_SHIPPED.md | handoffs | 130 | 2026-07-20 16:43 |
+| INDEX.md | docs | 403 | 2026-07-20 16:43 |
 | SESSION_2852_LIST_CAPS_AUTH_TIGHTENED.md | handoffs | 99 | 2026-07-20 15:46 |
-| INDEX.md | docs | 403 | 2026-07-20 15:46 |
 | SESSION_2851_A1_W2_3_1_ENFORCEMENT_REPORT_SHIPPED.md | handoffs | 153 | 2026-07-20 15:25 |
 | SESSION_2850_A1_W2_ENFORCEMENT_CORRECTNESS_LEG.md | handoffs | 173 | 2026-07-20 14:47 |
 | SESSION_2849_A1_W2_DEFAULTS_BACKFILL_SHIPPED.md | handoffs | 127 | 2026-07-20 13:56 |
