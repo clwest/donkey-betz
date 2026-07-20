@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-20T05:35:05+00:00",
+    "generated": "2026-07-20T06:34:08+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "3b5d9a4894c9",
-    "doc_count": 2713,
-    "commit_count": 8177,
+    "git_head": "993f06b1d3b3",
+    "doc_count": 2715,
+    "commit_count": 8182,
     "confidence_breakdown": {
-      "HIGH": 1702,
-      "MEDIUM": 409,
+      "HIGH": 1703,
+      "MEDIUM": 410,
       "LOW": 40,
       "UNKNOWN": 562
     },
@@ -2433,6 +2433,7 @@
         1125,
         1126,
         1127,
+        1128,
         1130,
         1131,
         1132,
@@ -2595,7 +2596,7 @@
         2808,
         2830
       ],
-      "commit_count": 1400,
+      "commit_count": 1402,
       "prs": [
         10,
         11,
@@ -3246,7 +3247,8 @@
         3291,
         3292,
         3293,
-        3294
+        3294,
+        3295
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7566,6 +7568,7 @@
       "first_commit_subject": "feat(session-1156-provenance): P3.5 round 9 \u2014 FINAL pass (71 handoffs, pool exhausted) (#2241)",
       "sessions_touched": [
         1116,
+        1128,
         1145,
         1147,
         1148,
@@ -7615,7 +7618,7 @@
         2808,
         2830
       ],
-      "commit_count": 340,
+      "commit_count": 342,
       "prs": [
         2213,
         2219,
@@ -7865,7 +7868,8 @@
         3291,
         3292,
         3293,
-        3294
+        3294,
+        3295
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21178,6 +21182,22 @@
       "commit_count": 2,
       "prs": [
         3294
+      ]
+    },
+    "docs/handoffs/SESSION_2842_S2841_RATIFIED_D0_D6.md": {
+      "originating_session": 2842,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "7317e728",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(discovery): S2842 close pin retirement \u2014 pa-9729e4f9925445c2 retired at close (not S2843 open)",
+      "sessions_touched": [
+        1128,
+        2842
+      ],
+      "commit_count": 3,
+      "prs": [
+        3295
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
@@ -36189,6 +36209,7 @@
         990,
         1077,
         1116,
+        1128,
         1171,
         1275,
         1276,
@@ -36268,7 +36289,7 @@
         2499,
         2500
       ],
-      "commit_count": 127,
+      "commit_count": 129,
       "prs": [
         2773,
         2775,
@@ -36370,7 +36391,8 @@
         3290,
         3292,
         3293,
-        3294
+        3294,
+        3295
       ]
     },
     "docs/research/actor_identity_attribution_architecture.md": {
@@ -39486,19 +39508,36 @@
         3056
       ]
     },
+    "docs/research/platform/S2841_PRESSURE_TEST_ADDENDUM.md": {
+      "originating_session": 1128,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "7317e728",
+      "first_commit_date": "2026-07-19",
+      "first_commit_subject": "docs(discovery): S2842 close pin retirement \u2014 pa-9729e4f9925445c2 retired at close (not S2843 open)",
+      "sessions_touched": [
+        1128
+      ],
+      "commit_count": 3,
+      "prs": [
+        3295
+      ]
+    },
     "docs/research/platform/S2841_STRATEGIC_DISCOVERY_WHAT_DBZ_ACTUALLY_IS.md": {
       "originating_session": 1116,
       "confidence": "MEDIUM",
       "match_source": "body",
-      "first_commit_sha": "3b5d9a48",
+      "first_commit_sha": "196472a6",
       "first_commit_date": "2026-07-19",
-      "first_commit_subject": "docs(discovery): S2841 \u2014 Strategic Discovery \u00b7 Chris D0-D6 pending \u00b7 Atlas v1 unshipped ~1,700 sessions \u00b7 9-opportunity portfolio + Ledger Bet proposal (#3294)",
+      "first_commit_subject": "docs(discovery): S2842 \u2014 S2841 Strategic Discovery RATIFIED (Chris D0-D6) \u00b7 Pressure-Test Addendum shipped \u00b7 Foundry reclassified after /development/ investigation \u00b7 discovery moratorium in effect",
       "sessions_touched": [
-        1116
+        1116,
+        1128
       ],
-      "commit_count": 2,
+      "commit_count": 4,
       "prs": [
-        3294
+        3294,
+        3295
       ]
     },
     "docs/research/platform/constitutional_ecosystem_inventory.md": {
