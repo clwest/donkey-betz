@@ -37,6 +37,11 @@ def get_active_workspace(user):
     """
     Get the user's active workspace, or their first workspace as fallback.
     Returns ProjectWorkspace instance or None.
+
+    Session 2846 (A1 W1) Fold 1 guardrail: emits a WARN log whenever the
+    `is_active=True` filter misses and the fallback ("first workspace")
+    path is taken. This surfaces users whose active-workspace state is
+    ambiguous — a policy signal for BudgetController per-workspace caps.
     """
     if not user:
         return None
@@ -48,8 +53,21 @@ def get_active_workspace(user):
         ).first()
         if ws:
             return ws
-        # Fallback: any workspace owned by user
-        return ProjectWorkspace.objects.filter(user=user).first()
+        # Fallback: any workspace owned by user. Session 2846 Fold 1:
+        # log this branch so BudgetController operators can see when
+        # per-workspace attribution is falling back to arbitrary choice.
+        fallback = ProjectWorkspace.objects.filter(user=user).first()
+        if fallback is not None:
+            logger.warning(
+                "workspace_resolver: no active workspace for user_id=%s; "
+                "using fallback workspace_id=%s (name=%r). Per-workspace "
+                "attribution / caps will apply to this fallback until an "
+                "explicit is_active=True workspace is set.",
+                getattr(user, "id", None),
+                fallback.id,
+                fallback.name,
+            )
+        return fallback
     except _WORKSPACE_RESOLVER_ENV_ERRORS as _e:
         # Session 2728 F-WS-4 — narrow-except discipline. Pre-patch this
         # branch caught every Exception and returned None with a WARNING

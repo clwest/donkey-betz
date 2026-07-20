@@ -463,10 +463,25 @@ class AgentLLMRouter:
         try:
             from core.models_llm_routing import LLMCallLog, AgentLLMConfig
 
+            # Session 2846 (A1 W1) — resolve workspace from user for
+            # per-workspace attribution. Null when user is None (system tasks).
+            workspace = None
+            if user is not None:
+                try:
+                    from core.services.workspace_resolver import get_active_workspace
+                    workspace = get_active_workspace(user)
+                except Exception as _ws_err:
+                    logger.debug(
+                        "agent_llm_router: workspace resolution failed for "
+                        "user_id=%s: %s",
+                        getattr(user, "id", None), _ws_err,
+                    )
+
             # Create log entry
             LLMCallLog.objects.create(
                 agent_name=agent_name,
                 user=user,
+                workspace=workspace,
                 provider=provider,
                 model_id=model_id,
                 was_fallback=was_fallback,
