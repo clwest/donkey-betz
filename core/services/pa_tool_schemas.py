@@ -3370,6 +3370,7 @@ PA_TOOL_SCHEMAS = [
                         "get_default_cap",
                         "set_default_cap",
                         "backfill_defaults",
+                        "enforcement_report",
                     ],
                     "description": (
                         "set_cap: write/update a per-workspace daily cap ($ USD). "
@@ -3413,7 +3414,28 @@ PA_TOOL_SCHEMAS = [
                         "explicit cap; force=true overwrites them. Optional "
                         "include_workspace_ids / exclude_workspace_ids allowlist. "
                         "Fail-soft per-workspace — one bad row doesn't abort the "
-                        "batch. Returns per-workspace details + counts."
+                        "batch. Returns per-workspace details + counts. "
+                        "enforcement_report: fleet auditability over time — for "
+                        "each in-scope workspace, returns per-workspace cap + "
+                        "effective_cap + cap_source + freeze/downgrade state + "
+                        "enforcement_events_count + last_enforcement_at over a "
+                        "sliding window. Enforcement events counted = "
+                        "AutopilotAction rows with action_type in "
+                        "{workspace_budget_freeze, workspace_freeze_cleared, "
+                        "workspace_downgrade_set, workspace_downgrade_cleared} "
+                        "and created_at within `window`. Optional include_spend "
+                        "adds per-workspace attributed spend + calls in the "
+                        "same window. Optional include_null_bucket adds the "
+                        "null-workspace bucket (system tasks, embeddings, "
+                        "background — spend that workspace caps don't govern). "
+                        "READ-ONLY. Auto-scoped to caller's owned workspaces "
+                        "for non-staff; staff sees all workspaces. Optional "
+                        "workspace_id narrows to a single workspace (must be "
+                        "in scope). NOTE on attribution: workspace_id is "
+                        "extracted from AutopilotAction.evidence JSON (no FK "
+                        "column) — best-effort. Report is diagnostic; the "
+                        "point-of-action trust surface is `set_cap`'s inline "
+                        "enforcement_fired payload (S2850 #3.0a)."
                     ),
                 },
                 "workspace_id": {
@@ -3421,8 +3443,43 @@ PA_TOOL_SCHEMAS = [
                     "description": (
                         "UUID of the ProjectWorkspace being managed. Required for "
                         "set_cap, get_status, clear_freeze, clear_downgrade, "
-                        "clear_cap. Ignored for list_caps, get_default_cap, "
+                        "clear_cap. Optional narrowing filter for "
+                        "enforcement_report (must be in caller's scope). "
+                        "Ignored for list_caps, get_default_cap, "
                         "set_default_cap, backfill_defaults."
+                    ),
+                },
+                "window": {
+                    "type": "string",
+                    "enum": ["24h", "7d", "30d"],
+                    "description": (
+                        "For enforcement_report: sliding time window for "
+                        "counting enforcement events and (if include_spend) "
+                        "aggregating attributed spend. Defaults to '24h'."
+                    ),
+                },
+                "include_spend": {
+                    "type": "boolean",
+                    "description": (
+                        "For enforcement_report: when true, per-workspace rows "
+                        "include attributed_spend_usd + calls for the window "
+                        "(from LLMCallLog joined by workspace FK). Defaults to "
+                        "false (enforcement-forward — the report's primary "
+                        "answer is whether/when enforcement fired, not how "
+                        "much was spent). Attributed spend is a subset — the "
+                        "null-workspace bucket is reported separately when "
+                        "include_null_bucket=true."
+                    ),
+                },
+                "include_null_bucket": {
+                    "type": "boolean",
+                    "description": (
+                        "For enforcement_report: when true (default), the "
+                        "response's null_bucket field reports spend_usd + "
+                        "calls for LLMCallLog rows with workspace=NULL in the "
+                        "window. This is the substrate that per-workspace "
+                        "caps do NOT govern (governed by global budget "
+                        "controls instead). Pass false to omit."
                     ),
                 },
                 "daily_cap_usd": {
