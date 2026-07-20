@@ -4180,9 +4180,14 @@ class OpsHandlersMixin:
             force = bool(payload.get('force', False))
             include_ids = payload.get('include_workspace_ids')
             exclude_ids = payload.get('exclude_workspace_ids')
+            # OpenAI function-calling often passes daily_cap_usd=0 when the
+            # optional param isn't intentionally set; coerce to None so the
+            # controller reads the stored global default. Callers who want
+            # an explicit per-run cap must pass a positive value.
+            override_cap = daily_cap_usd if daily_cap_usd else None
             try:
                 result = controller.backfill_workspace_defaults(
-                    default_cap=daily_cap_usd,
+                    default_cap=override_cap,
                     include_workspace_ids=include_ids,
                     exclude_workspace_ids=exclude_ids,
                     force=force,
