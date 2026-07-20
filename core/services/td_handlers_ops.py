@@ -4228,13 +4228,212 @@ class OpsHandlersMixin:
                 ),
             }
 
+        if action == 'enforcement_report':
+            # S2851 W2 #3.1 — fleet auditability over time. Complements
+            # set_cap's inline enforcement_fired (S2850 #3.0a) which is the
+            # point-of-action trust surface. This report answers "over the
+            # last window, whose caps fired, when, and how often?" Query
+            # strategy per Rigby SIGN Q1: single-filter narrow using the
+            # existing (action_type, -created_at) index, then aggregate in
+            # Python — avoids JSONB group-by execution plans on
+            # (evidence->>'workspace_id') which has no functional index.
+            from datetime import timedelta
+            from core.models_diagnostic_pipeline import AutopilotAction
+            from core.models_llm_routing import LLMCallLog
+            from django.db.models import Sum, Count
+
+            window = payload.get('window', '24h')
+            window_hours = {'24h': 24, '7d': 168, '30d': 720}.get(window)
+            if window_hours is None:
+                return {
+                    'action': action,
+                    'error': (
+                        f'invalid window {window!r} — must be one of '
+                        f'"24h", "7d", "30d"'
+                    ),
+                }
+            cutoff = now - timedelta(hours=window_hours)
+            include_spend = bool(payload.get('include_spend', False))
+            include_null_bucket = bool(
+                payload.get('include_null_bucket', True)
+            )
+
+            # Auth scope (Rigby SIGN Q3: option c). Non-staff sees only own
+            # workspaces; staff sees all. Unauthenticated callers get the
+            # null_bucket + note only (no per-workspace rows) so the tool
+            # still surfaces something rather than 403-ing.
+            is_staff = False
+            if user_id is not None:
+                try:
+                    User = get_user_model()
+                    actor = User.objects.get(id=user_id)
+                    is_staff = bool(getattr(actor, 'is_staff', False))
+                except Exception:
+                    is_staff = False
+
+            if user_id is None:
+                workspace_scope_qs = ProjectWorkspace.objects.none()
+                scope_note = (
+                    'unauthenticated caller — per-workspace rows omitted; '
+                    'null_bucket only'
+                )
+            elif is_staff:
+                workspace_scope_qs = ProjectWorkspace.objects.all()
+                scope_note = 'staff scope — all workspaces'
+            else:
+                workspace_scope_qs = ProjectWorkspace.objects.filter(
+                    user_id=user_id,
+                )
+                scope_note = f'auto-scoped to workspaces owned by user_id={user_id}'
+
+            # Optional single-workspace narrowing (must be in scope).
+            if workspace_id:
+                workspace_scope_qs = workspace_scope_qs.filter(
+                    id=workspace_id,
+                )
+
+            scoped_workspaces = list(
+                workspace_scope_qs.only('id', 'name', 'user_id')
+            )
+            scoped_ids = {str(ws.id) for ws in scoped_workspaces}
+
+            # Q1 (a′): single narrow query, aggregate in Python. Fetches
+            # only the two fields we need per row (created_at + evidence).
+            enforcement_action_types = [
+                'workspace_budget_freeze',
+                'workspace_freeze_cleared',
+                'workspace_downgrade_set',
+                'workspace_downgrade_cleared',
+            ]
+            enforcement_qs = (
+                AutopilotAction.objects
+                .filter(
+                    action_type__in=enforcement_action_types,
+                    created_at__gte=cutoff,
+                )
+                .values('created_at', 'evidence')
+            )
+            per_ws_events: Dict[str, Dict[str, Any]] = {}
+            for row in enforcement_qs.iterator():
+                ev = row.get('evidence') or {}
+                wid = ev.get('workspace_id')
+                if not wid:
+                    continue
+                wid = str(wid)
+                if wid not in scoped_ids:
+                    continue
+                bucket = per_ws_events.setdefault(
+                    wid, {'count': 0, 'last': None},
+                )
+                bucket['count'] += 1
+                if bucket['last'] is None or row['created_at'] > bucket['last']:
+                    bucket['last'] = row['created_at']
+
+            # Optional per-workspace spend aggregation using the
+            # (workspace, -created_at) index on LLMCallLog.
+            per_ws_spend: Dict[str, Dict[str, Any]] = {}
+            if include_spend and scoped_ids:
+                spend_qs = (
+                    LLMCallLog.objects
+                    .filter(
+                        workspace_id__in=list(scoped_ids),
+                        created_at__gte=cutoff,
+                    )
+                    .values('workspace_id')
+                    .annotate(
+                        spend=Sum('cost'),
+                        calls=Count('id'),
+                    )
+                )
+                for row in spend_qs:
+                    wid = str(row['workspace_id'])
+                    per_ws_spend[wid] = {
+                        'spend_usd': float(row['spend'] or 0),
+                        'calls': row['calls'] or 0,
+                    }
+
+            rows = []
+            for ws in scoped_workspaces:
+                wid = str(ws.id)
+                effective = controller.get_effective_workspace_daily_cap(ws.id)
+                events = per_ws_events.get(wid, {'count': 0, 'last': None})
+                row_out: Dict[str, Any] = {
+                    'workspace_id': wid,
+                    'workspace_name': ws.name,
+                    'cap_usd': controller.get_workspace_daily_cap(ws.id),
+                    'effective_cap_usd': effective['cap'],
+                    'cap_source': effective['source'],
+                    'is_frozen': controller.is_workspace_frozen(ws.id),
+                    'is_downgraded': controller.is_workspace_downgraded(ws.id),
+                    'enforcement_events_count': events['count'],
+                    'last_enforcement_at': (
+                        events['last'].isoformat() if events['last'] else None
+                    ),
+                }
+                if include_spend:
+                    spend = per_ws_spend.get(
+                        wid, {'spend_usd': 0.0, 'calls': 0},
+                    )
+                    row_out['attributed_spend_usd'] = spend['spend_usd']
+                    row_out['calls'] = spend['calls']
+                else:
+                    row_out['attributed_spend_usd'] = None
+                    row_out['calls'] = None
+                rows.append(row_out)
+
+            # Deterministic order — highest enforcement activity first,
+            # then by workspace name for stable diff.
+            rows.sort(
+                key=lambda r: (
+                    -r['enforcement_events_count'],
+                    (r['workspace_name'] or ''),
+                ),
+            )
+
+            response: Dict[str, Any] = {
+                'action': action,
+                'window': window,
+                'window_hours': window_hours,
+                'cutoff': cutoff.isoformat(),
+                'scope_note': scope_note,
+                'note': (
+                    'Enforcement events counted from AutopilotAction rows '
+                    'where workspace_id lives inside evidence JSON — '
+                    'best-effort attribution. Point-of-action trust '
+                    'surface is set_cap\'s inline enforcement_fired '
+                    'payload; this report is fleet auditability over '
+                    'time.'
+                ),
+                'row_count': len(rows),
+                'rows': rows,
+            }
+            if include_spend:
+                response['spend_note'] = (
+                    'attributed_spend_usd is the workspace-attributed '
+                    'subset only (currently the PA path); NULL-bucket is '
+                    'governed by GLOBAL budget controls, not per-workspace'
+                )
+            if include_null_bucket:
+                null_qs = LLMCallLog.objects.filter(
+                    workspace__isnull=True,
+                    created_at__gte=cutoff,
+                ).aggregate(
+                    spend=Sum('cost'),
+                    calls=Count('id'),
+                )
+                response['null_bucket'] = {
+                    'spend_usd': float(null_qs['spend'] or 0),
+                    'calls': null_qs['calls'] or 0,
+                }
+            return response
+
         return {
             'action': action,
             'error': (
                 f'Unknown workspace_budget_tool action: {action!r}. '
                 f'Valid: set_cap, get_status, clear_freeze, clear_downgrade, '
                 f'list_caps, clear_cap, get_default_cap, set_default_cap, '
-                f'backfill_defaults.'
+                f'backfill_defaults, enforcement_report.'
             ),
         }
 
