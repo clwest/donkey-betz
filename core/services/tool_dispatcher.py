@@ -519,6 +519,9 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("autopilot_tool", self._handle_autopilot)
         self.register("ops_digest_tool", self._handle_ops_digest)
 
+        # Session 2847 A1 W1 Phase 3: per-workspace budget cap management
+        self.register("workspace_budget_tool", self._handle_workspace_budget)
+
         # Session 1078: Work tool — gateway for initiatives + action items
         self.register("work_tool", self._handle_work)
 
