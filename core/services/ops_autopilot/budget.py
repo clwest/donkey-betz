@@ -628,12 +628,20 @@ class BudgetController:
             return {'cap': default, 'source': 'default'}
         return {'cap': None, 'source': 'unset'}
 
-    def enforce_workspace_freeze(self, spend, now, workspace_id):
+    def enforce_workspace_freeze(
+        self, spend, now, workspace_id,
+        actor_user_id=None, trigger='autopilot_cycle',
+    ):
         """Freeze the given workspace when its daily spend crosses its cap.
 
         Freeze-tier only for W1 (per Rigby's D6 tweak — downgrade-tier
         deferred to W1.5). Idempotent: no-op if already frozen or no
         cap is set.
+
+        S2850 #3.0a: when actor_user_id is passed, the AutopilotAction row
+        is attributed to workspace_budget_tool (operator surface) instead
+        of the autopilot cycle, and `trigger` is recorded in evidence.
+        Threshold + idempotency logic UNCHANGED regardless of actor.
         """
         if workspace_id is None:
             return None  # null bucket has no per-workspace freeze
@@ -669,12 +677,22 @@ class BudgetController:
             },
         )
 
+        operator_triggered = actor_user_id is not None
+        evidence = {**spend, 'cap': cap, 'trigger': trigger}
+        if operator_triggered:
+            evidence['actor_user_id'] = str(actor_user_id)
         AutopilotAction.objects.create(
             action_type='workspace_budget_freeze',
-            agent_name='BudgetController',
-            policy='workspace_budget_controller',
+            agent_name=(
+                'workspace_budget_tool' if operator_triggered
+                else 'BudgetController'
+            ),
+            policy=(
+                'workspace_budget_tool' if operator_triggered
+                else 'workspace_budget_controller'
+            ),
             dry_run=False,
-            evidence={**spend, 'cap': cap},
+            evidence=evidence,
             result={
                 'workspace_id': str(workspace_id),
                 'daily_spend': round(spend['daily_total'], 4),
@@ -763,13 +781,24 @@ class BudgetController:
     # Manual clear via clear_workspace_downgrade (operator override).
     # ─────────────────────────────────────────────────────────────────
 
-    def enforce_workspace_downgrade(self, spend, now, workspace_id):
+    def enforce_workspace_downgrade(
+        self, spend, now, workspace_id,
+        actor_user_id=None, trigger='autopilot_cycle',
+    ):
         """Set/clear the downgrade flag based on the workspace's daily spend.
 
         Called from _policy_budget_controller cycle per-workspace. Idempotent
         with hysteresis: set at BUDGET_SOFT_LIMIT_PCT of cap, clear at
         _WORKSPACE_DOWNGRADE_CLEAR_PCT (60%). Returns action dict when
         state changes; None on no-op.
+
+        S2850 #3.0a: when actor_user_id is passed (operator-triggered via
+        set_cap), BOTH state transitions (set-on-cross-up and auto-clear-
+        on-hysteresis) attribute the AutopilotAction row to
+        workspace_budget_tool with actor_user_id + trigger in evidence.
+        Per Rigby SIGN #4 Q2: any state transition caused by an operator-
+        induced call is attributed to the operator regardless of branch.
+        Threshold + hysteresis logic UNCHANGED regardless of actor.
         """
         if workspace_id is None:
             return None
@@ -784,18 +813,35 @@ class BudgetController:
         from core.models.system import SystemConfiguration
         key = f"{self._WORKSPACE_DOWNGRADE_KEY_PREFIX}{workspace_id}"
 
+        operator_triggered = actor_user_id is not None
+
         # Auto-clear when spend drops below hysteresis floor
         if currently_downgraded and spend['daily_total'] < clear_threshold:
             SystemConfiguration.objects.filter(key=key).delete()
+            evidence = {
+                **spend, 'cap': cap, 'clear_threshold': clear_threshold,
+                'trigger': trigger,
+            }
+            if operator_triggered:
+                evidence['actor_user_id'] = str(actor_user_id)
             AutopilotAction.objects.create(
                 action_type='workspace_downgrade_cleared',
-                agent_name='BudgetController',
-                policy='workspace_budget_controller',
+                agent_name=(
+                    'workspace_budget_tool' if operator_triggered
+                    else 'BudgetController'
+                ),
+                policy=(
+                    'workspace_budget_tool' if operator_triggered
+                    else 'workspace_budget_controller'
+                ),
                 dry_run=False,
-                evidence={**spend, 'cap': cap, 'clear_threshold': clear_threshold},
+                evidence=evidence,
                 result={
                     'workspace_id': str(workspace_id),
-                    'reason': 'auto_hysteresis',
+                    'reason': (
+                        'operator_cap_change_hysteresis'
+                        if operator_triggered else 'auto_hysteresis'
+                    ),
                 },
             )
             logger.info(
@@ -827,12 +873,24 @@ class BudgetController:
                     'category': 'performance',
                 },
             )
+            set_evidence = {
+                **spend, 'cap': cap, 'set_threshold': set_threshold,
+                'trigger': trigger,
+            }
+            if operator_triggered:
+                set_evidence['actor_user_id'] = str(actor_user_id)
             AutopilotAction.objects.create(
                 action_type='workspace_downgrade_set',
-                agent_name='BudgetController',
-                policy='workspace_budget_controller',
+                agent_name=(
+                    'workspace_budget_tool' if operator_triggered
+                    else 'BudgetController'
+                ),
+                policy=(
+                    'workspace_budget_tool' if operator_triggered
+                    else 'workspace_budget_controller'
+                ),
                 dry_run=False,
-                evidence={**spend, 'cap': cap, 'set_threshold': set_threshold},
+                evidence=set_evidence,
                 result={
                     'workspace_id': str(workspace_id),
                     'daily_spend': round(spend['daily_total'], 4),
