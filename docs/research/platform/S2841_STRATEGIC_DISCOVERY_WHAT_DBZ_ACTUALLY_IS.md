@@ -5,9 +5,11 @@
 **Git HEAD at authoring:** `63306c21005a`
 **Playbook version:** v0.8.0 (205 rules; unchanged this session)
 **Scope:** Platform (whole-DBZ discovery under Research OS §5 request-classification)
-**Status:** **DISCOVERY COMPLETE · CHRIS D-VERDICT PENDING (D0–D6 open)**
-**Ratification envelope:** none yet — this is discovery output, not a ratified plan
-**Twin workspace mirror:** Rigby-created content deliverable in Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50` (ID filled at close)
+**Status:** **RATIFIED WITH REFINEMENTS (Chris D0–D6, S2842, 2026-07-19)** — see canonical companion [`S2841_PRESSURE_TEST_ADDENDUM.md`](S2841_PRESSURE_TEST_ADDENDUM.md)
+**Ratification envelope:** twin-mirrored to Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50` by Rigby (addendum + envelope)
+**Twin workspace mirror:** Rigby-created content deliverable `d8e093a1-0d27-4829-aa34-92f3a9b774bd` in Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50`
+
+> **RATIFICATION BANNER — S2842 (2026-07-19):** This discovery is ratified as a strategic document with refinements. Chris issued D0–D6 verdicts after independent Chris + ChatGPT re-evaluation, Claude + Rigby parallel independent re-scoring on two new dimensions (Self-Acceleration + Compound Advantage), and a filesystem investigation of `/Users/donkeyking/development/` that materially changed the Foundry (OPP-7) evidence base. The canonical companion document [`S2841_PRESSURE_TEST_ADDENDUM.md`](S2841_PRESSURE_TEST_ADDENDUM.md) captures the pressure-test cycle end-to-end and supersedes this doc's §6.7 (OPP-7) classification. All future references to the S2841 discovery should cite BOTH docs. D6 declares strategic discovery closed; S2843 opens with wedge selection.
 
 ---
 
@@ -434,6 +436,9 @@ Ranking rubric: (a) foundation actually exists, (b) time to revenue < 12 weeks f
 | Falsify | 10 beta practitioners → 0 conversion |
 
 ### 6.7 OPP-7 — Cross-App AI Fleet Activation (Rigby as gateway to 8 sibling apps) — NET-NEW
+
+> **⚠️ SUPERSEDED by [`S2841_PRESSURE_TEST_ADDENDUM.md`](S2841_PRESSURE_TEST_ADDENDUM.md) §6 (Chris D3, S2842).** The original classification below (LOW confidence, "0 users = distribution problem") was based on the fleet_health probe alone. Filesystem investigation of `/Users/donkeyking/development/` revealed the foundry is **architecturally real + substantially implemented + operationally dormant**, ~2–3 weeks from reusable capability. Corrected SA: **8**, CA: **9** (from Claude 10/10 + Rigby 6/8). Read the addendum §4 (foundry evidence investigation) + §6 (revised classification) before citing this section.
+
 
 | Field | Value |
 |---|---|
