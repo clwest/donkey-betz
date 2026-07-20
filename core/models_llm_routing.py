@@ -468,8 +468,10 @@ DEFAULT_MODELS = [
         'max_output_tokens': 16384,
         'speed_rating': 9,
         'quality_rating': 7,
-        'cost_per_1m_input': 0.15,
-        'cost_per_1m_output': 0.60,
+        # S2854: aligned to canonical pricing_catalog.MODEL_PRICES['gpt-5-mini']
+        # (was 0.15/0.60, i.e. 3.33× lower than the enforcer's real billing lineage)
+        'cost_per_1m_input': 0.50,
+        'cost_per_1m_output': 1.50,
         'specializations': ['general', 'quick_tasks', 'routing'],
         'is_recommended': True,
     },
@@ -496,8 +498,10 @@ DEFAULT_MODELS = [
         'max_output_tokens': 65536,
         'speed_rating': 5,
         'quality_rating': 10,
-        'cost_per_1m_input': 5.00,
-        'cost_per_1m_output': 20.00,
+        # S2854: aligned to canonical pricing_catalog.MODEL_PRICES['gpt-5.2']
+        # (was 5.00/20.00, i.e. 2.86×/1.43× higher than the enforcer's real billing lineage)
+        'cost_per_1m_input': 1.75,
+        'cost_per_1m_output': 14.00,
         'specializations': ['complex_reasoning', 'research', 'strategy'],
         'is_recommended': False,
     },
