@@ -435,6 +435,195 @@ class BudgetController:
             ),
         }
 
+    # ─────────────────────────────────────────────────────────────────
+    # Session 2846 (A1 W1 Phase 2) — per-workspace attribution & caps.
+    #
+    # Cap-keying policy (Fold 2, ratified S2846):
+    #   Caps are keyed by workspace_id, NOT by owner. If a workspace is
+    #   reassigned or its owning user is deleted, the cap follows the
+    #   workspace id. This decouples billing from user identity and
+    #   supports future multi-owner workspaces.
+    #
+    # Null-bucket policy (Fold 3, ratified S2846):
+    #   LLMCallLog rows with workspace=NULL are treated as a distinct
+    #   "system" bucket (embedding jobs, background tasks without user
+    #   context). compute_workspace_spend(workspace_id=None) reports
+    #   spend on that bucket separately. enforce_workspace_freeze does
+    #   NOT freeze the null bucket — global freeze is the mechanism.
+    #
+    # Cache policy (Fold 4, ratified S2846):
+    #   No memoization in W1. Every is_workspace_frozen call hits the
+    #   SystemConfiguration DB. Fine for pre-prod; revisit at scale.
+    # ─────────────────────────────────────────────────────────────────
+
+    _WORKSPACE_CAP_KEY_PREFIX = 'workspace_daily_cap:'
+    _WORKSPACE_FREEZE_KEY_PREFIX = 'workspace_freeze_active:'
+
+    def compute_workspace_spend(self, now, workspace_id=None) -> dict:
+        """Per-workspace spend from LLMCallLog.
+
+        workspace_id=<uuid>: spend for that specific workspace.
+        workspace_id=None: spend for the null-workspace bucket (system
+        tasks / embedding jobs — Fold 3 explicit null handling).
+        """
+        from core.models_llm_routing import LLMCallLog
+        from django.db.models import Sum, Count
+
+        hour_ago = now - timedelta(hours=1)
+        day_ago = now - timedelta(hours=24)
+
+        if workspace_id is None:
+            base_qs = LLMCallLog.objects.filter(workspace__isnull=True)
+        else:
+            base_qs = LLMCallLog.objects.filter(workspace_id=workspace_id)
+
+        daily = base_qs.filter(created_at__gte=day_ago).aggregate(
+            total=Sum('cost'),
+            calls=Count('id'),
+        )
+        hourly = base_qs.filter(created_at__gte=hour_ago).aggregate(
+            total=Sum('cost'),
+            calls=Count('id'),
+        )
+
+        return {
+            'workspace_id': str(workspace_id) if workspace_id else None,
+            'daily_total': float(daily['total'] or 0),
+            'daily_calls': daily['calls'] or 0,
+            'hourly_total': float(hourly['total'] or 0),
+            'hourly_calls': hourly['calls'] or 0,
+        }
+
+    def get_workspace_daily_cap(self, workspace_id):
+        """Look up the per-workspace daily cap ($ USD) from SystemConfiguration.
+
+        Returns float or None (no cap set). Falls back to global cap
+        semantics — a workspace without an explicit cap gets only the
+        global protection tier.
+        """
+        if workspace_id is None:
+            return None
+        from core.models.system import SystemConfiguration
+        key = f"{self._WORKSPACE_CAP_KEY_PREFIX}{workspace_id}"
+        entry = (
+            SystemConfiguration.objects
+            .filter(key=key)
+            .values_list('value', flat=True)
+            .first()
+        )
+        if entry is None:
+            return None
+        try:
+            return float(entry)
+        except (TypeError, ValueError):
+            logger.warning(
+                "BudgetController: workspace_daily_cap for workspace_id=%s "
+                "is not a valid float (value=%r) — treating as no cap",
+                workspace_id, entry,
+            )
+            return None
+
+    def enforce_workspace_freeze(self, spend, now, workspace_id):
+        """Freeze the given workspace when its daily spend crosses its cap.
+
+        Freeze-tier only for W1 (per Rigby's D6 tweak — downgrade-tier
+        deferred to W1.5). Idempotent: no-op if already frozen or no
+        cap is set.
+        """
+        if workspace_id is None:
+            return None  # null bucket has no per-workspace freeze
+        cap = self.get_workspace_daily_cap(workspace_id)
+        if cap is None:
+            return None
+        if spend['daily_total'] < cap:
+            return None
+
+        from core.models.system import SystemConfiguration
+        key = f"{self._WORKSPACE_FREEZE_KEY_PREFIX}{workspace_id}"
+
+        # Idempotent — don't re-fire on already-frozen workspace
+        existing = (
+            SystemConfiguration.objects
+            .filter(key=key)
+            .values_list('value', flat=True)
+            .first()
+        )
+        if existing:
+            return None
+
+        SystemConfiguration.objects.update_or_create(
+            key=key,
+            defaults={
+                'value': True,
+                'description': (
+                    f'WORKSPACE FREEZE: workspace_id={workspace_id} '
+                    f'daily spend ${spend["daily_total"]:.2f} '
+                    f'exceeds cap ${cap:.2f} (Session 2846 A1 W1)'
+                ),
+                'category': 'performance',
+            },
+        )
+
+        AutopilotAction.objects.create(
+            action_type='workspace_budget_freeze',
+            agent_name='BudgetController',
+            policy='workspace_budget_controller',
+            dry_run=False,
+            evidence={**spend, 'cap': cap},
+            result={
+                'workspace_id': str(workspace_id),
+                'daily_spend': round(spend['daily_total'], 4),
+                'cap': cap,
+            },
+        )
+
+        logger.warning(
+            f"[BudgetController] WORKSPACE FREEZE activated — "
+            f"workspace_id={workspace_id} daily spend "
+            f"${spend['daily_total']:.2f} vs cap ${cap:.2f}"
+        )
+
+        return {
+            'type': 'workspace_budget_freeze',
+            'workspace_id': str(workspace_id),
+            'daily_spend': round(spend['daily_total'], 4),
+            'cap': cap,
+        }
+
+    def is_workspace_frozen(self, workspace_id) -> bool:
+        """Hot-path check — is this workspace currently frozen?
+
+        Called from llm_enforcer BEFORE firing the LLM call. Fold 4
+        says no caching in W1; every call hits SystemConfiguration.
+        """
+        if workspace_id is None:
+            return False
+        from core.models.system import SystemConfiguration
+        key = f"{self._WORKSPACE_FREEZE_KEY_PREFIX}{workspace_id}"
+        entry = (
+            SystemConfiguration.objects
+            .filter(key=key)
+            .values_list('value', flat=True)
+            .first()
+        )
+        return bool(entry)
+
+    def clear_workspace_freeze(self, workspace_id) -> bool:
+        """Clear the freeze flag for a specific workspace. Returns True if
+        a flag was actually cleared."""
+        if workspace_id is None:
+            return False
+        from core.models.system import SystemConfiguration
+        key = f"{self._WORKSPACE_FREEZE_KEY_PREFIX}{workspace_id}"
+        deleted, _ = SystemConfiguration.objects.filter(key=key).delete()
+        if deleted:
+            logger.info(
+                "[BudgetController] Cleared workspace freeze for "
+                "workspace_id=%s",
+                workspace_id,
+            )
+        return bool(deleted)
+
     def clear_budget_flags(self):
         """Clear downgrade/freeze flags when spend is back to normal."""
         from core.models.system import SystemConfiguration
