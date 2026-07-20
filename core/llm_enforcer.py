@@ -148,7 +148,8 @@ class LLMEnforcer:
                        previous_response_id: Optional[str] = None,
                        tool_choice: Optional[Dict] = None,
                        input_messages: Optional[List[Dict]] = None,
-                       trace_id: str = "") -> Dict[str, Any]:
+                       trace_id: str = "",
+                       user: Optional[Any] = None) -> Dict[str, Any]:
         """
         ENFORCE real AI usage - this is the ONLY way to get AI responses
 
@@ -345,6 +346,7 @@ class LLMEnforcer:
                 cached_input_tokens=response.get('cached_input_tokens', 0),
                 cost_estimator_version=response.get('cost_estimator_version', COST_ESTIMATOR_VERSION),
                 response_preview=_stall_preview,
+                user=user,  # Session 2846 (A1 W1) — per-workspace attribution
             )
 
             result = {
@@ -706,6 +708,7 @@ class LLMEnforcer:
         cached_input_tokens: int = 0,
         cost_estimator_version: str = COST_ESTIMATOR_VERSION,
         response_preview: str = "",
+        user: Optional[Any] = None,
     ) -> None:
         """
         Session 802: Persist LLM usage to both CostTracking and LLMCallLog.
@@ -716,7 +719,25 @@ class LLMEnforcer:
         Session 2749: response_preview populated on stall — success=True
         with tiny completion_tokens — so future diagnostics can see what
         the LLM actually returned instead of guessing from token counts.
+
+        Session 2846 (A1 W1): optional `user` kwarg — when provided, the
+        active workspace is resolved via workspace_resolver.get_active_workspace
+        and attached to the LLMCallLog row for per-workspace attribution.
+        Callers without user context leave workspace null; that null bucket
+        is treated explicitly by BudgetController (Fold 3 guardrail).
         """
+        # Session 2846: resolve workspace from user for per-workspace attribution
+        workspace = None
+        if user is not None:
+            try:
+                from core.services.workspace_resolver import get_active_workspace
+                workspace = get_active_workspace(user)
+            except Exception as _ws_err:
+                logger.debug(
+                    "Failed to resolve workspace for user_id=%s: %s",
+                    getattr(user, "id", None), _ws_err,
+                )
+
         # Save to LLMCallLog (used by LLM Routing analytics UI)
         try:
             from core.models_llm_routing import LLMCallLog
@@ -735,6 +756,8 @@ class LLMEnforcer:
                 error_message=error_message,
                 trace_id=trace_id,
                 response_preview=response_preview,
+                user=user,
+                workspace=workspace,
             )
             logger.debug(f"💾 Saved LLM call log: {provider}/{model} - ${cost:.6f}")
         except Exception as e:
