@@ -333,17 +333,9 @@ class OpenAIProvider(BaseLLMProvider):
         )
 
     def _calculate_cost(self, model_id: str, input_tokens: int, output_tokens: int) -> float:
-        """Calculate cost based on model pricing"""
-        pricing = {
-            'gpt-5-mini': (0.15, 0.60),      # per 1M tokens
-            'gpt-5.1': (1.25, 10.00),
-            'gpt-5.2': (5.00, 20.00),
-            'gpt-4-turbo': (10.00, 30.00),
-            'gpt-4o': (2.50, 10.00),
-            'gpt-4o-mini': (0.15, 0.60),
-        }
-        input_price, output_price = pricing.get(model_id, (1.00, 3.00))
-        return (input_tokens * input_price / 1_000_000) + (output_tokens * output_price / 1_000_000)
+        """S2854: delegate to canonical pricing_catalog."""
+        from core.services.pricing_catalog import calculate_cost
+        return float(calculate_cost(model_id, input_tokens, output_tokens))
 
 
 # =============================================================================
@@ -510,15 +502,9 @@ class AnthropicProvider(BaseLLMProvider):
         return anthropic_tools
 
     def _calculate_cost(self, model_id: str, input_tokens: int, output_tokens: int) -> float:
-        pricing = {
-            'claude-3.5-sonnet': (3.00, 15.00),
-            'claude-3.5-haiku': (0.25, 1.25),
-            'claude-3.5-opus': (15.00, 75.00),
-            'claude-3-sonnet-20240229': (3.00, 15.00),
-            'claude-3-haiku-20240307': (0.25, 1.25),
-        }
-        input_price, output_price = pricing.get(model_id, (3.00, 15.00))
-        return (input_tokens * input_price / 1_000_000) + (output_tokens * output_price / 1_000_000)
+        """S2854: delegate to canonical pricing_catalog."""
+        from core.services.pricing_catalog import calculate_cost
+        return float(calculate_cost(model_id, input_tokens, output_tokens))
 
 
 # =============================================================================
@@ -625,12 +611,9 @@ class DeepSeekProvider(BaseLLMProvider):
             )
 
     def _calculate_cost(self, model_id: str, input_tokens: int, output_tokens: int) -> float:
-        pricing = {
-            'deepseek-coder': (0.14, 0.28),
-            'deepseek-chat': (0.07, 0.14),
-        }
-        input_price, output_price = pricing.get(model_id, (0.14, 0.28))
-        return (input_tokens * input_price / 1_000_000) + (output_tokens * output_price / 1_000_000)
+        """S2854: delegate to canonical pricing_catalog."""
+        from core.services.pricing_catalog import calculate_cost
+        return float(calculate_cost(model_id, input_tokens, output_tokens))
 
 
 # =============================================================================
@@ -742,16 +725,9 @@ class TogetherProvider(BaseLLMProvider):
             )
 
     def _calculate_cost(self, model_id: str, input_tokens: int, output_tokens: int) -> float:
-        # Together AI pricing per 1M tokens (approximate)
-        pricing = {
-            'deepseek-ai/deepseek-coder-33b-instruct': (0.80, 0.80),
-            'meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo': (0.88, 0.88),
-            'meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo': (0.18, 0.18),
-            'mistralai/Mixtral-8x7B-Instruct-v0.1': (0.60, 0.60),
-            'Qwen/Qwen2.5-Coder-32B-Instruct': (0.80, 0.80),
-        }
-        input_price, output_price = pricing.get(model_id, (0.80, 0.80))
-        return (input_tokens * input_price / 1_000_000) + (output_tokens * output_price / 1_000_000)
+        """S2854: delegate to canonical pricing_catalog."""
+        from core.services.pricing_catalog import calculate_cost
+        return float(calculate_cost(model_id, input_tokens, output_tokens))
 
 
 # =============================================================================
@@ -878,16 +854,9 @@ class GeminiProvider(BaseLLMProvider):
             )
 
     def _calculate_cost(self, model_id: str, input_tokens: int, output_tokens: int) -> float:
-        # Pricing per 1M tokens (Jan 2026)
-        pricing = {
-            'gemini-2.0-flash': (0.075, 0.30),
-            'gemini-2.5-flash': (0.075, 0.30),
-            'gemini-2.0-pro': (1.25, 5.00),
-            'gemini-2.5-pro': (1.25, 5.00),
-            'gemini-pro': (0.50, 1.50),
-        }
-        input_price, output_price = pricing.get(model_id, (0.50, 1.50))
-        return (input_tokens * input_price / 1_000_000) + (output_tokens * output_price / 1_000_000)
+        """S2854: delegate to canonical pricing_catalog."""
+        from core.services.pricing_catalog import calculate_cost
+        return float(calculate_cost(model_id, input_tokens, output_tokens))
 
 
 # =============================================================================
