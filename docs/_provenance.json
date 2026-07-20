@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-20T21:42:54+00:00",
+    "generated": "2026-07-20T22:41:46+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "f22f0c154394",
-    "doc_count": 2724,
-    "commit_count": 8233,
+    "git_head": "fcffd2dd99be",
+    "doc_count": 2725,
+    "commit_count": 8237,
     "confidence_breakdown": {
-      "HIGH": 1711,
+      "HIGH": 1712,
       "MEDIUM": 411,
       "LOW": 40,
       "UNKNOWN": 562
@@ -2597,7 +2597,7 @@
         2830,
         2847
       ],
-      "commit_count": 1424,
+      "commit_count": 1426,
       "prs": [
         10,
         11,
@@ -3260,7 +3260,8 @@
         3312,
         3314,
         3317,
-        3319
+        3319,
+        3321
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7631,7 +7632,7 @@
         2830,
         2847
       ],
-      "commit_count": 356,
+      "commit_count": 358,
       "prs": [
         2213,
         2219,
@@ -7889,7 +7890,8 @@
         3310,
         3312,
         3314,
-        3319
+        3319,
+        3321
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21353,6 +21355,21 @@
       "commit_count": 2,
       "prs": [
         3319
+      ]
+    },
+    "docs/handoffs/SESSION_2852_LIST_CAPS_AUTH_TIGHTENED.md": {
+      "originating_session": 2852,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "088aa2ce",
+      "first_commit_date": "2026-07-20",
+      "first_commit_subject": "docs(session): S2852 close \u2014 list_caps auth tightened + docs cascade (#3321)",
+      "sessions_touched": [
+        2852
+      ],
+      "commit_count": 2,
+      "prs": [
+        3321
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
