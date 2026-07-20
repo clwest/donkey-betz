@@ -603,14 +603,14 @@ class LLMEnforcer:
         usage = response.usage if hasattr(response, 'usage') else None
         cached_input_tokens = 0
         if usage:
-            # GPT-5.2 pricing: $1.75/1M input, $14.00/1M output
-            # Cached input (via previous_response_id): $0.18/1M (90% discount)
+            # S2854: canonical pricing lives in core/services/pricing_catalog.py.
+            # gpt-5.2: $1.75/1M input, $14.00/1M output, $0.18/1M cached input.
             input_tokens = usage.input_tokens if hasattr(usage, 'input_tokens') else 0
             output_tokens = usage.output_tokens if hasattr(usage, 'output_tokens') else 0
             reasoning_tokens = usage.reasoning_tokens if hasattr(usage, 'reasoning_tokens') else 0
 
             # Session 1170: cached input tokens were silently charged at the
-            # full $1.75/1M rate, materially overestimating cost on every
+            # full input rate, materially overestimating cost on every
             # call that benefited from the previous_response_id cache.
             # OpenAI exposes cache hits at usage.input_tokens_details
             # .cached_tokens (Responses API) — fall back to
@@ -620,11 +620,13 @@ class LLMEnforcer:
             cached_input_tokens = _extract_cached_input_tokens(usage, total_input)
             uncached_input = max(0, total_input - cached_input_tokens)
 
-            cost = (
-                uncached_input * 1.75 / 1_000_000
-                + cached_input_tokens * 0.18 / 1_000_000
-                + output_tokens * 14.00 / 1_000_000
-            )
+            from core.services.pricing_catalog import calculate_cost
+            cost = float(calculate_cost(
+                str(effective_model),
+                input_tokens=uncached_input,
+                output_tokens=output_tokens,
+                cached_input_tokens=cached_input_tokens,
+            ))
             total_tokens = input_tokens + output_tokens + reasoning_tokens
 
             logger.info(
@@ -683,7 +685,7 @@ class LLMEnforcer:
         """
         Calculate cost based on token usage for GPT-5-mini.
 
-        Session 127: Updated for GPT-5-mini pricing
+        S2854: rates sourced from core/services/pricing_catalog.py (canonical).
 
         Args:
             usage: OpenAI usage object
@@ -694,13 +696,12 @@ class LLMEnforcer:
         if not usage:
             return 0.0
 
-        # GPT-5-mini pricing (Session 127)
-        # Input: $0.50 per 1M tokens = $0.0005 per 1K tokens
-        # Output: $1.50 per 1M tokens = $0.0015 per 1K tokens
-        input_cost = (usage.prompt_tokens / 1000) * 0.0005
-        output_cost = (usage.completion_tokens / 1000) * 0.0015
-
-        return input_cost + output_cost
+        from core.services.pricing_catalog import calculate_cost
+        return float(calculate_cost(
+            'gpt-5-mini',
+            input_tokens=getattr(usage, 'prompt_tokens', 0),
+            output_tokens=getattr(usage, 'completion_tokens', 0),
+        ))
 
     def _call_claude(self, prompt: str, max_tokens: int, temperature: float) -> Dict[str, Any]:
         """Make actual Claude API call"""
@@ -723,8 +724,16 @@ class LLMEnforcer:
         output_tokens = response.usage.output_tokens if hasattr(response, 'usage') else 0
         tokens = input_tokens + output_tokens
 
-        # Estimate cost (Claude Haiku pricing)
-        cost = tokens * 0.00025 / 1000
+        # S2854: pre-canonicalization this path applied a single blended
+        # $0.25/1M rate to TOTAL tokens, silently under-charging every Claude
+        # call (Haiku output should charge 5x input). Split via
+        # pricing_catalog.
+        from core.services.pricing_catalog import calculate_cost
+        cost = float(calculate_cost(
+            'claude-3-haiku-20240307',
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+        ))
 
         return {
             'content': content,

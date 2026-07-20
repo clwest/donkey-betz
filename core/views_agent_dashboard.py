@@ -136,8 +136,11 @@ def agent_costs_data(request):
     learning_tokens = total_learnings * tokens_per_learning
     total_tokens = solution_tokens + learning_tokens
 
-    # GPT-4o-mini pricing: $0.150 per 1M input tokens, $0.600 per 1M output tokens
-    # Average: ~$0.375 per 1M tokens
+    # NOT BILLING — display-only dashboard estimator (blended per-1M
+    # approximation for the agent-collaboration/learning cost card). Do not
+    # use for budgets / enforcement. Canonical billing rates live in
+    # core/services/pricing_catalog.py (S2854 Phase 2 will migrate this to a
+    # real per-call aggregation.)
     cost_per_million_tokens = 0.375
 
     # Calculate actual API costs

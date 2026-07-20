@@ -2589,7 +2589,10 @@ Consider these trends when crafting the response to maximize relevance and engag
             input_tokens = getattr(usage, 'prompt_tokens', 0) if usage else 0
             output_tokens = getattr(usage, 'completion_tokens', 0) if usage else 0
             total_tokens = getattr(usage, 'total_tokens', 0) if usage else 0
-            # GPT-5-mini pricing: $0.003/1K input, $0.012/1K output
+            # NOT BILLING — display-only accumulated cost for the agent execution
+            # summary. Do not use for budgets / enforcement. Canonical billing
+            # rates live in core/services/pricing_catalog.py; the base_agent →
+            # LLMCallLog path does not run through this estimator (S2854).
             call_cost = (input_tokens * 0.003 / 1000) + (output_tokens * 0.012 / 1000)
 
             # Accumulate for this execution
@@ -2820,8 +2823,9 @@ Consider these trends when crafting the response to maximize relevance and engag
             output_tokens = getattr(usage, 'completion_tokens', 0) if usage else 0
             total_tokens = getattr(usage, 'total_tokens', 0) if usage else 0
 
-            # Calculate cost (GPT-5-mini estimated pricing)
-            # Reasoning models typically: $0.003/1K input, $0.012/1K output
+            # NOT BILLING — display-only cost estimate for AdvancedAnalyticsService
+            # (writes CostTracking, not LLMCallLog). Do not use for budgets /
+            # enforcement. Canonical rates live in core/services/pricing_catalog.py (S2854).
             estimated_cost = (input_tokens * 0.003 / 1000) + (output_tokens * 0.012 / 1000)
 
             # Track cost (requires authenticated user)

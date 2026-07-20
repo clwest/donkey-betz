@@ -312,7 +312,9 @@ def cost_breakdown(request):
         )
 
         if agent_cost['total_tokens']:
-            # Estimate cost at $0.01 per 1K tokens (approximate)
+            # NOT BILLING — display-only rollup estimator (agent-execution
+            # cost breakdown card). Do not use for budgets / enforcement.
+            # Canonical billing rates live in core/services/pricing_catalog.py (S2854).
             estimated_cost = (agent_cost['total_tokens'] / 1000) * 0.01
             services['agent_execution'] = {
                 'cost': estimated_cost,
