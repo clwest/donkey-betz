@@ -4018,6 +4018,21 @@ class OpsHandlersMixin:
             except ValueError as e:
                 return {'action': action, 'error': str(e)}
             spend = controller.compute_workspace_spend(now, workspace_id=workspace.id)
+            # S2850 #3.0a — immediate enforcement so operators don't wait
+            # for the next autopilot cycle. Both calls are idempotent and
+            # thresholded, so they no-op when the new cap doesn't cross a
+            # boundary. Auto-clear on cap-raise is also attributed here
+            # per Rigby SIGN #4 Q2.
+            freeze_action = controller.enforce_workspace_freeze(
+                spend, now, workspace.id,
+                actor_user_id=user_id,
+                trigger='operator_set_cap_immediate',
+            )
+            downgrade_action = controller.enforce_workspace_downgrade(
+                spend, now, workspace.id,
+                actor_user_id=user_id,
+                trigger='operator_set_cap_immediate',
+            )
             is_frozen = controller.is_workspace_frozen(workspace.id)
             warning = None
             if is_frozen and result['cap'] > spend['daily_total']:
@@ -4032,6 +4047,10 @@ class OpsHandlersMixin:
                 **result,
                 'daily_total': spend['daily_total'],
                 'is_frozen': is_frozen,
+                'enforcement_fired': {
+                    'freeze': freeze_action,
+                    'downgrade': downgrade_action,
+                },
                 'warning': warning,
             }
 
