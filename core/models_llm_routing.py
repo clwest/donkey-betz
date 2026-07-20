@@ -314,6 +314,23 @@ class LLMCallLog(models.Model):
         null=True,
         blank=True
     )
+    # Session 2846 (A1 W1) — per-workspace attribution for the A1 SaaS
+    # product substrate. Caps track spend per workspace_id regardless of
+    # ownership (Fold 2 policy). SET_NULL means workspace-deletion orphans
+    # historical rows into a null bucket that BudgetController treats
+    # explicitly (Fold 3 guardrail).
+    workspace = models.ForeignKey(
+        'core.ProjectWorkspace',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='llm_calls',
+        help_text=(
+            'Workspace this call was attributed to (Session 2846). '
+            'Null when caller has no user or no active workspace, or '
+            'when the referenced workspace was later deleted.'
+        ),
+    )
 
     # Model Used
     provider = models.CharField(max_length=50)
@@ -369,6 +386,9 @@ class LLMCallLog(models.Model):
             models.Index(fields=['provider', 'model_id', '-created_at']),
             models.Index(fields=['-created_at']),
             models.Index(fields=['success', '-created_at']),
+            # Session 2846 (A1 W1) — per-workspace spend aggregation is
+            # the hot path for BudgetController._compute_workspace_spend.
+            models.Index(fields=['workspace', '-created_at']),
         ]
 
     def __str__(self):
