@@ -3313,6 +3313,85 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Session 2847 A1 W1 Phase 3: Per-workspace budget management ──────────
+    {
+        "type": "function",
+        "name": "workspace_budget_tool",
+        "description": (
+            "Manage per-workspace LLM spend caps and freeze state (A1 W1 Phase 3). "
+            "Complements autopilot_tool.budget_report (global spend) and llm_enforcer's "
+            "per-workspace freeze hook: caps are stored in SystemConfiguration under "
+            "'workspace_daily_cap:<uuid>' and enforced by BudgetController against the "
+            "last-24h LLMCallLog spend for that workspace (sliding window, NOT calendar "
+            "day — spend at 09:15 today is measured against 09:15 yesterday). "
+            "Actions: 'set_cap' writes a cap ($ USD); 'get_status' returns cap + last-24h "
+            "spend + is_frozen + enforcement_tier for one workspace; 'clear_freeze' "
+            "removes an active workspace freeze flag; 'list_caps' shows every workspace "
+            "with a configured cap plus its current spend + freeze state; 'clear_cap' "
+            "removes the cap entirely (workspace falls back to global protection only). "
+            "MUTATIONS (set_cap, clear_cap, clear_freeze) require the caller to be "
+            "workspace owner OR staff, and are logged as AutopilotAction rows with "
+            "policy='workspace_budget_tool' for symmetric visibility with the automatic "
+            "enforce_workspace_freeze audit trail. Use this tool when asked to set/change/"
+            "clear a workspace budget cap, unfreeze a workspace, check a workspace's spend "
+            "vs cap, or inventory configured caps."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "set_cap",
+                        "get_status",
+                        "clear_freeze",
+                        "list_caps",
+                        "clear_cap",
+                    ],
+                    "description": (
+                        "set_cap: write/update a per-workspace daily cap ($ USD). "
+                        "Requires workspace_id + daily_cap_usd > 0. Idempotent — same "
+                        "value returns changed=false. Response warns when the target "
+                        "workspace is currently frozen and the new cap now exceeds "
+                        "24h spend (operator should call clear_freeze to resume). "
+                        "get_status: return {cap, spend, is_frozen, enforcement_tier} "
+                        "for one workspace. cap is null if unset. spend is a sliding "
+                        "24h + 1h window over LLMCallLog rows keyed by workspace_id. "
+                        "enforcement_tier is 'freeze_only' in W1 — will grow to include "
+                        "'downgrade_and_freeze' when W1.5 lands. "
+                        "clear_freeze: delete the workspace_freeze_active:<uuid> flag, "
+                        "which allows non-critical LLM calls to resume. Idempotent — "
+                        "no-op if the workspace isn't currently frozen. "
+                        "list_caps: return every workspace with a configured cap, "
+                        "joined against ProjectWorkspace for the human-readable name "
+                        "and enriched with current 24h spend + freeze status. "
+                        "clear_cap: delete the workspace_daily_cap:<uuid> row. The "
+                        "workspace falls back to global-tier budget protection only. "
+                        "Does NOT clear an existing freeze — call clear_freeze "
+                        "explicitly if both are intended."
+                    ),
+                },
+                "workspace_id": {
+                    "type": "string",
+                    "description": (
+                        "UUID of the ProjectWorkspace being managed. Required for "
+                        "set_cap, get_status, clear_freeze, clear_cap. Ignored for "
+                        "list_caps."
+                    ),
+                },
+                "daily_cap_usd": {
+                    "type": "number",
+                    "description": (
+                        "For set_cap: the new daily cap in USD. Must be > 0. Applied "
+                        "against the sliding last-24h spend from LLMCallLog. Ignored "
+                        "for all other actions."
+                    ),
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Session 1079: Governance Gateway ──────────────────────────────────────
     {
         "type": "function",
