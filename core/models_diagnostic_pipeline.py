@@ -529,6 +529,15 @@ class AutopilotAction(models.Model):
         ('remediate', 'Auto-Remediation Applied'),
         ('config_tune', 'Config Self-Tuning'),
         ('budget_freeze', 'Budget Hard Freeze'),
+        # Session 2846–2848 A1 W1 per-workspace budget audit trail. Backfill
+        # of values Phase 2 + Phase 3 already write to the audit log; W1.5
+        # adds the last two. All within max_length=30 (longest 27 chars).
+        ('workspace_budget_freeze', 'Workspace Budget Freeze (auto)'),
+        ('workspace_freeze_cleared', 'Workspace Freeze Cleared'),
+        ('workspace_cap_set', 'Workspace Cap Set'),
+        ('workspace_cap_cleared', 'Workspace Cap Cleared'),
+        ('workspace_downgrade_set', 'Workspace Downgrade Set (auto)'),
+        ('workspace_downgrade_cleared', 'Workspace Downgrade Cleared'),
     ]
 
     VERIFICATION_STATES = [

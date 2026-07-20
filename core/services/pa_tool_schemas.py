@@ -3313,28 +3313,35 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
-    # ── Session 2847 A1 W1 Phase 3: Per-workspace budget management ──────────
+    # ── Session 2847 A1 W1 Phase 3 + Session 2848 A1 W1.5 downgrade tier ────
     {
         "type": "function",
         "name": "workspace_budget_tool",
         "description": (
-            "Manage per-workspace LLM spend caps and freeze state (A1 W1 Phase 3). "
-            "Complements autopilot_tool.budget_report (global spend) and llm_enforcer's "
-            "per-workspace freeze hook: caps are stored in SystemConfiguration under "
-            "'workspace_daily_cap:<uuid>' and enforced by BudgetController against the "
-            "last-24h LLMCallLog spend for that workspace (sliding window, NOT calendar "
-            "day — spend at 09:15 today is measured against 09:15 yesterday). "
+            "Manage per-workspace LLM spend caps, downgrade state, and freeze state "
+            "(A1 W1 Phase 3 + W1.5). Complements autopilot_tool.budget_report (global "
+            "spend) and llm_enforcer's per-workspace freeze + downgrade hooks: caps are "
+            "stored in SystemConfiguration under 'workspace_daily_cap:<uuid>' and "
+            "enforced by BudgetController against the last-24h LLMCallLog spend for that "
+            "workspace (sliding window, NOT calendar day — spend at 09:15 today is "
+            "measured against 09:15 yesterday). Two enforcement tiers: at 70% of cap the "
+            "workspace is DOWNGRADED (routed to BUDGET_DOWNGRADE_MODEL, currently "
+            "gpt-5-mini) with hysteresis auto-clear at 60%; at 100% of cap the workspace "
+            "is FROZEN (non-critical LLM calls blocked). Freeze wins over downgrade. "
             "Actions: 'set_cap' writes a cap ($ USD); 'get_status' returns cap + last-24h "
-            "spend + is_frozen + enforcement_tier for one workspace; 'clear_freeze' "
-            "removes an active workspace freeze flag; 'list_caps' shows every workspace "
-            "with a configured cap plus its current spend + freeze state; 'clear_cap' "
-            "removes the cap entirely (workspace falls back to global protection only). "
-            "MUTATIONS (set_cap, clear_cap, clear_freeze) require the caller to be "
-            "workspace owner OR staff, and are logged as AutopilotAction rows with "
-            "policy='workspace_budget_tool' for symmetric visibility with the automatic "
-            "enforce_workspace_freeze audit trail. Use this tool when asked to set/change/"
-            "clear a workspace budget cap, unfreeze a workspace, check a workspace's spend "
-            "vs cap, or inventory configured caps."
+            "spend + is_frozen + is_downgraded + enforcement_tier for one workspace; "
+            "'clear_freeze' removes an active freeze flag; 'clear_downgrade' removes an "
+            "active downgrade flag (autopilot may re-flag on next cycle if spend still "
+            "over 70%); 'list_caps' shows every workspace with a configured cap plus its "
+            "current spend + freeze + downgrade state; 'clear_cap' removes the cap "
+            "entirely (workspace falls back to global protection only). "
+            "MUTATIONS (set_cap, clear_cap, clear_freeze, clear_downgrade) require the "
+            "caller to be workspace owner OR staff, and are logged as AutopilotAction "
+            "rows with policy='workspace_budget_tool' for symmetric visibility with the "
+            "automatic enforce_workspace_freeze + enforce_workspace_downgrade audit "
+            "trail. Use this tool when asked to set/change/clear a workspace budget cap, "
+            "unfreeze or un-downgrade a workspace, check a workspace's spend vs cap, or "
+            "inventory configured caps."
         ),
         "parameters": {
             "type": "object",
@@ -3345,6 +3352,7 @@ PA_TOOL_SCHEMAS = [
                         "set_cap",
                         "get_status",
                         "clear_freeze",
+                        "clear_downgrade",
                         "list_caps",
                         "clear_cap",
                     ],
@@ -3354,21 +3362,27 @@ PA_TOOL_SCHEMAS = [
                         "value returns changed=false. Response warns when the target "
                         "workspace is currently frozen and the new cap now exceeds "
                         "24h spend (operator should call clear_freeze to resume). "
-                        "get_status: return {cap, spend, is_frozen, enforcement_tier} "
-                        "for one workspace. cap is null if unset. spend is a sliding "
-                        "24h + 1h window over LLMCallLog rows keyed by workspace_id. "
-                        "enforcement_tier is 'freeze_only' in W1 — will grow to include "
-                        "'downgrade_and_freeze' when W1.5 lands. "
+                        "get_status: return {cap, spend, is_frozen, is_downgraded, "
+                        "enforcement_tier} for one workspace. cap is null if unset. "
+                        "spend is a sliding 24h + 1h window over LLMCallLog rows keyed "
+                        "by workspace_id. enforcement_tier is 'downgrade_and_freeze' "
+                        "(W1.5 tier is live). "
                         "clear_freeze: delete the workspace_freeze_active:<uuid> flag, "
                         "which allows non-critical LLM calls to resume. Idempotent — "
                         "no-op if the workspace isn't currently frozen. "
+                        "clear_downgrade: delete the workspace_downgrade_active:<uuid> "
+                        "flag, which restores routing to the requested model. "
+                        "Idempotent — no-op if the workspace isn't currently downgraded. "
+                        "Note: autopilot's periodic budget cycle may re-flag on the next "
+                        "iteration if spend is still above 70% of cap (hysteresis "
+                        "auto-clear is at 60%). "
                         "list_caps: return every workspace with a configured cap, "
                         "joined against ProjectWorkspace for the human-readable name "
-                        "and enriched with current 24h spend + freeze status. "
+                        "and enriched with current 24h spend + freeze + downgrade status. "
                         "clear_cap: delete the workspace_daily_cap:<uuid> row. The "
                         "workspace falls back to global-tier budget protection only. "
-                        "Does NOT clear an existing freeze — call clear_freeze "
-                        "explicitly if both are intended."
+                        "Does NOT clear an existing freeze or downgrade — call "
+                        "clear_freeze / clear_downgrade explicitly if intended."
                     ),
                 },
                 "workspace_id": {
