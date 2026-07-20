@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-20T13:36:32+00:00",
+    "generated": "2026-07-20T14:05:40+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "1595cf04f036",
-    "doc_count": 2717,
-    "commit_count": 8188,
+    "git_head": "834a0f173d4a",
+    "doc_count": 2718,
+    "commit_count": 8194,
     "confidence_breakdown": {
-      "HIGH": 1705,
+      "HIGH": 1706,
       "MEDIUM": 410,
       "LOW": 40,
       "UNKNOWN": 562
@@ -2596,7 +2596,7 @@
         2808,
         2830
       ],
-      "commit_count": 1406,
+      "commit_count": 1408,
       "prs": [
         10,
         11,
@@ -3250,7 +3250,8 @@
         3294,
         3295,
         3297,
-        3298
+        3298,
+        3299
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7620,7 +7621,7 @@
         2808,
         2830
       ],
-      "commit_count": 344,
+      "commit_count": 346,
       "prs": [
         2213,
         2219,
@@ -7872,7 +7873,8 @@
         3293,
         3294,
         3295,
-        3297
+        3297,
+        3299
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21231,6 +21233,21 @@
       "commit_count": 2,
       "prs": [
         3298
+      ]
+    },
+    "docs/handoffs/SESSION_2845_SIGNAL_CLUSTER_SOURCE_FILTER_FIX.md": {
+      "originating_session": 2845,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "834a0f17",
+      "first_commit_date": "2026-07-20",
+      "first_commit_subject": "docs(handoff): S2845 \u2014 S2844 misdiagnosis corrected + source_spider fix + Rigby Tool Gap Ledger (#3301)",
+      "sessions_touched": [
+        2845
+      ],
+      "commit_count": 2,
+      "prs": [
+        3301
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
