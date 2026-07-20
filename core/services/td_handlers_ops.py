@@ -3945,9 +3945,48 @@ class OpsHandlersMixin:
         if action == 'list_caps':
             include_defaults = bool(payload.get('include_defaults', False))
             default_cap = controller.get_workspace_default_cap()
+
+            # S2852 — same auth scope as enforcement_report (S2851 #3.1).
+            # Non-staff sees only own workspaces; staff sees all;
+            # unauthenticated returns an empty list + scope_note (was
+            # previously exposing all workspace names + spend to any
+            # caller — Rigby SIGN Q3 latent-overexposure finding).
+            is_staff = False
+            if user_id is not None:
+                try:
+                    User = get_user_model()
+                    actor = User.objects.get(id=user_id)
+                    is_staff = bool(getattr(actor, 'is_staff', False))
+                except Exception:
+                    is_staff = False
+
+            # Rigby SIGN Q1 nit: keep scoped_ids as native workspace-id
+            # values (UUIDs) — don't str()-coerce early. The str() dance is
+            # only needed for the include_defaults=False loop where
+            # controller.list_workspace_caps() returns str workspace_ids;
+            # do that stringify at the comparison site, not at build time.
+            if user_id is None:
+                scoped_ids: Optional[set] = set()
+                scope_note = (
+                    'unauthenticated caller — per-workspace rows omitted'
+                )
+            elif is_staff:
+                scoped_ids = None  # None = no filter, staff sees all
+                scope_note = 'staff scope — all workspaces'
+            else:
+                scoped_ids = set(
+                    ProjectWorkspace.objects
+                    .filter(user_id=user_id)
+                    .values_list('id', flat=True)
+                )
+                scope_note = f'auto-scoped to workspaces owned by user_id={user_id}'
+
             enriched = []
             if include_defaults:
-                for ws in ProjectWorkspace.objects.all().only('id', 'name'):
+                ws_qs = ProjectWorkspace.objects.all().only('id', 'name')
+                if scoped_ids is not None:
+                    ws_qs = ws_qs.filter(id__in=scoped_ids)
+                for ws in ws_qs:
                     effective = controller.get_effective_workspace_daily_cap(ws.id)
                     if effective['cap'] is None:
                         continue
@@ -3965,9 +4004,17 @@ class OpsHandlersMixin:
                         'is_downgraded': controller.is_workspace_downgraded(ws.id),
                     })
             else:
+                import uuid as _uuid
                 rows = controller.list_workspace_caps()
                 for row in rows:
                     wid = row['workspace_id']
+                    if scoped_ids is not None:
+                        try:
+                            wid_uuid = _uuid.UUID(str(wid))
+                        except (ValueError, TypeError):
+                            continue
+                        if wid_uuid not in scoped_ids:
+                            continue
                     try:
                         ws = ProjectWorkspace.objects.get(id=wid)
                         name = ws.name
@@ -3992,6 +4039,7 @@ class OpsHandlersMixin:
                 'workspaces': enriched,
                 'default_cap': default_cap,
                 'include_defaults': include_defaults,
+                'scope_note': scope_note,
                 'enforcement_tier': 'downgrade_and_freeze',
                 'window_note': (
                     'daily = last 24h sliding window (not calendar day)'
