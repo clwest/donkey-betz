@@ -608,9 +608,16 @@ class BudgetController:
         )
         return bool(entry)
 
-    def clear_workspace_freeze(self, workspace_id) -> bool:
+    def clear_workspace_freeze(self, workspace_id, actor_user_id=None) -> bool:
         """Clear the freeze flag for a specific workspace. Returns True if
-        a flag was actually cleared."""
+        a flag was actually cleared.
+
+        actor_user_id (S2847 Phase 3): when passed from a manual PA-tool
+        clear, an AutopilotAction row is written so that operator unlocks
+        show up symmetrically with the auto-freeze logged by
+        enforce_workspace_freeze. When None (autopilot path), no row is
+        written from here — the caller is responsible for its own audit.
+        """
         if workspace_id is None:
             return False
         from core.models.system import SystemConfiguration
@@ -622,7 +629,147 @@ class BudgetController:
                 "workspace_id=%s",
                 workspace_id,
             )
+            if actor_user_id is not None:
+                AutopilotAction.objects.create(
+                    action_type='workspace_freeze_cleared',
+                    agent_name='workspace_budget_tool',
+                    policy='workspace_budget_tool',
+                    dry_run=False,
+                    evidence={
+                        'workspace_id': str(workspace_id),
+                        'actor_user_id': str(actor_user_id),
+                    },
+                    result={'cleared': True},
+                )
         return bool(deleted)
+
+    def set_workspace_daily_cap(
+        self, workspace_id, daily_cap_usd, actor_user_id=None,
+    ) -> dict:
+        """Write the per-workspace daily cap ($ USD) to SystemConfiguration.
+
+        S2847 Phase 3 — symmetric with get_workspace_daily_cap. When
+        actor_user_id is passed, records an AutopilotAction so operator
+        cap changes are as auditable as auto-freezes.
+
+        Idempotent: repeat set_cap with the same value is a no-op with
+        `changed=False`. Returns {workspace_id, cap, previous_cap, changed}.
+        """
+        if workspace_id is None:
+            raise ValueError("workspace_id is required")
+        try:
+            cap = float(daily_cap_usd)
+        except (TypeError, ValueError) as e:
+            raise ValueError(
+                f"daily_cap_usd must be numeric, got {daily_cap_usd!r}"
+            ) from e
+        if cap <= 0:
+            raise ValueError(
+                f"daily_cap_usd must be > 0, got {cap}"
+            )
+        from core.models.system import SystemConfiguration
+        key = f"{self._WORKSPACE_CAP_KEY_PREFIX}{workspace_id}"
+        previous = self.get_workspace_daily_cap(workspace_id)
+        SystemConfiguration.objects.update_or_create(
+            key=key,
+            defaults={
+                'value': cap,
+                'description': (
+                    f'Per-workspace daily cap ($ USD) — workspace_id='
+                    f'{workspace_id}. Enforced by BudgetController.'
+                    f'enforce_workspace_freeze against last-24h spend.'
+                ),
+                'category': 'performance',
+            },
+        )
+        changed = previous != cap
+        logger.info(
+            "[BudgetController] Set workspace daily cap — workspace_id=%s "
+            "cap=$%.2f (previous=%s, changed=%s)",
+            workspace_id, cap, previous, changed,
+        )
+        if actor_user_id is not None and changed:
+            AutopilotAction.objects.create(
+                action_type='workspace_cap_set',
+                agent_name='workspace_budget_tool',
+                policy='workspace_budget_tool',
+                dry_run=False,
+                evidence={
+                    'workspace_id': str(workspace_id),
+                    'actor_user_id': str(actor_user_id),
+                    'previous_cap': previous,
+                },
+                result={'cap': cap, 'previous_cap': previous},
+            )
+        return {
+            'workspace_id': str(workspace_id),
+            'cap': cap,
+            'previous_cap': previous,
+            'changed': changed,
+        }
+
+    def clear_workspace_daily_cap(
+        self, workspace_id, actor_user_id=None,
+    ) -> bool:
+        """Delete the per-workspace daily cap. Returns True if a cap row
+        was actually deleted.
+
+        S2847 Phase 3 — symmetric undo for set_workspace_daily_cap.
+        Deleting the cap does NOT clear an existing freeze; callers who
+        want both should call clear_workspace_freeze separately (keeps
+        the two operations independently auditable).
+        """
+        if workspace_id is None:
+            return False
+        from core.models.system import SystemConfiguration
+        key = f"{self._WORKSPACE_CAP_KEY_PREFIX}{workspace_id}"
+        deleted, _ = SystemConfiguration.objects.filter(key=key).delete()
+        if deleted:
+            logger.info(
+                "[BudgetController] Cleared workspace daily cap — "
+                "workspace_id=%s",
+                workspace_id,
+            )
+            if actor_user_id is not None:
+                AutopilotAction.objects.create(
+                    action_type='workspace_cap_cleared',
+                    agent_name='workspace_budget_tool',
+                    policy='workspace_budget_tool',
+                    dry_run=False,
+                    evidence={
+                        'workspace_id': str(workspace_id),
+                        'actor_user_id': str(actor_user_id),
+                    },
+                    result={'cleared': True},
+                )
+        return bool(deleted)
+
+    def list_workspace_caps(self) -> list:
+        """Return every workspace with a configured cap.
+
+        S2847 Phase 3 — inventory for workspace_budget_tool.list_caps.
+        Returns [{workspace_id, cap}] rows straight from SystemConfiguration.
+        The handler is responsible for joining ProjectWorkspace.name +
+        current spend + freeze status for operator visibility.
+        """
+        from core.models.system import SystemConfiguration
+        rows = SystemConfiguration.objects.filter(
+            key__startswith=self._WORKSPACE_CAP_KEY_PREFIX,
+        ).values_list('key', 'value')
+        out = []
+        for key, value in rows:
+            workspace_id = key[len(self._WORKSPACE_CAP_KEY_PREFIX):]
+            try:
+                cap = float(value)
+            except (TypeError, ValueError):
+                logger.warning(
+                    "[BudgetController] list_workspace_caps: skipping "
+                    "workspace_id=%s — value=%r not a valid float",
+                    workspace_id, value,
+                )
+                continue
+            out.append({'workspace_id': workspace_id, 'cap': cap})
+        return out
 
     def clear_budget_flags(self):
         """Clear downgrade/freeze flags when spend is back to normal."""
