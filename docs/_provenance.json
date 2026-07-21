@@ -1,12 +1,12 @@
 {
   "_meta": {
-    "generated": "2026-07-21T02:27:22+00:00",
+    "generated": "2026-07-21T04:10:15+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "4b7d29927885",
-    "doc_count": 2728,
-    "commit_count": 8251,
+    "git_head": "7a7bea22f44f",
+    "doc_count": 2730,
+    "commit_count": 8261,
     "confidence_breakdown": {
-      "HIGH": 1714,
+      "HIGH": 1716,
       "MEDIUM": 412,
       "LOW": 40,
       "UNKNOWN": 562
@@ -2598,7 +2598,7 @@
         2847,
         2855
       ],
-      "commit_count": 1432,
+      "commit_count": 1436,
       "prs": [
         10,
         11,
@@ -3265,7 +3265,9 @@
         3321,
         3323,
         3325,
-        3327
+        3327,
+        3330,
+        3332
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7637,7 +7639,7 @@
         2847,
         2855
       ],
-      "commit_count": 364,
+      "commit_count": 366,
       "prs": [
         2213,
         2219,
@@ -7899,7 +7901,8 @@
         3321,
         3323,
         3325,
-        3327
+        3327,
+        3330
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21423,6 +21426,36 @@
       "commit_count": 2,
       "prs": [
         3327
+      ]
+    },
+    "docs/handoffs/SESSION_2856_AUTOPILOT_HISTORY_EVIDENCE_AND_ENFORCEMENT_SPLIT_SHIPPED.md": {
+      "originating_session": 2856,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "dfcc0965",
+      "first_commit_date": "2026-07-20",
+      "first_commit_subject": "docs(session): S2856 close \u2014 autopilot.history evidence + enforcement_report auto/operator split shipped + docs cascade (#3330)",
+      "sessions_touched": [
+        2856
+      ],
+      "commit_count": 2,
+      "prs": [
+        3330
+      ]
+    },
+    "docs/handoffs/SESSION_2857_SIMULATE_ENFORCEMENT_SHIPPED.md": {
+      "originating_session": 2857,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "18463fe8",
+      "first_commit_date": "2026-07-20",
+      "first_commit_subject": "docs(session): S2857 close \u2014 simulate_enforcement shipped + docs cascade (#3332)",
+      "sessions_touched": [
+        2857
+      ],
+      "commit_count": 2,
+      "prs": [
+        3332
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
