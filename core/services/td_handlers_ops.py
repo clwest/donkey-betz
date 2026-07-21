@@ -6545,13 +6545,36 @@ class OpsHandlersMixin:
                     qs = qs.filter(DQ(embedding_text__icontains=query) | DQ(source_url__icontains=query))
 
                 qs = qs.order_by('-created_at')[:limit]
+
+                def _preview_for(r):
+                    et = (r.embedding_text or '').strip()
+                    if et:
+                        return et[:200]
+                    # S2869 Ledger #2: best-effort raw_data fallback (inline, not a shared
+                    # helper — do not codify raw_data structure as a contract).
+                    rd = r.raw_data
+                    if isinstance(rd, dict):
+                        items_val = rd.get('items')
+                        if isinstance(items_val, list) and items_val:
+                            first = items_val[0]
+                            if isinstance(first, dict):
+                                for key in ('title', 'name', 'id'):
+                                    val = first.get(key)
+                                    if isinstance(val, str) and val.strip():
+                                        return val.strip()[:200]
+                        for key in ('title', 'name'):
+                            val = rd.get(key)
+                            if isinstance(val, str) and val.strip():
+                                return val.strip()[:200]
+                    return ''
+
                 items = [{
                     'id': str(r.id),
                     'spider_name': r.spider_name,
                     'data_type': r.data_type,
                     'source_url': (r.source_url or '')[:120],
                     'created_at': r.created_at.isoformat(),
-                    'preview': (r.embedding_text or '')[:200],
+                    'preview': _preview_for(r),
                 } for r in qs]
                 return {'action': 'search', 'count': len(items), 'items': items}
 
