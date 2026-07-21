@@ -773,6 +773,12 @@ def create_deliverable(
     source_operation_id: Optional[str] = None,
     publish_intent: Optional[str] = None,  # Session 1095: explicit override
     raise_on_gated: bool = False,  # Session 1169: opt-in typed exception
+    # S2859 Ledger #8: skip `_clean_deliverable_title` entirely when the
+    # caller supplied an explicit user-authored/identifier-like title
+    # (e.g. `RATIFICATION_...`). Wire narrowly from the PA tool surface
+    # only — do NOT spread to agent callers; the cleaner exists to fix
+    # raw-prompt-as-title leakage from those flows.
+    preserve_title: bool = False,
     # Pass-through for any additional model fields
     **extra_fields,
 ) -> Any:
@@ -1074,7 +1080,14 @@ def create_deliverable(
     # else status comes from the caller (default 'ready')
 
     # --- Session 1088: Clean up prompt-as-title ---
-    title = _clean_deliverable_title(title, agent_name, content)
+    # S2859 Ledger #8: PA/Rigby tool-surface callers pass explicit,
+    # user-authored, identifier-like titles (e.g. `RATIFICATION_...`) and
+    # opt out via `preserve_title=True`. Bypass the auto-prefix
+    # reconstruction and 120-char cap; the outer `kwargs['title'] = title[:255]`
+    # below (aligned to Deliverable.title.max_length) still enforces
+    # model-column safety.
+    if not preserve_title:
+        title = _clean_deliverable_title(title, agent_name, content)
 
     # Build preview
     preview = content[:500] if content else ''
@@ -1139,7 +1152,12 @@ def create_deliverable(
 
     # Build creation kwargs
     kwargs = {
-        'title': title[:500],  # Enforce max length
+        # S2859 Ledger #8 post-code Q5.1 (Rigby): match the actual
+        # Deliverable.title column (max_length=255) instead of the
+        # legacy [:500] guard, which quietly diverged from the model.
+        # Pre-existing latent bug now exposed by preserve_title=True
+        # (the cleaner used to cap at [:120], hiding the mismatch).
+        'title': title[:255],
         'content': content,
         'agent_name': agent_name,
         'category': category,
@@ -1221,6 +1239,7 @@ def create_deliverable(
     diag_eval = _evaluate_initiative_alignment(
         initiative_id=kwargs.get('initiative_id'),
         workspace_id=workspace_id,
+        deliverable_type=deliverable_type,  # S2859 Ledger #9
     )
     diag_payload_extras: Optional[dict] = None
     if diag_eval is not None:
@@ -1374,9 +1393,21 @@ def _get_or_create_unassigned_workspace_id(user) -> Optional[str]:
         return None
 
 
+# S2859 Ledger #9: deliverable types that legitimately have no initiative
+# parent — governance/ratification artifacts document decisions across
+# initiatives rather than progress within one. Exemption fires ONLY on the
+# no-initiative-id-supplied branch below; when the caller supplies a stale/
+# hallucinated initiative_id, or a real workspace_mismatch is detected, the
+# diagnostic still fires — those are real data-integrity signals regardless
+# of type. Conservative v1 set (`ratification_record` only); grow via a
+# second/third independent trigger per Playbook §14.2.
+_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT = frozenset({'ratification_record'})
+
+
 def _evaluate_initiative_alignment(
     initiative_id: Optional[str],
     workspace_id: Optional[str],
+    deliverable_type: Optional[str] = None,
 ) -> Optional[tuple]:
     """Session 1195 — Plan C Phase 1: Initiative-alignment check.
 
@@ -1389,11 +1420,18 @@ def _evaluate_initiative_alignment(
         ``(diag_code, expected_workspace_id)`` when the pair is
         misaligned and the deliverable should be marked diagnostic.
 
+    S2859 Ledger #9: ``deliverable_type`` is accepted so governance
+    types listed in ``_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT`` skip
+    the missing-initiative diagnostic. Workspace-mismatch semantics
+    are unchanged for all types — the exemption is narrowly scoped.
+
     Never raises — alignment-check failure must never block a
     deliverable write. On unexpected error, logs and returns None
     so the create path proceeds without a diagnostic mark.
     """
     if not initiative_id:
+        if deliverable_type in _TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT:
+            return None
         return ('missing_initiative_id', None)
     try:
         from core.models import Initiative
