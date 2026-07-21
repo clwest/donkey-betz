@@ -306,6 +306,8 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
 
         # Research & Analysis agents
         self.register("web_search", self._handle_web_search)
+        # Rigby Tool Gap Ledger #15 (S2865) — raw HTTP fetch surface
+        self.register("web_fetch_tool", self._handle_web_fetch)
         self.register("competitor_analysis_agent", self._handle_agent_tool)
         self.register("customer_research_agent", self._handle_agent_tool)
         self.register("brand_strategy_agent", self._handle_agent_tool)

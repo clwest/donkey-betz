@@ -424,6 +424,172 @@ class AgentHandlersMixin:
             'error': result.get('error', 'Search failed'),
         }
 
+    def _handle_web_fetch(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str,
+    ) -> Dict[str, Any]:
+        """Raw HTTP fetch tool (Rigby Tool Gap Ledger #15, shipped S2865).
+
+        Minimal GET/POST fetch surface so PA / Rigby can self-service the
+        raw-HTTP verification cases that previously required Claude off-tool
+        (S2863 Q1 HF Hub API check, S2864 post-code Q4 local feed check).
+
+        Future concerns (Rigby zoom-out SIGN S2865 — folded here, not
+        acted on this slate): (a) if platform ever goes multi-tenant this
+        becomes primary SSRF vector — flip allow_private_networks default
+        to false + add cloud-metadata blocklist then; (b) exfiltration via
+        fetch + summarize workflows is out-of-scope for this tool but
+        worth watching if deliverables start containing sensitive bodies;
+        (c) bot-protection / CORS / cookies misconceptions — this is not
+        a browser, docstring makes it clear.
+        """
+        import httpx
+        from urllib.parse import urlparse
+
+        _TEXT_LIKE_PREFIXES = (
+            'text/',
+            'application/json',
+            'application/javascript',
+            'application/xml',
+        )
+
+        url = (payload.get('url') or '').strip()
+        if not url:
+            return {'ok': False, 'error': 'url is required'}
+
+        parsed = urlparse(url)
+        if parsed.scheme not in ('http', 'https'):
+            return {
+                'ok': False,
+                'error': f"disallowed scheme '{parsed.scheme}' (only http/https allowed)",
+                'url': url,
+            }
+
+        method = (payload.get('method') or 'GET').upper()
+        if method not in ('GET', 'POST'):
+            return {
+                'ok': False,
+                'error': f"unsupported method '{method}' (only GET/POST allowed)",
+                'url': url,
+            }
+
+        # Clamp timeout to [1, 60]
+        try:
+            timeout_seconds = float(payload.get('timeout_seconds') or 15)
+        except (TypeError, ValueError):
+            timeout_seconds = 15.0
+        timeout_seconds = max(1.0, min(timeout_seconds, 60.0))
+
+        # Clamp max_bytes to [1024, 2_000_000]
+        try:
+            max_bytes = int(payload.get('max_bytes') or 500_000)
+        except (TypeError, ValueError):
+            max_bytes = 500_000
+        max_bytes = max(1024, min(max_bytes, 2_000_000))
+
+        headers = payload.get('headers') or {}
+        if not isinstance(headers, dict):
+            headers = {}
+        params = payload.get('params') or None
+        if params is not None and not isinstance(params, dict):
+            params = None
+        json_body = payload.get('json_body') if method == 'POST' else None
+        allow_private_networks = bool(payload.get('allow_private_networks', True))
+
+        # Log without leaking Authorization header value or body content
+        header_names = sorted(headers.keys())
+        logger.info(
+            "web_fetch_tool call: method=%s url=%s header_names=%s "
+            "timeout=%.1fs max_bytes=%d allow_private=%s trace_id=%s",
+            method,
+            url,
+            header_names,
+            timeout_seconds,
+            max_bytes,
+            allow_private_networks,
+            trace_id,
+        )
+
+        started = time.monotonic()
+        try:
+            with httpx.Client(
+                timeout=httpx.Timeout(
+                    connect=min(5.0, timeout_seconds),
+                    read=timeout_seconds,
+                    write=min(5.0, timeout_seconds),
+                    pool=min(5.0, timeout_seconds),
+                ),
+                follow_redirects=True,
+                max_redirects=5,
+            ) as client:
+                if method == 'GET':
+                    resp = client.get(url, headers=headers, params=params)
+                else:
+                    resp = client.post(
+                        url,
+                        headers=headers,
+                        params=params,
+                        json=json_body,
+                    )
+        except httpx.TimeoutException as e:
+            return {
+                'ok': False,
+                'error': f"timeout after {timeout_seconds:.1f}s: {e}",
+                'url': url,
+                'latency_ms': int((time.monotonic() - started) * 1000),
+            }
+        except httpx.HTTPError as e:
+            return {
+                'ok': False,
+                'error': f"http error ({type(e).__name__}): {e}",
+                'url': url,
+                'latency_ms': int((time.monotonic() - started) * 1000),
+            }
+
+        latency_ms = int((time.monotonic() - started) * 1000)
+        raw_bytes = resp.content or b''
+        body_bytes_total = len(raw_bytes)
+        truncated = body_bytes_total > max_bytes
+        body_slice = raw_bytes[:max_bytes] if truncated else raw_bytes
+
+        content_type = (resp.headers.get('content-type') or '').lower()
+        is_text_like = any(content_type.startswith(p) for p in _TEXT_LIKE_PREFIXES)
+
+        body_text = ''
+        body_text_note = None
+        parsed_json = None
+        if is_text_like:
+            body_text = body_slice.decode('utf-8', errors='replace')
+            # Only try JSON parse when server said JSON; don't parse text/html as JSON.
+            if 'json' in content_type and not truncated:
+                try:
+                    parsed_json = resp.json()
+                except (ValueError, Exception):
+                    parsed_json = None
+        elif content_type:
+            body_text_note = 'omitted_non_text_content_type'
+        else:
+            body_text_note = 'omitted_unknown_content_type'
+
+        response_headers = {k: v for k, v in resp.headers.items()}
+
+        return {
+            'ok': True,
+            'status_code': resp.status_code,
+            'final_url': str(resp.url),
+            'content_type': content_type,
+            'body_bytes': body_bytes_total,
+            'truncated': truncated,
+            'body_text': body_text,
+            'body_text_note': body_text_note,
+            'json': parsed_json,
+            'response_headers': response_headers,
+            'latency_ms': latency_ms,
+        }
+
     def _handle_opportunity_manager(
         self,
         tool_name: str,
