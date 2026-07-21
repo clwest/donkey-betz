@@ -3910,7 +3910,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "detail", "create", "update", "append", "search", "save", "unsave", "stats", "duplicates", "set_status", "normalize", "export_pdf", "bulk_archive", "link_initiative", "unlink_initiative"],
+                    "enum": ["list", "detail", "create", "update", "append", "search", "save", "unsave", "stats", "duplicates", "set_status", "normalize", "export_pdf", "bulk_archive", "delete", "link_initiative", "unlink_initiative"],
                     "description": (
                         "list: browse deliverables (supports status/type/category/date/workspace filters). "
                         "detail: get full content of a deliverable (pass full=true for uncapped content). "
@@ -3925,6 +3925,7 @@ PA_TOOL_SCHEMAS = [
                         "normalize: dry-run alias-map sweep — preview rows whose `agent_name` (v1) would be canonicalized via the canonical alias map (e.g., 'rigby'→'Rigby', 'ClaudeCode'→'claude-code'). Defaults to dry_run=true; writes require BOTH dry_run=false AND confirm=true. Workspace-scoped by default; show_all=true sweeps globally. "
                         "export_pdf: generate a downloadable PDF. "
                         "bulk_archive: archive multiple deliverables by filter (dry_run=true by default). "
+                        "delete: PERMANENTLY delete a single deliverable by id. IRREVERSIBLE — cascades to DeliverableExport / DeliverableEvent (audit trail is also erased) / ContentPacketItem (may break content packets). Prefer set_status='archived' or bulk_archive for reversible cleanup. Defaults to dry_run=true (safe preview showing cascade counts). Writes require BOTH dry_run=false AND confirm=true. Rejects status='published' rows unless allow_published=true AND a non-empty reason is provided. Pre-delete WARNING log line records deliverable_id + user_id + trace_id + reason + cascade counts (DeliverableEvent cannot be relied on for audit because it cascades). "
                         "link_initiative: link a deliverable to an initiative (pass deliverable_id + initiative_id). "
                         "unlink_initiative: remove initiative link from a deliverable (pass deliverable_id)."
                     ),
@@ -3958,7 +3959,8 @@ PA_TOOL_SCHEMAS = [
                 "agent_name": {"type": "string", "description": "For create: agent name"},
                 "return_detail": {"type": "boolean", "description": "For create: when true, run a follow-up `detail` fetch and embed the sanitized dict under a `detail` key in the response, plus `detail_included: bool`. Closes the verify-then-set_status round-trip for callers who need the full provenance/content_preview/initiative/workspace block immediately. Note: `status` is ALWAYS echoed at top level regardless of this flag — use return_detail only when you need the full sanitized detail block."},
                 "dry_run": {"type": "boolean", "description": "For bulk_archive / cleanup / normalize: preview without executing (DEFAULT true). Writes require BOTH dry_run='false' AND confirm=true (Session 1227 PR4 normalize precedent, extended to bulk_archive/cleanup by Session 1228 PR-A). Belt-and-suspenders against LLM autofill — GPT-5.2 autofills declared optional booleans with False."},
-                "confirm": {"type": "boolean", "description": "For bulk_archive / cleanup / normalize: explicit second-factor confirmation required (along with dry_run=false) to actually apply writes. Defaults to false. Session 1228 PR-A extended the existing normalize gate to bulk_archive + cleanup."},
+                "confirm": {"type": "boolean", "description": "For bulk_archive / cleanup / normalize / delete: explicit second-factor confirmation required (along with dry_run=false) to actually apply writes. Defaults to false. Session 1228 PR-A extended the existing normalize gate to bulk_archive + cleanup; S2860 extended to single-row delete."},
+                "allow_published": {"type": "boolean", "description": "For delete: escape hatch to allow deletion of a deliverable with status='published'. Defaults to false (published rows rejected). When true, a non-empty `reason` is also REQUIRED. Autofill-safe: Python False is treated as not-set."},
                 "cap": {"type": "integer", "description": "For bulk_archive: max items per run"},
                 "title_prefixes": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive: title prefix filter"},
                 "agent_names": {"type": "array", "items": {"type": "string"}, "description": "For bulk_archive: agent name filter"},
