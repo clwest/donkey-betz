@@ -1169,7 +1169,7 @@ Remember: You provide PROCEDURAL INFORMATION and JDF-FORMATTED TEMPLATES, not le
             intelligence = []
             for item in results:
                 # LegacySpiderData stores data in raw_data or processed_data JSON fields
-                raw_data = item.raw_data or {}
+                raw_data = item.raw_data_dict
                 processed_data = item.processed_data or {}
 
                 # Extract title and content from the data

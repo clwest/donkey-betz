@@ -830,7 +830,7 @@ class SpiderCommands(commands.Cog):
 
                 result = []
                 for entry in spider_entries:
-                    raw = entry.raw_data or {}
+                    raw = entry.raw_data_dict
                     # Items are stored in raw_data['items'] array
                     items_list = raw.get('items', [])
 

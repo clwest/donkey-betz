@@ -669,7 +669,7 @@ You score and analyze - you do NOT create content or execute workflows."""
 
         Session 470: Now uses hybrid ML + rule-based scoring with SHAP explanations.
         """
-        raw_data = spider_data.raw_data or {}
+        raw_data = spider_data.raw_data_dict
         title = raw_data.get('title', f"{spider_data.data_type} from {spider_data.spider_name}")
 
         # Session 470: Try ML scoring first
@@ -916,7 +916,7 @@ You score and analyze - you do NOT create content or execute workflows."""
         try:
             from core.models_unified_system import Opportunity
 
-            raw_data = spider_data.raw_data or {}
+            raw_data = spider_data.raw_data_dict
             title = raw_data.get('title', f"{spider_data.data_type} from {spider_data.spider_name}")
 
             # Determine category from spider name

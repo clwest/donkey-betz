@@ -583,8 +583,8 @@ def get_project_spiders(request, project_id):
                     'id': str(sd.id),
                     'spider_name': sd.spider_name,
                     'data_type': sd.data_type,
-                    'summary': (sd.raw_data or {}).get('summary', '')[:200] if sd.raw_data else '',
-                    'url': (sd.raw_data or {}).get('url', '') if sd.raw_data else '',
+                    'summary': sd.raw_data_dict.get('summary', '')[:200],
+                    'url': sd.raw_data_dict.get('url', ''),
                     'created_at': sd.created_at.isoformat(),
                 })
 

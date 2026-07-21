@@ -215,7 +215,7 @@ class AutonomousIntelligenceLoop:
 
             for item in recent_data:
                 # Extract title/content from raw_data JSON
-                raw = item.raw_data or {}
+                raw = item.raw_data_dict
                 title = str(raw.get('title', raw.get('headline', ''))).lower()
                 content = str(raw.get('content', raw.get('description', raw.get('summary', '')))).lower()
                 combined = f"{title} {content}"
@@ -300,7 +300,7 @@ class AutonomousIntelligenceLoop:
 
             for job in recent_jobs:
                 # Extract job info from raw_data JSON
-                raw = job.raw_data or {}
+                raw = job.raw_data_dict
                 title = str(raw.get('title', raw.get('position', ''))).lower()
                 content = str(raw.get('description', raw.get('content', raw.get('company', '')))).lower()
                 combined = f"{title} {content}"

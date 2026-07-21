@@ -381,7 +381,7 @@ Focus on stocks without corresponding news explanations for moves."""
 
             results = []
             for data in query:
-                raw = data.raw_data or {}
+                raw = data.raw_data_dict
                 item = {
                     'source': data.spider_name,
                     'ticker': raw.get('symbol', raw.get('ticker', '')),

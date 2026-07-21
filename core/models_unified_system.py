@@ -26,6 +26,30 @@ import warnings
 
 logger = logging.getLogger(__name__)
 
+
+_NON_DICT_RAW_DATA_COUNTER: dict[str, int] = {}
+_NON_DICT_RAW_DATA_LOG_INTERVAL = 100
+
+
+def _record_non_dict_raw_data(instance, raw) -> None:
+    """S2872 Ledger #22b telemetry — rate-limited debug log for schema drift.
+
+    When ``LegacySpiderData.raw_data_dict`` falls back to ``{}`` because the
+    underlying ``raw_data`` is a list / ``None`` / any non-dict, record it so
+    schema drift is observable rather than silent. Rate-limited to one log
+    line per ``_NON_DICT_RAW_DATA_LOG_INTERVAL`` occurrences per spider_name
+    so a broken spider doesn't flood logs.
+    """
+    spider_name = getattr(instance, 'spider_name', '<unknown>') or '<unknown>'
+    _NON_DICT_RAW_DATA_COUNTER[spider_name] = _NON_DICT_RAW_DATA_COUNTER.get(spider_name, 0) + 1
+    count = _NON_DICT_RAW_DATA_COUNTER[spider_name]
+    if count == 1 or count % _NON_DICT_RAW_DATA_LOG_INTERVAL == 0:
+        logger.debug(
+            "LegacySpiderData.raw_data_dict fallback: spider=%s type=%s count=%d",
+            spider_name, type(raw).__name__, count,
+        )
+
+
 # Session 730: Import pgvector for native vector operations
 try:
     from pgvector.django import VectorField
@@ -3807,8 +3831,16 @@ class LegacySpiderData(models.Model):
         row). Every reader that does ``instance.raw_data.get(...)`` must go
         through this property to avoid ``AttributeError`` on list-form rows.
         Ingestion / write paths continue to use ``raw_data`` directly.
+
+        S2872 telemetry (Rigby SIGN fold): non-dict rows emit a rate-limited
+        debug log so schema drift is visible operationally — otherwise a crash
+        gets silently traded for a data-drop.
         """
-        return self.raw_data if isinstance(self.raw_data, dict) else {}
+        raw = self.raw_data
+        if isinstance(raw, dict):
+            return raw
+        _record_non_dict_raw_data(self, raw)
+        return {}
 
     def get_searchable_text(self) -> str:
         """Build searchable text from all items for embedding generation."""

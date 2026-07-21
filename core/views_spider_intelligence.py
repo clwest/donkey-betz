@@ -623,7 +623,7 @@ def opportunities_dashboard(request):
                 ).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:5]  # Get fewer records, each has multiple items
 
                 for data in spider_data:
-                    raw = data.raw_data or {}
+                    raw = data.raw_data_dict
                     # Items are stored as a list in raw_data['items']
                     raw_items = raw.get('items', [])
                     if isinstance(raw_items, list):
@@ -743,7 +743,7 @@ def opportunities_dashboard(request):
         ]
 
         for data in reddit_data:
-            raw = data.raw_data or {}
+            raw = data.raw_data_dict
             raw_items = raw.get('items', [])
             if isinstance(raw_items, list):
                 for item in raw_items:

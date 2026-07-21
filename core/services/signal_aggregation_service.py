@@ -363,7 +363,7 @@ class SignalAggregationService:
         Doesn't validate scheme/host; assumes spiders persist
         already-clean URLs.
         """
-        raw = sd.raw_data or {}
+        raw = sd.raw_data_dict
         for field in ('url', 'link', 'permalink', 'href'):
             v = raw.get(field)
             if isinstance(v, str) and v.strip():
@@ -394,7 +394,7 @@ class SignalAggregationService:
         """Extract readable text from spider data."""
         text_parts = []
 
-        raw = sd.raw_data or {}
+        raw = sd.raw_data_dict
 
         # Try common fields
         for field in ['title', 'description', 'content', 'text', 'body', 'summary']:

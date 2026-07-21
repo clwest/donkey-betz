@@ -256,7 +256,7 @@ class PersonaAgentContextBuilder:
         }
 
         # Try to extract from raw_data
-        raw = spider_data.raw_data or {}
+        raw = spider_data.raw_data_dict
         if isinstance(raw, dict):
             # Check for items array (common pattern)
             items = raw.get('items', [])

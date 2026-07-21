@@ -2106,7 +2106,7 @@ def _impl_run_viral_content_predictor(self):
 
         predictions_created = 0
         for data in spider_data:
-            raw = data.raw_data or {}
+            raw = data.raw_data_dict
 
             # Session 488: Fix - spider data stores items in 'items' array
             items = raw.get('items', [])
@@ -2237,7 +2237,7 @@ def _impl_run_tech_stack_tracker(self):
                  'openai': 'ai_ml', 'anthropic': 'ai_ml', 'llama': 'ai_ml', 'huggingface': 'ai_ml'}
         mentions = Counter()
         for data in spider_data:
-            raw = data.raw_data or {}
+            raw = data.raw_data_dict
 
             # Session 488: Fix - spider data stores items in 'items' array
             items = raw.get('items', [])
@@ -2303,7 +2303,7 @@ def _impl_run_ai_model_monitor(self):
 
         created = 0
         for data in spider_data:
-            raw = data.raw_data or {}
+            raw = data.raw_data_dict
             title = raw.get('title', '') or raw.get('modelId', '') or ''
             if any(kw in title.lower() for kw in ['model', 'llm', 'gpt', 'llama']):
                 org = 'openai' if 'openai' in title.lower() else 'unknown'
@@ -2360,7 +2360,7 @@ def _impl_run_case_law_monitor(self):
 
         created = 0
         for data in spider_data:
-            raw = data.raw_data or {}
+            raw = data.raw_data_dict
             case_name = raw.get('caseName', '') or raw.get('title', '') or ''
             if case_name and len(case_name) > 10:
                 CaseLawUpdate.objects.create(
