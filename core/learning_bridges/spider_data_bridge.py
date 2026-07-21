@@ -24,6 +24,13 @@ from core.models_unified_system import LegacySpiderData, UserAgentLearning, Agen
 logger = logging.getLogger(__name__)
 
 
+def _safe_dict(raw_data: Any) -> Dict:
+    """Return raw_data if it's a dict, else {}. Guards `raw_data.get(...)` callsites
+    against AttributeError when a LegacySpiderData row has list-form raw_data
+    (S2870 Ledger #21 — surfaced by S2869 test fixture 6)."""
+    return raw_data if isinstance(raw_data, dict) else {}
+
+
 class SpiderDataLearningLoop(LearningBridge):
     """
     Learns from spider data collection to improve agent intelligence
@@ -89,7 +96,7 @@ class SpiderDataLearningLoop(LearningBridge):
         """Extract target agents + summary metrics."""
         spider_data: LegacySpiderData = event_data
         target_agents = self._get_target_agents_for_data(spider_data)
-        raw_data = spider_data.raw_data or {}
+        raw_data = _safe_dict(spider_data.raw_data)
         items = raw_data.get('items', [])
         return {
             'target_agents': target_agents,
@@ -180,7 +187,7 @@ class SpiderDataLearningLoop(LearningBridge):
             # Session 400: Extract learning content using available fields in core LegacySpiderData
             # Core LegacySpiderData has: spider_name, source_url, data_type, raw_data, processed_data,
             # relevance_score, insights, embedding, is_processed, is_actionable, created_at
-            raw_data = spider_data.raw_data or {}
+            raw_data = _safe_dict(spider_data.raw_data)
             items = raw_data.get('items', [])
             item_count = len(items)
 
@@ -277,7 +284,7 @@ class SpiderDataLearningLoop(LearningBridge):
             score += 0.25
 
         # Check raw_data has items
-        raw_data = spider_data.raw_data or {}
+        raw_data = _safe_dict(spider_data.raw_data)
         items = raw_data.get('items', [])
         if items:
             score += 0.5
@@ -355,7 +362,7 @@ class SpiderDataLearningLoop(LearningBridge):
         relevance = float(spider_data.relevance_score or 50) / 100
 
         # Also factor in item count
-        raw_data = spider_data.raw_data or {}
+        raw_data = _safe_dict(spider_data.raw_data)
         items = raw_data.get('items', [])
         item_score = min(1.0, len(items) / 10) if items else 0.3
 
@@ -373,7 +380,7 @@ class SpiderDataLearningLoop(LearningBridge):
         """Evaluate whether spider data is actionable (can drive user decisions)."""
         if (spider_data.relevance_score or 0) < 50:
             return False
-        raw = spider_data.raw_data or {}
+        raw = _safe_dict(spider_data.raw_data)
         items = raw.get('items', [])
         if not items:
             return False
