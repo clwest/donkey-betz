@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-21T01:17:34+00:00",
+    "generated": "2026-07-21T02:27:22+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "4649851980ec",
-    "doc_count": 2727,
-    "commit_count": 8245,
+    "git_head": "4b7d29927885",
+    "doc_count": 2728,
+    "commit_count": 8251,
     "confidence_breakdown": {
       "HIGH": 1714,
-      "MEDIUM": 411,
+      "MEDIUM": 412,
       "LOW": 40,
       "UNKNOWN": 562
     },
@@ -2595,9 +2595,10 @@
         2807,
         2808,
         2830,
-        2847
+        2847,
+        2855
       ],
-      "commit_count": 1430,
+      "commit_count": 1432,
       "prs": [
         10,
         11,
@@ -3263,7 +3264,8 @@
         3319,
         3321,
         3323,
-        3325
+        3325,
+        3327
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7632,9 +7634,10 @@
         2807,
         2808,
         2830,
-        2847
+        2847,
+        2855
       ],
-      "commit_count": 362,
+      "commit_count": 364,
       "prs": [
         2213,
         2219,
@@ -7895,7 +7898,8 @@
         3319,
         3321,
         3323,
-        3325
+        3325,
+        3327
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21404,6 +21408,21 @@
       "commit_count": 2,
       "prs": [
         3325
+      ]
+    },
+    "docs/handoffs/SESSION_2855_PRICING_CANON_PHASE_2A_SHIPPED.md": {
+      "originating_session": 2855,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "9eadf073",
+      "first_commit_date": "2026-07-20",
+      "first_commit_subject": "docs(session): S2855 close \u2014 pricing canonicalization Phase 2A shipped + docs cascade (#3327)",
+      "sessions_touched": [
+        2855
+      ],
+      "commit_count": 2,
+      "prs": [
+        3327
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
