@@ -2,32 +2,35 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2858 CLOSE → clear_* status_context + list_caps N+1 fix SHIPPED (2026-07-20; picks up as S2859) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2859 CLOSE → `deliverable_tool.create` Ledger #8 + #9 SHIPPED (2026-07-20; picks up as S2860) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-20 (S2858 close).** Chris-ratified bundle shipped as **two split PRs** (Rigby Q4 recommended split for blame localization):
+**Refreshed 2026-07-20 (S2859 close).** Chris-selected Ledger entries #8 + #9 (`deliverable_tool.create` gotchas) shipped as **one bundled PR with two commits** (Rigby SIGN Q3 concurred on bundle; Q4 mod folded via split-commit for blame localization):
 
-- **PR #3333** `96e4798d4` — S2858 PR#1: inline `status_context` block on `clear_freeze` / `clear_downgrade` responses. Operators no longer have to re-call `get_status` to know if the flag will immediately re-fire. New `_status_context()` private helper encodes enforcer semantics: `re_flag_likely` computed against EXPLICIT cap only (not effective), so when `cap_source != 'explicit'` the bool is False + reason explains enforcement won't re-fire until `set_cap`/`backfill_defaults`. Notes flag "state flip only" so operators don't misread `cleared=true` as remediation.
-- **PR #3334** `7a7bea22f` — S2858 PR#2: eliminate N+1 in `workspace_budget_tool.list_caps include_defaults=false`. Was: `ProjectWorkspace.objects.get()` per row. Now: two-pass batching — pass 1 collects `(row, uuid)` tuples + valid uuids; single `filter(id__in=uuids).values_list('id','name')` builds name dict; pass 2 uses dict lookup. Wire shape preserved (workspace_id stays string, missing rows → None-name).
+- **PR #3337** `f0757eabd` — S2859 slate #1: `deliverable_tool.create` substrate fix
+  - Commit `14ac6e23c` — fixture-drift fix in `test_deliverable_initiative_diagnostics.py` (owner_id NOT NULL + S1199 PR-D provenance contract). No production code changes; unblocks the A/B/C regression classes locally.
+  - Commit `b8b1cd518` — S2859 behavior change:
+    - **Ledger #8:** opt-in `preserve_title: bool = False` on `create_deliverable()`; wired from PA tool-surface create path so identifier-like titles (e.g. `RATIFICATION_20260720_...`) land verbatim (no auto-`Rigby:` prefix, no 120-char cap). Aligned latent `kwargs['title'] = title[:500]` truncation to actual `Deliverable.title.max_length = 255` (Rigby post-code Q5.1 fold).
+    - **Ledger #9:** `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT = frozenset({'ratification_record'})` skips `missing_initiative_id` diagnostic for governance types. Narrowly scoped — bypasses ONLY the no-initiative-id branch; `workspace_mismatch` integrity check preserved. Same gate applied at update-path re-eval.
+    - 12 new pytest cases (6 PreserveTitleTests + 6 RatificationTypeExemptTests).
 
-**Working loop validated at S2858:**
-- 1 combined pre-code SIGN cycle covering both PRs (6 grounded `repo_tool.read_file` calls, Q4 DISAGREE-with-mods → SPLIT PRs adopted, Q5 zoom-out surfaced 6 concerns with 4 folded same-PR into PR#1)
-- 2 post-code SIGN cycles: PR#1 (7 grounded reads, AGREE-TO-SHIP all 5), PR#2 (3 grounded reads, AGREE-TO-SHIP all 5)
-- 18 new pytest cases (12 PR#1 + 6 PR#2) + 26 S2857 regression = **44 total green**
-- Post-recycle Rigby E2E: PR#1 confirmed `status_context` block wired end-to-end on `chris-personal` workspace; PR#2 confirmed `list_caps` returns 16 workspaces with intact wire shape
-- Two new memory rules captured: `feedback_claude_stdout_truncation_vs_ui_truncation` + `feedback_per_pr_summary_signals_close_readiness`
+**Working loop validated at S2859:**
+- 1 pre-code SIGN cycle covering both fixes (5 grounded `repo_tool.read_file` calls, AGREE-with-mods on all 5 Qs, 4 mods folded + Q5 zoom-out surfaced 3 concerns — 2 folded same-PR, 1 recorded as future-trigger)
+- 1 post-code SIGN cycle (7 grounded reads, AGREE-TO-SHIP on Q1/Q2/Q3, AGREE-WITH-MODS on Q4 → split-commit, Q5.1 title-length mismatch folded same-PR, Q5.2 governance obligation recorded)
+- 23 total tests green (12 new + 11 pre-existing that were blocked by fixture drift, now unblocked)
+- Post-recycle Rigby E2E confirmed both fixes wired end-to-end on Donkey Betz workspace — title verbatim + no diagnostic mark on ratification_record row
 
-**Session pin `pa-ce93e07302c946cf` RETIRES at S2858 close.** Fresh mint required at S2859 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
+**Session pin `pa-c82f75411b3d45f0` RETIRES at S2859 close.** Fresh mint required at S2860 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
 
 ---
 
-## S2859 open sequence
+## S2860 open sequence
 
 ### Step 1 — Session-open atomic mint (per `feedback_session_open_atomic_mint_before_pa_dispatch`)
 
-`pa-ce93e07302c946cf` retired at S2858 close. Run atomic close BEFORE any PA dispatch:
+`pa-c82f75411b3d45f0` retired at S2859 close. Run atomic close BEFORE any PA dispatch:
 
 ```bash
-python manage.py session_lifecycle close --label s2859-<slate>
+python manage.py session_lifecycle close --label s2860-<slate>
 ```
 
 Verify:
@@ -35,14 +38,13 @@ Verify:
 grep "^python tools/pa_chat.py" tools/pa_local.sh
 ```
 
-### Step 2 — Net-new engineering candidates for S2859
+### Step 2 — Net-new engineering candidates for S2860
 
 Per `feedback_engineering_bias_over_audit`, list net-new first.
 
-0. **`deliverable_tool.create` gotchas — Ledger entries #8 + #9 (Chris-selected S2858 close)** — bundled ~30-45 min substrate fix in `core/services/td_handlers_agents.py::_handle_deliverables`:
-   - Remove/gate the auto-`Rigby:` title prefix (Ledger entry #8)
-   - Skip `missing_initiative_id` diagnostic when `deliverable_type in ('ratification_record', ...)` because those types legitimately have no initiative parent (Ledger entry #9)
-   Both hit every session at close cascade and force a Django-shell ORM cleanup. Customer-visible surface per `feedback_rigby_tool_gap_ledger` (Rigby's deliverable_tool IS the A1 SaaS product surface). Full context: Rigby Tool Gap Ledger deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` in workspace `b4503364-2573-4401-9e28-61a739e0ce50`. **My recommendation for S2859 slate #1.**
+0. **New Ledger candidates surfaced at S2859 (Chris to pick 1–2 for slate #1):**
+   - **`deliverable_tool.delete` action missing** — surfaced during S2859 post-merge E2E. Rigby had to fall back to `content_tool.content_reject` (soft-archive) to clean up a smoke row. For genuine hard-delete cleanup, need a first-class `delete` action. Small (~1-2 hours), self-contained. Adds to Rigby Tool Gap Ledger.
+   - **Q5.3 fold from S2859 SIGN — "diagnostic == effectively hidden in workspace UI"** — deeper substrate driver behind repeated exemption pressure. Requires UI/product decision (filterable diagnostic view? severity levels?). Watch for a 3rd/4th independent trigger before proposing a same-PR fix; NOT ready for slate — record only.
 
 1. **`simulate_enforcement` auto-clear-after-N-seconds** (S2857 first-trigger fold) — currently `dry_run=false` writes flags that persist until operator calls `clear_freeze`/`clear_downgrade`. Consider optional `auto_clear_after_seconds` param so a demo doesn't leave a workspace frozen if the operator forgets to clean up. Deferred — awaits explicit ask.
 
@@ -56,11 +58,13 @@ Per `feedback_engineering_bias_over_audit`, list net-new first.
 
 6. **`list_caps include_defaults=true` remaining perf costs** (S2858 Q5 concern 5, first trigger observed — deferred) — spend computation + is_frozen/is_downgraded lookups still per-row after PR #3334 batched the name lookup. Not urgent until fleet size makes it a slow ticket. Would extend the two-pass pattern from PR#2 to also batch SystemConfiguration reads.
 
-7. **Phase 2B pricing arc (only if reconciliation trigger surfaces)** — 4 deferred items from S2855: `model_kind` dimension, `EMBEDDING_COSTS`+`MODEL_PRICES` unification, `pricing_catalog_version` field on LLMCallLog, LLMCallLog↔CostTracking schema-level provenance column. None currently justified without a specific reconciliation trigger.
+7. **Second-trigger candidate for expanding `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT`** (S2859 first-trigger observed — needs 2nd/3rd independent trigger before adding types like `governance_charter`, `session_handoff`). Governed change per constant docstring; Playbook §14.2 threshold applies.
 
-8. **A4 warm-up under ratified constraints** — S2846 6-line block still in force. The substrate story now includes: per-workspace enforcement immediate + accurate audit trail + accurate tracking + fleet auditability + auth-scoped reads + downgrade savings estimate + Claude Haiku billing bug fixed + policy-downgraded calls priced correctly + analytics-plane attribution correct + display fallbacks canonical + embedding pricing SoT preserved + enforcer-forced downgrades cleanly distinguishable + operator vs autopilot enforcement events cleanly distinguishable + evidence/reason surfacing on autopilot audit history + operators + demo audiences can trigger enforcer against synthetic spend without shell access + **post-clear status_context inline on clear_* responses (no follow-up get_status needed) + list_caps read surface no longer degrades linearly with workspace count (PR #3333 + PR #3334)**.
+8. **Phase 2B pricing arc (only if reconciliation trigger surfaces)** — 4 deferred items from S2855: `model_kind` dimension, `EMBEDDING_COSTS`+`MODEL_PRICES` unification, `pricing_catalog_version` field on LLMCallLog, LLMCallLog↔CostTracking schema-level provenance column. None currently justified without a specific reconciliation trigger.
 
-### What's forbidden at S2859 (D6 moratorium still in force)
+9. **A4 warm-up under ratified constraints** — S2846 6-line block still in force. See A4 Constraints below for the full capability list after S2859.
+
+### What's forbidden at S2860 (D6 moratorium still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No new evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 
@@ -80,47 +84,46 @@ Per `feedback_engineering_bias_over_audit`, list net-new first.
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2858 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2859 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. Every workspace including A4 has $5/day default; operator can raise/lower via `set_cap` (fires immediate enforcement per S2850 #3.0a) or change the default via `set_default_cap` + `backfill_defaults`. S2857: operator can now verify enforcement without touching real spend via `simulate_enforcement`. **S2858: post-clear re-flag likelihood inline on clear_* responses; list_caps read surface no longer degrades linearly with workspace count.**
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. Every workspace including A4 has $5/day default; operator can raise/lower via `set_cap` (fires immediate enforcement per S2850 #3.0a) or change the default via `set_default_cap` + `backfill_defaults`. S2857: operator can now verify enforcement without touching real spend via `simulate_enforcement`. S2858: post-clear re-flag likelihood inline on clear_* responses; list_caps read surface no longer degrades linearly with workspace count. **S2859: `deliverable_tool.create` with `deliverable_type='ratification_record'` lands with verbatim title + no spurious diagnostic mark — governance close-cascade no longer requires manual ORM cleanup.**
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
-3. **Capability claims:** A4 outreach can now accurately claim: (a) per-workspace daily caps at operator-configurable default with backfill; (b) auto-enforcement at 70% soft / 100% hard tiers with hysteresis; (c) full audit trail — cycle-triggered vs operator-triggered attributed correctly + auto_events_count vs operator_events_count now visible per-workspace in the fleet report; (d) immediate enforcement on cap change (no ~10-min wait); (e) policy-triggered model downgrade routes to gpt-5-mini and is truthfully tracked in cost logs; (f) fleet auditability via `workspace_budget_tool.enforcement_report`; (g) read surfaces auth-scoped; (h) downgrade savings estimate visible per-workspace + fleet-total — now cleanly filtered to enforcer-forced downgrades only; (i) all billing paths route through a single canonical pricing catalog with Decimal-typed rates + cached-input support; Claude Haiku billing bug fixed; policy-downgraded calls priced at effective_model rates; (j) analytics-plane cost attribution correct; display fallbacks use canonical rates with explicit `estimated: true` flag; embedding pricing SoT preserved; (k) autopilot audit history (`autopilot_tool.history include_evidence=true`) surfaces evidence + result JSONField values inline for operators inspecting trigger / actor_user_id / reason; (l) operators + demo audiences can trigger the freeze + downgrade enforcer against a synthetic spend value via `workspace_budget_tool.simulate_enforcement` — dry-run reveals decisions + thresholds without state writes; live path writes real flags with `evidence.simulated=True` marker (excluded from fleet report by default); **(m) operators can now inspect post-clear re-flag likelihood inline on clear_freeze/clear_downgrade responses (no follow-up get_status call needed); status_context block encodes enforcer semantics with re_flag_likely tied to EXPLICIT cap only + explicit reason string; (n) workspace_budget_tool.list_caps read surface no longer degrades linearly with workspace count — batched name lookup via single filter().values_list() query regardless of row count.**
+3. **Capability claims:** A4 outreach can now accurately claim: (a) per-workspace daily caps at operator-configurable default with backfill; (b) auto-enforcement at 70% soft / 100% hard tiers with hysteresis; (c) full audit trail — cycle-triggered vs operator-triggered attributed correctly + auto_events_count vs operator_events_count now visible per-workspace in the fleet report; (d) immediate enforcement on cap change (no ~10-min wait); (e) policy-triggered model downgrade routes to gpt-5-mini and is truthfully tracked in cost logs; (f) fleet auditability via `workspace_budget_tool.enforcement_report`; (g) read surfaces auth-scoped; (h) downgrade savings estimate visible per-workspace + fleet-total — now cleanly filtered to enforcer-forced downgrades only; (i) all billing paths route through a single canonical pricing catalog with Decimal-typed rates + cached-input support; Claude Haiku billing bug fixed; policy-downgraded calls priced at effective_model rates; (j) analytics-plane cost attribution correct; display fallbacks use canonical rates with explicit `estimated: true` flag; embedding pricing SoT preserved; (k) autopilot audit history (`autopilot_tool.history include_evidence=true`) surfaces evidence + result JSONField values inline for operators inspecting trigger / actor_user_id / reason; (l) operators + demo audiences can trigger the freeze + downgrade enforcer against a synthetic spend value via `workspace_budget_tool.simulate_enforcement` — dry-run reveals decisions + thresholds without state writes; live path writes real flags with `evidence.simulated=True` marker (excluded from fleet report by default); (m) operators can now inspect post-clear re-flag likelihood inline on clear_freeze/clear_downgrade responses (no follow-up get_status call needed); status_context block encodes enforcer semantics with re_flag_likely tied to EXPLICIT cap only + explicit reason string; (n) workspace_budget_tool.list_caps read surface no longer degrades linearly with workspace count — batched name lookup via single filter().values_list() query regardless of row count; **(o) governance/ratification records land clean via `deliverable_tool.create` (deliverable_type=ratification_record) — no auto-title-prefix, no spurious missing_initiative_id diagnostic hiding the row from the workspace UI, no manual Django-shell cleanup required.**
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
 5. **Hard throttle:** A4 warm-up is constrained to a fixed timebox and fixed send count (3-5 total intros).
 6. **No bespoke follow-ups:** A4 warm-up prohibits custom follow-ups / custom research / custom deliverables.
 
 ---
 
-## S2858 close — what shipped (two code PRs + docs cascade)
+## S2859 close — what shipped (one PR, two commits + docs cascade)
 
 **Repo canonical (Claude-authored):**
-- **PR #3333** `96e4798d4` — S2858 PR#1: clear_freeze/clear_downgrade status_context (+ `_status_context()` private helper + schema prose updates + 12 new tests)
-- **PR #3334** `7a7bea22f` — S2858 PR#2: list_caps N+1 fix via batched name lookup (+ 6 new tests including query-count assertion)
-- **PR `<this docs cascade>`** — S2858 handoff + 00-START-NEXT-SESSION refresh + docs cascade
+- **PR #3337** `f0757eabd` — S2859 slate #1: Ledger #8 + #9 substrate fix
+  - Commit `14ac6e23c` — fixture drift fix (unblocks A/B/C regression classes)
+  - Commit `b8b1cd518` — `preserve_title` opt-in + `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT` frozenset + 12 new tests
+- **PR `<this docs cascade>`** — S2859 handoff + 00-START-NEXT-SESSION refresh + docs cascade
 
-**Memory (Claude-authored) — 2 new entries at S2858:**
-- `feedback_claude_stdout_truncation_vs_ui_truncation` — Claude stdout truncation ≠ UI truncation; full response usually visible to Chris in Chat UI. Re-request only for Claude's execution context. Extends `feedback_read_full_rigby_response_not_just_tail`.
-- `feedback_per_pr_summary_signals_close_readiness` — after every merged PR in a multi-PR slate, surface a summary WITH an explicit "still open before close" checklist. Chris uses these mid-flight summaries as decision points. Extends `feedback_session_close_three_part_summary`.
-
-**Workspace canonical:** Content mirror + ratification envelope written by Rigby via PA tool per `feedback_rigby_writes_workspace_deliverables` at S2858 close-cascade.
+**Workspace canonical:** Content mirror + ratification envelope written by Rigby via PA tool per `feedback_rigby_writes_workspace_deliverables` at S2859 close-cascade. Ledger entries #8 + #9 marked complete + 2 new candidates added (`deliverable_tool.delete` gap + Q5.3 diagnostic-invisibility future-trigger).
 
 **Runtime impact:**
-- **PR #3333:** `clear_freeze` + `clear_downgrade` responses now embed a `status_context` block with 9 fields (`daily_total`, `effective_cap`, `cap_source`, `spend_pct_of_cap`, `re_flag_likely`, `re_flag_reason`, `refire_threshold`, `refire_threshold_pct_of_cap`, `enforcement_note`) so operators don't have to re-call `get_status` to know if the flag will re-fire. `re_flag_likely` mirrors enforcer semantics (explicit-cap-only). Note strings flag "state flip only" so `cleared=true` isn't misread as remediation.
-- **PR #3334:** `workspace_budget_tool.list_caps include_defaults=false` scales O(1) on ProjectWorkspace name queries regardless of row count (was N+1). Two-pass batching: pass 1 collects `(row, uuid)` tuples + valid uuids; single `filter(id__in=uuids).values_list('id','name')`; pass 2 uses dict lookup. Wire shape preserved (workspace_id stays string, missing rows still yield None-name).
+- Every `deliverable_tool.create` call with `deliverable_type='ratification_record'` + explicit title now lands correctly first time — no post-create ORM cleanup step needed at ratification close-cascades.
+- Non-PA agent flows unaffected — `preserve_title=False` (default) still runs `_clean_deliverable_title` for raw-prompt-as-title cleanup.
+- Workspace_mismatch integrity check preserved for exempt types (a ratification with a real initiative_id + wrong workspace still marks diagnostic).
+- Pre-existing latent bug fixed: `kwargs['title']` truncation now matches actual `Deliverable.title.max_length=255` (was diverging at [:500]).
 
-**Not shipped at S2858 close (deferred to S2859 or later):**
-- Q5 concern 5 (list_caps include_defaults=true remaining per-row perf costs beyond N+1 fixed here)
-- `simulate_enforcement` auto-clear-after-N-seconds (first-trigger fold)
-- `EnforcementContext` dataclass consolidation (first-trigger fold)
-- `selected_fields` for `autopilot_tool.history include_evidence` (first-trigger fold)
-- Phase 2B pricing (4 items)
+**Not shipped at S2859 close (deferred to S2860 or later):**
+- `deliverable_tool.delete` action (new Ledger candidate; ~1-2 hours; surfaced at S2859 post-merge E2E)
+- Q5.3 fold — "diagnostic == effectively hidden" substrate work (needs 3rd/4th trigger; NOT ready for slate)
+- Second-trigger expansion of `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT` (needs another governance type to hit; Playbook §14.2 threshold)
+- All prior deferred items from S2858/S2857/S2856
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2858)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2859)
 
 See:
-- **S2858 handoff (current):** `docs/handoffs/SESSION_2858_CLEAR_STATUS_CONTEXT_AND_LIST_CAPS_N1_SHIPPED.md`
+- **S2859 handoff (current):** `docs/handoffs/SESSION_2859_DELIVERABLE_TOOL_GOTCHAS_LEDGER_8_9_SHIPPED.md`
+- **S2858 handoff:** `docs/handoffs/SESSION_2858_CLEAR_STATUS_CONTEXT_AND_LIST_CAPS_N1_SHIPPED.md`
 - **S2857 handoff:** `docs/handoffs/SESSION_2857_SIMULATE_ENFORCEMENT_SHIPPED.md`
 - **S2856 handoff:** `docs/handoffs/SESSION_2856_AUTOPILOT_HISTORY_EVIDENCE_AND_ENFORCEMENT_SPLIT_SHIPPED.md`
 - **S2855 handoff:** `docs/handoffs/SESSION_2855_PRICING_CANON_PHASE_2A_SHIPPED.md`
