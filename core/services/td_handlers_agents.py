@@ -2208,6 +2208,11 @@ class AgentHandlersMixin:
                     data_sensitivity=data_sensitivity,
                     workspace=resolved_workspace,
                     raise_on_gated=True,
+                    # S2859 Ledger #8: PA tool-surface callers pass user-
+                    # authored titles verbatim (identifier-like governance
+                    # artifacts, ratification records). Skip the auto-
+                    # prefix reconstruction + 120-char cap in the factory.
+                    preserve_title=True,
                 )
             except DeliverableGatedError as e:
                 return {
@@ -2457,6 +2462,7 @@ class AgentHandlersMixin:
             new_diag_eval = _evaluate_initiative_alignment(
                 initiative_id=str(obj.initiative_id) if obj.initiative_id else None,
                 workspace_id=str(obj.workspace_id) if obj.workspace_id else None,
+                deliverable_type=obj.deliverable_type,  # S2859 Ledger #9
             )
             DIAG_FIELDS = [
                 'diagnostic_status', 'diagnostic_code',
