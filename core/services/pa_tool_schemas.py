@@ -321,6 +321,79 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── Web Fetch (raw HTTP) — Rigby Tool Gap Ledger #15 (S2865) ───────────
+    {
+        "type": "function",
+        "name": "web_fetch_tool",
+        "description": (
+            "Raw HTTP GET/POST to a URL, returning status_code, headers, "
+            "and body (parsed JSON when content-type is application/json). "
+            "Use this when you need to verify what an API actually returns — "
+            "e.g., inspecting a JSON endpoint, checking a local /api/... "
+            "response, or confirming a service is reachable. Not a browser: "
+            "no JS execution, no cookies, no bot-protection bypass. Response "
+            "body capped at 500KB by default (max 2MB). Timeout capped at "
+            "60s. Only http:// and https:// URLs allowed."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string",
+                    "description": "Full URL to fetch (http:// or https:// only).",
+                },
+                "method": {
+                    "type": "string",
+                    "enum": ["GET", "POST"],
+                    "description": "HTTP method (default GET).",
+                },
+                "headers": {
+                    "type": "object",
+                    "description": (
+                        "Optional request headers as a {name: value} object. "
+                        "Authorization values are not logged, but body content is "
+                        "returned in the tool result — do not fetch URLs whose "
+                        "response would leak secrets you don't want visible."
+                    ),
+                },
+                "params": {
+                    "type": "object",
+                    "description": (
+                        "Optional querystring parameters merged into the URL. "
+                        "Prefer this over hand-constructing the URL — safer "
+                        "escaping and repeated-key handling."
+                    ),
+                },
+                "json_body": {
+                    "type": "object",
+                    "description": "Optional JSON body (POST only; ignored for GET).",
+                },
+                "timeout_seconds": {
+                    "type": "number",
+                    "description": "Read timeout in seconds (default 15, max 60).",
+                },
+                "max_bytes": {
+                    "type": "integer",
+                    "description": (
+                        "Truncate response body after this many bytes "
+                        "(default 500000 = 500KB, max 2000000 = 2MB). "
+                        "truncated=true in response indicates the cap was hit."
+                    ),
+                },
+                "allow_private_networks": {
+                    "type": "boolean",
+                    "description": (
+                        "Allow loopback / RFC1918 hosts (default true for "
+                        "current single-tenant pre-prod context). Flip to "
+                        "false to lock down egress if platform ever becomes "
+                        "multi-tenant."
+                    ),
+                },
+            },
+            "required": ["url"],
+        },
+    },
+
     # ── Research and Create ─────────────────────────────────────────────────
     {
         "type": "function",
