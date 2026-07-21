@@ -76,14 +76,15 @@ class HuggingFaceSpider:
         return all_items[:max_results]
 
     def _fetch_models(self, limit: int = 25) -> List[Dict[str, Any]]:
-        """Fetch trending models from HuggingFace."""
+        """Fetch top models from HuggingFace, ordered by downloads."""
         items = []
 
         try:
-            # Fetch models sorted by trending/downloads
+            # S2863 Rigby Ledger #13: sort=trending returns HTTP 400 on Hub API;
+            # sort=downloads is the current supported ordering (verified live 2026-07-21).
             url = f"{self.BASE_URL}/models"
             params = {
-                'sort': 'trending',
+                'sort': 'downloads',
                 'direction': -1,
                 'limit': limit,
             }
@@ -132,13 +133,15 @@ class HuggingFaceSpider:
         return items
 
     def _fetch_datasets(self, limit: int = 15) -> List[Dict[str, Any]]:
-        """Fetch trending datasets from HuggingFace."""
+        """Fetch top datasets from HuggingFace, ordered by downloads."""
         items = []
 
         try:
+            # S2863 Rigby Ledger #13: sort=trending returns HTTP 400 on Hub API;
+            # sort=downloads is the current supported ordering (verified live 2026-07-21).
             url = f"{self.BASE_URL}/datasets"
             params = {
-                'sort': 'trending',
+                'sort': 'downloads',
                 'direction': -1,
                 'limit': limit,
             }
@@ -179,13 +182,22 @@ class HuggingFaceSpider:
         return items
 
     def _fetch_spaces(self, limit: int = 10) -> List[Dict[str, Any]]:
-        """Fetch trending spaces (demos) from HuggingFace."""
+        """Fetch top spaces (demos) from HuggingFace, ordered by downloads.
+
+        Note: /api/spaces items don't populate `downloads` (returned as None) but
+        the server still accepts `sort=downloads` with HTTP 200 and yields a
+        deterministic ordering — matching the same fix shape as /models + /datasets.
+        Description text is built from `sdk` + `likes` (not downloads), so item
+        payloads remain well-formed.
+        """
         items = []
 
         try:
+            # S2863 Rigby Ledger #13: sort=trending returns HTTP 400 on Hub API;
+            # sort=downloads is the current supported ordering (verified live 2026-07-21).
             url = f"{self.BASE_URL}/spaces"
             params = {
-                'sort': 'trending',
+                'sort': 'downloads',
                 'direction': -1,
                 'limit': limit,
             }
