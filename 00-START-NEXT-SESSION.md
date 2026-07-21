@@ -2,48 +2,57 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2871 CLOSE → 3-item slate shipped (2026-07-21; picks up as S2872) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2872 CLOSE → Ledger #22b sweep shipped (2026-07-21; picks up as S2873) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-21 (S2871 close).** Rigby Tool Gap Ledger #22 + #23 + #24 grouped (all surfaced mid-S2870; all harden PA tool-surface reliability); shipped as **one PR / one commit**:
+**Refreshed 2026-07-21 (S2872 close).** Rigby Tool Gap Ledger #22b (broader `raw_data_dict` sweep) — Chris ratified at S2872 open while doing his own character-os repo dive; Claude+Rigby executed:
 
-- **PR #3363** `2c542fd4d` — S2871 slate (15 files, +366/-43)
-  - **#22 fix**: `LegacySpiderData.raw_data_dict` @property promoted from S2870 file-local `_safe_dict` helper. Guards `.raw_data.get(...)` against `AttributeError` on list-form rows. Also migrated `LegacySpiderData.get_searchable_text()` itself (was a self-crash site inside the model's own method) + 16 external callsites across 12 files.
-  - **#23 fix**: `LegacySpiderData` added to `orm_inspect_tool._MODEL_POLICIES` allowlist (sensitive=False, expensive_text_fields=('embedding_text',)). Unblocks S2870 Q4 verification path. Live post-code: `count_by field='spider_name'` returns 15,610 rows across 51 spiders.
-  - **#24 fix**: `repo_tool` search action gets conditional wall-clock timeouts per Rigby's Option A F-BLOCKING alternative. Repo-wide default keeps 10s/5s cap (UX protection); narrowed (path or file_type provided) unlocks 30s/10s. Timeout errors return structured `error_code` + narrowing hints with `suggested_paths`.
-  - 17 pytest cases across 3 test classes. S2870 + S2869 regression 32/32 (49/49 total in S2869→S2871 test suite).
+- **PR #3365** `a54998be4` — S2872 slate (30 files, +308/-46)
+  - **44 crash-risk callsites migrated** across 30 files from `raw = X.raw_data or {}` → `raw = X.raw_data_dict`. Old pattern silently failed on list-form LegacySpiderData rows: list is truthy → passes `or {}` guard → `.get()` crashes with AttributeError. Files: 12 agent + 6 service + 3 tasks_* + 2 views + 1 model + 1 mgmt cmd + 3 core/tasks.
+  - **Rigby Q4 zoom-out fold shipped:** `LegacySpiderData.raw_data_dict` property now emits rate-limited debug telemetry on fallback (first hit + every 100th per spider_name). Trades silent-data-drop for observable-schema-drift. Helper `_record_non_dict_raw_data` + counter `_NON_DICT_RAW_DATA_COUNTER` at `core/models_unified_system.py:29-49`.
+  - New test file `core/tests/test_s2872_ledger_22b_raw_data_dict_sweep.py` — 11 tests across 3 test classes (migrated call-paths list-form + dict-form correctness + telemetry).
+  - Combined regression suite (S2869 + S2870 + S2871 + S2872): **60/60 pass**.
+
+**Scope discipline (Rigby Q1 F-AGREE):**
+- **Category A (crash-risk):** unguarded `raw = X.raw_data or {}` on LegacySpiderData readers → **44 sites migrated** ✅
+- **Category B (already `isinstance(..., dict)`-guarded):** ~8-10 sites → **SKIPPED** (cosmetic churn deferred). Files: `td_handlers_content.py`, `tasks_content.py`, `views_spider_data.py`, `views_spider_dashboard.py`, `marketplace_discovery_service.py`, `platform_intelligence_briefing.py`, `spider_intelligence.py`, `living_project_service.py`, `content_diversity_orchestrator.py`.
+- **Category C (different model):** `persistence.models.SpiderData`, `Opportunity`, etc → **SKIPPED** (belongs to wish-list #2 + #3).
 
 **Discovery arc — 2 SIGN cycles:**
-- Pre-code SIGN: Rigby F-AGREE on #22/#23 with mitigations (property docstring, migrate get_searchable_text, standardize on raw_data_dict). F-BLOCKING-DISAGREE on #24 as originally proposed (blanket 30s bump = UX degradation); adopted Rigby's Option A (conditional timeout based on narrowing).
-- Post-code SIGN: F-AGREE all three with live tool_runs evidence — orm_inspect describe_model/count_by/filter/list_models all work; repo-wide search returns structured timeout error; narrowed path='core/' completes normally.
+- Pre-code SIGN: Rigby F-AGREE with 2 folds — (a) Q2 caution triggered narrow re-sweep, expanding scope from Claude's initial 8-site estimate to 44 confirmed sites; (b) Q4 zoom-out surfaced telemetry addition (biggest fold — reshaped property design).
+- Post-code SIGN: F-AGREE all 4 questions with live tool_runs evidence — `orm_inspect_tool` confirms LegacySpiderData reads work (15,618 rows, dict-form loads clean); `repo_tool.search` confirms remaining `raw_data or {}` hits are ONLY in Category B/C/write-path/tests (no unguarded reader regressions).
 
-**Working loop observations at S2871:**
-- `feedback_verify_rigby_tool_runs_before_trusting_sign` fired 2× — both SIGN cycles grounded in tool_runs evidence.
-- `feedback_verify_at_raw_orm_before_trusting_tool_no_data` did NOT fire this session — #23 removed the constraint that would have triggered it for spider-data verification.
-- `feedback_zoom_out_ask_per_rigby_sign` yielded 3 usable folds — all applied: (1) property mitigations + get_searchable_text self-migration; (2) Option A adoption for #24 (biggest fold — reshaped the design); (3) SpiderData allowlist future candidate + #22b sweep priority.
-- `feedback_claude_rigby_agree_first_chris_yes_no` applied: F-BLOCKING on #24 resolved between Claude+Rigby (Option A adopted) BEFORE Chris; presented Chris one recommendation.
-- `feedback_recycle_after_merge` (PLAYBOOK-7.4.4) applied post-merge.
+**Working loop observations at S2872:**
+- `feedback_verify_rigby_tool_runs_before_trusting_sign` fired 2×.
+- `feedback_zoom_out_ask_per_rigby_sign` yielded 2 usable folds — both applied.
+- `feedback_claude_rigby_agree_first_chris_yes_no` — presented Chris one recommendation.
+- `feedback_engineering_bias_over_audit` — net-new engineering ship (not audit).
+- `feedback_recycle_after_merge` (PLAYBOOK-7.4.4) — clean recycle post-merge (`sha=a54998be4d59, surviving=none`).
+- `feedback_read_full_rigby_response_not_just_tail` — initially truncated with `tail -200`; re-fetched for full F-verdict prose.
+- Chris redirected mid-session onto character-os Rigby integration (research question grounded in `consult_engine.py` — NOT a scope expansion; no arc opened).
 - No candidate lessons for Playbook amendment this session.
+
+**New Rigby-observed tool-surface gaps (candidates for future ledger entries, NOT logged yet — watch for second-trigger):**
+1. `orm_inspect_tool` can't JSON-type filter/count JSONField rows (no `jsonb_typeof` predicate). Blocked direct list-form prevalence quantification.
+2. `repo_tool.read_file` line caps on large files (e.g. `core/models_unified_system.py` at 554359 bytes returned "file too large" — had to rely on search anchors for verification).
 
 **Rigby Tool Gap Ledger updates (via Rigby PA per `feedback_rigby_writes_workspace_deliverables`):**
 - Deliverable ID `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0`
-- **#22** → `shipped_in_pr_S2871`
-- **#23** → `shipped_in_pr_S2871`
-- **#24** → `shipped_in_pr_S2871`
-- **NEW #22b** — broader raw_data_dict standardization sweep (~30 sites across agent/service files) — low priority, defer until live crash evidence
-- **NEW allowlist wish-list** — SpiderData (canonical, non-legacy) + Opportunity — for future orm_inspect_tool additions
+- **#22b** → `shipped_in_pr_S2872` (44 sites / 30 files / telemetry fold shipped)
 
-**Session pin `pa-4aee1a3ab24d42c6` (labeled `s2871-ledger-22-23-24-tool-surface-triple`) RETIRES at S2871 close.** Fresh mint required at S2872 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
+**Session pin `pa-de1eb1fdbd3540f3` (labeled `s2872-ledger-22b-raw-data-dict-sweep`) RETIRES at S2872 close.** Fresh mint required at S2873 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
+
+**Character-os Rigby integration research (mid-session, per Chris directive):** DBZ's `/api/pa/chat/` endpoint doesn't recognize `source='character-os-consult-engine'` or context payload (`spokesperson_id`, `workspace_id`). 5 gap tiers identified for future work: (1) caller recognition, (2) panel-shaped response contract, (3) persona translation activation, (4) per-caller tool allowlist, (5) reverse channel. Not opened as an arc under D6 moratorium — parked for post-moratorium consideration.
 
 ---
 
-## S2872 open sequence
+## S2873 open sequence
 
 ### Step 1 — Session-open atomic mint (per `feedback_session_open_atomic_mint_before_pa_dispatch`)
 
-Wrapper pin rewritten at S2871 close. If needed at S2872 open:
+Wrapper pin rewritten at S2872 close. If needed at S2873 open:
 
 ```bash
-python manage.py session_lifecycle close --label s2872-<slate>
+python manage.py session_lifecycle close --label s2873-<slate>
 ```
 
 Verify:
@@ -51,61 +60,67 @@ Verify:
 grep "^python tools/pa_chat.py" tools/pa_local.sh
 ```
 
-### Step 2 — Net-new engineering candidates for S2872
+### Step 2 — Net-new engineering candidates for S2873
 
 Per `feedback_engineering_bias_over_audit`, list net-new first.
 
-1. **NEW at S2871 close — Ledger #22b — broader `raw_data_dict` sweep** (~30 sites across agent files + `core/services/model_registry.py`, `smart_trending_service.py`, `autonomous_loop.py`, `living_project_service.py`, `core/tasks_ops.py`, `core/tasks_misc.py`, `core/views_odds_sports.py`, `core/views_project_intelligence.py`, `core/models_situation_triggers.py`). Property is in place; migration is mechanical. Waiting on: (a) live crash evidence OR (b) explicit Chris pick. ~1-2 hr.
+1. **NEW at S2872 close — SpiderData (canonical) → orm_inspect allowlist** (wish-list #2 from S2871). ~15 min. High value for cross-checking canonical spider data model when APIs disagree.
 
-2. **NEW at S2871 close — SpiderData (canonical) → orm_inspect allowlist** (Rigby's post-code S2871 Q7 wish-list). ~15 min. High value for cross-checking canonical spider data model when APIs disagree.
+2. **NEW at S2872 close — Opportunity → orm_inspect allowlist** (wish-list #3 from S2871). ~15 min. High-value model for revenue-side inspection.
 
-3. **NEW at S2871 close — Opportunity → orm_inspect allowlist** (Rigby's post-code S2871 Q7 second pick). ~15 min. High-value model for revenue-side inspection.
+3. **NEW at S2872 close — `orm_inspect_tool` JSONField type predicate** (Rigby-observed gap #1). Would enable direct queries like "count LegacySpiderData rows where raw_data is not a dict" via a `jsonb_typeof`-style predicate. 1st trigger only — watch for 2nd before promoting.
 
-4. **Ledger #5 — schema/handler drift detection lint / CI wiring** (~2 hr). Command exists at `core/management/commands/check_pa_tool_drift.py` (S2846-authored, 403 lines) but never wired to CI enforcement. Also worth reconciling pre-existing drift reports before flipping to enforce mode.
+4. **NEW at S2872 close — `repo_tool.read_file` large-file paging** (Rigby-observed gap #2). Currently rejects files >~500KB. Could add pagination or lazy-load semantics. 1st trigger only — watch for 2nd.
 
-5. **Ledger #16 — close-ceremony twin-mirror enforcement gap** (S2863). Ranked fix candidates: (a) explicit close-checklist gate (~15 min); (b) hard-enforce in `session_lifecycle close` — refuse close without both deliverable IDs (~2 hr); (c) nightly audit task for recent handoffs missing mirrors (~1 hr).
+5. **Ledger #5 — schema/handler drift detection lint / CI wiring** (~2 hr). Command exists at `core/management/commands/check_pa_tool_drift.py` (S2846-authored, 403 lines) but never wired to CI enforcement. Also worth reconciling pre-existing drift reports before flipping to enforce mode.
 
-6. **Carried — Exemption-list telemetry (Rigby zoom-out from S2868 slate #1)**. Add counts-by-code/type instrumentation for `diagnostic_status='cleared'` so we can detect exemption-list-junk-drawer risk over time. 1st trigger only — watch for 2nd before opening.
+6. **Carried from S2872 — Category B cosmetic `raw_data_dict` migration** (~30 min). ~8-10 already-`isinstance(..., dict)`-guarded sites in `td_handlers_content.py`, `tasks_content.py`, `views_spider_data.py`, `views_spider_dashboard.py`, `marketplace_discovery_service.py`, `platform_intelligence_briefing.py`, `spider_intelligence.py`, `living_project_service.py`, `content_diversity_orchestrator.py`. Deferred as cosmetic; consistency-only. Skip unless explicit Chris pick.
 
-7. **Carried — Stale-cleared row GC (Rigby zoom-out from S2868 slate #1)**. Optional sweep for `diagnostic_status='cleared'` rows >180 days old that could be fully NULLed. Deferred until UI clutter becomes real.
+7. **Ledger #16 — close-ceremony twin-mirror enforcement gap** (S2863). Ranked fix candidates: (a) explicit close-checklist gate (~15 min); (b) hard-enforce in `session_lifecycle close` — refuse close without both deliverable IDs (~2 hr); (c) nightly audit task for recent handoffs missing mirrors (~1 hr).
 
-8. **Carried — `group_key_note` UX hint on `count_by`** (S2867 Q2 fold). Nice-to-have string like `"FK grouped on attname <field>_id"`. 1st trigger; watch for 2nd.
+8. **Carried — Exemption-list telemetry (Rigby zoom-out from S2868 slate #1)**. Add counts-by-code/type instrumentation for `diagnostic_status='cleared'` so we can detect exemption-list-junk-drawer risk over time. 1st trigger only — watch for 2nd before opening.
 
-9. **Carried — High-cardinality guardrail on `count_by`** (S2867 Q5 fold). Optional soft-warning when `total_matching` exceeds a threshold. 1st trigger; deferred until slow-query experience report.
+9. **Carried — Stale-cleared row GC (Rigby zoom-out from S2868 slate #1)**. Optional sweep for `diagnostic_status='cleared'` rows >180 days old that could be fully NULLed. Deferred until UI clutter becomes real.
 
-10. **Carried — Per-model `allowed_fields` explicit allowlist on `orm_inspect_tool`** (S2866 fold, still 1st trigger). Mitigates euphemistic-name slip-through class.
+10. **Carried — `group_key_note` UX hint on `count_by`** (S2867 Q2 fold). Nice-to-have string like `"FK grouped on attname <field>_id"`. 1st trigger; watch for 2nd.
 
-11. **Carried — Promote S2862 Q5.a bimodal-collector fold to tracked spec_backlog entry.** Still 2 independent triggers, not promoted. ~30 min doc/deliverable.
+11. **Carried — High-cardinality guardrail on `count_by`** (S2867 Q5 fold). Optional soft-warning when `total_matching` exceeds a threshold. 1st trigger; deferred until slow-query experience report.
 
-12. **Carried — Codify "verify at persisted source of truth" as SIGN discipline** (Playbook amendment candidate). 1st trigger only from S2864; watch for 2nd/3rd.
+12. **Carried — Per-model `allowed_fields` explicit allowlist on `orm_inspect_tool`** (S2866 fold, still 1st trigger). Mitigates euphemistic-name slip-through class.
 
-13. **Carried — Provider-specific composite additions.** Reactive; watch for new integrations.
+13. **Carried — Promote S2862 Q5.a bimodal-collector fold to tracked spec_backlog entry.** Still 2 independent triggers, not promoted. ~30 min doc/deliverable.
 
-14. **Carried — `simulate_enforcement` auto-clear-after-N-seconds** (S2857 fold). Deferred; awaits explicit ask.
+14. **Carried — Codify "verify at persisted source of truth" as SIGN discipline** (Playbook amendment candidate). 1st trigger only from S2864; watch for 2nd/3rd.
 
-15. **Carried — `enforcement_action_types` shared constant** (S2856 Q5b, 1st trigger).
+15. **Carried — Provider-specific composite additions.** Reactive; watch for new integrations.
 
-16. **Carried — `actor_user_id` as first-class column on `AutopilotAction`** (S2856 Q5a, MIGRATION required). Deferred until schema-migration budget opens.
+16. **Carried — `simulate_enforcement` auto-clear-after-N-seconds** (S2857 fold). Deferred; awaits explicit ask.
 
-17. **Carried — `EnforcementContext` dataclass consolidation** (S2857 Q5, 1st trigger).
+17. **Carried — `enforcement_action_types` shared constant** (S2856 Q5b, 1st trigger).
 
-18. **Carried — `list_caps include_defaults=true` remaining perf costs** (S2858, 1st trigger).
+18. **Carried — `actor_user_id` as first-class column on `AutopilotAction`** (S2856 Q5a, MIGRATION required). Deferred until schema-migration budget opens.
 
-19. **Carried — Second-trigger candidate for expanding `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT`** (S2859 1st trigger observed; S2868 shipped 4 additions — this is now the 2nd cycle).
+19. **Carried — `EnforcementContext` dataclass consolidation** (S2857 Q5, 1st trigger).
 
-20. **Carried — Q5.3 fold from S2859 SIGN — "diagnostic == effectively hidden in workspace UI"**.
+20. **Carried — `list_caps include_defaults=true` remaining perf costs** (S2858, 1st trigger).
 
-21. **Carried — Fold C from S2861 close: shared JSONField projection helper**.
+21. **Carried — Second-trigger candidate for expanding `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT`** (S2859 1st trigger observed; S2868 shipped 4 additions — this is now the 2nd cycle).
 
-22. **Carried — Fold D from S2861 close: operator-surface discoverability for advanced PA-tool params**.
+22. **Carried — Q5.3 fold from S2859 SIGN — "diagnostic == effectively hidden in workspace UI"**.
 
-23. **Carried — openmeteo → SignalCluster drop (fold-carry from S2862)** — product decision.
+23. **Carried — Fold C from S2861 close: shared JSONField projection helper**.
 
-24. **Carried — Middleware `log_injected_params` spec candidate** (S2870 Q6 zoom-out fold). Compare GPT-5.2's function-call payload against operator utterance for un-mentioned filter values; log-only mode first, strip mode later for high-risk tools. Rigby-recommended pattern-checklist framing, not blanket Playbook rule. 1st trigger only from S2870 — watch for 2nd.
+24. **Carried — Fold D from S2861 close: operator-surface discoverability for advanced PA-tool params**.
 
-25. **Carried — Phase 2B pricing arc (only if reconciliation trigger surfaces)** — 4 deferred items from S2855.
+25. **Carried — openmeteo → SignalCluster drop (fold-carry from S2862)** — product decision.
 
-26. **Carried — A4 warm-up under ratified constraints** — S2846 6-line block still in force. A4 capabilities extended at S2871: see A4 Constraints below.
+26. **Carried — Middleware `log_injected_params` spec candidate** (S2870 Q6 zoom-out fold). Compare GPT-5.2's function-call payload against operator utterance for un-mentioned filter values; log-only mode first, strip mode later for high-risk tools. Rigby-recommended pattern-checklist framing, not blanket Playbook rule. 1st trigger only from S2870 — watch for 2nd.
+
+27. **Carried — Phase 2B pricing arc (only if reconciliation trigger surfaces)** — 4 deferred items from S2855.
+
+28. **Carried — A4 warm-up under ratified constraints** — S2846 6-line block still in force. A4 capabilities extended at S2871: see A4 Constraints below.
+
+29. **Carried — Character-os Rigby integration (5-gap analysis from S2872 mid-session, D6 moratorium hold)** — DBZ's `/api/pa/chat/` endpoint doesn't recognize `source='character-os-consult-engine'` / `spokesperson_id` / `workspace_id`. Cheapest safety wins: (a) caller recognition (~30 min), (d) per-caller tool allowlist (~1 hr). Biggest UX wins: (b) panel-shaped response contract (~1-2 hr), (c) persona translation activation (~1 hr). Largest scope: (e) reverse channel (`character_os_tool` in Rigby's surface). Parked under D6 moratorium; unlock requires Chris directive.
 
 ### What's forbidden at S2872 (D6 moratorium still in force)
 
@@ -133,32 +148,36 @@ Per `feedback_engineering_bias_over_audit`, list net-new first.
 
 ---
 
-## S2871 close — what shipped (one PR + docs cascade)
+## S2872 close — what shipped (one PR + docs cascade)
 
 **Repo canonical (Claude-authored):**
-- **PR #3363** `2c542fd4d` — S2871 slate: Ledger #22 + #23 + #24 (15 files, +366/-43)
-- **PR `<this docs cascade>`** — S2871 handoff + 00-START-NEXT-SESSION refresh + wrapper pin bump for S2872 open
+- **PR #3365** `a54998be4` — S2872 slate: Ledger #22b sweep + telemetry (30 files, +308/-46)
+- **PR `<this docs cascade>`** — S2872 handoff + 00-START-NEXT-SESSION refresh + wrapper pin bump for S2873 open
 
-**Workspace canonical:** Rigby Tool Gap Ledger updated by Rigby via PA tool per `feedback_rigby_writes_workspace_deliverables` (entries #22 + #23 + #24 marked shipped, 1 new entry #22b added + wish-list entries for SpiderData + Opportunity). Confirmed via `deliverable_tool.append` — 2,660 chars appended.
+**Workspace canonical:** Rigby Tool Gap Ledger updated by Rigby via PA tool per `feedback_rigby_writes_workspace_deliverables` (entry #22b marked `shipped_in_pr_S2872` + 2 new observed tool-surface gaps noted). Confirmed via `deliverable_tool.append`.
 
 **Runtime impact:**
-- `LegacySpiderData.raw_data_dict` is now the canonical guarded accessor. `.raw_data.get(...)` on list-form rows no longer crashes when callers use the property. 16 external callsites migrated.
-- `orm_inspect_tool` accepts `model='LegacySpiderData'` — describe_model, filter, count_by, get all work.
-- `repo_tool search` returns structured timeout errors + narrowing hints; narrowed calls (path/file_type) get 30s/10s budget.
+- 44 crash-risk callsites on LegacySpiderData readers migrated from `raw = X.raw_data or {}` → `raw = X.raw_data_dict`. List-form rows no longer crash on `.get()` in any migrated site.
+- `LegacySpiderData.raw_data_dict` property now emits rate-limited debug telemetry on fallback (first hit + every 100th per spider_name). Schema drift observable via `_NON_DICT_RAW_DATA_COUNTER`.
+- Combined regression suite (S2869 + S2870 + S2871 + S2872): 60/60 pass.
 - PA tool schemas unchanged (no new drift from `check_pa_tool_drift`).
 
-**Not shipped at S2871 close (deferred to S2872 or later):**
-- Ledger #22b (raw_data_dict sweep for ~30 remaining sites)
-- SpiderData + Opportunity → orm_inspect allowlist
+**Not shipped at S2872 close (deferred to S2873 or later):**
+- SpiderData + Opportunity → orm_inspect allowlist (wish-list from S2871)
+- `orm_inspect_tool` JSONField type predicate (new S2872 gap #1, 1st trigger)
+- `repo_tool.read_file` large-file paging (new S2872 gap #2, 1st trigger)
+- Category B cosmetic `raw_data_dict` migration (~8-10 already-guarded sites)
+- Character-os Rigby integration (5-gap analysis parked under D6 moratorium)
 - Ledger #5 / #16 (remaining open ledger items from prior sessions)
-- All prior deferred items from S2868/S2867/S2866/S2862/S2861/etc still carried
+- All prior deferred items from S2871/S2868/S2867/S2866/S2862/S2861/etc still carried
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2871)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2872)
 
 See:
-- **S2871 handoff (current):** `docs/handoffs/SESSION_2871_RAW_DATA_DICT_PROPERTY_ORM_INSPECT_LEGACY_SPIDER_DATA_CONDITIONAL_TIMEOUT.md`
+- **S2872 handoff (current):** `docs/handoffs/SESSION_2872_RAW_DATA_DICT_SWEEP_LEDGER_22B_TELEMETRY.md`
+- **S2871 handoff:** `docs/handoffs/SESSION_2871_RAW_DATA_DICT_PROPERTY_ORM_INSPECT_LEGACY_SPIDER_DATA_CONDITIONAL_TIMEOUT.md`
 - **S2870 handoff:** `docs/handoffs/SESSION_2870_INJECTION_HARDENING_AND_RAW_DATA_GUARD.md`
 - **S2869 handoff:** `docs/handoffs/SESSION_2869_SPIDER_SEARCH_PREVIEW_AND_SIGNAL_CLUSTERS_MULTISOURCE.md`
 - **S2868 handoff:** `docs/handoffs/SESSION_2868_DELIVERABLE_DIAGNOSTIC_AND_SPIDER_STATUS_PAGINATION.md`
