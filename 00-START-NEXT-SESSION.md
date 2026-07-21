@@ -2,34 +2,31 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2856 CLOSE → AUTOPILOT.HISTORY EVIDENCE + ENFORCEMENT_REPORT AUTO/OPERATOR SPLIT SHIPPED (2026-07-20; picks up as S2857) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2857 CLOSE → `workspace_budget_tool.simulate_enforcement` SHIPPED (2026-07-20; picks up as S2858) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-20 (S2856 close).** Two code PRs shipped in the S2856 window:
+**Refreshed 2026-07-20 (S2857 close).** One code PR shipped:
 
-- **PR #3328** `725b71f2f` (earlier in-window) — S2856 slate #1: `was_downgraded` + `pre_downgrade_model_id` fields on `LLMCallLog` + `enforce_real_ai` singleton stale-flag reset. Removed the OVER-estimate caveat from S2853's `downgrade_savings`.
-- **PR #3329** `4b7d29927` (this session) — S2856 slate #2 + #3 bundle: `autopilot_tool.history include_evidence` opt-in param surfaces `evidence` + `result` JSONField values per row (was previously hidden — operators had to drop to Django shell to see `trigger` / `actor_user_id` / `reason`). `enforcement_report` per-workspace rows gain `auto_events_count` + `operator_events_count` using `evidence.actor_user_id` presence as the decision rule; `enforcement_events_count` preserved as sum for back-compat. Bundled schema copy-edit to `include_downgrade_savings` description (was stale since PR #3328 — still said "OVER-reports" but was_downgraded fixed that).
+- **PR #3331** `52cf41287` — S2857 slate #1: new PA-tool action `workspace_budget_tool.simulate_enforcement`. Operators + customer demos can now fire the workspace freeze + downgrade enforcer against a synthetic daily-spend value without needing Django shell (Rigby's `PersonalAssistant` calling agent bypasses freeze at `core/llm_enforcer.py:271` `_critical_agents`). Rigby pre-code SIGN mods adopted same-PR: `evidence.simulated=True` marker + `enforcement_report.include_simulated` opt-in filter (default false — protects `operator_events_count` from demo pollution). Rigby post-code SIGN caught missing `math.isfinite()` guard for nan/inf; fix applied inline before ship + 2 new test cases.
 
-**Working loop validated at S2856 for PR #3329:**
-- 1 Rigby pre-code design SIGN cycle (1 turn: AGREE-TO-BUILD on all Q1–Q5 with 9 tool_runs = repo_tool + workspace_budget_tool + deliverable_tool)
-- 1 Rigby post-code diff SIGN cycle (1 turn: AGREE-TO-SHIP on all Q1–Q5 with 4 independent repo_tool diff verifications on the actual staged hunks; optional Q3 belt-and-suspenders comment applied inline)
-- 10 new pytest cases pass (2 new classes) + 33 pre-existing S2856 + pricing_catalog tests pass (43/43 in 0.811s)
-- Post-recycle Rigby E2E on `4b7d29927` confirms new keys populate: Donkey Betz workspace shows `enforcement_events_count: 17 = auto_events_count: 6 + operator_events_count: 11` (sum invariant holds)
-- Chris ratified the bundle scope via joint Claude+Rigby recommendation per `feedback_claude_rigby_agree_first_chris_yes_no`
+**Working loop validated at S2857:**
+- 1 Rigby pre-code SIGN cycle (1 turn: AGREE-TO-BUILD on Q1/Q2/Q4, DISAGREE-with-mods on Q3 → adopted; 9 tool_runs across `repo_tool` grounding checks)
+- 1 Rigby post-code SIGN cycle (1 turn: 6 independent `repo_tool.read_file` verifications on the actual staged hunks; DISAGREE-TO-SHIP on Q3 nan/inf; fix + 2 test cases applied inline)
+- 26 new pytest cases across 5 classes + 43 pre-existing S2856 + pricing_catalog tests pass (69 total green)
+- Post-recycle Rigby E2E on `52cf41287` confirmed all 3 dry-run decision tiers on `chris-personal` workspace (below cap → no_op; at 80% cap → `would_set_downgrade`; above cap → `would_freeze + would_set_downgrade`); validation error correctly returned for `-1.0`
+- Chris ratified the slate at open ("go ahead with simulate_enforcement") per `feedback_claude_rigby_agree_first_chris_yes_no` — Rigby's Q3 mods (evidence.simulated + report filter + nan/inf guard) are scope-preserving refinements landed same-PR.
 
-**Stale START-NEXT caveat caught early:** The S2855 close doc listed slate #1 as pending, but PR #3328 had already shipped it in a prior session on the same S2856 label (retired pin `pa-42d61f82953a4e48`). Investigation caught this before wasted work.
-
-**Session pin `pa-cd83950450f3466c` RETIRES at S2856 close.** Fresh mint required at S2857 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
+**Session pin `pa-cda874e3ee284874` RETIRES at S2857 close.** Fresh mint required at S2858 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
 
 ---
 
-## S2857 open sequence
+## S2858 open sequence
 
 ### Step 1 — Session-open atomic mint (per `feedback_session_open_atomic_mint_before_pa_dispatch`)
 
-`pa-cd83950450f3466c` retired at S2856 close. Run atomic close BEFORE any PA dispatch:
+`pa-cda874e3ee284874` retired at S2857 close. Run atomic close BEFORE any PA dispatch:
 
 ```bash
-python manage.py session_lifecycle close --label s2857-<slate>
+python manage.py session_lifecycle close --label s2858-<slate>
 ```
 
 Verify:
@@ -37,27 +34,29 @@ Verify:
 grep "^python tools/pa_chat.py" tools/pa_local.sh
 ```
 
-### Step 2 — Net-new engineering candidates for S2857
+### Step 2 — Net-new engineering candidates for S2858
 
 Per `feedback_engineering_bias_over_audit`, list net-new first.
 
-1. **`budget_tool.simulate_enforcement`** (S2850 Ledger #2 carry) — new PA tool action to exercise the enforcer hot-path as a non-PA agent. Rigby's calling agent is always `PersonalAssistant` which bypasses workspace freeze/downgrade. For customer demos or operator verification the current workaround is Django shell. ~2 hrs. **My recommendation for S2857.**
+1. **`clear_freeze`/`clear_downgrade` post-clear spend context** (carried from S2857) — currently `clear_freeze` just deletes the flag; inline the spend + re-flag likelihood in the response so operator doesn't have to re-call `get_status`. ~30 min. **My recommendation for S2858 slate #1.**
 
-2. **`clear_freeze`/`clear_downgrade` post-clear spend context** (carried forward) — currently `clear_freeze` just deletes the flag; inline the spend + re-flag likelihood in the response so the operator doesn't have to re-call `get_status`. ~30 min.
+2. **N+1 in `list_caps include_defaults=False` path** (S2852 Rigby Q4 pre-existing finding) — `ProjectWorkspace.objects.get(id=wid)` inside loop at `td_handlers_ops.py:4013`. Batch with `filter(id__in=[…]).in_bulk(field_name='id')` prefetch. ~30 min. Could bundle with #1.
 
-3. **N+1 in `list_caps include_defaults=False` path** (S2852 Rigby Q4 pre-existing finding) — `ProjectWorkspace.objects.get(id=wid)` inside loop at `td_handlers_ops.py:4013`. Batch with `filter(id__in=[…]).in_bulk(field_name='id')` prefetch. ~30 min.
+3. **`workspace_budget_tool.simulate_enforcement` — live-path with auto-clear-after-N-seconds** (S2857 first-trigger fold if user asks). Currently `dry_run=false` writes flags that persist until operator calls `clear_freeze`/`clear_downgrade`. Consider optional `auto_clear_after_seconds` param so a demo doesn't leave a workspace frozen if the operator forgets to clean up. Deferred — awaits explicit ask.
 
-4. **`selected_fields` param for `autopilot_tool.history include_evidence`** (S2856 slate #3 Rigby Q5c zoom-out fold, first trigger observed — deferred until second trigger before Playbook amendment) — introduce structured field selection over the JSONField payload so consumers can request only what they need without full evidence + result blobs. Blocked until concrete need surfaces (i.e. any consumer complaining about payload size).
+4. **`selected_fields` param for `autopilot_tool.history include_evidence`** (S2856 slate #3 Rigby Q5c zoom-out fold, first trigger observed — deferred until second trigger before Playbook amendment) — structured field selection over the JSONField payload. Blocked until concrete need surfaces.
 
 5. **`enforcement_action_types` shared constant** (S2856 pre-code Q5b, first trigger observed) — de-duplicate the 4-item action-type list between `td_handlers_ops.py:4362` and `ops_autopilot/budget.py` write sites. ~1 hr refactor. Not urgent until a fifth type is added.
 
-6. **`actor_user_id` as first-class column on `AutopilotAction`** (S2856 pre-code Q5a, first trigger observed — MIGRATION required) — the `evidence.actor_user_id` contract is now a first-class read semantic that drives the enforcement_report split. Long-term this wants to be an explicit column. Deferred until schema-migration budget opens or a second trigger surfaces.
+6. **`actor_user_id` as first-class column on `AutopilotAction`** (S2856 pre-code Q5a, first trigger — MIGRATION required). Deferred until schema-migration budget opens.
 
-7. **Phase 2B pricing arc (only if reconciliation trigger surfaces)** — 4 deferred items from S2855: `model_kind` dimension, `EMBEDDING_COSTS`+`MODEL_PRICES` unification, `pricing_catalog_version` field on LLMCallLog, LLMCallLog↔CostTracking schema-level provenance column. None currently justified without a specific reconciliation trigger.
+7. **`EnforcementContext` dataclass consolidation** (S2857 post-code Q5, first trigger observed) — `actor_user_id` + `trigger` + `simulated` (and growing) currently piped as kwargs on both enforce_ methods. Consolidate into an `EnforcementContext` dataclass. **Deferred** — awaits second independent trigger before Playbook amendment.
 
-8. **A4 warm-up under ratified constraints** — S2846 6-line block still in force. The substrate story now includes: per-workspace enforcement immediate + accurate audit trail + accurate tracking + fleet auditability + auth-scoped reads + downgrade savings estimate + Claude Haiku billing bug fixed + policy-downgraded calls priced correctly + analytics-plane attribution correct + display fallbacks canonical + embedding pricing SoT preserved + **enforcer-forced downgrades cleanly distinguishable (was_downgraded, PR #3328) + operator vs autopilot enforcement events cleanly distinguishable in fleet report + evidence/reason surfacing on autopilot audit history (PR #3329)**.
+8. **Phase 2B pricing arc (only if reconciliation trigger surfaces)** — 4 deferred items from S2855: `model_kind` dimension, `EMBEDDING_COSTS`+`MODEL_PRICES` unification, `pricing_catalog_version` field on LLMCallLog, LLMCallLog↔CostTracking schema-level provenance column. None currently justified without a specific reconciliation trigger.
 
-### What's forbidden at S2857 (D6 moratorium still in force)
+9. **A4 warm-up under ratified constraints** — S2846 6-line block still in force. The substrate story now includes: per-workspace enforcement immediate + accurate audit trail + accurate tracking + fleet auditability + auth-scoped reads + downgrade savings estimate + Claude Haiku billing bug fixed + policy-downgraded calls priced correctly + analytics-plane attribution correct + display fallbacks canonical + embedding pricing SoT preserved + enforcer-forced downgrades cleanly distinguishable + operator vs autopilot enforcement events cleanly distinguishable + evidence/reason surfacing on autopilot audit history + **operators + demo audiences can trigger enforcer against synthetic spend without shell access (PR #3331)**.
+
+### What's forbidden at S2858 (D6 moratorium still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No new evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 
@@ -77,47 +76,46 @@ Per `feedback_engineering_bias_over_audit`, list net-new first.
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2856 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2857 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. Every workspace including A4 has $5/day default; operator can raise/lower via `set_cap` (fires immediate enforcement per S2850 #3.0a) or change the default via `set_default_cap` + `backfill_defaults`.
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. Every workspace including A4 has $5/day default; operator can raise/lower via `set_cap` (fires immediate enforcement per S2850 #3.0a) or change the default via `set_default_cap` + `backfill_defaults`. **S2857: operator can now verify enforcement without touching real spend via `simulate_enforcement`.**
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
-3. **Capability claims:** A4 outreach can now accurately claim: (a) per-workspace daily caps at operator-configurable default with backfill; (b) auto-enforcement at 70% soft / 100% hard tiers with hysteresis; (c) full audit trail — cycle-triggered vs operator-triggered attributed correctly + **auto_events_count vs operator_events_count now visible per-workspace in the fleet report**; (d) immediate enforcement on cap change (no ~10-min wait); (e) policy-triggered model downgrade routes to gpt-5-mini and is truthfully tracked in cost logs; (f) fleet auditability via `workspace_budget_tool.enforcement_report`; (g) read surfaces auth-scoped; (h) downgrade savings estimate visible per-workspace + fleet-total — **now cleanly filtered to enforcer-forced downgrades only (PR #3328 `was_downgraded=True`)**; (i) all billing paths route through a single canonical pricing catalog with Decimal-typed rates + cached-input support; Claude Haiku billing bug fixed; policy-downgraded calls priced at effective_model rates; (j) analytics-plane cost attribution correct; display fallbacks use canonical rates with explicit `estimated: true` flag; embedding pricing SoT preserved; **(k) autopilot audit history (`autopilot_tool.history include_evidence=true`) now surfaces evidence + result JSONField values inline for operators inspecting trigger / actor_user_id / reason.**
+3. **Capability claims:** A4 outreach can now accurately claim: (a) per-workspace daily caps at operator-configurable default with backfill; (b) auto-enforcement at 70% soft / 100% hard tiers with hysteresis; (c) full audit trail — cycle-triggered vs operator-triggered attributed correctly + auto_events_count vs operator_events_count now visible per-workspace in the fleet report; (d) immediate enforcement on cap change (no ~10-min wait); (e) policy-triggered model downgrade routes to gpt-5-mini and is truthfully tracked in cost logs; (f) fleet auditability via `workspace_budget_tool.enforcement_report`; (g) read surfaces auth-scoped; (h) downgrade savings estimate visible per-workspace + fleet-total — now cleanly filtered to enforcer-forced downgrades only; (i) all billing paths route through a single canonical pricing catalog with Decimal-typed rates + cached-input support; Claude Haiku billing bug fixed; policy-downgraded calls priced at effective_model rates; (j) analytics-plane cost attribution correct; display fallbacks use canonical rates with explicit `estimated: true` flag; embedding pricing SoT preserved; (k) autopilot audit history (`autopilot_tool.history include_evidence=true`) surfaces evidence + result JSONField values inline for operators inspecting trigger / actor_user_id / reason; **(l) operators + demo audiences can trigger the freeze + downgrade enforcer against a synthetic spend value via `workspace_budget_tool.simulate_enforcement` — dry-run reveals decisions + thresholds without state writes; live path writes real flags with `evidence.simulated=True` marker (excluded from fleet report by default). Rigby's PersonalAssistant caller no longer needs Django shell to verify enforcement machinery.**
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
 5. **Hard throttle:** A4 warm-up is constrained to a fixed timebox and fixed send count (3-5 total intros).
 6. **No bespoke follow-ups:** A4 warm-up prohibits custom follow-ups / custom research / custom deliverables.
 
 ---
 
-## S2856 close — what shipped (two code PRs + docs cascade)
+## S2857 close — what shipped (one code PR + docs cascade)
 
 **Repo canonical (Claude-authored):**
-- **PR #3328** `725b71f2f` — S2856 slate #1 `was_downgraded` (prior in-window session)
-- **PR #3329** `4b7d29927` — S2856 slate #2 + #3 bundle: `autopilot_tool.history include_evidence` + `enforcement_report` auto/operator split + bundled `include_downgrade_savings` schema copy-edit
-- **PR `<this docs cascade>`** — S2856 handoff + 00-START-NEXT-SESSION refresh + docs cascade
+- **PR #3331** `52cf41287` — S2857 A1 W2 #4: `workspace_budget_tool.simulate_enforcement` (+ `enforcement_report.include_simulated` + additive `simulated=False` kwarg on enforce_ methods + 26 new tests + Rigby SIGN Q3 nan/inf guard)
+- **PR `<this docs cascade>`** — S2857 handoff + 00-START-NEXT-SESSION refresh + docs cascade
 
-**Memory (Claude-authored):** No new memory entries at S2856; all rules reinforced by session evidence (verify Rigby tool_runs; zoom-out ask; docs cascade at every close; recycle after merge; Claude directs / Rigby executes / Claude verifies; Rigby writes workspace deliverables; read full Rigby response not just tail).
+**Memory (Claude-authored):** No new memory entries at S2857; all rules reinforced by session evidence (verify Rigby tool_runs; zoom-out ask; belt-and-suspenders same-PR pattern; docs cascade at every close; recycle after merge; Claude directs / Rigby executes / Claude verifies; Rigby writes workspace deliverables; read full Rigby response not just tail).
 
-**Workspace canonical:** Content mirror to be written by Rigby via PA tool per `feedback_rigby_writes_workspace_deliverables` at S2856 close-cascade.
+**Workspace canonical:** Content mirror + ratification envelope to be written by Rigby via PA tool per `feedback_rigby_writes_workspace_deliverables` at S2857 close-cascade.
 
-**Runtime impact of PR #3329:**
-- `autopilot_tool.history include_evidence=true` returns `evidence` + `result` JSONField values per row — first-class read semantic on why an action fired and who triggered it (operator vs autopilot)
-- `enforcement_report` per-workspace rows carry `auto_events_count` + `operator_events_count` — fleet auditability now cleanly distinguishes autopilot cycle enforcement from operator-forced enforcement via `workspace_budget_tool`
-- Response `note` field carries the split-rule explainer (`bool(evidence.actor_user_id) → operator`)
-- `include_downgrade_savings` schema description updated to reflect PR #3328's semantics; no more "OVER-reports" caveat
+**Runtime impact of PR #3331:**
+- `workspace_budget_tool.simulate_enforcement` returns freeze + downgrade decisions (would_freeze / would_set_downgrade / would_clear_downgrade / no_op variants) + computed thresholds; dry_run=true default is read-only; dry_run=false invokes real enforce_ methods with synthetic spend
+- `enforcement_report include_simulated=false` (default) excludes `evidence.simulated=True` rows from `operator_events_count` / `auto_events_count` — demo/verification traffic no longer pollutes fleet counts
+- `enforce_workspace_freeze` + `enforce_workspace_downgrade` gain `simulated=False` kwarg — kwarg default preserves prior behavior; when True, adds `evidence['simulated']=True` on both set and clear branches
 
-**Not shipped at S2856 close (deferred to S2857 or later):**
-- Slate #4 `budget_tool.simulate_enforcement`
-- Slate #5 `clear_freeze`/`clear_downgrade` spend context
-- Slate #6 N+1 in `list_caps`
-- Slate #7 Phase 2B pricing (4 items)
-- Rigby zoom-out folds Q5a/Q5b/Q5c (first triggers observed; each awaits second trigger before Playbook promotion)
+**Not shipped at S2857 close (deferred to S2858 or later):**
+- Slate #2 `clear_freeze`/`clear_downgrade` post-clear spend context
+- Slate #3 N+1 in `list_caps`
+- `simulate_enforcement` auto-clear-after-N-seconds (first-trigger fold, deferred)
+- `EnforcementContext` dataclass consolidation (first-trigger fold, deferred)
+- Phase 2B pricing (4 items)
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2856)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2857)
 
 See:
-- **S2856 handoff (current):** `docs/handoffs/SESSION_2856_AUTOPILOT_HISTORY_EVIDENCE_AND_ENFORCEMENT_SPLIT_SHIPPED.md`
+- **S2857 handoff (current):** `docs/handoffs/SESSION_2857_SIMULATE_ENFORCEMENT_SHIPPED.md`
+- **S2856 handoff:** `docs/handoffs/SESSION_2856_AUTOPILOT_HISTORY_EVIDENCE_AND_ENFORCEMENT_SPLIT_SHIPPED.md`
 - **S2855 handoff:** `docs/handoffs/SESSION_2855_PRICING_CANON_PHASE_2A_SHIPPED.md`
 - **S2854 handoff:** `docs/handoffs/SESSION_2854_PRICING_CANON_PHASE_1_SHIPPED.md`
 - **S2853 handoff:** `docs/handoffs/SESSION_2853_W2_3_2_DOWNGRADE_SAVINGS_SHIPPED.md`
