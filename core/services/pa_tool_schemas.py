@@ -5155,7 +5155,7 @@ PA_TOOL_SCHEMAS = [
                     "type": "string",
                     "enum": ["list", "history", "detail", "search"],
                     "description": (
-                        "list: per-spider stats (items_24h, items_7d, age_hours, active/stale). "
+                        "list: per-spider stats (items_24h, items_7d, age_hours, active/stale/never_run). Paginated (S2868 Ledger #1): response includes total/has_more/offset/limit. Canonical iteration pattern: start with offset=0, then advance offset += limit until has_more=false. Default union with the spider registry so never-run spiders are visible with status='never_run' (toggle via include_registry=false). Legacy orphan spider_names visible by default (toggle via include_orphans=false). Each row also carries an in_registry boolean for triage (true = current class in ai_core.spiders.spider_registry). "
                         "history: item history for a specific spider. "
                         "detail: fetch full raw_data/processed_data for a SpiderData item by ID. "
                         "search: search spider data by query, data_type, or spider_name."
@@ -5165,7 +5165,10 @@ PA_TOOL_SCHEMAS = [
                 "item_id": {"type": "string", "description": "SpiderData UUID (for detail action)"},
                 "query": {"type": "string", "description": "Text search in embedding_text/source_url (for search action)"},
                 "data_type": {"type": "string", "description": "Filter by data_type (for search action)"},
-                "limit": {"type": "integer", "description": "Max results (default 20)"},
+                "limit": {"type": "integer", "description": "Max results (default 30 for list, 20 elsewhere). List cap 500; history/search cap 100."},
+                "offset": {"type": "integer", "description": "Pagination offset for list action (S2868). Combine with limit + response has_more to iterate the full spider inventory."},
+                "include_registry": {"type": "boolean", "description": "For list (default true): union LegacySpiderData rows with the runtime spider registry so never-run spiders are visible with status='never_run'. Pass false to scope strictly to spiders that have written data."},
+                "include_orphans": {"type": "boolean", "description": "For list (default true): keep legacy spider_names present in LegacySpiderData but absent from the current registry. Pass false to filter down to registry-known spiders only."},
             },
             "required": ["action"],
         },
