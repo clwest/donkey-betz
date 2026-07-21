@@ -1214,31 +1214,9 @@ def spider_data_feed(request):
                     ''
                 )
 
-                # Special handling for HuggingFace models - build a rich description
-                if sd.spider_name == 'huggingface' and not description:
-                    desc_parts = []
-                    if item.get('pipeline_tag'):
-                        desc_parts.append(f"Task: {item.get('pipeline_tag')}")
-                    if item.get('library_name'):
-                        desc_parts.append(f"Library: {item.get('library_name')}")
-                    # Extract useful tags (skip dataset:, arxiv:, region:, etc.)
-                    tags = item.get('tags', [])
-                    useful_tags = [t for t in tags[:10] if not any(t.startswith(p) for p in ['dataset:', 'arxiv:', 'region:', 'license:', 'deploy:', 'endpoints_', 'autotrain_'])]
-                    if useful_tags:
-                        desc_parts.append(f"Tags: {', '.join(useful_tags[:5])}")
-                    if item.get('downloads'):
-                        desc_parts.append(f"{item.get('downloads'):,} downloads")
-                    if item.get('likes'):
-                        desc_parts.append(f"{item.get('likes'):,} likes")
-                    description = ' | '.join(desc_parts)
-
                 # Special handling for GitHub - build URL from html_url
                 if sd.spider_name == 'github' and not url and item.get('html_url'):
                     url = item.get('html_url')
-
-                # Special handling for HuggingFace - construct URL from modelId
-                if sd.spider_name == 'huggingface' and not url and item.get('modelId'):
-                    url = f"https://huggingface.co/{item.get('modelId')}"
 
                 # Build item object
                 feed_item = {
