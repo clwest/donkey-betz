@@ -2104,12 +2104,19 @@ class OpsHandlersMixin:
 
         elif action == 'history':
             limit = min(int(payload.get('limit', 20)), 100)
+            # S2856 slate #2: opt-in evidence + result JSON per row so
+            # operators can inspect trigger / actor_user_id / reason without
+            # dropping to Django shell. Default false preserves prior shape.
+            include_evidence = bool(payload.get('include_evidence', False))
+            fields = [
+                'id', 'created_at', 'action_type', 'agent_name',
+                'policy', 'dry_run', 'deploy_sha',
+            ]
+            if include_evidence:
+                fields.extend(['evidence', 'result'])
             actions = _safe_autopilot_query(
                 lambda: list(
-                    AutopilotAction.objects.all()[:limit].values(
-                        'id', 'created_at', 'action_type', 'agent_name',
-                        'policy', 'dry_run', 'deploy_sha',
-                    )
+                    AutopilotAction.objects.all()[:limit].values(*fields)
                 ), []
             )
             for a in actions:
@@ -2118,6 +2125,7 @@ class OpsHandlersMixin:
             return {
                 'action': 'history',
                 'count': len(actions),
+                'include_evidence': include_evidence,
                 'actions': actions,
             }
 
@@ -4365,6 +4373,15 @@ class OpsHandlersMixin:
                 )
                 .values('created_at', 'evidence')
             )
+            # S2856 slate #3: split each workspace's enforcement events into
+            # auto (autopilot cycle) vs operator (workspace_budget_tool)
+            # counts. Decision rule per Rigby SIGN Q1: presence of
+            # evidence.actor_user_id → operator, absence → auto. This works
+            # uniformly across all 4 filtered action types including
+            # manual-clear rows that don't stamp `trigger` (freeze_cleared,
+            # manual downgrade_cleared). enforcement_events_count is
+            # preserved as the sum for back-compat with any existing
+            # consumer of the report shape.
             per_ws_events: Dict[str, Dict[str, Any]] = {}
             for row in enforcement_qs.iterator():
                 ev = row.get('evidence') or {}
@@ -4375,9 +4392,15 @@ class OpsHandlersMixin:
                 if wid not in scoped_ids:
                     continue
                 bucket = per_ws_events.setdefault(
-                    wid, {'count': 0, 'last': None},
+                    wid,
+                    {'count': 0, 'auto_count': 0, 'operator_count': 0,
+                     'last': None},
                 )
                 bucket['count'] += 1
+                if ev.get('actor_user_id'):
+                    bucket['operator_count'] += 1
+                else:
+                    bucket['auto_count'] += 1
                 if bucket['last'] is None or row['created_at'] > bucket['last']:
                     bucket['last'] = row['created_at']
 
@@ -4464,10 +4487,16 @@ class OpsHandlersMixin:
                     }
 
             rows = []
+            # NOTE: shared/immutable-by-convention default — do not mutate
+            # `events` in the loop below (only reads). Per Rigby post-code
+            # SIGN Q3 (S2856 slate #3).
+            empty_bucket = {
+                'count': 0, 'auto_count': 0, 'operator_count': 0, 'last': None,
+            }
             for ws in scoped_workspaces:
                 wid = str(ws.id)
                 effective = controller.get_effective_workspace_daily_cap(ws.id)
-                events = per_ws_events.get(wid, {'count': 0, 'last': None})
+                events = per_ws_events.get(wid, empty_bucket)
                 row_out: Dict[str, Any] = {
                     'workspace_id': wid,
                     'workspace_name': ws.name,
@@ -4477,6 +4506,8 @@ class OpsHandlersMixin:
                     'is_frozen': controller.is_workspace_frozen(ws.id),
                     'is_downgraded': controller.is_workspace_downgraded(ws.id),
                     'enforcement_events_count': events['count'],
+                    'auto_events_count': events['auto_count'],
+                    'operator_events_count': events['operator_count'],
                     'last_enforcement_at': (
                         events['last'].isoformat() if events['last'] else None
                     ),
@@ -4537,7 +4568,10 @@ class OpsHandlersMixin:
                     'best-effort attribution. Point-of-action trust '
                     'surface is set_cap\'s inline enforcement_fired '
                     'payload; this report is fleet auditability over '
-                    'time.'
+                    'time. S2856: auto_events_count vs operator_events_count '
+                    'split uses evidence.actor_user_id presence — present → '
+                    'operator (workspace_budget_tool), absent → auto '
+                    '(autopilot cycle). enforcement_events_count is the sum.'
                 ),
                 'row_count': len(rows),
                 'rows': rows,

@@ -2955,6 +2955,8 @@ PA_TOOL_SCHEMAS = [
                     "description": (
                         "status: current config, last cycle timestamp, and pending actions. "
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
+                        "Pass include_evidence=true to also surface each row's evidence + result "
+                        "JSON (trigger, actor_user_id, reason, etc.). "
                         "run: trigger an immediate autopilot evaluation cycle. "
                         "config: view current thresholds (timeout spike, block TTL, etc.). "
                         "dry_run_report: evaluate all policies in dry-run mode and return a "
@@ -3151,6 +3153,17 @@ PA_TOOL_SCHEMAS = [
                 "limit": {
                     "type": "integer",
                     "description": "For 'history': max entries to return (default 20, max 100).",
+                },
+                "include_evidence": {
+                    "type": "boolean",
+                    "description": (
+                        "For 'history' action: when true, each returned row includes the "
+                        "raw `evidence` and `result` JSON fields from AutopilotAction (e.g., "
+                        "`evidence.trigger`, `evidence.actor_user_id`, `result.reason`, "
+                        "`result.cap`). Defaults to false (preserves prior shape). Use when "
+                        "you need to know WHY an action fired or WHO triggered it without "
+                        "dropping to Django shell."
+                    ),
                 },
                 "days": {
                     "type": "integer",
@@ -3504,13 +3517,17 @@ PA_TOOL_SCHEMAS = [
                         "calls would have cost at pre-downgrade gpt-5.2 "
                         "uncached rates. Response also gains "
                         "downgrade_model_totals aggregate + explanatory "
-                        "downgrade_savings_note. Counts ALL calls to the "
-                        "downgrade model — natively-mini calls are not yet "
-                        "distinguishable from enforcer-forced downgrades, "
-                        "so the estimate OVER-reports true policy savings. "
-                        "Diagnostic estimate only; LLMCallLog.cost remains "
-                        "the authoritative per-call cost ledger. Defaults "
-                        "to false."
+                        "downgrade_savings_note. S2856 (PR #3328): filter "
+                        "is now LLMCallLog.was_downgraded=True, so counts "
+                        "only enforcer-forced downgrades; natively-mini "
+                        "agents (PersonalAssistantAgent, orchestration "
+                        "coordinators) are excluded. Rows created before "
+                        "the S2856 deploy default to was_downgraded=False "
+                        "and are excluded, so windows straddling that "
+                        "boundary UNDER-report until enough post-deploy "
+                        "traffic accrues. Diagnostic estimate; LLMCallLog."
+                        "cost remains the authoritative per-call cost "
+                        "ledger. Defaults to false."
                     ),
                 },
                 "daily_cap_usd": {
