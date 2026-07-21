@@ -911,7 +911,7 @@ Your job is to keep this system running smoothly and surfacing valuable narrativ
             results['processed'] += 1
 
             # Extract content from raw_data (LegacySpiderData stores items in raw_data.items)
-            raw_data = sd.raw_data or {}
+            raw_data = sd.raw_data_dict
             items = raw_data.get('items', [])
 
             # Build searchable content from items

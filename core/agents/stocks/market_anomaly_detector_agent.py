@@ -443,7 +443,7 @@ Focus on patterns that suggest informed trading or manipulation."""
 
             results = []
             for data in query:
-                raw = data.raw_data or {}
+                raw = data.raw_data_dict
                 item = {
                     'ticker': raw.get('symbol', raw.get('ticker', '')),
                     'price': raw.get('price', raw.get('regularMarketPrice', 0)),
@@ -478,7 +478,7 @@ Focus on patterns that suggest informed trading or manipulation."""
 
             results = []
             for data in query:
-                raw = data.raw_data or {}
+                raw = data.raw_data_dict
                 text = str(raw.get('title', '')) + ' ' + str(raw.get('content', ''))
 
                 if ticker and ticker.upper() not in text.upper():

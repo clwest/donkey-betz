@@ -185,7 +185,7 @@ Rate movements: STEAM (urgent), SHARP (high value), DRIFT (moderate), NOISE (ign
             ).order_by('created_at')[:500]
 
             for record in recent_odds:
-                raw = record.raw_data or {}
+                raw = record.raw_data_dict
                 event_id = raw.get('event_id', '')
                 if event_id and event_id not in snapshots:
                     snapshots[event_id] = {

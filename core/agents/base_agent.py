@@ -1403,7 +1403,7 @@ Use delegation when you need expertise outside your specialty. For example:
 
             results = []
             for spider_data in query:
-                raw_data = spider_data.raw_data or {}
+                raw_data = spider_data.raw_data_dict
                 items = raw_data.get('items', [])
 
                 # Extract useful content from items

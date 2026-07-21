@@ -123,7 +123,7 @@ class Command(BaseCommand):
         batch = []
         for sd in qs.iterator():
             rows_scanned += 1
-            items = (sd.raw_data or {}).get('items') or []
+            items = sd.raw_data_dict.get('items') or []
             row_changed = False
             for item in items:
                 if not isinstance(item, dict):

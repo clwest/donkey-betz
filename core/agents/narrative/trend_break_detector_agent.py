@@ -470,7 +470,7 @@ When analyzing potential shifts, consider:
 
                 for sd in spider_data:
                     # Extract title from raw_data JSON
-                    raw_data = sd.raw_data or {}
+                    raw_data = sd.raw_data_dict
                     items = raw_data.get('items', [])
                     title = 'Spider Data'
                     if items and len(items) > 0:
@@ -651,7 +651,7 @@ When analyzing potential shifts, consider:
         results = []
         for sd in queryset.order_by('-created_at')[:20]:
             # Session 737: Extract title/content from raw_data JSON field
-            raw_data = sd.raw_data or {}
+            raw_data = sd.raw_data_dict
             items = raw_data.get('items', [])
 
             # Get first item's title if available

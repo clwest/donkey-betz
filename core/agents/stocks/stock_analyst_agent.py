@@ -538,7 +538,7 @@ Alert on:
             latest_timestamp = None
 
             for filing in filings:
-                raw = filing.raw_data or {}
+                raw = filing.raw_data_dict
                 if ticker and ticker.upper() in str(raw).upper():
                     results.append({
                         'title': raw.get('title', raw.get('company', '')),
@@ -627,7 +627,7 @@ Alert on:
             tickers_found = set()
 
             for entry in market_data:
-                raw = entry.raw_data or {}
+                raw = entry.raw_data_dict
                 # Check if data matches requested categories
                 item_category = raw.get('category', raw.get('market_category', 'general'))
                 if item_category in categories or 'all' in categories:
@@ -951,7 +951,7 @@ Provide:
                 ).order_by('-created_at')[:30]
 
                 for entry in data:
-                    raw = entry.raw_data or {}
+                    raw = entry.raw_data_dict
                     if ticker and ticker.upper() in str(raw).upper():
                         price = raw.get('current_price') or raw.get('price')
                         if price:

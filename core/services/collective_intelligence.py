@@ -1280,7 +1280,7 @@ class CollectiveIntelligenceService:
             # 2. Generate knowledge from spider data
             for item in spider_items:
                 # Extract title and content from raw_data JSON
-                raw_data = item.raw_data or {}
+                raw_data = item.raw_data_dict
                 title = raw_data.get('title', raw_data.get('name', f'Data from {item.spider_name}'))[:100]
                 content = raw_data.get('content', raw_data.get('description', raw_data.get('summary', str(raw_data)[:500])))
 
