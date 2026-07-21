@@ -4113,8 +4113,18 @@ class OpsHandlersMixin:
             else:
                 import uuid as _uuid
                 rows = controller.list_workspace_caps()
+                # S2858 PR#2 — batch ProjectWorkspace name lookup to eliminate
+                # per-row ProjectWorkspace.objects.get() N+1 (was firing one
+                # query per row inside the loop). Pass 1 collects valid+
+                # scoped UUIDs; single filter().in_bulk() fetches all names;
+                # pass 2 builds rows via dict lookup. Preserves the previous
+                # DoesNotExist=None-name behavior and keeps the original
+                # `wid` string in the emitted 'workspace_id' unchanged.
+                keep_rows = []
+                lookup_uuids = []
                 for row in rows:
                     wid = row['workspace_id']
+                    wid_uuid = None
                     if scoped_ids is not None:
                         try:
                             wid_uuid = _uuid.UUID(str(wid))
@@ -4122,11 +4132,24 @@ class OpsHandlersMixin:
                             continue
                         if wid_uuid not in scoped_ids:
                             continue
-                    try:
-                        ws = ProjectWorkspace.objects.get(id=wid)
-                        name = ws.name
-                    except (ProjectWorkspace.DoesNotExist, ValueError):
-                        name = None
+                    else:
+                        try:
+                            wid_uuid = _uuid.UUID(str(wid))
+                        except (ValueError, TypeError):
+                            wid_uuid = None
+                    keep_rows.append((row, wid_uuid))
+                    if wid_uuid is not None:
+                        lookup_uuids.append(wid_uuid)
+
+                name_by_uuid = dict(
+                    ProjectWorkspace.objects
+                    .filter(id__in=lookup_uuids)
+                    .values_list('id', 'name')
+                ) if lookup_uuids else {}
+
+                for row, wid_uuid in keep_rows:
+                    wid = row['workspace_id']
+                    name = name_by_uuid.get(wid_uuid) if wid_uuid else None
                     spend = controller.compute_workspace_spend(
                         now, workspace_id=wid,
                     )
