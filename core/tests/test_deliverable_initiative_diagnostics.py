@@ -81,6 +81,7 @@ def _make_fixtures(cls):
         status='ACTIVE',
         current_stage=1,
         target_workspace=cls.workspace_a,
+        owner=cls.user,  # schema drift: owner became NOT NULL post-fixture-author
     )
 
 
@@ -97,7 +98,10 @@ class FactoryDiagnosticTests(TestCase):
         return create_deliverable(
             title=title,
             content=LONG,
-            agent_name='SmokeAgent',
+            # S1199 PR-D contract: non-PA callers MUST pass
+            # parent_execution_id; PA-direct context synthesizes it.
+            # Diagnostic behavior tested here is agent-identity-agnostic.
+            agent_name='PersonalAssistant',
             user=self.user,
             initiative_id=initiative_id,
             workspace_id=workspace_id,
@@ -182,7 +186,8 @@ class UpdateDiagnosticTests(TestCase):
 
     def _create(self, *, initiative_id, workspace_id, title='B-test'):
         return create_deliverable(
-            title=title, content=LONG, agent_name='SmokeAgent',
+            title=title, content=LONG,
+            agent_name='PersonalAssistant',  # S1199 PR-D provenance contract
             user=self.user,
             initiative_id=initiative_id, workspace_id=workspace_id,
         )
@@ -263,7 +268,8 @@ class SweepDiagnosticTests(TestCase):
 
     def _create_diagnostic(self, *, expires_at, title):
         d = create_deliverable(
-            title=title, content=LONG, agent_name='SmokeAgent',
+            title=title, content=LONG,
+            agent_name='PersonalAssistant',  # S1199 PR-D provenance contract
             user=self.user,
             initiative_id=None, workspace_id=str(self.workspace_a.id),
         )
