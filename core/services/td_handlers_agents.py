@@ -2571,19 +2571,130 @@ class AgentHandlersMixin:
             }
 
         elif action == 'delete':
-            # Session 1169: use _id_lookup_qs (orphan-inclusive) to match update.
+            # S2860 Ledger #10: hard-delete a single deliverable by id. This
+            # path was implemented since Session 1169 but never exposed in the
+            # deliverable_tool schema enum, so Rigby had to fall back to
+            # content_tool.content_reject (soft-archive) for genuine cleanup.
+            # Exposing the action here — with two-factor gate + published
+            # guard + audit log line (DeliverableEvent cascades on delete, so
+            # we cannot rely on it for the audit trail).
+            from core.services.td_autofill_safety import require_write_authorization
+            dry_run, _write_ok = require_write_authorization(payload)
+
             obj, disambiguation = _resolve_deliverable(_id_lookup_qs(), payload, 'delete')
             if disambiguation:
                 return disambiguation
 
+            # Cascade counts (surfaced in dry-run preview + live response so
+            # the caller can see the blast radius before/after the delete).
+            # ContentPacketItem uses related_name='packet_items'; other two
+            # use 'exports' / 'events'.
+            cascades = {
+                'exports_count': obj.exports.count(),
+                'events_count': obj.events.count(),
+                'packet_items_count': obj.packet_items.count(),
+            }
+
+            raw_reason = payload.get('reason')
+            reason = raw_reason.strip() if isinstance(raw_reason, str) else ''
+            allow_published = payload.get('allow_published') is True
+
+            # Published guard — reject by default; allow_published=true is the
+            # explicit escape hatch and additionally requires a non-empty
+            # reason (defence against LLM autofilling allow_published=True
+            # blindly on a published row).
+            if obj.status == 'published':
+                if not allow_published:
+                    return {
+                        'action': 'delete',
+                        'ok': False,
+                        'error_code': 'delete_published_requires_allow_published',
+                        'id': str(obj.id),
+                        'title': obj.title,
+                        'status': obj.status,
+                        'message': (
+                            f"Refusing to delete published deliverable "
+                            f'"{obj.title}". Published rows must set '
+                            "allow_published=true AND provide a non-empty "
+                            "reason. Prefer set_status='archived' for "
+                            "reversible cleanup of published content."
+                        ),
+                        'cascades': cascades,
+                        'trace_id': trace_id,
+                    }
+                if not reason:
+                    return {
+                        'action': 'delete',
+                        'ok': False,
+                        'error_code': 'delete_published_requires_reason',
+                        'id': str(obj.id),
+                        'title': obj.title,
+                        'status': obj.status,
+                        'message': (
+                            f"allow_published=true set for published deliverable "
+                            f'"{obj.title}" but reason is missing/empty. '
+                            "Provide a non-empty reason explaining why this "
+                            "published row must be permanently deleted."
+                        ),
+                        'cascades': cascades,
+                        'trace_id': trace_id,
+                    }
+
             title = obj.title
             del_id = str(obj.id)
+            status = obj.status
+            workspace_id = str(obj.workspace_id) if getattr(obj, 'workspace_id', None) else None
+            agent_name = getattr(obj, 'agent_name', None)
+
+            if dry_run:
+                return {
+                    'action': 'delete',
+                    'dry_run': True,
+                    'id': del_id,
+                    'title': title,
+                    'status': status,
+                    'workspace_id': workspace_id,
+                    'agent_name': agent_name,
+                    'cascades': cascades,
+                    'will_delete': True,
+                    'reason': reason or None,
+                    'message': (
+                        f'DRY RUN: would permanently delete "{title}" '
+                        f'({cascades["exports_count"]} exports, '
+                        f'{cascades["events_count"]} events, '
+                        f'{cascades["packet_items_count"]} packet items cascade). '
+                        "Set dry_run=false AND confirm=true to execute."
+                    ),
+                    'trace_id': trace_id,
+                }
+
+            # Live path — pre-delete WARNING log line is the durable audit
+            # trail because DeliverableEvent CASCADEs with the row (see
+            # core/models_deliverables.py:584-588). Logs land in application
+            # log aggregation; grep by deliverable_id / trace_id / user_id.
+            logger.warning(
+                "[DELIVERABLE_DELETE] %s deliverable_id=%s title=%r status=%s "
+                "workspace_id=%s agent_name=%s user_id=%s reason=%r cascades=%s",
+                trace_id, del_id, title, status, workspace_id, agent_name,
+                user_id, reason or None, cascades,
+            )
             obj.delete()
             return {
                 'action': 'delete',
+                'dry_run': False,
                 'id': del_id,
                 'title': title,
-                'message': f'Permanently deleted "{title}" from your Deliverables library.',
+                'status': status,
+                'workspace_id': workspace_id,
+                'cascades': cascades,
+                'reason': reason or None,
+                'message': (
+                    f'Permanently deleted "{title}" '
+                    f'({cascades["exports_count"]} exports, '
+                    f'{cascades["events_count"]} events, '
+                    f'{cascades["packet_items_count"]} packet items cascaded).'
+                ),
+                'trace_id': trace_id,
             }
 
         elif action == 'export_pdf':
