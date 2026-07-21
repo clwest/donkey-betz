@@ -631,6 +631,7 @@ class BudgetController:
     def enforce_workspace_freeze(
         self, spend, now, workspace_id,
         actor_user_id=None, trigger='autopilot_cycle',
+        simulated=False,
     ):
         """Freeze the given workspace when its daily spend crosses its cap.
 
@@ -642,6 +643,12 @@ class BudgetController:
         is attributed to workspace_budget_tool (operator surface) instead
         of the autopilot cycle, and `trigger` is recorded in evidence.
         Threshold + idempotency logic UNCHANGED regardless of actor.
+
+        S2857 #4: when simulated=True (from workspace_budget_tool.
+        simulate_enforcement), evidence carries simulated=True so the
+        enforcement_report can filter these out of operator_events_count
+        by default. Threshold + idempotency logic UNCHANGED regardless
+        of simulated.
         """
         if workspace_id is None:
             return None  # null bucket has no per-workspace freeze
@@ -681,6 +688,8 @@ class BudgetController:
         evidence = {**spend, 'cap': cap, 'trigger': trigger}
         if operator_triggered:
             evidence['actor_user_id'] = str(actor_user_id)
+        if simulated:
+            evidence['simulated'] = True
         AutopilotAction.objects.create(
             action_type='workspace_budget_freeze',
             agent_name=(
@@ -784,6 +793,7 @@ class BudgetController:
     def enforce_workspace_downgrade(
         self, spend, now, workspace_id,
         actor_user_id=None, trigger='autopilot_cycle',
+        simulated=False,
     ):
         """Set/clear the downgrade flag based on the workspace's daily spend.
 
@@ -799,6 +809,12 @@ class BudgetController:
         Per Rigby SIGN #4 Q2: any state transition caused by an operator-
         induced call is attributed to the operator regardless of branch.
         Threshold + hysteresis logic UNCHANGED regardless of actor.
+
+        S2857 #4: when simulated=True (from workspace_budget_tool.
+        simulate_enforcement), evidence carries simulated=True on both
+        set and clear branches so the enforcement_report can filter
+        these out of operator_events_count by default. Threshold +
+        hysteresis logic UNCHANGED regardless of simulated.
         """
         if workspace_id is None:
             return None
@@ -824,6 +840,8 @@ class BudgetController:
             }
             if operator_triggered:
                 evidence['actor_user_id'] = str(actor_user_id)
+            if simulated:
+                evidence['simulated'] = True
             AutopilotAction.objects.create(
                 action_type='workspace_downgrade_cleared',
                 agent_name=(
@@ -879,6 +897,8 @@ class BudgetController:
             }
             if operator_triggered:
                 set_evidence['actor_user_id'] = str(actor_user_id)
+            if simulated:
+                set_evidence['simulated'] = True
             AutopilotAction.objects.create(
                 action_type='workspace_downgrade_set',
                 agent_name=(

@@ -4317,6 +4317,11 @@ class OpsHandlersMixin:
             include_downgrade_savings = bool(
                 payload.get('include_downgrade_savings', False)
             )
+            # S2857: simulate_enforcement rows carry evidence.simulated=True.
+            # Excluded by default so operator/autopilot counts stay clean;
+            # opt in via include_simulated=true to see demo/verification
+            # traffic in the fleet report.
+            include_simulated = bool(payload.get('include_simulated', False))
 
             # Auth scope (Rigby SIGN Q3: option c). Non-staff sees only own
             # workspaces; staff sees all. Unauthenticated callers get the
@@ -4390,6 +4395,9 @@ class OpsHandlersMixin:
                     continue
                 wid = str(wid)
                 if wid not in scoped_ids:
+                    continue
+                # S2857: exclude simulated events unless opted in.
+                if not include_simulated and ev.get('simulated'):
                     continue
                 bucket = per_ws_events.setdefault(
                     wid,
@@ -4571,7 +4579,13 @@ class OpsHandlersMixin:
                     'time. S2856: auto_events_count vs operator_events_count '
                     'split uses evidence.actor_user_id presence — present → '
                     'operator (workspace_budget_tool), absent → auto '
-                    '(autopilot cycle). enforcement_events_count is the sum.'
+                    '(autopilot cycle). enforcement_events_count is the sum. '
+                    'S2857: rows with evidence.simulated=True (from '
+                    'simulate_enforcement) are ' + (
+                        'INCLUDED (include_simulated=true)'
+                        if include_simulated
+                        else 'excluded by default; pass include_simulated=true to see them'
+                    ) + '.'
                 ),
                 'row_count': len(rows),
                 'rows': rows,
@@ -4645,13 +4659,215 @@ class OpsHandlersMixin:
                 }
             return response
 
+        if action == 'simulate_enforcement':
+            # S2857 A1 W2 #4 — exercise the enforcer hot-path against a
+            # SYNTHETIC daily-spend value without needing to make real
+            # LLM calls from a non-PA agent. Motivating pain: Rigby's
+            # calling agent is always 'PersonalAssistant', which
+            # bypasses freeze at core/llm_enforcer.py:271 (_critical_
+            # agents), so operators/customer demos had to drop to
+            # Django shell to see enforcement fire. This action fires
+            # BOTH freeze and downgrade branches so the combined tier
+            # outcome is visible in one round-trip (Rigby SIGN Q1a).
+            #
+            # Attribution (Rigby SIGN Q3): rows written when dry_run=
+            # false carry evidence.actor_user_id=user_id AND
+            # evidence.simulated=True + evidence.trigger='simulate_
+            # enforcement'. enforcement_report excludes simulated=True
+            # by default (include_simulated=false); operator_events_
+            # count is therefore protected from demo/verification
+            # pollution.
+            workspace, err = _resolve_workspace(workspace_id)
+            if err is not None:
+                return {'action': action, **err}
+
+            raw_spend = payload.get('simulated_daily_spend_usd')
+            if raw_spend is None:
+                return {
+                    'action': action,
+                    'error': (
+                        'simulated_daily_spend_usd is required '
+                        '(float ≥ 0, USD)'
+                    ),
+                }
+            try:
+                simulated_spend = float(raw_spend)
+            except (TypeError, ValueError):
+                return {
+                    'action': action,
+                    'error': (
+                        f'simulated_daily_spend_usd must be numeric; '
+                        f'got {raw_spend!r}'
+                    ),
+                }
+            if simulated_spend < 0:
+                return {
+                    'action': action,
+                    'error': (
+                        f'simulated_daily_spend_usd must be ≥ 0; '
+                        f'got {simulated_spend}'
+                    ),
+                }
+            # Rigby SIGN Q3 — nan/inf pass the `< 0` check silently
+            # (NaN comparisons always False) and pollute SystemConfig
+            # descriptions + evidence dicts on dry_run=false.
+            import math
+            if not math.isfinite(simulated_spend):
+                return {
+                    'action': action,
+                    'error': (
+                        f'simulated_daily_spend_usd must be finite; '
+                        f'got {simulated_spend}'
+                    ),
+                }
+
+            dry_run = bool(payload.get('dry_run', True))
+
+            # Auth: dry-run reads AND mutations both require ownership /
+            # staff. Rigby SIGN Q2 — dry-run reveals caps + enforcement
+            # thresholds so is still a sensitive read; matches S2852
+            # latent-overexposure fix.
+            auth_err = _authorize_mutation(workspace)
+            if auth_err is not None:
+                return {'action': action, **auth_err}
+
+            cap = controller.get_workspace_daily_cap(workspace.id)
+            if cap is None:
+                return {
+                    'action': action,
+                    'workspace_id': str(workspace.id),
+                    'workspace_name': workspace.name,
+                    'error': (
+                        f'workspace {workspace.id} has no explicit '
+                        f'per-workspace cap set; simulate_enforcement '
+                        f'requires an explicit cap because the '
+                        f'enforcer only runs against workspaces with '
+                        f'a cap row. Call set_cap first '
+                        f'(or set the global default via '
+                        f'set_default_cap + backfill_defaults).'
+                    ),
+                }
+
+            from core.services.ops_autopilot.config import AutopilotConfig
+            soft_pct = AutopilotConfig.BUDGET_SOFT_LIMIT_PCT
+            clear_pct = controller._WORKSPACE_DOWNGRADE_CLEAR_PCT
+            downgrade_set_threshold = cap * soft_pct
+            downgrade_clear_threshold = cap * clear_pct
+
+            currently_frozen = controller.is_workspace_frozen(workspace.id)
+            currently_downgraded = controller.is_workspace_downgraded(
+                workspace.id,
+            )
+
+            # Decision math mirrors enforce_workspace_freeze +
+            # enforce_workspace_downgrade branch structure so dry-run
+            # tells the operator EXACTLY what a mutation would do.
+            if simulated_spend >= cap and not currently_frozen:
+                freeze_decision = 'would_freeze'
+            elif simulated_spend >= cap and currently_frozen:
+                freeze_decision = 'no_op_already_frozen'
+            else:
+                freeze_decision = 'no_op_below_cap'
+
+            if (
+                currently_downgraded
+                and simulated_spend < downgrade_clear_threshold
+            ):
+                downgrade_decision = 'would_clear_downgrade'
+            elif (
+                simulated_spend >= downgrade_set_threshold
+                and not currently_downgraded
+            ):
+                downgrade_decision = 'would_set_downgrade'
+            elif (
+                simulated_spend >= downgrade_set_threshold
+                and currently_downgraded
+            ):
+                downgrade_decision = 'no_op_already_downgraded'
+            else:
+                downgrade_decision = 'no_op_below_soft_limit'
+
+            thresholds = {
+                'cap_usd': cap,
+                'downgrade_set_threshold_usd': round(
+                    downgrade_set_threshold, 4,
+                ),
+                'downgrade_clear_threshold_usd': round(
+                    downgrade_clear_threshold, 4,
+                ),
+                'soft_limit_pct': soft_pct,
+                'clear_pct': clear_pct,
+                'currently_frozen': currently_frozen,
+                'currently_downgraded': currently_downgraded,
+            }
+
+            base_response: Dict[str, Any] = {
+                'action': action,
+                'workspace_id': str(workspace.id),
+                'workspace_name': workspace.name,
+                'simulated_daily_spend_usd': simulated_spend,
+                'dry_run': dry_run,
+                'thresholds': thresholds,
+                'freeze_decision': freeze_decision,
+                'downgrade_decision': downgrade_decision,
+            }
+
+            if dry_run:
+                base_response['note'] = (
+                    'dry_run=true — no state written and no '
+                    'AutopilotAction rows created. Pass dry_run=false '
+                    'to fire the enforcer (WARNING: real workspace '
+                    'freeze/downgrade flags WILL be written and '
+                    'llm_enforcer will block or downgrade real calls '
+                    'for this workspace until clear_freeze / '
+                    'clear_downgrade is called).'
+                )
+                base_response['freeze_action'] = None
+                base_response['downgrade_action'] = None
+                return base_response
+
+            # dry_run=False — invoke the real enforcer methods with
+            # the synthetic spend dict. enforcer only reads daily_total
+            # (verified at ops_autopilot/budget.py:651,819,861), so
+            # zero-fill the rest.
+            synthetic_spend = {
+                'daily_total': simulated_spend,
+                'daily_calls': 0,
+                'hourly_total': 0.0,
+                'hourly_calls': 0,
+            }
+            freeze_action = controller.enforce_workspace_freeze(
+                synthetic_spend, now, workspace.id,
+                actor_user_id=user_id, trigger='simulate_enforcement',
+                simulated=True,
+            )
+            downgrade_action = controller.enforce_workspace_downgrade(
+                synthetic_spend, now, workspace.id,
+                actor_user_id=user_id, trigger='simulate_enforcement',
+                simulated=True,
+            )
+
+            base_response['freeze_action'] = freeze_action
+            base_response['downgrade_action'] = downgrade_action
+            base_response['note'] = (
+                'dry_run=false — enforcer methods invoked with the '
+                'synthetic spend value. Any freeze/downgrade flags '
+                'written are LIVE and will affect real LLM calls '
+                'attributed to this workspace until cleared via '
+                'clear_freeze / clear_downgrade. AutopilotAction rows '
+                'carry evidence.simulated=True and are excluded from '
+                'enforcement_report by default (opt in via '
+                'include_simulated=true).'
+            )
+            return base_response
+
         return {
             'action': action,
             'error': (
                 f'Unknown workspace_budget_tool action: {action!r}. '
                 f'Valid: set_cap, get_status, clear_freeze, clear_downgrade, '
                 f'list_caps, clear_cap, get_default_cap, set_default_cap, '
-                f'backfill_defaults, enforcement_report.'
+                f'backfill_defaults, enforcement_report, simulate_enforcement.'
             ),
         }
 
