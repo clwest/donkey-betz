@@ -2957,6 +2957,8 @@ PA_TOOL_SCHEMAS = [
                         "history: recent autopilot actions (blocks, attention items, dry runs). "
                         "Pass include_evidence=true to also surface each row's evidence + result "
                         "JSON (trigger, actor_user_id, reason, etc.). "
+                        "Pair with selected_fields=[\"evidence.<key>\", \"result.<key>\"] to "
+                        "trim the returned JSON to only specific top-level keys. "
                         "run: trigger an immediate autopilot evaluation cycle. "
                         "config: view current thresholds (timeout spike, block TTL, etc.). "
                         "dry_run_report: evaluate all policies in dry-run mode and return a "
@@ -3162,7 +3164,26 @@ PA_TOOL_SCHEMAS = [
                         "`evidence.trigger`, `evidence.actor_user_id`, `result.reason`, "
                         "`result.cap`). Defaults to false (preserves prior shape). Use when "
                         "you need to know WHY an action fired or WHO triggered it without "
-                        "dropping to Django shell."
+                        "dropping to Django shell. Pair with `selected_fields` to trim the "
+                        "returned JSON to only specific top-level keys."
+                    ),
+                },
+                "selected_fields": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "For 'history' action: project the returned `evidence` and `result` "
+                        "JSON to only the specified top-level keys. Use dot-notation with "
+                        "`evidence.<key>` or `result.<key>` prefixes (e.g., "
+                        "[\"evidence.actor_user_id\", \"evidence.trigger\", \"result.reason\", "
+                        "\"result.cap\"]). Returns the top-level key's value verbatim — "
+                        "nested dicts/lists are returned whole (v1 does not deep-project). "
+                        "Missing keys silently omitted; invalid prefixes silently ignored. "
+                        "Max 20 paths (extras truncated). Ignored unless `include_evidence=true`. "
+                        "When set, BOTH `evidence` and `result` are projected to their "
+                        "respective selections (an empty selection for one prefix returns "
+                        "`{}` for that field). Response echoes the server-applied list "
+                        "(post-validation, post-cap)."
                     ),
                 },
                 "days": {
