@@ -101,7 +101,18 @@ SPIDER_TARGET_URLS = {
     'openmeteo': ['https://api.open-meteo.com/v1/forecast?latitude=39.7392&longitude=-104.9903&current_weather=true&hourly=temperature_2m,precipitation'],
 
     # === SESSION 395: AI/ML SPIDERS ===
-    'huggingface': ['https://huggingface.co/api/models?sort=downloads&direction=-1&limit=20'],
+    # S2862: intentionally NOT re-added. HF Hub API items expose
+    # `modelId`/`id` but no `title`/`name`/`description`, so the shared
+    # `normalize_item()` field mappings (title <- title|name|headline|
+    # position|role, description <- description|summary|body|content|
+    # excerpt|tagline) never populate anything readable, and downstream
+    # `SignalAggregationService._extract_text_from_spider_data()` gets
+    # 0-char text, dropping every signal before clustering (22 rows/7d
+    # -> 0 SignalCluster contributions). Falling through to the else
+    # branch at core/tasks_spiders.py:158 invokes HuggingFaceSpider.fetch_data()
+    # (ai_core/spiders/specialized/huggingface_spider.py) which builds
+    # items with title/summary/description already populated. Regression
+    # tests: core/tests/test_s2862_huggingface_signal_extraction.py.
 
     # === SESSION 396: PHASE 2 - FREE PUBLIC APIs ===
 
