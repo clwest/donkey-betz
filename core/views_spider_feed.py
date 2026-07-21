@@ -37,7 +37,7 @@ def _serialize_spider_item(spider_data, include_full_data=False):
     # Build preview from raw_data
     preview = ""
     title = ""
-    items = spider_data.raw_data.get('items', []) if spider_data.raw_data else []
+    items = spider_data.raw_data_dict.get('items', [])
     if items:
         first_item = items[0]
         title = first_item.get('title') or first_item.get('name') or first_item.get('modelId') or ''
@@ -461,7 +461,7 @@ def sports_hub_feed(request):
         # Expand raw_data items into individual entries
         expanded = []
         for row in qs[:20]:  # Check up to 20 LegacySpiderData rows
-            raw = row.raw_data or {}
+            raw = row.raw_data_dict
             entries = raw.get('items', [])
             spider_ts = row.created_at.isoformat() if row.created_at else None
             for entry in entries:

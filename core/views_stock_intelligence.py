@@ -116,7 +116,7 @@ def stock_hub(request):
         for row in LegacySpiderData.objects.filter(
             spider_name__in=FINANCIAL_NEWS_SPIDERS
         ).order_by('-created_at')[:20]:
-            raw = row.raw_data or {}
+            raw = row.raw_data_dict
             entries = raw.get('items', [])
             spider_ts = row.created_at.isoformat() if row.created_at else None
             fallback_source = SPIDER_SOURCE_NAMES.get(row.spider_name, row.spider_name)
@@ -140,7 +140,7 @@ def stock_hub(request):
         for row in LegacySpiderData.objects.filter(
             spider_name='sec_edgar'
         ).order_by('-created_at')[:10]:
-            raw = row.raw_data or {}
+            raw = row.raw_data_dict
             entries = raw.get('items', [])
             spider_ts = row.created_at.isoformat() if row.created_at else None
             for entry in entries:
@@ -509,7 +509,7 @@ def stock_market_news(request):
         for row in LegacySpiderData.objects.filter(
             spider_name__in=FINANCIAL_NEWS_SPIDERS
         ).order_by('-created_at')[:200]:
-            raw = row.raw_data or {}
+            raw = row.raw_data_dict
             entries = raw.get('items', [])
             spider_ts = row.created_at.isoformat() if row.created_at else None
             fallback_source = SPIDER_SOURCE_NAMES.get(row.spider_name, row.spider_name)
@@ -723,7 +723,7 @@ def ticker_lookup(request, symbol):
                 'spider_name': s.spider_name,
                 'source_url': s.source_url,
                 'data_type': s.data_type,
-                'summary': (s.raw_data or {}).get('summary') or (s.raw_data or {}).get('title', ''),
+                'summary': s.raw_data_dict.get('summary') or s.raw_data_dict.get('title', ''),
                 'relevance_score': s.relevance_score,
                 'created_at': s.created_at.isoformat() if s.created_at else None,
             })

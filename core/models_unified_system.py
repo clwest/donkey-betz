@@ -3797,13 +3797,26 @@ class LegacySpiderData(models.Model):
     def __str__(self):
         return f"Spider Data: {self.spider_name} - {self.data_type}"
 
+    @property
+    def raw_data_dict(self) -> dict:
+        """Return ``raw_data`` guaranteed as a dict — ``{}`` when the row
+        holds a list, ``None``, or any non-dict JSON.
+
+        ``raw_data`` is ``JSONField()`` with no default and can legitimately
+        hold list-shaped payloads (S2869 test fixture 6 surfaced this class of
+        row). Every reader that does ``instance.raw_data.get(...)`` must go
+        through this property to avoid ``AttributeError`` on list-form rows.
+        Ingestion / write paths continue to use ``raw_data`` directly.
+        """
+        return self.raw_data if isinstance(self.raw_data, dict) else {}
+
     def get_searchable_text(self) -> str:
         """Build searchable text from all items for embedding generation."""
-        if not self.raw_data:
+        if not self.raw_data_dict:
             return ""
 
         texts = []
-        items = self.raw_data.get('items', [])
+        items = self.raw_data_dict.get('items', [])
         for item in items[:20]:  # Limit to 20 items to avoid huge embeddings
             # Session 505: Added modelId and id as fallbacks for huggingface/kaggle data
             title = item.get('title') or item.get('name') or item.get('modelId') or item.get('id') or ''

@@ -104,7 +104,7 @@ def evaluate_workspace_triggers_for_spider_data(spider_data):
                 continue
 
             # Get raw data
-            raw_data = spider_data.raw_data or {}
+            raw_data = spider_data.raw_data_dict
 
             # Handle 'items' array - check each item
             items = raw_data.get('items', [raw_data])
