@@ -2108,6 +2108,27 @@ class OpsHandlersMixin:
             # operators can inspect trigger / actor_user_id / reason without
             # dropping to Django shell. Default false preserves prior shape.
             include_evidence = bool(payload.get('include_evidence', False))
+            # S2861 slate #1: selected_fields projects evidence + result JSON
+            # down to specific top-level keys so operators can request only
+            # the fields they need (e.g., ['evidence.actor_user_id',
+            # 'result.reason']) instead of dumping full JSONField blobs.
+            # Top-level only in v1 — nested dicts/lists returned whole.
+            # Allowlist set makes future extension (e.g., verification_result)
+            # a single-line change per Rigby Q5b fold-mitigation.
+            _ALLOWED_PROJECTION_PREFIXES = ('evidence', 'result')
+            _MAX_SELECTED_FIELDS = 20
+            raw_selected = payload.get('selected_fields') or []
+            if not isinstance(raw_selected, list):
+                raw_selected = []
+            raw_selected = [str(f) for f in raw_selected[:_MAX_SELECTED_FIELDS]]
+            selected_fields: list = []
+            projection: dict = {p: [] for p in _ALLOWED_PROJECTION_PREFIXES}
+            if include_evidence:
+                for path in raw_selected:
+                    prefix, _, key = path.partition('.')
+                    if prefix in _ALLOWED_PROJECTION_PREFIXES and key:
+                        projection[prefix].append(key)
+                        selected_fields.append(path)
             fields = [
                 'id', 'created_at', 'action_type', 'agent_name',
                 'policy', 'dry_run', 'deploy_sha',
@@ -2121,11 +2142,21 @@ class OpsHandlersMixin:
             )
             for a in actions:
                 a['created_at'] = a['created_at'].isoformat()
+                if include_evidence and selected_fields:
+                    for prefix in _ALLOWED_PROJECTION_PREFIXES:
+                        src = a.get(prefix)
+                        if not isinstance(src, dict):
+                            a[prefix] = {}
+                            continue
+                        a[prefix] = {
+                            k: src[k] for k in projection[prefix] if k in src
+                        }
 
             return {
                 'action': 'history',
                 'count': len(actions),
                 'include_evidence': include_evidence,
+                'selected_fields': selected_fields,
                 'actions': actions,
             }
 
