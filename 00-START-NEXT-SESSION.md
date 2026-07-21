@@ -39,6 +39,11 @@ grep "^python tools/pa_chat.py" tools/pa_local.sh
 
 Per `feedback_engineering_bias_over_audit`, list net-new first.
 
+0. **`deliverable_tool.create` gotchas — Ledger entries #8 + #9 (Chris-selected S2858 close)** — bundled ~30-45 min substrate fix in `core/services/td_handlers_agents.py::_handle_deliverables`:
+   - Remove/gate the auto-`Rigby:` title prefix (Ledger entry #8)
+   - Skip `missing_initiative_id` diagnostic when `deliverable_type in ('ratification_record', ...)` because those types legitimately have no initiative parent (Ledger entry #9)
+   Both hit every session at close cascade and force a Django-shell ORM cleanup. Customer-visible surface per `feedback_rigby_tool_gap_ledger` (Rigby's deliverable_tool IS the A1 SaaS product surface). Full context: Rigby Tool Gap Ledger deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` in workspace `b4503364-2573-4401-9e28-61a739e0ce50`. **My recommendation for S2859 slate #1.**
+
 1. **`simulate_enforcement` auto-clear-after-N-seconds** (S2857 first-trigger fold) — currently `dry_run=false` writes flags that persist until operator calls `clear_freeze`/`clear_downgrade`. Consider optional `auto_clear_after_seconds` param so a demo doesn't leave a workspace frozen if the operator forgets to clean up. Deferred — awaits explicit ask.
 
 2. **`selected_fields` param for `autopilot_tool.history include_evidence`** (S2856 slate #3 Rigby Q5c zoom-out fold, first trigger observed — deferred until second trigger before Playbook amendment) — structured field selection over the JSONField payload. Blocked until concrete need surfaces.
