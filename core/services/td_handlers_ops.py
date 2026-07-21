@@ -4404,14 +4404,17 @@ class OpsHandlersMixin:
                         'calls': row['calls'] or 0,
                     }
 
-            # S2853 W2 #3.2: optional per-workspace downgrade-model usage +
-            # savings estimate. "downgrade_model_*" names (Rigby zoom-out
-            # Q4.4) — the report can only detect a call ran on the
-            # downgrade model, not that it was FORCED there by the
-            # enforcer (LLMCallLog has no was_downgraded flag; that's a
-            # deferred field). When the flag lands, additive
-            # "forced_downgrade_*" fields can be added without breaking
-            # semantics of these fields.
+            # S2853 W2 #3.2 + S2856 unblock: per-workspace forced-downgrade
+            # usage + savings estimate. Filter is now was_downgraded=True
+            # (S2856 field on LLMCallLog) — enforcer-forced downgrades
+            # only, not calls that natively target the downgrade model
+            # (PersonalAssistantAgent, orchestration coordinators — see
+            # DEFAULT_AGENT_LLM_CONFIGS at ~753+). "downgrade_model_*"
+            # names retained for backward-compatible response shape;
+            # semantics are now "forced" per S2856. Historical rows
+            # written before S2856 migration default to was_downgraded=False
+            # and are excluded, so windows overlapping the migration
+            # boundary under-report by that amount.
             from core.services.ops_autopilot.pricing import (
                 MODEL_PRICES,
                 estimate_uncached_cost,
@@ -4426,7 +4429,7 @@ class OpsHandlersMixin:
                     LLMCallLog.objects
                     .filter(
                         workspace_id__in=list(scoped_ids),
-                        model_id=downgrade_model_id,
+                        was_downgraded=True,
                         created_at__gte=cutoff,
                     )
                     .values('workspace_id')
@@ -4573,16 +4576,21 @@ class OpsHandlersMixin:
                     ),
                 }
                 response['downgrade_savings_note'] = (
-                    'Counts ALL calls to '
-                    f'{downgrade_model_id} in-window per workspace — '
-                    'LLMCallLog has no was_downgraded flag yet, so natively-'
-                    f'{downgrade_model_id} calls are indistinguishable from '
-                    'enforcer-forced downgrades and OVER-estimate true '
-                    'policy savings. would_have_cost is UNCACHED math at '
-                    'gpt-5.2 pre-downgrade rates ($1.75/1M input, '
-                    '$14/1M output — llm_enforcer.py:606-627); actual_cost '
-                    'comes from LLMCallLog.cost. Diagnostic estimate only; '
-                    'as-of query time, not a reconciled billing ledger.'
+                    'Counts only enforcer-forced downgrades '
+                    f'(LLMCallLog.was_downgraded=True → routed to '
+                    f'{downgrade_model_id} because a global or per-workspace '
+                    'downgrade flag was live). Natively-'
+                    f'{downgrade_model_id} agents (PersonalAssistantAgent, '
+                    'orchestration coordinators) are excluded. '
+                    'would_have_cost is UNCACHED math at gpt-5.2 pre-'
+                    'downgrade rates ($1.75/1M input, $14/1M output — '
+                    'llm_enforcer.py:606-627); actual_cost comes from '
+                    'LLMCallLog.cost. Diagnostic estimate; as-of query '
+                    'time, not a reconciled billing ledger. Rows created '
+                    'before the S2856 deploy do not have was_downgraded '
+                    'populated (default=False); savings will under-report '
+                    'until enough post-deploy traffic accrues to fill '
+                    'the window.'
                     if downgrade_priced and gpt52_priced else
                     'Pricing table missing entry for '
                     f'{downgrade_model_id!r} or gpt-5.2 in '

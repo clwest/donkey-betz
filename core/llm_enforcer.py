@@ -174,6 +174,17 @@ class LLMEnforcer:
         """
         logger.info(f"🔒 ENFORCING REAL AI for {agent_name} - Task: {task_type}")
 
+        # S2856 (A1 W2 #3.2 unblock) — LLMEnforcer is a process-wide
+        # singleton (see __new__ at ~90-96). Prior code only SET
+        # self._budget_downgrade_model when a downgrade flag was truthy
+        # (lines 224-237 global, 288-296 workspace); it never reset the
+        # attr when the flag became inactive. Result: once ANY call
+        # triggered a downgrade, EVERY subsequent openai call in the
+        # process silently routed to the downgrade model until Django
+        # restarted. Reset per-call so the downstream checks re-derive
+        # the flag from live config every time.
+        self._budget_downgrade_model = None
+
         # Session 1064: Check LUNGS budget before making LLM call
         try:
             from django.conf import settings as django_settings
@@ -423,6 +434,11 @@ class LLMEnforcer:
                 cost_estimator_version=response.get('cost_estimator_version', COST_ESTIMATOR_VERSION),
                 response_preview=_stall_preview,
                 user=user,  # Session 2846 (A1 W1) — per-workspace attribution
+                # S2856: forced-downgrade attribution on LLMCallLog.
+                # Claude path leaves these at their default (Claude has
+                # no downgrade cascade).
+                was_downgraded=response.get('was_downgraded', False),
+                pre_downgrade_model_id=response.get('pre_downgrade_model_id', ''),
             )
 
             result = {
@@ -532,11 +548,17 @@ class LLMEnforcer:
         # Session 1036: GPT-5.2 pricing: $1.75/1M input, $14/1M output
         #   Cached input (via previous_response_id): $0.18/1M (90% discount)
         # Session 1088: Apply budget downgrade if active
-        effective_model = "gpt-5.2"
+        # S2856: hoist the requested model into a named variable so
+        # pre_downgrade_model_id can capture it definitionally rather
+        # than relying on a hardcoded literal (Rigby pre-code SIGN Q2).
+        requested_model_id = "gpt-5.2"
+        effective_model = requested_model_id
+        was_downgraded = False
         if getattr(self, '_budget_downgrade_model', None):
             effective_model = self._budget_downgrade_model
+            was_downgraded = True
             logger.info(
-                f"[BudgetController] Downgrading {task_type} from gpt-5.2 → {effective_model}"
+                f"[BudgetController] Downgrading {task_type} from {requested_model_id} → {effective_model}"
             )
 
         params = {
@@ -669,6 +691,12 @@ class LLMEnforcer:
             # shapes; never larger than the total input total.
             'cached_input_tokens': cached_input_tokens,
             'cost_estimator_version': COST_ESTIMATOR_VERSION,
+            # S2856: forced-downgrade attribution for LLMCallLog. Only
+            # True when the enforcer's downgrade flag was live at the
+            # start of _call_openai. pre_downgrade_model_id is the
+            # originally-requested model (currently always 'gpt-5.2').
+            'was_downgraded': was_downgraded,
+            'pre_downgrade_model_id': requested_model_id if was_downgraded else '',
         }
 
         # Add response_id for chain of thought passing
@@ -804,6 +832,8 @@ class LLMEnforcer:
         cost_estimator_version: str = COST_ESTIMATOR_VERSION,
         response_preview: str = "",
         user: Optional[Any] = None,
+        was_downgraded: bool = False,
+        pre_downgrade_model_id: str = "",
     ) -> None:
         """
         Session 802: Persist LLM usage to both CostTracking and LLMCallLog.
@@ -853,6 +883,9 @@ class LLMEnforcer:
                 response_preview=response_preview,
                 user=user,
                 workspace=workspace,
+                # S2856: forced-downgrade attribution
+                was_downgraded=was_downgraded,
+                pre_downgrade_model_id=pre_downgrade_model_id,
             )
             logger.debug(f"💾 Saved LLM call log: {provider}/{model} - ${cost:.6f}")
         except Exception as e:
