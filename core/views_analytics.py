@@ -313,13 +313,21 @@ def cost_breakdown(request):
 
         if agent_cost['total_tokens']:
             # NOT BILLING — display-only rollup estimator (agent-execution
-            # cost breakdown card). Do not use for budgets / enforcement.
-            # Canonical billing rates live in core/services/pricing_catalog.py (S2854).
-            estimated_cost = (agent_cost['total_tokens'] / 1000) * 0.01
+            # cost breakdown card). Priced through canonical pricing_catalog
+            # against a documented default model (gpt-5-mini) since the
+            # AgentTaskExecution aggregate carries no per-row model attribution.
+            # The `estimated: true` flag tells the frontend to label it.
+            from core.services.pricing_catalog import calculate_cost
+            DEFAULT_DISPLAY_MODEL = 'gpt-5-mini'
+            estimated_cost = float(calculate_cost(
+                DEFAULT_DISPLAY_MODEL, agent_cost['total_tokens'], 0, 0
+            ))
             services['agent_execution'] = {
                 'cost': estimated_cost,
                 'usage': f"{agent_cost['total_tokens']} tokens",
-                'percentage': round((estimated_cost / total_revenue * 100) if total_revenue > 0 else 0, 1)
+                'percentage': round((estimated_cost / total_revenue * 100) if total_revenue > 0 else 0, 1),
+                'estimated': True,
+                'estimator_model': DEFAULT_DISPLAY_MODEL,
             }
     except Exception as _e:
         logger.warning(

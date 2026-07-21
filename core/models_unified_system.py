@@ -6707,7 +6707,25 @@ class PerformanceLog(models.Model):
 
 class CostTracking(models.Model):
     """
-    Track API costs and token usage across all providers.
+    Track API costs and token usage — the **analytics plane** for per-user usage.
+
+    ``estimated_cost_usd`` is priced through
+    ``core/services/pricing_catalog.py::calculate_cost`` at every LLM write
+    site (S2855 Phase 2A). Complements ``core.models_llm_routing.LLMCallLog``
+    (the **canonical billing plane** — enforcer path, agent_llm_router path,
+    embedding_service path).
+
+    CostTracking write sites for LLM ops (verified S2855):
+    - ``core/agents/base_agent.py::_track_llm_analytics`` (called after every
+      ``_call_openai`` direct-client call; writes provider='openai' +
+      service=<actual gpt-5.2/gpt-5-mini>)
+    - ``core/views_analytics.py::AdvancedAnalyticsService.track_cost``
+      (also invoked for non-LLM ops: image / video generation, TTS, etc.)
+
+    Non-overlap invariant: the ``base_agent._call_openai`` direct-client path
+    goes to CostTracking only, never LLMCallLog. Router / enforcer /
+    embedding paths go to LLMCallLog only. If a future refactor unifies these
+    paths, add a provenance dimension to avoid silent double-counting.
 
     Session 221 Phase F: Enable cost monitoring and budget management.
     """
