@@ -41,12 +41,15 @@ class SchemaAndRegistrationTests(SimpleTestCase):
         self.assertIn('orm_inspect_tool', names)
 
     def test_schema_action_enum(self):
+        # Baseline S2866 shipped 4 actions; S2867 added 'count_by' as a 5th.
+        # This assertion tracks the current tool contract, so a future
+        # slate landing another action should update it in the same PR.
         from core.services.pa_tool_schemas import PA_TOOL_SCHEMAS
         schema = next(s for s in PA_TOOL_SCHEMAS if s.get('name') == 'orm_inspect_tool')
         actions = schema['parameters']['properties']['action']['enum']
         self.assertEqual(
             sorted(actions),
-            sorted(['list_models', 'describe_model', 'get', 'filter']),
+            sorted(['list_models', 'describe_model', 'get', 'filter', 'count_by']),
         )
 
 

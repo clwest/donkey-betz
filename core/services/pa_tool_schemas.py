@@ -417,12 +417,16 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list_models", "describe_model", "get", "filter"],
+                    "enum": ["list_models", "describe_model", "get", "filter", "count_by"],
                     "description": (
                         "list_models = enumerate the allowlist. "
                         "describe_model = return field types for one model. "
                         "get = fetch one row by pk. "
-                        "filter = fetch N rows by filter_kwargs (default 20, max 200)."
+                        "filter = fetch N rows by filter_kwargs (default 20, max 200). "
+                        "count_by = group-by aggregate counts on a field with "
+                        "optional filter_kwargs (returns [{value, count}, ...] "
+                        "sorted desc, default limit 50, max 500). Auto-buckets "
+                        "DateTimeField by day."
                     ),
                 },
                 "model": {
@@ -474,7 +478,10 @@ PA_TOOL_SCHEMAS = [
                 "limit": {
                     "type": "integer",
                     "description": (
-                        "Max rows returned for 'filter' (default 20, max 200)."
+                        "Max rows returned for 'filter' (default 20, max 200). "
+                        "For 'count_by', max distinct group values returned "
+                        "(default 50, max 500). truncated=true in response "
+                        "indicates the cap was hit."
                     ),
                 },
                 "include_json_fields": {
@@ -487,6 +494,25 @@ PA_TOOL_SCHEMAS = [
                         "matching the redaction denylist (token/api_key/"
                         "authorization/cookie/secret/credential/password/etc.) "
                         "is replaced with '<redacted>'."
+                    ),
+                },
+                "field": {
+                    "type": "string",
+                    "description": (
+                        "Group-by field name for 'count_by' action. Must exist "
+                        "on the model, must not be sensitive-by-name, must not "
+                        "be a JSONField, and must not be listed in the model's "
+                        "expensive_text_fields. FK fields group on <field>_id. "
+                        "DateTimeField auto-buckets to day (TruncDate)."
+                    ),
+                },
+                "order_by_count": {
+                    "type": "string",
+                    "enum": ["desc", "asc"],
+                    "description": (
+                        "Order the returned groups by count. Default 'desc' "
+                        "(highest count first). Ties break by value ascending "
+                        "for stable output. Only applies to 'count_by' action."
                     ),
                 },
             },

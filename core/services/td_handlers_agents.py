@@ -613,6 +613,17 @@ class AgentHandlersMixin:
           - No FK traversal / deep __ chains (single-underscore lookups only).
           - No .save / .update / .delete surface — construction only.
 
+        S2867 extension — added action='count_by' (aggregate group-by counts).
+        Design contract per pre-code SIGN S2867 Q1+Q2+Q3+Q6 F-AGREE:
+          - New _validate_groupby_field mirrors _validate_filter_kwargs strictness
+            (field exists + not sensitive + not JSONField + not expensive_text).
+          - FK fields group on <field>_id (matches _serialize_row convention).
+          - DateTimeField auto-buckets to day via TruncDate (matches "how many
+            rows match X by day" original ask; explicit truncate= is v2).
+          - Group cardinality bounded: default limit=50, max=500. total_matching
+            (pre-group row count) + group_count (distinct group values) reported
+            separately from returned/truncated so operators see when a cap hit.
+
         Future v2 (Rigby zoom-out folded, not shipped this slate):
           - Token-shape heuristic redaction (JWT-ish, Bearer, long-base64).
           - Per-model per-field lookup allowlist (currently global lookup set).
@@ -624,12 +635,29 @@ class AgentHandlersMixin:
             name heuristics. Mitigation: per-model explicit allowed_fields
             (v2) — for v1, the JSONField-omission-by-default posture on
             sensitive models is the primary net.
-          - Aggregate counts by field (group-by counts) — post-code SIGN round 1
-            zoom-out named this as the next diagnostic rung after row inspection.
+          - count_by extensions: explicit truncate='day'|'week'|'month' for
+            DateTimeField (auto-day covers the primary ask), multi-field
+            group-by, opt-in value_repr batched lookup for FK groups. Carve
+            out to separate orm_aggregate_tool per Q6 zoom-out only if any of
+            those v2 items land (this tool stays "bounded inspection").
+          - count_by group_key_note (post-code SIGN Q2 fold): add an optional
+            human-readable one-liner describing how group_key was resolved
+            (e.g., "FK grouped on attname <field>_id", "DateTimeField grouped
+            by TruncDate(field)"). Not shipped in v1 — group_key + the field
+            type on describe_model already carry the information.
+          - count_by high-cardinality guardrail (post-code SIGN Q5 fold): if
+            an operator groups on a high-cardinality unindexed column of a
+            large table (e.g., LLMCallLog.trace_id when it exists), the
+            GROUP BY can be heavy. Considered adding a total_matching
+            threshold that nudges callers to filter first, or a soft-warning
+            field. Deferred — the row cap (limit + max 500) and truncation
+            signal already bound the response size; DB-plan-cost surfacing
+            is out of scope for a "bounded inspection" tool.
         """
         from django.apps import apps as _apps
         from django.core.exceptions import FieldError, ObjectDoesNotExist
-        from django.db.models import JSONField, TextField
+        from django.db.models import Count, DateField, DateTimeField, JSONField, TextField
+        from django.db.models.functions import TruncDate
 
         # ── Policy tables ────────────────────────────────────────────────────
         # Sensitive field-name rules — post-code SIGN S2866 Case 3 fold:
@@ -729,6 +757,8 @@ class AgentHandlersMixin:
         _DEFAULT_LIMIT = 20
         _MAX_STR_LEN = 4096  # per-field truncation cap
         _MAX_IN_LIST = 100
+        _DEFAULT_GROUP_LIMIT = 50   # count_by default distinct groups returned
+        _MAX_GROUP_LIMIT = 500      # count_by hard cap on distinct groups returned
 
         # ── Helpers ──────────────────────────────────────────────────────────
         def _is_sensitive_field_name(name: str) -> bool:
@@ -832,6 +862,42 @@ class AgentHandlersMixin:
                         return f"'in' list on '{field_name}' capped at {_MAX_IN_LIST} (got {len(value)})"
             return None
 
+        def _validate_groupby_field(field_name: str, model_cls, policy) -> Optional[str]:
+            """Guardrails for count_by target field per pre-code SIGN Q1 F-AGREE.
+
+            Strictness parity with _validate_filter_kwargs plus JSONField and
+            expensive_text_fields blocks (grouping on JSON or long free text
+            yields unbounded distinct values → runaway query cost).
+            """
+            model_field_names = {f.name for f in model_cls._meta.get_fields()}
+            if field_name not in model_field_names:
+                return f"field '{field_name}' not on model {model_cls.__name__}"
+            if _is_sensitive_field_name(field_name):
+                return f"group-by on sensitive field '{field_name}' rejected"
+            field_obj = model_cls._meta.get_field(field_name)
+            if isinstance(field_obj, JSONField):
+                return (
+                    f"group-by on JSONField '{field_name}' rejected — group values "
+                    f"would be raw JSON blobs. Use filter_kwargs with has_key + "
+                    f"count_by on a categorical column instead."
+                )
+            expensive = set(policy.get('expensive_text_fields') or ())
+            if field_name in expensive:
+                return (
+                    f"group-by on expensive text field '{field_name}' rejected "
+                    f"(would produce unbounded distinct values)"
+                )
+            return None
+
+        def _coerce_group_value(value: Any) -> Any:
+            """Serialize a group-by result value for JSON transport."""
+            if value is None:
+                return None
+            if isinstance(value, (str, int, float, bool)):
+                return value
+            # UUID / Decimal / date / datetime → string
+            return str(value)
+
         # ── Action dispatch ──────────────────────────────────────────────────
         action = (payload.get('action') or '').strip()
         logger.info(
@@ -839,7 +905,7 @@ class AgentHandlersMixin:
             action, payload.get('model'), user_id, trace_id,
         )
 
-        _VALID_ACTIONS = ('list_models', 'describe_model', 'get', 'filter')
+        _VALID_ACTIONS = ('list_models', 'describe_model', 'get', 'filter', 'count_by')
         if action not in _VALID_ACTIONS:
             return {'ok': False, 'error': f"unknown action '{action}' (allowed: {', '.join(_VALID_ACTIONS)})"}
 
@@ -975,6 +1041,108 @@ class AgentHandlersMixin:
                 'returned': len(rows),
                 'truncated': total_matching > len(rows),
                 'rows': rows,
+            }
+
+        if action == 'count_by':
+            field_name = (payload.get('field') or '').strip()
+            if not field_name:
+                return {'ok': False, 'error': "field is required for 'count_by' action"}
+            err = _validate_groupby_field(field_name, model_cls, policy)
+            if err:
+                return {'ok': False, 'error': err}
+
+            filter_kwargs = payload.get('filter_kwargs') or {}
+            if not isinstance(filter_kwargs, dict):
+                return {'ok': False, 'error': "filter_kwargs must be a dict"}
+            err = _validate_filter_kwargs(filter_kwargs, model_cls, policy)
+            if err:
+                return {'ok': False, 'error': err}
+
+            try:
+                limit_raw = int(payload.get('limit') or _DEFAULT_GROUP_LIMIT)
+            except (TypeError, ValueError):
+                limit_raw = _DEFAULT_GROUP_LIMIT
+            limit = max(1, min(limit_raw, _MAX_GROUP_LIMIT))
+
+            order_by_count = (payload.get('order_by_count') or 'desc').lower()
+            if order_by_count not in ('desc', 'asc'):
+                return {'ok': False, 'error': "order_by_count must be 'desc' or 'asc'"}
+            count_order_prefix = '-' if order_by_count == 'desc' else ''
+
+            # Resolve the group-by column expression per field type per SIGN Q1+Q2+Q3.
+            field_obj = model_cls._meta.get_field(field_name)
+            group_key: str
+            annotate_kwargs: Dict[str, Any] = {}
+            if field_obj.many_to_one:
+                # FK — group on attname (<field>_id) per Q3 F-AGREE + serializer parity
+                group_key = field_name + '_id'
+            elif isinstance(field_obj, DateTimeField):
+                # DateTimeField auto-bucket to day per Q2 F-AGREE.
+                # Django's DateTimeField extends DateField, so isinstance-DateTimeField
+                # alone selects only true datetime columns (plain DateField is
+                # already day-grained and falls through to the else branch).
+                group_key = '_count_by_day_bucket'
+                annotate_kwargs[group_key] = TruncDate(field_name)
+            else:
+                group_key = field_name
+
+            try:
+                filtered_qs = model_cls.objects.filter(**filter_kwargs)
+                total_matching = filtered_qs.count()
+                grouped_qs = filtered_qs
+                if annotate_kwargs:
+                    grouped_qs = grouped_qs.annotate(**annotate_kwargs)
+                grouped_qs = (
+                    grouped_qs
+                    .values(group_key)
+                    .annotate(_count=Count('id'))
+                    .order_by(f'{count_order_prefix}_count', group_key)
+                )
+                # Materialize +1 beyond limit so we can detect truncation without
+                # a second COUNT(DISTINCT) query.
+                head_plus_one = list(grouped_qs[:limit + 1])
+            except FieldError as e:
+                return {'ok': False, 'error': f"queryset FieldError: {e}"}
+            except (ValueError, TypeError) as e:
+                return {'ok': False, 'error': f"queryset value error: {e}"}
+
+            truncated = len(head_plus_one) > limit
+            head_rows = head_plus_one[:limit]
+            groups = [
+                {'value': _coerce_group_value(row[group_key]), 'count': row['_count']}
+                for row in head_rows
+            ]
+            # group_count semantics: exact distinct-value count when
+            # truncated=false; a lower bound (returned + 1) when truncated=true.
+            # We intentionally skip a separate COUNT(DISTINCT) query — the
+            # `truncated` flag already tells callers to interpret group_count
+            # as a lower bound. Post-code SIGN Q4 F-DISAGREE (S2867) dropped
+            # a redundant `group_count_is_lower_bound` field that always
+            # flipped with `truncated` — the docstring here carries the
+            # semantics instead.
+            if truncated:
+                group_count_reported = len(head_rows) + 1
+            else:
+                group_count_reported = len(head_rows)
+
+            logger.info(
+                "orm_inspect_tool count_by: model=%s field=%s total_matching=%d "
+                "group_count=%d returned=%d truncated=%s trace_id=%s",
+                model_name, field_name, total_matching,
+                group_count_reported, len(groups), truncated, trace_id,
+            )
+
+            return {
+                'ok': True, 'action': 'count_by', 'model': model_name,
+                'field': field_name,
+                'group_key': group_key,  # exposes the actual column (e.g., <fk>_id, bucket)
+                'total_matching': total_matching,
+                'group_count': group_count_reported,  # exact when truncated=false, lower bound when true
+                'returned': len(groups),
+                'truncated': truncated,
+                'order_by_count': order_by_count,
+                'limit': limit,
+                'groups': groups,
             }
 
         # Should be unreachable — _VALID_ACTIONS guard covers all branches.
