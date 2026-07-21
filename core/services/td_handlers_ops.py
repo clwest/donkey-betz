@@ -3919,6 +3919,105 @@ class OpsHandlersMixin:
             'budget controls'
         )
 
+        def _status_context(workspace, *, cleared_flag):
+            """S2858 PR#1 — return post-clear spend/threshold context.
+
+            Used by clear_freeze + clear_downgrade to inline enough state
+            that operators don't have to re-call get_status. `cleared_flag`
+            is 'freeze' or 'downgrade' and drives which re-flag threshold
+            + reason string we compute against.
+
+            Enforcement reads the EXPLICIT cap only (not the effective
+            default fallback) — so re_flag_likely is computed against
+            explicit cap and, when the workspace only has a default cap,
+            re_flag_likely is False with an explanatory reason (per
+            Rigby SIGN Q5 concern 1).
+            """
+            from core.services.ops_autopilot.config import AutopilotConfig
+            spend = controller.compute_workspace_spend(
+                now, workspace_id=workspace.id,
+            )
+            daily_total = spend['daily_total']
+            explicit_cap = controller.get_workspace_daily_cap(workspace.id)
+            effective = controller.get_effective_workspace_daily_cap(
+                workspace.id,
+            )
+            effective_cap = effective['cap']
+            cap_source = effective['source']
+
+            if effective_cap and effective_cap > 0:
+                spend_pct_of_cap = round(100 * daily_total / effective_cap)
+            else:
+                spend_pct_of_cap = None
+
+            re_flag_likely = False
+            re_flag_reason = None
+            threshold = None
+            threshold_pct = None
+
+            if explicit_cap is None:
+                enforcement_note = (
+                    f'no explicit cap on this workspace '
+                    f'(cap_source={cap_source}) — enforcement will NOT '
+                    f're-fire until an explicit cap is set via set_cap '
+                    f'or backfill_defaults; effective_cap is display-only'
+                )
+                re_flag_reason = enforcement_note
+            elif cleared_flag == 'freeze':
+                threshold = explicit_cap
+                threshold_pct = 100
+                enforcement_note = (
+                    'freeze re-fires when daily spend >= explicit cap'
+                )
+                if daily_total >= explicit_cap:
+                    re_flag_likely = True
+                    re_flag_reason = (
+                        f'daily spend ${daily_total:.2f} still >= '
+                        f'explicit cap ${explicit_cap:.2f} — freeze '
+                        f'will re-fire on next enforce_ call'
+                    )
+                else:
+                    re_flag_reason = (
+                        f'daily spend ${daily_total:.2f} < explicit cap '
+                        f'${explicit_cap:.2f} — freeze will not re-fire '
+                        f'unless additional spend crosses the cap'
+                    )
+            else:  # cleared_flag == 'downgrade'
+                soft_pct = AutopilotConfig.BUDGET_SOFT_LIMIT_PCT
+                threshold = explicit_cap * soft_pct
+                threshold_pct = round(soft_pct * 100)
+                enforcement_note = (
+                    f'downgrade re-fires when daily spend >= '
+                    f'{threshold_pct}% of explicit cap'
+                )
+                if daily_total >= threshold:
+                    re_flag_likely = True
+                    re_flag_reason = (
+                        f'daily spend ${daily_total:.2f} still >= '
+                        f'${threshold:.2f} ({threshold_pct}% of cap '
+                        f'${explicit_cap:.2f}) — downgrade will re-fire '
+                        f'on next enforce_ call'
+                    )
+                else:
+                    re_flag_reason = (
+                        f'daily spend ${daily_total:.2f} < '
+                        f'${threshold:.2f} ({threshold_pct}% of cap '
+                        f'${explicit_cap:.2f}) — downgrade will not '
+                        f're-fire unless spend crosses the soft threshold'
+                    )
+
+            return {
+                'daily_total': daily_total,
+                'effective_cap': effective_cap,
+                'cap_source': cap_source,
+                'spend_pct_of_cap': spend_pct_of_cap,
+                're_flag_likely': re_flag_likely,
+                're_flag_reason': re_flag_reason,
+                'refire_threshold': threshold,
+                'refire_threshold_pct_of_cap': threshold_pct,
+                'enforcement_note': enforcement_note,
+            }
+
         if action == 'get_status':
             workspace, err = _resolve_workspace(workspace_id)
             if err is not None:
@@ -4142,6 +4241,10 @@ class OpsHandlersMixin:
             cleared = controller.clear_workspace_freeze(
                 workspace.id, actor_user_id=user_id,
             )
+            # S2858 PR#1 — inline post-clear spend/threshold context so
+            # operators don't have to re-call get_status to know whether
+            # the freeze will immediately re-fire.
+            status_context = _status_context(workspace, cleared_flag='freeze')
             return {
                 'action': action,
                 'workspace_id': str(workspace.id),
@@ -4149,9 +4252,12 @@ class OpsHandlersMixin:
                 'cleared': cleared,
                 'note': (
                     'freeze cleared — non-critical LLM calls resume for '
-                    'this workspace'
+                    'this workspace (state flip only; check re_flag_likely '
+                    'below to know if it will re-fire)'
                     if cleared else 'workspace was not frozen (no-op)'
                 ),
+                'status_context': status_context,
+                'null_bucket_note': _null_bucket_note,
             }
 
         if action == 'clear_downgrade':
@@ -4164,6 +4270,7 @@ class OpsHandlersMixin:
             cleared = controller.clear_workspace_downgrade(
                 workspace.id, actor_user_id=user_id,
             )
+            status_context = _status_context(workspace, cleared_flag='downgrade')
             return {
                 'action': action,
                 'workspace_id': str(workspace.id),
@@ -4171,10 +4278,12 @@ class OpsHandlersMixin:
                 'cleared': cleared,
                 'note': (
                     'downgrade cleared — LLM calls resume on the requested '
-                    'model. Autopilot may re-flag if spend crosses 70% of '
-                    'cap on the next budget cycle'
+                    'model (state flip only; check re_flag_likely below '
+                    'to know if it will re-fire)'
                     if cleared else 'workspace was not downgraded (no-op)'
                 ),
+                'status_context': status_context,
+                'null_bucket_note': _null_bucket_note,
             }
 
         # S2849 W2 #2a — global default cap + backfill actions. These are
