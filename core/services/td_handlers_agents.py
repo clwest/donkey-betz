@@ -759,6 +759,26 @@ class AgentHandlersMixin:
                 'app_label': 'core', 'sensitive': False,
                 'expensive_text_fields': ('embedding_text',),
             },
+            # S2873 Rigby Tool Gap Ledger wish-list #2 — persistence.SpiderData
+            # is the canonical spider-persistence model (116K rows vs LegacySpiderData's
+            # 15K). Same public-web-content sensitivity level as LegacySpiderData.
+            # content (article bodies) + raw_html (full page source) can each
+            # exceed 10KB per row, so both are blocked from contains lookups.
+            'SpiderData': {
+                'app_label': 'persistence', 'sensitive': False,
+                'expensive_text_fields': ('content', 'raw_html'),
+            },
+            # S2873 Rigby Tool Gap Ledger wish-list #3 — core.Opportunity is
+            # the revenue-side opportunities model (2.6K rows, user-facing).
+            # description is the only TextField on the model. FKs (user,
+            # workspace, spider_data, project, recommended_by) emit as *_id
+            # per existing FK-attname pattern; single-tenant pre-prod context
+            # (per project_single_user_pre_prod_operating_context) means no
+            # workspace_id gating required at v1.
+            'Opportunity': {
+                'app_label': 'core', 'sensitive': False,
+                'expensive_text_fields': ('description',),
+            },
         }
 
         _MAX_LIMIT = 200
