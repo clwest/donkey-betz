@@ -140,3 +140,204 @@ class OpsAutopilotShimTests(SimpleTestCase):
         self.assertIs(shim_prices, MODEL_PRICES)
         self.assertIs(shim_calculate_cost, calculate_cost)
         self.assertIs(shim_estimate_uncached_cost, estimate_uncached_cost)
+
+
+# =============================================================================
+# S2855 Phase 2A — analytics-plane migration
+# =============================================================================
+
+
+class PricingCatalogSeparationTests(SimpleTestCase):
+    """Embedding rates live in embedding_service.EMBEDDING_COSTS — NOT here.
+
+    Rigby zoom-out fold: adding embeddings to MODEL_PRICES would create dual
+    sources of truth for embedding pricing. Enforce the separation.
+    """
+
+    def test_embedding_models_not_in_chat_pricing_catalog(self):
+        for model_id in (
+            'text-embedding-3-small',
+            'text-embedding-3-large',
+            'text-embedding-ada-002',
+        ):
+            self.assertNotIn(model_id, MODEL_PRICES)
+
+    def test_embedding_service_owns_embedding_rates(self):
+        from core.services.embedding_service import EMBEDDING_COSTS
+        # Assert the canonical embedding rates present (guards against silent
+        # rate drift that would diverge from OpenAI pricing).
+        from decimal import Decimal as D
+        self.assertEqual(EMBEDDING_COSTS['text-embedding-3-small'], D('0.02'))
+        self.assertEqual(EMBEDDING_COSTS['text-embedding-3-large'], D('0.13'))
+        self.assertEqual(EMBEDDING_COSTS['text-embedding-ada-002'], D('0.10'))
+
+
+class TrackLLMAnalyticsModelAttributionTests(SimpleTestCase):
+    """base_agent._track_llm_analytics respects the _last_llm_model instance attr.
+
+    Pre-S2855 the method hardcoded ``service='gpt-5-mini'`` on every
+    ``AdvancedAnalyticsService.track_cost`` call irrespective of the actual
+    model used — silently mis-attributing every gpt-5.2 call to gpt-5-mini in
+    CostTracking, and mispricing at $3/$12 per 1M (matched neither model).
+    """
+
+    def _fake_response(self, prompt_tokens=100, completion_tokens=50, model=None):
+        from types import SimpleNamespace
+        usage = SimpleNamespace(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=prompt_tokens + completion_tokens,
+        )
+        r = SimpleNamespace(usage=usage)
+        if model is not None:
+            r.model = model
+        return r
+
+    def _make_fake_agent(self, last_model=None):
+        """Build the minimum viable BaseAgent needed by _track_llm_analytics."""
+        from core.agents.base_agent import BaseAgent
+
+        class _FakeAgent(BaseAgent):
+            system_prompt = 'fake'
+
+            def execute(self, task, context=None, **kwargs):  # noqa: ARG002
+                return {'success': True}
+
+        # Bypass __init__ (touches LLM/spider plumbing); set only what
+        # _track_llm_analytics reads.
+        agent = _FakeAgent.__new__(_FakeAgent)
+        agent.name = 'test-agent'
+        agent.user = None  # user=None → skips track_cost + track_usage
+        if last_model is not None:
+            agent._last_llm_model = last_model
+        return agent
+
+    def test_uses_last_llm_model_when_set(self):
+        """gpt-5.2 attributed correctly; not silently rewritten to gpt-5-mini."""
+        from unittest.mock import patch
+        agent = self._make_fake_agent(last_model='gpt-5.2')
+        agent.user = object()  # non-None so track_cost fires
+        response = self._fake_response(100, 50)
+
+        with patch('core.views_analytics.AdvancedAnalyticsService.track_cost') as tc, \
+             patch('core.views_analytics.AdvancedAnalyticsService.track_usage'), \
+             patch('core.models_unified_system.PerformanceLog.objects.create'):
+            agent._track_llm_analytics(response, start_time=0.0)
+
+        tc.assert_called_once()
+        kwargs = tc.call_args.kwargs
+        self.assertEqual(kwargs['service'], 'gpt-5.2')
+        # gpt-5.2 canonical: 100*1.75/1M + 50*14/1M = 0.000175 + 0.0007 = 0.000875
+        self.assertAlmostEqual(kwargs['estimated_cost_usd'], 0.000875, places=8)
+
+    def test_falls_back_to_response_model_when_no_last_llm_model(self):
+        from unittest.mock import patch
+        agent = self._make_fake_agent(last_model=None)
+        agent.user = object()
+        response = self._fake_response(100, 50, model='gpt-5.2')
+
+        with patch('core.views_analytics.AdvancedAnalyticsService.track_cost') as tc, \
+             patch('core.views_analytics.AdvancedAnalyticsService.track_usage'), \
+             patch('core.models_unified_system.PerformanceLog.objects.create'):
+            agent._track_llm_analytics(response, start_time=0.0)
+
+        self.assertEqual(tc.call_args.kwargs['service'], 'gpt-5.2')
+
+    def test_final_fallback_to_gpt_5_mini(self):
+        from unittest.mock import patch
+        agent = self._make_fake_agent(last_model=None)
+        agent.user = object()
+        response = self._fake_response(100, 50)  # no .model attr
+
+        with patch('core.views_analytics.AdvancedAnalyticsService.track_cost') as tc, \
+             patch('core.views_analytics.AdvancedAnalyticsService.track_usage'), \
+             patch('core.models_unified_system.PerformanceLog.objects.create'):
+            agent._track_llm_analytics(response, start_time=0.0)
+
+        self.assertEqual(tc.call_args.kwargs['service'], 'gpt-5-mini')
+        # gpt-5-mini canonical: 100*0.5/1M + 50*1.5/1M = 0.00005 + 0.000075 = 0.000125
+        self.assertAlmostEqual(
+            tc.call_args.kwargs['estimated_cost_usd'], 0.000125, places=8
+        )
+
+    def test_pre_phase_2a_wrong_rates_would_have_differed(self):
+        """Regression witness: the pre-S2855 formula priced 100/50 at $0.000900.
+
+        (100 * 0.003/1000) + (50 * 0.012/1000) = 0.0003 + 0.0006 = 0.0009.
+        gpt-5.2 canonical is 0.000875; gpt-5-mini canonical is 0.000125.
+        Neither matches — proving the pre-fix formula was rate-broken.
+        """
+        pre_fix = (100 * 0.003 / 1000) + (50 * 0.012 / 1000)
+        self.assertAlmostEqual(pre_fix, 0.0009, places=8)
+        canonical_5_2 = float(calculate_cost('gpt-5.2', 100, 50))
+        canonical_mini = float(calculate_cost('gpt-5-mini', 100, 50))
+        self.assertNotAlmostEqual(pre_fix, canonical_5_2, places=6)
+        self.assertNotAlmostEqual(pre_fix, canonical_mini, places=6)
+
+
+class DisplayFallbackEstimatorTests(SimpleTestCase):
+    """views_agent_dashboard + views_analytics fallback rates are canonical.
+
+    Pre-S2855 these hardcoded blended per-1M rates ($0.375 dashboard,
+    $10 analytics) with unclear provenance. Now they price through
+    ``calculate_cost('gpt-5-mini', tokens, 0)`` with an ``estimated=True``
+    flag telling the frontend to label the number.
+    """
+
+    def test_dashboard_default_display_model_is_canonical_gpt_5_mini_rate(self):
+        # 750 tokens (dashboard solution baseline) priced as gpt-5-mini input:
+        # 750 * 0.5/1M = 0.000375
+        self.assertEqual(
+            calculate_cost('gpt-5-mini', 750, 0, 0),
+            (750 * MODEL_PRICES['gpt-5-mini']['input']) / 1_000_000,
+        )
+
+    def test_analytics_default_display_model_is_canonical_gpt_5_mini_rate(self):
+        # 10_000 tokens (analytics rollup baseline):
+        # 10000 * 0.5/1M = 0.005
+        from decimal import Decimal as D
+        self.assertEqual(
+            calculate_cost('gpt-5-mini', 10_000, 0, 0),
+            D('0.005'),
+        )
+
+
+class TriageSpiderEmbeddingsCostSourceTests(SimpleTestCase):
+    """triage_spider_embeddings sources embedding rate from EMBEDDING_COSTS.
+
+    Pre-S2855 the management command inlined ``* 0.02`` (correct rate for
+    text-embedding-3-small at the time it was written but decoupled from
+    the canonical embedding-rate table). Post-S2855 it imports from
+    ``core.services.embedding_service.EMBEDDING_COSTS`` so any future rate
+    update lands in one place.
+    """
+
+    def test_management_command_imports_embedding_costs_from_canonical_table(self):
+        import ast
+        from pathlib import Path
+        source = Path(
+            'core/management/commands/triage_spider_embeddings.py'
+        ).read_text()
+        tree = ast.parse(source)
+        imports = [
+            node for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom)
+            and node.module == 'core.services.embedding_service'
+        ]
+        self.assertTrue(
+            imports,
+            'triage_spider_embeddings must import from embedding_service; '
+            'inlining embedding rates duplicates the canonical table.',
+        )
+        imported_names = {
+            alias.name for imp in imports for alias in imp.names
+        }
+        self.assertIn('EMBEDDING_COSTS', imported_names)
+
+    def test_management_command_no_longer_inlines_0_02_rate(self):
+        from pathlib import Path
+        source = Path(
+            'core/management/commands/triage_spider_embeddings.py'
+        ).read_text()
+        # Substring guard — old formula would contain `* 0.02` literal.
+        self.assertNotIn('/ 1_000_000 * 0.02', source)
