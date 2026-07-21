@@ -2058,8 +2058,8 @@ def _impl_trigger_spider_conversations(self, min_relevance: int = 70, max_conver
 
             # Build topic from spider data
             spider_summary = ""
-            if spider_data.raw_data:
-                items = spider_data.raw_data.get('items', [])[:3]
+            items = spider_data.raw_data_dict.get('items', [])[:3]
+            if items:
                 titles = [item.get('title', '')[:50] for item in items if item.get('title')]
                 spider_summary = "; ".join(titles)
 

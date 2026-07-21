@@ -5407,7 +5407,7 @@ def run_job_match_intelligence(self):
 
         jobs_created = 0
         for data in spider_data:
-            raw = data.raw_data or {}
+            raw = data.raw_data_dict
             title = raw.get('title', '') or raw.get('position', '') or ''
             url = raw.get('url', '') or data.source_url
             if not title or not url:
@@ -5513,7 +5513,7 @@ def run_regulatory_change_detector(self):
         created = 0
         reg_keywords = ['regulation', 'rule', 'policy', 'sec', 'ftc', 'fda']
         for data in spider_data:
-            raw = data.raw_data or {}
+            raw = data.raw_data_dict
             title = raw.get('title', '') or ''
             if any(kw in title.lower() for kw in reg_keywords):
                 RegulatoryChange.objects.create(

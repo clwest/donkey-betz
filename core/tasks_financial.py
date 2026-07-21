@@ -747,7 +747,7 @@ def _impl_run_blockchain_security_monitor():
 
         # Analyze each spider data record for alerts
         for data in spider_data[:50]:  # Process top 50 most recent
-            raw = data.raw_data or {}
+            raw = data.raw_data_dict
 
             # Check for whale movements from etherscan
             if data.spider_name in ['etherscan', 'etherscan_api']:
@@ -968,7 +968,7 @@ def _impl_run_stock_market_intelligence():
 
         # Analyze each spider data record
         for data in spider_data[:50]:
-            raw = data.raw_data or {}
+            raw = data.raw_data_dict
 
             # Yahoo Finance analysis — spider returns news articles (title, link, description)
             if data.spider_name == 'yahoo_finance':
@@ -1227,7 +1227,7 @@ def _impl_run_sec_filing_analyzer(self):
 
         filings_analyzed = 0
         for data in spider_data:
-            raw = data.raw_data or {}
+            raw = data.raw_data_dict
             title = (raw.get('title', '') or '').upper()
             content = (raw.get('content', '') or raw.get('description', '') or '')
 
@@ -1336,7 +1336,7 @@ def _impl_run_earnings_predictor(self):
         companies_analyzed = {}
 
         for data in spider_data:
-            raw = data.raw_data or {}
+            raw = data.raw_data_dict
             title = (raw.get('title', '') or '').lower()
             content = (raw.get('content', '') or raw.get('description', '') or '').lower()
 

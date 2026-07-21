@@ -598,10 +598,10 @@ class WorkflowEngine:
             }
 
             for trend in trends:
-                if not trend.raw_data:
+                items = trend.raw_data_dict.get('items', [])
+                if not items:
                     continue
 
-                items = trend.raw_data.get('items', [])
                 if items:
                     items_found += len(items)
                     for item in items[:10]:
