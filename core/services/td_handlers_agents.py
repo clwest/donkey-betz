@@ -590,6 +590,396 @@ class AgentHandlersMixin:
             'latency_ms': latency_ms,
         }
 
+    def _handle_orm_inspect(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str,
+    ) -> Dict[str, Any]:
+        """Bounded ORM row inspector (Rigby Tool Gap Ledger #3 / b5a22ea7, S2866).
+
+        Read-only, allowlist-scoped Django ORM inspection. Closes the S2845-
+        class false-negative gap where a tool surface reports 'no data' but
+        rows exist under a different filter path (140 AI-community clusters
+        found via ORM after enum-restricted source filter returned 0).
+
+        Design contract (per pre-code SIGN S2866 Q3+Q6 F-BLOCKING):
+          - Per-model policy dict (allowlist + sensitivity flag + expensive
+            text field list) — no field-name heuristic alone.
+          - JSONField default: excluded for high-sensitivity models
+            (LLMCallLog, AutopilotAction, OpsRun); included with recursive
+            key-redaction for others.
+          - No FK traversal / deep __ chains (single-underscore lookups only).
+          - No .save / .update / .delete surface — construction only.
+
+        Future v2 (Rigby zoom-out folded, not shipped this slate):
+          - Token-shape heuristic redaction (JWT-ish, Bearer, long-base64).
+          - Per-model per-field lookup allowlist (currently global lookup set).
+          - order_by allowlist per model (currently common-field intersection).
+          - Multi-tenant workspace_id enforcement (deferred per single-tenant
+            pre-prod context; flip to required if multi-tenant ever ships).
+          - Euphemistic-name coverage: fields like `opaque`, `blob`, `payload`,
+            `header_value`, `signed_value` can carry secrets but don't match
+            name heuristics. Mitigation: per-model explicit allowed_fields
+            (v2) — for v1, the JSONField-omission-by-default posture on
+            sensitive models is the primary net.
+          - Aggregate counts by field (group-by counts) — post-code SIGN round 1
+            zoom-out named this as the next diagnostic rung after row inspection.
+        """
+        from django.apps import apps as _apps
+        from django.core.exceptions import FieldError, ObjectDoesNotExist
+        from django.db.models import JSONField, TextField
+
+        # ── Policy tables ────────────────────────────────────────────────────
+        # Sensitive field-name rules — post-code SIGN S2866 Case 3 fold:
+        # naive `'token' in name.lower()` matched `total_tokens`/`prompt_tokens`
+        # (numeric counters, non-sensitive). Switched to two-layer match:
+        #   1) COMPOSITE substrings for known-dangerous multi-word field names
+        #      (`api_key`, `access_key`, etc.) — match anywhere in the name.
+        #   2) EXACT word matching against SENSITIVE_WORDS after splitting the
+        #      field name on '_'/'-' — so `access_token` splits to
+        #      {'access','token'} and matches, but `total_tokens` splits to
+        #      {'total','tokens'} and does NOT match (no 'tokens' in set).
+        _SENSITIVE_WORDS = frozenset({
+            'password', 'secret', 'authorization',
+            'token', 'apikey', 'cookie', 'credential', 'creds',
+            'session', 'csrf', 'xsrf',
+            'signature', 'salt', 'nonce',
+            'encrypted', 'encryption',
+        })
+
+        _SENSITIVE_COMPOSITES = (
+            'api_key', 'access_key', 'refresh_token', 'id_token',
+            'client_secret', 'private_key', 'ssh_key', 'rsa_key',
+            'set_cookie', 'auth_token', 'session_token', 'session_key',
+            'bearer_token', 'webhook_secret', 'webhook_key',
+            'pem_key', 'pem_cert',
+            # Post-code SIGN round 2 Case B fold-ins (provider + header names)
+            'auth_header', 'authorization_header',
+            'x_api_key', 'openai_key', 'anthropic_key', 'github_pat',
+        )
+
+        # Exact keys to redact recursively inside JSONField values.
+        _JSON_REDACT_KEYS = frozenset({
+            'token', 'api_key', 'apikey', 'access_key', 'authorization',
+            'cookie', 'set_cookie', 'secret', 'client_secret',
+            'credential', 'creds', 'password',
+            'refresh_token', 'id_token', 'private_key',
+            'auth', 'signature', 'bearer', 'session_token',
+        })
+
+        _SAFE_LOOKUPS = frozenset({
+            'exact', 'iexact', 'isnull',
+            'gt', 'gte', 'lt', 'lte',
+            'contains', 'icontains',
+            'startswith', 'istartswith',
+            'in',
+            'has_key', 'has_keys',
+        })
+
+        _COMMON_ORDER_FIELDS = frozenset({
+            'id', 'created_at', 'updated_at',
+            'detected_at', 'started_at', 'finished_at',
+            'first_seen', 'last_seen', 'signal_window_start',
+        })
+
+        # Per-model policy. app_label + model_name resolved via apps.get_model.
+        # sensitive=True → include_json_fields defaults false.
+        # expensive_text_fields → contains/icontains rejected on these fields.
+        _MODEL_POLICIES: Dict[str, Dict[str, Any]] = {
+            'SignalCluster': {
+                'app_label': 'core', 'sensitive': False,
+                'expensive_text_fields': (),
+            },
+            'Deliverable': {
+                'app_label': 'core', 'sensitive': False,
+                'expensive_text_fields': ('content', 'preview_content', 'agent_task'),
+            },
+            'Initiative': {
+                'app_label': 'core', 'sensitive': False,
+                'expensive_text_fields': (
+                    'description', 'stop_rule', 'manual_priority_reason',
+                    'next_action', 'blocking_reason', 'boardroom_approval_notes',
+                ),
+            },
+            'LLMCallLog': {
+                'app_label': 'core', 'sensitive': True,
+                'expensive_text_fields': ('response_preview', 'error_message'),
+            },
+            'Agent': {
+                'app_label': 'core', 'sensitive': False,
+                'expensive_text_fields': ('description',),
+            },
+            'AutopilotAction': {
+                'app_label': 'core', 'sensitive': True,
+                'expensive_text_fields': (),
+            },
+            'Budget': {
+                'app_label': 'core', 'sensitive': False,
+                'expensive_text_fields': (),
+            },
+            'OpsRun': {
+                'app_label': 'core', 'sensitive': True,
+                'expensive_text_fields': (),
+            },
+        }
+
+        _MAX_LIMIT = 200
+        _DEFAULT_LIMIT = 20
+        _MAX_STR_LEN = 4096  # per-field truncation cap
+        _MAX_IN_LIST = 100
+
+        # ── Helpers ──────────────────────────────────────────────────────────
+        def _is_sensitive_field_name(name: str) -> bool:
+            lower = name.lower()
+            if any(c in lower for c in _SENSITIVE_COMPOSITES):
+                return True
+            words = set(lower.replace('-', '_').split('_'))
+            return bool(words & _SENSITIVE_WORDS)
+
+        def _redact_json(value: Any, depth: int = 0) -> Any:
+            if depth > 8:
+                return '<redacted:depth>'
+            if isinstance(value, dict):
+                out: Dict[str, Any] = {}
+                for k, v in value.items():
+                    if isinstance(k, str) and k.lower() in _JSON_REDACT_KEYS:
+                        out[k] = '<redacted>'
+                    else:
+                        out[k] = _redact_json(v, depth + 1)
+                return out
+            if isinstance(value, list):
+                return [_redact_json(x, depth + 1) for x in value]
+            if isinstance(value, str) and len(value) > _MAX_STR_LEN:
+                return value[:_MAX_STR_LEN] + f'…<truncated:{len(value)}b>'
+            return value
+
+        def _truncate_str(value: Any) -> Any:
+            if isinstance(value, str) and len(value) > _MAX_STR_LEN:
+                return value[:_MAX_STR_LEN] + f'…<truncated:{len(value)}b>'
+            return value
+
+        def _get_model_class(name: str):
+            policy = _MODEL_POLICIES.get(name)
+            if policy is None:
+                return None, None
+            try:
+                model_cls = _apps.get_model(policy['app_label'], name)
+            except LookupError:
+                return None, policy
+            return model_cls, policy
+
+        def _serialize_row(instance, model_cls, policy, requested_fields, include_json) -> Dict[str, Any]:
+            row: Dict[str, Any] = {}
+            for field in model_cls._meta.get_fields():
+                if field.is_relation and not field.many_to_one:
+                    continue  # skip reverse relations
+                fname = field.name
+                if requested_fields is not None and fname not in requested_fields:
+                    continue
+                if _is_sensitive_field_name(fname):
+                    row[fname] = '<redacted:field_name>'
+                    continue
+                # FK: return the id, not the object
+                if field.many_to_one:
+                    fk_id_attr = fname + '_id'
+                    row[fname] = getattr(instance, fk_id_attr, None)
+                    continue
+                # JSONField policy
+                if isinstance(field, JSONField):
+                    if not include_json:
+                        row[fname] = '<omitted:json_field>'
+                        continue
+                    raw = getattr(instance, fname, None)
+                    row[fname] = _redact_json(raw)
+                    continue
+                raw = getattr(instance, fname, None)
+                # Coerce UUID / Decimal / datetime to string for JSON transport
+                if raw is None:
+                    row[fname] = None
+                elif isinstance(raw, (str, int, float, bool)):
+                    row[fname] = _truncate_str(raw)
+                else:
+                    row[fname] = _truncate_str(str(raw))
+            return row
+
+        def _validate_filter_kwargs(kwargs: Dict[str, Any], model_cls, policy) -> Optional[str]:
+            model_field_names = {f.name for f in model_cls._meta.get_fields()}
+            expensive_fields = set(policy.get('expensive_text_fields') or ())
+            for key, value in kwargs.items():
+                parts = key.split('__')
+                # Reject deep chains — one lookup segment max
+                if len(parts) > 2:
+                    return f"filter key '{key}' has deep __ chain (only field or field__lookup allowed)"
+                field_name = parts[0]
+                lookup = parts[1] if len(parts) == 2 else 'exact'
+                if field_name not in model_field_names:
+                    return f"field '{field_name}' not on model {model_cls.__name__}"
+                if lookup not in _SAFE_LOOKUPS:
+                    return f"lookup '{lookup}' not allowed (allowed: {sorted(_SAFE_LOOKUPS)})"
+                if _is_sensitive_field_name(field_name):
+                    return f"filter on sensitive field '{field_name}' rejected"
+                if lookup in ('contains', 'icontains') and field_name in expensive_fields:
+                    return (
+                        f"contains/icontains rejected on expensive text field "
+                        f"'{field_name}' — use exact or a shorter startswith prefix"
+                    )
+                if lookup == 'in':
+                    if not isinstance(value, list):
+                        return f"'in' lookup on '{field_name}' requires a list value"
+                    if len(value) > _MAX_IN_LIST:
+                        return f"'in' list on '{field_name}' capped at {_MAX_IN_LIST} (got {len(value)})"
+            return None
+
+        # ── Action dispatch ──────────────────────────────────────────────────
+        action = (payload.get('action') or '').strip()
+        logger.info(
+            "orm_inspect_tool call: action=%s model=%s user_id=%s trace_id=%s",
+            action, payload.get('model'), user_id, trace_id,
+        )
+
+        _VALID_ACTIONS = ('list_models', 'describe_model', 'get', 'filter')
+        if action not in _VALID_ACTIONS:
+            return {'ok': False, 'error': f"unknown action '{action}' (allowed: {', '.join(_VALID_ACTIONS)})"}
+
+        if action == 'list_models':
+            models_out = []
+            for name, pol in sorted(_MODEL_POLICIES.items()):
+                model_cls, _ = _get_model_class(name)
+                if model_cls is None:
+                    continue
+                models_out.append({
+                    'name': name,
+                    'app_label': pol['app_label'],
+                    'sensitive': pol['sensitive'],
+                    'expensive_text_fields': list(pol.get('expensive_text_fields') or ()),
+                    'field_count': len(model_cls._meta.get_fields()),
+                })
+            return {'ok': True, 'action': 'list_models', 'count': len(models_out), 'models': models_out}
+
+        model_name = (payload.get('model') or '').strip()
+        if not model_name:
+            return {'ok': False, 'error': "model is required for describe_model/get/filter"}
+
+        model_cls, policy = _get_model_class(model_name)
+        if policy is None:
+            return {
+                'ok': False,
+                'error': f"model '{model_name}' not in allowlist",
+                'allowlist': sorted(_MODEL_POLICIES.keys()),
+            }
+        if model_cls is None:
+            return {'ok': False, 'error': f"model '{model_name}' allowlisted but not resolvable via apps.get_model"}
+
+        if action == 'describe_model':
+            fields_out = []
+            for field in model_cls._meta.get_fields():
+                if field.is_relation and not field.many_to_one:
+                    continue
+                fname = field.name
+                sensitive_flag = _is_sensitive_field_name(fname)
+                fields_out.append({
+                    'name': fname,
+                    'type': type(field).__name__,
+                    'is_json': isinstance(field, JSONField),
+                    'is_text': isinstance(field, TextField),
+                    'sensitive_by_name': sensitive_flag,
+                    'is_fk': bool(field.many_to_one),
+                })
+            return {
+                'ok': True, 'action': 'describe_model', 'model': model_name,
+                'sensitive_model': policy['sensitive'],
+                'expensive_text_fields': list(policy.get('expensive_text_fields') or ()),
+                'field_count': len(fields_out),
+                'fields': fields_out,
+            }
+
+        # get + filter share projection args
+        requested_fields = payload.get('fields')
+        if requested_fields is not None:
+            if not isinstance(requested_fields, list) or not all(isinstance(f, str) for f in requested_fields):
+                return {'ok': False, 'error': "fields must be a list of strings"}
+            requested_fields = set(requested_fields)
+        include_json = payload.get('include_json_fields')
+        if include_json is None:
+            include_json = not policy['sensitive']
+        include_json = bool(include_json)
+
+        if action == 'get':
+            pk_value = payload.get('pk')
+            if pk_value is None or pk_value == '':
+                return {'ok': False, 'error': "pk is required for 'get' action"}
+            try:
+                instance = model_cls.objects.get(pk=pk_value)
+            except ObjectDoesNotExist:
+                return {'ok': False, 'error': f"no {model_name} row with pk={pk_value}"}
+            except (ValueError, TypeError) as e:
+                return {'ok': False, 'error': f"invalid pk value '{pk_value}': {e}"}
+            row = _serialize_row(instance, model_cls, policy, requested_fields, include_json)
+            return {
+                'ok': True, 'action': 'get', 'model': model_name,
+                'include_json_fields': include_json, 'row': row,
+            }
+
+        if action == 'filter':
+            filter_kwargs = payload.get('filter_kwargs') or {}
+            if not isinstance(filter_kwargs, dict):
+                return {'ok': False, 'error': "filter_kwargs must be a dict"}
+            err = _validate_filter_kwargs(filter_kwargs, model_cls, policy)
+            if err:
+                return {'ok': False, 'error': err}
+
+            try:
+                limit_raw = int(payload.get('limit') or _DEFAULT_LIMIT)
+            except (TypeError, ValueError):
+                limit_raw = _DEFAULT_LIMIT
+            limit = max(1, min(limit_raw, _MAX_LIMIT))
+
+            order_by = (payload.get('order_by') or '').strip() or None
+            if order_by:
+                order_field = order_by.lstrip('-')
+                model_field_names = {f.name for f in model_cls._meta.get_fields()}
+                if order_field not in _COMMON_ORDER_FIELDS:
+                    return {
+                        'ok': False,
+                        'error': f"order_by '{order_field}' not in allowlist {sorted(_COMMON_ORDER_FIELDS)}",
+                    }
+                if order_field not in model_field_names:
+                    return {'ok': False, 'error': f"order_by '{order_field}' not on model {model_name}"}
+            else:
+                order_field_default = None
+                model_field_names = {f.name for f in model_cls._meta.get_fields()}
+                for candidate in ('created_at', 'detected_at', 'started_at', 'first_seen'):
+                    if candidate in model_field_names:
+                        order_field_default = f'-{candidate}'
+                        break
+                order_by = order_field_default or '-id'
+
+            try:
+                queryset = model_cls.objects.filter(**filter_kwargs).order_by(order_by)
+                total_matching = queryset.count()
+                rows_qs = list(queryset[:limit])
+            except FieldError as e:
+                return {'ok': False, 'error': f"queryset FieldError: {e}"}
+            except (ValueError, TypeError) as e:
+                return {'ok': False, 'error': f"queryset value error: {e}"}
+
+            rows = [_serialize_row(inst, model_cls, policy, requested_fields, include_json) for inst in rows_qs]
+            return {
+                'ok': True, 'action': 'filter', 'model': model_name,
+                'include_json_fields': include_json,
+                'order_by': order_by,
+                'limit': limit,
+                'total_matching': total_matching,
+                'returned': len(rows),
+                'truncated': total_matching > len(rows),
+                'rows': rows,
+            }
+
+        # Should be unreachable — _VALID_ACTIONS guard covers all branches.
+        return {'ok': False, 'error': f"unhandled action '{action}'"}
+
     def _handle_opportunity_manager(
         self,
         tool_name: str,
