@@ -6344,7 +6344,14 @@ class OpsHandlersMixin:
     # =========================================================================
 
     def _handle_spider_status(self, tool_name, payload, user_id, trace_id):
-        """Gap 1: Per-spider run history, status, and item counts."""
+        """Gap 1: Per-spider run history, status, and item counts.
+
+        S2868 Ledger #1: `list` action now paginated with
+        limit/offset/total/has_more, unions with the spider registry so
+        never-run spiders (registered but no LegacySpiderData rows) are
+        visible with status='never_run', and preserves orphan-legacy
+        spider_names (in data but not in registry) by default.
+        """
         from django.utils import timezone
         from datetime import timedelta
         from django.db.models import Count, Max, Min
@@ -6356,9 +6363,25 @@ class OpsHandlersMixin:
             from core.models_unified_system import LegacySpiderData
 
             if action == 'list':
+                # S2868 Ledger #1 — pagination + registry union. Prior
+                # behavior returned the full population as one array; the
+                # downstream tool-response layer truncated to ~44 mid-flight
+                # producing false-negative 'spider not found' reports
+                # (S2845). Callers now explicitly manage the window via
+                # limit/offset and see total/has_more for iteration.
                 now = timezone.now()
                 cutoff_24h = now - timedelta(hours=24)
                 cutoff_7d = now - timedelta(days=7)
+
+                # `limit` for list uses a wider cap than the shared
+                # min(payload.get('limit', 30), 100) computed above —
+                # spider inventory is a bounded set (~80-100) and callers
+                # legitimately want the whole thing in one shot when they
+                # know it fits.
+                list_limit = min(int(payload.get('limit', 30)), 500)
+                list_offset = max(int(payload.get('offset', 0)), 0)
+                include_registry = payload.get('include_registry', True) is not False
+                include_orphans = payload.get('include_orphans', True) is not False
 
                 spider_stats = (
                     LegacySpiderData.objects
@@ -6373,12 +6396,30 @@ class OpsHandlersMixin:
                     .order_by('-last_run_at')
                 )
 
+                # Resolve registered spider set (best-effort — the registry
+                # is a runtime singleton, so a missing import degrades to
+                # empty rather than crashing the whole handler).
+                registered_names = set()
+                try:
+                    from ai_core.spiders.spider_registry import spider_registry
+                    registered_names = set(spider_registry.spider_classes.keys())
+                except Exception as _e:
+                    logger.warning(
+                        "spider_status.list: registry union skipped (%s: %s)",
+                        type(_e).__name__, _e,
+                    )
+
                 items = []
+                seen_names = set()
                 for s in spider_stats:
+                    name = s['spider_name']
+                    if not include_orphans and name not in registered_names:
+                        continue
                     last_run = s['last_run_at']
                     age_hours = (now - last_run).total_seconds() / 3600 if last_run else None
                     items.append({
-                        'spider_name': s['spider_name'],
+                        'spider_name': name,
+                        'in_registry': name in registered_names,
                         'total_runs': s['total_items'],  # renamed: each LegacySpiderData row = one run
                         'runs_24h': s['items_24h'],
                         'runs_7d': s['items_7d'],
@@ -6392,13 +6433,55 @@ class OpsHandlersMixin:
                         'status': 'active' if age_hours and age_hours < 48 else 'stale' if age_hours else 'unknown',
                         'count_note': 'total_runs = LegacySpiderData rows (each contains multiple items)',
                     })
+                    seen_names.add(name)
+
+                # Registry union — surface never-run spiders as
+                # zero-value entries with status='never_run'. Alphabetical
+                # sort within the never-run group so operators can scan.
+                if include_registry:
+                    never_run = sorted(registered_names - seen_names)
+                    for name in never_run:
+                        items.append({
+                            'spider_name': name,
+                            'in_registry': True,
+                            'total_runs': 0,
+                            'runs_24h': 0,
+                            'runs_7d': 0,
+                            'total_items': 0,
+                            'items_24h': 0,
+                            'items_7d': 0,
+                            'last_run_at': None,
+                            'first_seen': None,
+                            'age_hours': None,
+                            'status': 'never_run',
+                            'count_note': 'total_runs = LegacySpiderData rows (each contains multiple items)',
+                        })
+
+                # Summary counts on FULL population (not paginated slice)
+                # so operators see the true active/stale/never_run split
+                # regardless of window position.
+                total = len(items)
+                active_ct = sum(1 for i in items if i['status'] == 'active')
+                stale_ct = sum(1 for i in items if i['status'] == 'stale')
+                never_run_ct = sum(1 for i in items if i['status'] == 'never_run')
+
+                sliced = items[list_offset:list_offset + list_limit]
 
                 return {
                     'action': 'list',
-                    'total_spiders': len(items),
-                    'active': sum(1 for i in items if i['status'] == 'active'),
-                    'stale': sum(1 for i in items if i['status'] == 'stale'),
-                    'spiders': items,
+                    'limit': list_limit,
+                    'offset': list_offset,
+                    'total': total,
+                    'has_more': list_offset + list_limit < total,
+                    # Backward-compat alias — pre-S2868 callers read this key
+                    'total_spiders': total,
+                    'active': active_ct,
+                    'stale': stale_ct,
+                    'never_run': never_run_ct,
+                    'include_registry': include_registry,
+                    'include_orphans': include_orphans,
+                    'registered_count': len(registered_names),
+                    'spiders': sliced,
                 }
 
             elif action == 'history':
