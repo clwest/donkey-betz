@@ -132,7 +132,13 @@ class Command(BaseCommand):
         ))
 
         est_tokens = survivors * 200  # ~200 tokens avg per record
-        est_cost = est_tokens / 1_000_000 * 0.02
+        # S2855 Phase 2A — route embedding cost through the canonical
+        # EMBEDDING_COSTS table in embedding_service (single source of truth
+        # for embedding rates). Do NOT duplicate rates into pricing_catalog.
+        from decimal import Decimal
+        from core.services.embedding_service import EMBEDDING_COSTS, DEFAULT_MODEL
+        rate_per_million = EMBEDDING_COSTS[DEFAULT_MODEL]
+        est_cost = float((Decimal(est_tokens) / Decimal('1000000')) * rate_per_million)
         est_minutes = survivors / 500 * 15  # 500/batch every 15 min
         self.stdout.write(f'\n  Estimated embedding cost: ~${est_cost:.2f}')
         self.stdout.write(f'  Estimated backfill time:  ~{est_minutes:.0f} min ({est_minutes/60:.1f} hrs)')

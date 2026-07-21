@@ -4,6 +4,7 @@ Canonical LLM per-token pricing catalog.
 Single source of truth for per-1M-token USD rates used by every billing path
 that writes ``LLMCallLog.cost`` or ``CostTracking.estimated_cost_usd``:
 
+Billing plane (``LLMCallLog``):
 - ``core/llm_enforcer.py`` (``_call_openai_v2`` gpt-5.2 path, ``_calculate_cost``
   gpt-5-mini helper, and ``_call_claude`` Anthropic path)
 - ``core/services/llm_provider_registry.py`` (every provider's
@@ -11,10 +12,23 @@ that writes ``LLMCallLog.cost`` or ``CostTracking.estimated_cost_usd``:
 - ``core/services/ops_autopilot/pricing.py`` (re-exports from here; retained
   as a thin scoped-import compatibility shim for existing callers)
 
-Display-only estimator sites (``base_agent._call_openai`` / ``_track_llm_analytics``,
-``views_agent_dashboard``, ``views_analytics``) are intentionally NOT migrated in
-this pass — they carry an "NOT BILLING — see pricing_catalog.py" annotation and
-their reconciliation is Phase 2 of the S2854 canonicalization arc.
+Analytics plane (``CostTracking``) — S2855 Phase 2A:
+- ``core/agents/base_agent.py::_call_openai`` accumulated cost + return dict
+  ``cost`` field (previously hardcoded $3/$12 per 1M; matched neither model)
+- ``core/agents/base_agent.py::_track_llm_analytics`` per-user CostTracking
+  write (previously hardcoded service='gpt-5-mini' + same wrong rates)
+
+Display fallback estimators — S2855 Phase 2A:
+- ``core/views_agent_dashboard.py::agent_costs_data`` (when
+  ``AgentExecution.cost`` aggregate is null; response labels ``estimated:true``)
+- ``core/views_analytics.py::cost_breakdown`` (agent-execution rollup card
+  from ``AgentTaskExecution.tokens_used``; response labels ``estimated:true``)
+
+Embedding pricing is NOT in this catalog — see
+``core/services/embedding_service.EMBEDDING_COSTS`` for the canonical
+embedding-rate table (text-embedding-3-small / -3-large / -ada-002).
+``core/management/commands/triage_spider_embeddings.py`` imports from there
+directly rather than duplicating rates.
 
 DB-side ``LLMModel.cost_per_1m_input`` / ``cost_per_1m_output`` rows are kept for
 admin/display parity but are treated as consumers of this Python authority;

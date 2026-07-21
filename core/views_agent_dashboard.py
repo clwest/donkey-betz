@@ -136,17 +136,17 @@ def agent_costs_data(request):
     learning_tokens = total_learnings * tokens_per_learning
     total_tokens = solution_tokens + learning_tokens
 
-    # NOT BILLING — display-only dashboard estimator (blended per-1M
-    # approximation for the agent-collaboration/learning cost card). Do not
-    # use for budgets / enforcement. Canonical billing rates live in
-    # core/services/pricing_catalog.py (S2854 Phase 2 will migrate this to a
-    # real per-call aggregation.)
-    cost_per_million_tokens = 0.375
-
-    # Calculate actual API costs
-    learning_cost = (solution_tokens / 1_000_000) * cost_per_million_tokens
-    collaboration_cost = (learning_tokens / 1_000_000) * cost_per_million_tokens
+    # NOT BILLING — display-only dashboard fallback estimator (S2855 Phase 2A).
+    # Priced through canonical pricing_catalog against a documented default
+    # model (gpt-5-mini). The `estimated: true` flag in the response tells the
+    # frontend to label these numbers as estimates rather than actual billing.
+    # Overridden below by real AgentExecution.cost aggregates when present.
+    from core.services.pricing_catalog import calculate_cost
+    DEFAULT_DISPLAY_MODEL = 'gpt-5-mini'
+    learning_cost = float(calculate_cost(DEFAULT_DISPLAY_MODEL, solution_tokens, 0, 0))
+    collaboration_cost = float(calculate_cost(DEFAULT_DISPLAY_MODEL, learning_tokens, 0, 0))
     total_cost = learning_cost + collaboration_cost
+    estimated = True
 
     # Get actual execution costs if available
     # I-0302 Phase 3 Sub-phase B2c: scoped via predicate (own + null-user for superuser).
@@ -160,9 +160,10 @@ def agent_costs_data(request):
     )
 
     if actual_costs['total_cost'] and actual_costs['total_cost'] > 0:
-        # Use actual tracked costs if available
+        # Real per-call billing data present — supersedes the fallback estimate.
         total_cost = float(actual_costs['total_cost'])
         total_tokens = actual_costs['total_tokens']
+        estimated = False
 
     # Calculate cost per learning
     cost_per_learning_avg = total_cost / total_learnings if total_learnings > 0 else 0
@@ -176,7 +177,8 @@ def agent_costs_data(request):
         'solutionTokens': solution_tokens,
         'learningTokens': learning_tokens,
         'tokensPerDollar': int(total_tokens / total_cost) if total_cost > 0 else 0,
-        'modelUsed': 'gpt-5-mini',
+        'modelUsed': DEFAULT_DISPLAY_MODEL,
+        'estimated': estimated,
         'timestamp': datetime.now().isoformat()
     })
 
