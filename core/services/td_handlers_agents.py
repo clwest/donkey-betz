@@ -2810,7 +2810,13 @@ class AgentHandlersMixin:
             from django.utils.text import slugify as _d_slugify
 
             content_format = payload.get('content_format', 'markdown')
-            dtype = payload.get('type', 'document')
+            # S2868: normalize empty string / whitespace / None to 'document'.
+            # Prior behavior let payload.get('type', 'document') return '' if
+            # the caller explicitly passed type=''. That polluted downstream
+            # type-based logic (exemption checks, stats aggregations, UI
+            # icons) and produced 26 orphan-typed rows in production.
+            _raw_dtype = payload.get('type')
+            dtype = (_raw_dtype.strip() if isinstance(_raw_dtype, str) else _raw_dtype) or 'document'
             slug = f"{_d_slugify(title[:100])}-{_d_uuid.uuid4().hex[:8]}"
 
             # Resolve user
@@ -3194,8 +3200,11 @@ class AgentHandlersMixin:
                 'diagnostic_expires_at',
             ]
             if new_diag_eval is None:
-                # Aligned now — auto-clear if previously diagnostic.
-                if prior_diag_status == 'diagnostic':
+                # Aligned now — auto-clear if previously diagnostic OR
+                # manually-cleared. Includes 'cleared' so a caller that fixes
+                # the alignment (e.g., links an initiative) fully resets the
+                # sentinel back to NULL rather than leaving audit residue.
+                if prior_diag_status in ('diagnostic', 'cleared'):
                     obj.diagnostic_status = None
                     obj.diagnostic_code = None
                     obj.diagnostic_payload = None
@@ -3204,13 +3213,31 @@ class AgentHandlersMixin:
                     update_fields.extend(DIAG_FIELDS)
                     logger.info(
                         "[ORPHAN-DELIVERABLE] code=auto_clear "
-                        "deliverable_id=%s prior_code=%s trace_id=%s",
-                        str(obj.id), prior_diag_code, trace_id or '-',
+                        "deliverable_id=%s prior_status=%s prior_code=%s trace_id=%s",
+                        str(obj.id), prior_diag_status, prior_diag_code, trace_id or '-',
                     )
             else:
                 new_code, expected_ws_id = new_diag_eval
+                # S2868: sticky-clear sentinel — if an operator explicitly
+                # cleared this row via clear_diagnostic AND the alignment
+                # eval would re-raise the same code, suppress the re-mark.
+                # Only suppresses missing_initiative_id (the semantic
+                # covered by the manual clear); workspace_mismatch is a
+                # stronger integrity signal and any code transition
+                # (missing_initiative_id → workspace_mismatch) still fires.
+                if (
+                    prior_diag_status == 'cleared'
+                    and new_code == 'missing_initiative_id'
+                    and prior_diag_code == 'missing_initiative_id'
+                ):
+                    logger.info(
+                        "[ORPHAN-DELIVERABLE] code=cleared_sticky "
+                        "deliverable_id=%s trace_id=%s "
+                        "(suppressed missing_initiative_id re-mark)",
+                        str(obj.id), trace_id or '-',
+                    )
                 # Mark diagnostic on transition (NULL → diagnostic OR code change).
-                if prior_diag_status != 'diagnostic' or prior_diag_code != new_code:
+                elif prior_diag_status != 'diagnostic' or prior_diag_code != new_code:
                     ttl_hours = getattr(_settings, 'DELIVERABLE_DIAGNOSTIC_TTL_HOURS', 168)
                     diag_now = _tz.now()
                     obj.diagnostic_status = 'diagnostic'
@@ -3417,6 +3444,106 @@ class AgentHandlersMixin:
                     f'({cascades["exports_count"]} exports, '
                     f'{cascades["events_count"]} events, '
                     f'{cascades["packet_items_count"]} packet items cascaded).'
+                ),
+                'trace_id': trace_id,
+            }
+
+        elif action == 'clear_diagnostic':
+            # S2868 Ledger #7/#17/#18: sticky operator clear of the
+            # missing_initiative_id diagnostic. Sets diagnostic_status to
+            # the 'cleared' sentinel (distinct from NULL which the update
+            # path treats as 'never marked') so subsequent updates on a
+            # row whose alignment state is unchanged do NOT re-fire the
+            # same diagnostic. Preserves the prior code + marked_at as
+            # audit residue in diagnostic_payload alongside the manual
+            # clear metadata.
+            #
+            # Scope: missing_initiative_id only. Workspace_mismatch is a
+            # stronger integrity signal — its transition still fires
+            # even if a row was previously cleared (the update path
+            # branches on prior_diag_code != new_code).
+            obj, disambiguation = _resolve_deliverable(_id_lookup_qs(), payload, 'clear_diagnostic')
+            if disambiguation:
+                return disambiguation
+
+            if obj.diagnostic_status != 'diagnostic':
+                return {
+                    'action': 'clear_diagnostic',
+                    'ok': False,
+                    'id': str(obj.id),
+                    'title': obj.title,
+                    'diagnostic_status': obj.diagnostic_status,
+                    'error_code': 'not_diagnostic',
+                    'message': (
+                        f'Deliverable "{obj.title}" has diagnostic_status='
+                        f'{obj.diagnostic_status!r}; clear_diagnostic only '
+                        "applies to rows currently marked 'diagnostic'."
+                    ),
+                    'trace_id': trace_id,
+                }
+
+            raw_reason = payload.get('reason')
+            reason = raw_reason.strip() if isinstance(raw_reason, str) else ''
+            if not reason:
+                return {
+                    'action': 'clear_diagnostic',
+                    'ok': False,
+                    'id': str(obj.id),
+                    'title': obj.title,
+                    'error_code': 'reason_required',
+                    'message': (
+                        "reason is required for clear_diagnostic — a "
+                        "non-empty free-text explanation for why the "
+                        "diagnostic mark is being manually cleared "
+                        "(persisted under diagnostic_payload.manual_clear_reason)."
+                    ),
+                    'trace_id': trace_id,
+                }
+
+            from django.utils import timezone as _tz_cd
+            prior_code = obj.diagnostic_code
+            prior_payload = dict(obj.diagnostic_payload) if obj.diagnostic_payload else {}
+            prior_marked_at = obj.diagnostic_marked_at
+            clear_now = _tz_cd.now()
+
+            obj.diagnostic_status = 'cleared'
+            # Preserve prior_code + marked_at as audit residue; NULL out
+            # expires_at so the sweep task (which looks for
+            # diagnostic_status='diagnostic' only) does not touch this row.
+            obj.diagnostic_expires_at = None
+            obj.diagnostic_payload = {
+                **prior_payload,
+                'manually_cleared_at': clear_now.isoformat(),
+                'manually_cleared_by_user_id': str(user_id) if user_id else None,
+                'manual_clear_reason': reason,
+                'manual_clear_trace_id': trace_id,
+                'prior_diagnostic_code': prior_code,
+                'prior_marked_at': prior_marked_at.isoformat() if prior_marked_at else None,
+            }
+            obj.save(update_fields=[
+                'diagnostic_status',
+                'diagnostic_expires_at',
+                'diagnostic_payload',
+            ])
+
+            logger.info(
+                "[ORPHAN-DELIVERABLE] code=manual_clear "
+                "deliverable_id=%s prior_code=%s user_id=%s trace_id=%s reason=%r",
+                str(obj.id), prior_code, user_id, trace_id or '-', reason,
+            )
+
+            return {
+                'action': 'clear_diagnostic',
+                'ok': True,
+                'id': str(obj.id),
+                'title': obj.title,
+                'diagnostic_status': 'cleared',
+                'prior_diagnostic_code': prior_code,
+                'reason': reason,
+                'message': (
+                    f'Cleared diagnostic (prior code={prior_code!r}) on '
+                    f'"{obj.title}". Subsequent updates on this row will '
+                    "not re-fire missing_initiative_id."
                 ),
                 'trace_id': trace_id,
             }
