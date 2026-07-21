@@ -296,12 +296,31 @@ class AgentLLMConfig(models.Model):
 
 class LLMCallLog(models.Model):
     """
-    Audit log of all LLM calls for performance tracking and debugging.
+    Audit log of LLM calls — the **canonical billing plane** for the platform.
 
-    Used to:
-    - Track costs per agent
-    - Identify slow/failing models
-    - Optimize routing decisions
+    ``cost`` is priced through ``core/services/pricing_catalog.py::calculate_cost``
+    at every write site (S2854 canonicalization). Complements
+    ``core/models_unified_system.CostTracking`` (the **analytics plane** —
+    per-user usage rollup written from the ``base_agent`` direct-client path
+    via ``AdvancedAnalyticsService.track_cost``, plus non-LLM ops like image /
+    video generation).
+
+    LLMCallLog write sites (verified S2855):
+    - ``core/llm_enforcer.py::_save_call_log`` (enforcer path — gpt-5.2 hot
+      path, gpt-5-mini downgrades, Claude via _call_claude)
+    - ``core/services/agent_llm_router.py::_log_call`` (multi-model routing
+      via ``AgentLLMRouter.route``; lazily loaded from ``BaseAgent.llm_router``)
+    - ``core/services/embedding_service.py::_log_usage`` (all embedding calls
+      via the singleton ``EmbeddingService``)
+
+    Base_agent's direct ``self.client.chat.completions.create`` path
+    (``_call_openai`` → ``_track_llm_analytics``) does **not** write here — it
+    writes CostTracking only. If that changes in a future refactor, add a
+    provenance dimension so the two planes don't silently double-count.
+
+    Used for: per-agent cost tracking, per-workspace budget aggregation
+    (Session 2846 index on ``workspace``), slow / failing model detection,
+    routing decision optimization.
     """
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

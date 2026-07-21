@@ -2548,6 +2548,10 @@ Consider these trends when crafting the response to maximize relevance and engag
             # Session 1085: Use gpt-5.2 for tool-calling agents (gpt-5-mini struggles with tools)
             # gpt-5-mini only for agents with no tools (pure text generation)
             model = "gpt-5.2" if effective_tools else "gpt-5-mini"
+            # S2855 Phase 2A — expose the chosen model to _track_llm_analytics
+            # via instance attribute (avoids signature change that would break
+            # subclass overrides of _track_llm_analytics).
+            self._last_llm_model = model
 
             create_kwargs = {
                 "model": model,
@@ -2590,10 +2594,10 @@ Consider these trends when crafting the response to maximize relevance and engag
             output_tokens = getattr(usage, 'completion_tokens', 0) if usage else 0
             total_tokens = getattr(usage, 'total_tokens', 0) if usage else 0
             # NOT BILLING — display-only accumulated cost for the agent execution
-            # summary. Do not use for budgets / enforcement. Canonical billing
-            # rates live in core/services/pricing_catalog.py; the base_agent →
-            # LLMCallLog path does not run through this estimator (S2854).
-            call_cost = (input_tokens * 0.003 / 1000) + (output_tokens * 0.012 / 1000)
+            # summary. Priced through canonical pricing_catalog (S2855 Phase 2A;
+            # was hardcoded $3/$12 per 1M — matched neither gpt-5.2 nor gpt-5-mini).
+            from core.services.pricing_catalog import calculate_cost
+            call_cost = float(calculate_cost(model, input_tokens, output_tokens, 0))
 
             # Accumulate for this execution
             self._accumulated_tokens += total_tokens
@@ -2824,16 +2828,27 @@ Consider these trends when crafting the response to maximize relevance and engag
             total_tokens = getattr(usage, 'total_tokens', 0) if usage else 0
 
             # NOT BILLING — display-only cost estimate for AdvancedAnalyticsService
-            # (writes CostTracking, not LLMCallLog). Do not use for budgets /
-            # enforcement. Canonical rates live in core/services/pricing_catalog.py (S2854).
-            estimated_cost = (input_tokens * 0.003 / 1000) + (output_tokens * 0.012 / 1000)
+            # (writes CostTracking, not LLMCallLog). Priced through canonical
+            # pricing_catalog (S2855 Phase 2A); pre-Phase-2A this hardcoded
+            # $3/$12 per 1M and mis-attributed every call to gpt-5-mini.
+            from core.services.pricing_catalog import calculate_cost
+            # _last_llm_model is set by _call_openai just before the SDK call;
+            # fall back to response.model, then gpt-5-mini for pre-Phase-2A callers.
+            actual_model = (
+                getattr(self, '_last_llm_model', None)
+                or getattr(response, 'model', None)
+                or 'gpt-5-mini'
+            )
+            estimated_cost = float(calculate_cost(
+                actual_model, input_tokens, output_tokens, 0
+            ))
 
             # Track cost (requires authenticated user)
             if user:
                 AdvancedAnalyticsService.track_cost(
                     user=user,
                     provider='openai',
-                    service='gpt-5-mini',
+                    service=actual_model,
                     operation='agent_execution',
                     input_tokens=input_tokens,
                     output_tokens=output_tokens,
