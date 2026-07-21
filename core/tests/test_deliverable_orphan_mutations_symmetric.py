@@ -159,12 +159,16 @@ class OrphanMutationsSymmetricTests(TestCase):
     def test_delete_finds_orphan_for_non_staff_owner(self):
         orphan = self._make_orphan()
         orphan_id = orphan.id
+        # S2860: delete now requires two-factor gate (dry_run=false +
+        # confirm=true). Symmetric orphan-lookup semantic is preserved.
         result = self.dispatcher._handle_deliverables(
             'deliverables_tool',
             {
                 'action': 'delete',
                 'id': str(orphan_id),
                 'workspace_id': str(self.workspace.id),
+                'dry_run': False,
+                'confirm': True,
             },
             self.user.id,
             self.trace_id,
