@@ -2,9 +2,19 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2872 CLOSE → Ledger #22b sweep shipped (2026-07-21; picks up as S2873) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2873 CLOSE → orm_inspect_tool allowlist +2 shipped (2026-07-21; picks up as S2874) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-21 (S2872 close).** Rigby Tool Gap Ledger #22b (broader `raw_data_dict` sweep) — Chris ratified at S2872 open while doing his own character-os repo dive; Claude+Rigby executed:
+**Refreshed 2026-07-21 (S2873 close).** Rigby Tool Gap Ledger wish-list #2 + #3 (both carried from S2871) — Chris ratified at S2873 open; Claude+Rigby executed:
+
+- **PR #3367** `8423e946b` — S2873 slate (2 files, +253/-0)
+  - `orm_inspect_tool` `_MODEL_POLICIES` extended from 9 → 11 models:
+    - **`persistence.SpiderData`** (116K rows): app_label=persistence, sensitive=False, expensive_text_fields=('content', 'raw_html').
+    - **`core.Opportunity`** (2.6K rows): app_label=core, sensitive=False, expensive_text_fields=('description',).
+  - New test file `core/tests/test_s2873_orm_inspect_spider_data_opportunity.py` — 13 tests across 2 test classes.
+  - Combined regression suite (S2869 + S2870 + S2871 + S2872 + S2873): **73/73 pass**.
+  - Post-code SIGN via Rigby: live `count_by SpiderData spider_name` returned 117,000 rows (all `kalshi` — data-shape observation, not a regression); live `count_by Opportunity opportunity_type` returned 2,631 (freelance_services=2,630, task=1).
+
+## PRIOR SESSION — S2872 close (Ledger #22b raw_data_dict sweep)
 
 - **PR #3365** `a54998be4` — S2872 slate (30 files, +308/-46)
   - **44 crash-risk callsites migrated** across 30 files from `raw = X.raw_data or {}` → `raw = X.raw_data_dict`. Old pattern silently failed on list-form LegacySpiderData rows: list is truthy → passes `or {}` guard → `.get()` crashes with AttributeError. Files: 12 agent + 6 service + 3 tasks_* + 2 views + 1 model + 1 mgmt cmd + 3 core/tasks.
@@ -39,20 +49,22 @@
 - Deliverable ID `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0`
 - **#22b** → `shipped_in_pr_S2872` (44 sites / 30 files / telemetry fold shipped)
 
-**Session pin `pa-de1eb1fdbd3540f3` (labeled `s2872-ledger-22b-raw-data-dict-sweep`) RETIRES at S2872 close.** Fresh mint required at S2873 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
+**Session pin `pa-212927a27cf34515` (labeled `s2873-spider-data-opportunity-orm-inspect`) RETIRES at S2873 close.** Fresh mint required at S2874 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
+
+**Prior pin:** `pa-de1eb1fdbd3540f3` (labeled `s2872-ledger-22b-raw-data-dict-sweep`) retired at S2872 close.
 
 **Character-os Rigby integration research (mid-session, per Chris directive):** DBZ's `/api/pa/chat/` endpoint doesn't recognize `source='character-os-consult-engine'` or context payload (`spokesperson_id`, `workspace_id`). 5 gap tiers identified for future work: (1) caller recognition, (2) panel-shaped response contract, (3) persona translation activation, (4) per-caller tool allowlist, (5) reverse channel. Not opened as an arc under D6 moratorium — parked for post-moratorium consideration.
 
 ---
 
-## S2873 open sequence
+## S2874 open sequence
 
 ### Step 1 — Session-open atomic mint (per `feedback_session_open_atomic_mint_before_pa_dispatch`)
 
-Wrapper pin rewritten at S2872 close. If needed at S2873 open:
+Wrapper pin rewritten at S2873 close. If needed at S2874 open:
 
 ```bash
-python manage.py session_lifecycle close --label s2873-<slate>
+python manage.py session_lifecycle close --label s2874-<slate>
 ```
 
 Verify:
@@ -60,17 +72,17 @@ Verify:
 grep "^python tools/pa_chat.py" tools/pa_local.sh
 ```
 
-### Step 2 — Net-new engineering candidates for S2873
+### Step 2 — Net-new engineering candidates for S2874
 
 Per `feedback_engineering_bias_over_audit`, list net-new first.
 
-1. **NEW at S2872 close — SpiderData (canonical) → orm_inspect allowlist** (wish-list #2 from S2871). ~15 min. High value for cross-checking canonical spider data model when APIs disagree.
+1. **NEW at S2873 close — `orm_inspect_tool` JSONField type predicate** (S2872 Rigby-observed gap #1, still 1st trigger). Would enable direct queries like "count LegacySpiderData rows where raw_data is not a dict" via a `jsonb_typeof`-style predicate. Watch for 2nd trigger before promoting.
 
-2. **NEW at S2872 close — Opportunity → orm_inspect allowlist** (wish-list #3 from S2871). ~15 min. High-value model for revenue-side inspection.
+2. **NEW at S2873 close — `repo_tool.read_file` large-file paging** (S2872 Rigby-observed gap #2, still 1st trigger — hit again at S2873 pre-code SIGN when `core/models_unified_system.py` (760KB) rejected `read_file`). Add pagination or lazy-load semantics for files >500KB. **2nd trigger observed at S2873** — promote to ledger entry candidate. Est ~1-2 hr.
 
-3. **NEW at S2872 close — `orm_inspect_tool` JSONField type predicate** (Rigby-observed gap #1). Would enable direct queries like "count LegacySpiderData rows where raw_data is not a dict" via a `jsonb_typeof`-style predicate. 1st trigger only — watch for 2nd before promoting.
+3. **NEW at S2873 close — kalshi-only distribution on canonical SpiderData** (Rigby zoom-out 1st trigger). 117K rows all attributed to `kalshi` spider — other spiders likely still write to `LegacySpiderData` or there's a routing gap. Data-shape investigation candidate, not a code slate. Watch for 2nd trigger before opening.
 
-4. **NEW at S2872 close — `repo_tool.read_file` large-file paging** (Rigby-observed gap #2). Currently rejects files >~500KB. Could add pagination or lazy-load semantics. 1st trigger only — watch for 2nd.
+4. **NEW at S2873 close — "post-allowlist smoke checklist" UX pattern** (Rigby zoom-out 1st trigger). Standard diversity check (2-3 low-cost group-bys per new allowlist addition) to catch "all rows collapsed to one key" immediately. Operator-experience friction candidate. Watch for 2nd trigger.
 
 5. **Ledger #5 — schema/handler drift detection lint / CI wiring** (~2 hr). Command exists at `core/management/commands/check_pa_tool_drift.py` (S2846-authored, 403 lines) but never wired to CI enforcement. Also worth reconciling pre-existing drift reports before flipping to enforce mode.
 
@@ -122,7 +134,7 @@ Per `feedback_engineering_bias_over_audit`, list net-new first.
 
 29. **Carried — Character-os Rigby integration (5-gap analysis from S2872 mid-session, D6 moratorium hold)** — DBZ's `/api/pa/chat/` endpoint doesn't recognize `source='character-os-consult-engine'` / `spokesperson_id` / `workspace_id`. Cheapest safety wins: (a) caller recognition (~30 min), (d) per-caller tool allowlist (~1 hr). Biggest UX wins: (b) panel-shaped response contract (~1-2 hr), (c) persona translation activation (~1 hr). Largest scope: (e) reverse channel (`character_os_tool` in Rigby's surface). Parked under D6 moratorium; unlock requires Chris directive.
 
-### What's forbidden at S2872 (D6 moratorium still in force)
+### What's forbidden at S2874 (D6 moratorium still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No new evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 
@@ -148,24 +160,25 @@ Per `feedback_engineering_bias_over_audit`, list net-new first.
 
 ---
 
-## S2872 close — what shipped (one PR + docs cascade)
+## S2873 close — what shipped (one PR + docs cascade)
 
 **Repo canonical (Claude-authored):**
-- **PR #3365** `a54998be4` — S2872 slate: Ledger #22b sweep + telemetry (30 files, +308/-46)
-- **PR `<this docs cascade>`** — S2872 handoff + 00-START-NEXT-SESSION refresh + wrapper pin bump for S2873 open
+- **PR #3367** `8423e946b` — S2873 slate: orm_inspect_tool allowlist +2 (2 files, +253/-0)
+- **PR `<this docs cascade>`** — S2873 handoff + 00-START-NEXT-SESSION refresh + wrapper pin bump for S2874 open
 
-**Workspace canonical:** Rigby Tool Gap Ledger updated by Rigby via PA tool per `feedback_rigby_writes_workspace_deliverables` (entry #22b marked `shipped_in_pr_S2872` + 2 new observed tool-surface gaps noted). Confirmed via `deliverable_tool.append`.
+**Workspace canonical:** Rigby Tool Gap Ledger updated by Rigby via PA tool per `feedback_rigby_writes_workspace_deliverables` (wish-list #2 + #3 marked `shipped_in_pr_S2873` + 2 new zoom-out observations noted). Confirmed via `deliverable_tool.append` (1,363 chars appended, total 21,617).
 
 **Runtime impact:**
-- 44 crash-risk callsites on LegacySpiderData readers migrated from `raw = X.raw_data or {}` → `raw = X.raw_data_dict`. List-form rows no longer crash on `.get()` in any migrated site.
-- `LegacySpiderData.raw_data_dict` property now emits rate-limited debug telemetry on fallback (first hit + every 100th per spider_name). Schema drift observable via `_NON_DICT_RAW_DATA_COUNTER`.
-- Combined regression suite (S2869 + S2870 + S2871 + S2872): 60/60 pass.
+- `orm_inspect_tool` allowlist extended from 9 → 11 models. Rigby can now inspect `persistence.SpiderData` (116K rows) + `core.Opportunity` (2.6K rows) directly.
+- Live post-code verification: SpiderData count_by spider_name returned 117,000 rows (all `kalshi` — data-shape observation); Opportunity count_by opportunity_type returned 2,631 rows.
+- Combined regression suite (S2869 + S2870 + S2871 + S2872 + S2873): 73/73 pass.
 - PA tool schemas unchanged (no new drift from `check_pa_tool_drift`).
 
-**Not shipped at S2872 close (deferred to S2873 or later):**
-- SpiderData + Opportunity → orm_inspect allowlist (wish-list from S2871)
-- `orm_inspect_tool` JSONField type predicate (new S2872 gap #1, 1st trigger)
-- `repo_tool.read_file` large-file paging (new S2872 gap #2, 1st trigger)
+**Not shipped at S2873 close (deferred to S2874 or later):**
+- `orm_inspect_tool` JSONField type predicate (S2872 gap #1, still 1st trigger)
+- `repo_tool.read_file` large-file paging (S2872 gap #2 hit AGAIN at S2873 — 2nd trigger, promote to ledger candidate)
+- kalshi-only distribution investigation (S2873 zoom-out 1st trigger)
+- "post-allowlist smoke checklist" UX pattern (S2873 zoom-out 1st trigger)
 - Category B cosmetic `raw_data_dict` migration (~8-10 already-guarded sites)
 - Character-os Rigby integration (5-gap analysis parked under D6 moratorium)
 - Ledger #5 / #16 (remaining open ledger items from prior sessions)
@@ -173,10 +186,11 @@ Per `feedback_engineering_bias_over_audit`, list net-new first.
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2872)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2873)
 
 See:
-- **S2872 handoff (current):** `docs/handoffs/SESSION_2872_RAW_DATA_DICT_SWEEP_LEDGER_22B_TELEMETRY.md`
+- **S2873 handoff (current):** `docs/handoffs/SESSION_2873_ORM_INSPECT_SPIDER_DATA_OPPORTUNITY.md`
+- **S2872 handoff:** `docs/handoffs/SESSION_2872_RAW_DATA_DICT_SWEEP_LEDGER_22B_TELEMETRY.md`
 - **S2871 handoff:** `docs/handoffs/SESSION_2871_RAW_DATA_DICT_PROPERTY_ORM_INSPECT_LEGACY_SPIDER_DATA_CONDITIONAL_TIMEOUT.md`
 - **S2870 handoff:** `docs/handoffs/SESSION_2870_INJECTION_HARDENING_AND_RAW_DATA_GUARD.md`
 - **S2869 handoff:** `docs/handoffs/SESSION_2869_SPIDER_SEARCH_PREVIEW_AND_SIGNAL_CLUSTERS_MULTISOURCE.md`
