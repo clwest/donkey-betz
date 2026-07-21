@@ -3487,12 +3487,29 @@ RESEARCH DATA:
                 # source_spider is the dedicated signal_clusters filter (no enum restriction);
                 # fall back to `source` for callers that pass a spider name through the shared
                 # param, skipping the search-action enum values GPT-5.2 auto-injects.
+                # S2869 Ledger #4: accept list-of-spider-names → has_any_keys union filter.
                 source_spider = payload.get('source_spider')
                 if not source_spider:
                     src = payload.get('source')
                     if src and src not in ('kb', 'spider', 'web'):
                         source_spider = src
-                if source_spider:
+                # Defensive: handle JSON-stringified list from middleware coercion.
+                if isinstance(source_spider, str) and source_spider.startswith('['):
+                    try:
+                        import json as _json
+                        parsed = _json.loads(source_spider)
+                        if isinstance(parsed, list):
+                            source_spider = parsed
+                    except (ValueError, TypeError):
+                        pass
+                if isinstance(source_spider, list):
+                    source_spider = [s for s in source_spider if isinstance(s, str) and s.strip()]
+                    if source_spider:
+                        qs = qs.filter(source_breakdown__has_any_keys=source_spider)
+                        applied_source = source_spider
+                    else:
+                        applied_source = None
+                elif source_spider:
                     qs = qs.filter(source_breakdown__has_key=source_spider)
                     applied_source = source_spider
                 else:

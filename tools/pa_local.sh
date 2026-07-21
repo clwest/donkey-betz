@@ -560,4 +560,4 @@ if [ -n "$_pa_pin" ]; then
   fi
 fi
 
-python tools/pa_chat.py "$@" --tools --conversation pa-9ab5193dfe7e4428
+python tools/pa_chat.py "$@" --tools --conversation pa-c75328a89aef48c8
