@@ -1870,6 +1870,6 @@ class SpiderIntelligenceConsumer(AsyncWebsocketConsumer):
         return [{
             'spider_name': d.spider_name,
             'category': d.data_type,
-            'item_count': len(d.raw_data.get('items', [])) if d.raw_data else 0,
+            'item_count': len(d.raw_data_dict.get('items', [])),
             'created_at': d.created_at.isoformat()
         } for d in recent]

@@ -227,8 +227,18 @@ class GatewayHandlersMixin:
                 if file_type:
                     cmd = ['grep', '-rn', f'--include=*.{file_type}', '-l', query, full_path]
 
+                # S2871 Ledger #24 — conditional wall-clock budget so unblocking
+                # narrowed searches doesn't degrade UX on default repo-wide
+                # calls. If the caller supplied `path` or `file_type` they've
+                # opted into a heavier verification query → 30s/10s. Otherwise
+                # keep the tight 10s/5s cap that has always bounded the fast
+                # path (per S2870 pre-code SIGN Q5).
+                _is_narrowed = bool(search_path) or bool(file_type)
+                _list_timeout = 30 if _is_narrowed else 10
+                _per_file_timeout = 10 if _is_narrowed else 5
+
                 try:
-                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, cwd=project_root)
+                    result = subprocess.run(cmd, capture_output=True, text=True, timeout=_list_timeout, cwd=project_root)
                     files = [os.path.relpath(f, project_root) for f in result.stdout.strip().split('\n') if f]
                     files = [f for f in files if not any(bd in f for bd in BLOCKED_DIRS) and os.path.basename(f) not in BLOCKED_FILES]
 
@@ -252,7 +262,7 @@ class GatewayHandlersMixin:
                     matches = []
                     for fpath in files[:_MATCH_SOURCE_FILES_HARD_MAX]:
                         cmd2 = ['grep', '-n', query, os.path.join(project_root, fpath)]
-                        r2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=5)
+                        r2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=_per_file_timeout)
                         _file_lines = r2.stdout.strip().split('\n')
                         if len(_file_lines) > _LINES_PER_FILE_HARD_MAX:
                             _per_file_line_capped = True
@@ -283,7 +293,28 @@ class GatewayHandlersMixin:
                         _search_response['lines_per_file_hard_max'] = _LINES_PER_FILE_HARD_MAX
                     return _search_response
                 except subprocess.TimeoutExpired:
-                    return {'error': 'Search timed out (10s limit)'}
+                    # S2871 Ledger #24 — tell the caller how to unblock: if the
+                    # search was repo-wide, suggest narrowing (which lifts the
+                    # cap to 30s automatically); if it was already narrowed,
+                    # the 30s cap really was hit and the query needs further
+                    # scoping (smaller path, extra file_type, more specific
+                    # pattern).
+                    if _is_narrowed:
+                        return {
+                            'error': f'Search timed out (30s limit; narrowed to path={search_path!r} file_type={file_type!r}). Narrow further: smaller path, add file_type, or make the pattern more specific.',
+                            'error_code': 'search_timeout_narrowed',
+                            'timeout_seconds': 30,
+                        }
+                    return {
+                        'error': 'Search timed out (10s limit; repo-wide search). Re-run with path= (e.g. "core/", "ai_core/") or file_type= (e.g. "py") to unlock a 30s budget.',
+                        'error_code': 'search_timeout_repo_wide',
+                        'timeout_seconds': 10,
+                        'narrowing_hint': {
+                            'add_path': True,
+                            'add_file_type': True,
+                            'suggested_paths': ['core/', 'ai_core/', 'intelligence/', 'frontend/src/'],
+                        },
+                    }
 
             elif action == 'git_info':
                 # Session 1103c: was 'except Exception: pass' on each

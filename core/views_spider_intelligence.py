@@ -419,9 +419,9 @@ def market_research_dashboard(request):
         seen_crypto = set()
 
         for entry in crypto_data:
-            if not entry.raw_data:
+            items = entry.raw_data_dict.get('items', [])
+            if not items:
                 continue
-            items = entry.raw_data.get('items', [])
             for item in items:
                 symbol = item.get('symbol', '').upper()
                 if symbol and symbol not in seen_crypto and len(crypto_assets) < crypto_limit:
@@ -498,9 +498,9 @@ def market_research_dashboard(request):
         stock_keywords = ['stock', 'market', 'trading', 'nasdaq', 'dow', 'nyse', 's&p', 'fed', 'inflation', 'earnings', 'ipo']
 
         for entry in news_data:
-            if not entry.raw_data:
+            items = entry.raw_data_dict.get('items', [])
+            if not items:
                 continue
-            items = entry.raw_data.get('items', [])
             for item in items:
                 title = item.get('title', '')
                 url = item.get('url', '') or item.get('link', '')
@@ -1164,11 +1164,8 @@ def spider_data_feed(request):
         seen_urls = set()
 
         for sd in queryset:
-            if not sd.raw_data:
-                continue
-
-            raw_items = sd.raw_data.get('items', [])
-            if not isinstance(raw_items, list):
+            raw_items = sd.raw_data_dict.get('items', [])
+            if not isinstance(raw_items, list) or not raw_items:
                 continue
 
             for item in raw_items[:15]:  # Max 15 items per record
@@ -1596,8 +1593,9 @@ def spider_timeline(request):
             recent = LegacySpiderData.objects.filter(spider_name=spider_name).defer('embedding', 'item_embeddings', 'embedding_text').order_by('-created_at')[:3]
             item_count = 0
             for r in recent:
-                if r.raw_data and isinstance(r.raw_data.get('items'), list):
-                    item_count += len(r.raw_data['items'])
+                _items = r.raw_data_dict.get('items')
+                if isinstance(_items, list):
+                    item_count += len(_items)
             browseable_counts[spider_name] = item_count
 
         # Calculate age for each source

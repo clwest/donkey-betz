@@ -751,6 +751,14 @@ class AgentHandlersMixin:
                 'app_label': 'core', 'sensitive': True,
                 'expensive_text_fields': (),
             },
+            # S2871 Ledger #23 — spider-data inspection unblocks list-form
+            # raw_data prevalence checks that S2870 pre-code SIGN couldn't
+            # ground. Public web content; embedding_text is a TextField that
+            # can hold ~4KB per row so it's blocked from contains lookups.
+            'LegacySpiderData': {
+                'app_label': 'core', 'sensitive': False,
+                'expensive_text_fields': ('embedding_text',),
+            },
         }
 
         _MAX_LIMIT = 200

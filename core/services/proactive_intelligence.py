@@ -311,8 +311,8 @@ class ProactiveIntelligenceService:
             for item in content_data[:5]:
                 # Extract title from raw_data
                 title = ''
-                if item.raw_data and 'items' in item.raw_data:
-                    items = item.raw_data.get('items', [])
+                if 'items' in item.raw_data_dict:
+                    items = item.raw_data_dict.get('items', [])
                     if items and len(items) > 0:
                         title = items[0].get('title', '')[:100]
                 trending.append({
@@ -342,8 +342,8 @@ class ProactiveIntelligenceService:
             for item in design_data:
                 # Extract title from raw_data
                 title = ''
-                if item.raw_data and 'items' in item.raw_data:
-                    items = item.raw_data.get('items', [])
+                if 'items' in item.raw_data_dict:
+                    items = item.raw_data_dict.get('items', [])
                     if items and len(items) > 0:
                         title = items[0].get('title', '')[:100]
                 trending.append({
@@ -374,8 +374,8 @@ class ProactiveIntelligenceService:
             for item in tech_data:
                 # Extract title from raw_data
                 title = ''
-                if item.raw_data and 'items' in item.raw_data:
-                    items = item.raw_data.get('items', [])
+                if 'items' in item.raw_data_dict:
+                    items = item.raw_data_dict.get('items', [])
                     for raw_item in items[:5]:  # Check first 5 items
                         raw_title = raw_item.get('title', '')
                         if any(kw in raw_title.lower() for kw in ai_keywords):
@@ -408,8 +408,8 @@ class ProactiveIntelligenceService:
             for item in legal_data:
                 # Extract title from raw_data
                 title = ''
-                if item.raw_data and 'items' in item.raw_data:
-                    items = item.raw_data.get('items', [])
+                if 'items' in item.raw_data_dict:
+                    items = item.raw_data_dict.get('items', [])
                     if items and len(items) > 0:
                         title = items[0].get('title', '')[:100]
                 alerts.append({
