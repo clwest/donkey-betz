@@ -497,7 +497,7 @@ class SmartTrendingService:
         ).order_by('-created_at')[:limit * fetch_multiplier]
 
         for item in queryset:
-            raw_data = item.raw_data or {}
+            raw_data = item.raw_data_dict
 
             # Handle different data formats
             extracted_articles = self._extract_articles_from_raw_data(raw_data, item.spider_name, item.source_url, item.created_at)

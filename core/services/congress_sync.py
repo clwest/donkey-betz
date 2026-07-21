@@ -360,7 +360,7 @@ class CongressSyncService:
         rows = LegacySpiderData.objects.filter(spider_name='legislation').order_by('-created_at')
 
         for row in rows:
-            rd = row.raw_data or {}
+            rd = row.raw_data_dict
             items = rd.get('items', [])
 
             # Handle envelope format

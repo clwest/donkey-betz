@@ -295,7 +295,7 @@ class SituationTrigger(models.Model):
             return False, None
 
         # Get raw data
-        raw_data = spider_data.raw_data or {}
+        raw_data = spider_data.raw_data_dict
 
         # Handle 'items' array - check each item
         items = raw_data.get('items', [raw_data])

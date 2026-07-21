@@ -2097,7 +2097,7 @@ def _impl_run_design_trends_monitor(self):
 
         for data in spider_data[:100]:
             items_processed += 1
-            raw = data.raw_data or {}
+            raw = data.raw_data_dict
 
             # Session 488: Fix - spider data stores items in 'items' array
             items = raw.get('items', [])
@@ -2217,7 +2217,7 @@ def _impl_run_freelance_opportunity_scout(self):
 
         opportunities_created = 0
         for data in spider_data:
-            raw = data.raw_data or {}
+            raw = data.raw_data_dict
             title = (raw.get('title', '') or raw.get('position', '') or '').lower()
             description = (raw.get('description', '') or raw.get('summary', '') or '').lower()
             company = raw.get('company', '') or raw.get('company_name', '') or 'Unknown'
@@ -2330,7 +2330,7 @@ def _impl_run_skill_gap_analyzer(self):
             # Find courses matching this skill
             matching_courses = []
             for data in spider_data:
-                raw = data.raw_data or {}
+                raw = data.raw_data_dict
                 title = (raw.get('title', '') or '').lower()
                 description = (raw.get('description', '') or '').lower()
 

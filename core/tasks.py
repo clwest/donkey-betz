@@ -5454,7 +5454,7 @@ def run_side_hustle_detector(self):
         hustles = {'dropshipping': 'dropship', 'digital_products': 'digital product', 'saas': 'saas'}
         created = 0
         for data in spider_data:
-            raw = data.raw_data or {}
+            raw = data.raw_data_dict
             text = str(raw).lower()
             for cat, kw in hustles.items():
                 if kw in text:

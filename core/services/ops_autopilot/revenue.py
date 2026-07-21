@@ -474,7 +474,7 @@ class OutboundLeadEngine:
             if score < self.MIN_SCORE:
                 continue
 
-            raw = item.raw_data or {}
+            raw = item.raw_data_dict
             title = raw.get('title', '') or item.embedding_text[:80] if item.embedding_text else ''
 
             scored_leads.append({
@@ -501,7 +501,7 @@ class OutboundLeadEngine:
     def _score_lead(self, spider_item, now) -> int:
         """Score a spider data item as a prospecting lead (0-100)."""
         score = 0
-        raw = spider_item.raw_data or {}
+        raw = spider_item.raw_data_dict
         text = (
             (raw.get('title', '') or '') + ' ' +
             (raw.get('description', '') or '') + ' ' +

@@ -400,7 +400,7 @@ class MLScoringEngine:
 
         Returns: (title, description, has_url)
         """
-        raw_data = spider_data.raw_data or {}
+        raw_data = spider_data.raw_data_dict
         title = ''
         description = ''
         has_url = False
@@ -468,7 +468,7 @@ class MLScoringEngine:
         """
         from django.utils import timezone
 
-        raw_data = spider_data.raw_data or {}
+        raw_data = spider_data.raw_data_dict
 
         # Session 669: Use proper text extraction
         title, description, has_url = self._extract_text_content(spider_data)
@@ -711,7 +711,7 @@ class MLScoringEngine:
 
         Returns (score, reasoning_dict)
         """
-        raw_data = spider_data.raw_data or {}
+        raw_data = spider_data.raw_data_dict
         title = raw_data.get('title', '') or ''
         title_lower = title.lower()
 

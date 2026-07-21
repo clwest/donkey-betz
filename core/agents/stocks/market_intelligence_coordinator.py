@@ -551,7 +551,7 @@ Remember: Internal disagreement is a FEATURE, not a bug."""
                 all_known.update(pool)
 
             for data in recent_spider:
-                raw = data.raw_data or {}
+                raw = data.raw_data_dict
                 items = raw.get('items', []) if isinstance(raw, dict) else []
                 for item in items[:5]:
                     sym = item.get('symbol', '') or item.get('ticker', '')

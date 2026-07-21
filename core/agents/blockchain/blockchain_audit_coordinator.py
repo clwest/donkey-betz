@@ -922,7 +922,7 @@ Given your experience with cryptocurrency markets and blockchain technology:
 
             alerts = []
             for data in recent_data:
-                raw = data.raw_data or {}
+                raw = data.raw_data_dict
                 title = raw.get('title', '').lower()
 
                 if any(kw in title for kw in exploit_keywords):

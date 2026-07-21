@@ -393,7 +393,7 @@ Focus on transactions that diverge from normal patterns."""
 
             results = []
             for data in query:
-                raw = data.raw_data or {}
+                raw = data.raw_data_dict
                 form_type = str(raw.get('form_type', '')).upper()
 
                 # Look for Form 4 (insider trades) and 13F (institutional)
