@@ -357,6 +357,33 @@ class LLMCallLog(models.Model):
     was_fallback = models.BooleanField(default=False)
     was_auto_selected = models.BooleanField(default=False)
 
+    # Session 2856 (A1 W2 #3.2 unblock) — enforcer-forced-downgrade
+    # attribution. was_downgraded is True only when the enforcer's
+    # downgrade path (global budget_downgrade_active flag OR per-workspace
+    # is_workspace_downgraded) forced the call off its originally-requested
+    # model. Distinguishes forced downgrades from calls whose primary model
+    # is already the downgrade target (PersonalAssistantAgent, orchestration
+    # coordinators — see DEFAULT_AGENT_LLM_CONFIGS at ~753+). Enables
+    # enforcement_report --include_downgrade_savings to remove the
+    # OVER-estimate caveat that shipped in S2853.
+    was_downgraded = models.BooleanField(
+        default=False,
+        help_text=(
+            'True when the enforcer forced this call off its originally-'
+            'requested model via the budget-downgrade path. False for '
+            'calls that natively target the downgrade model.'
+        ),
+    )
+    pre_downgrade_model_id = models.CharField(
+        max_length=100,
+        blank=True,
+        default='',
+        help_text=(
+            'The model that would have been called had the downgrade not '
+            'fired. Empty string when was_downgraded=False.'
+        ),
+    )
+
     # Request Details
     task_type = models.CharField(max_length=50, blank=True)
     prompt_tokens = models.IntegerField(default=0)
