@@ -118,6 +118,7 @@ class ContentHandlersMixin:
             'save', 'unsave', 'stats', 'duplicates', 'set_status',
             'normalize', 'export_pdf', 'bulk_archive',
             'link_initiative', 'unlink_initiative', 'cleanup', 'delete',
+            'clear_diagnostic',  # S2868 Ledger #7/#17/#18
         }
         if action not in _VALID_ACTIONS:
             return {

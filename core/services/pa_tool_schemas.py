@@ -4130,7 +4130,7 @@ PA_TOOL_SCHEMAS = [
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["list", "detail", "create", "update", "append", "search", "save", "unsave", "stats", "duplicates", "set_status", "normalize", "export_pdf", "bulk_archive", "delete", "link_initiative", "unlink_initiative"],
+                    "enum": ["list", "detail", "create", "update", "append", "search", "save", "unsave", "stats", "duplicates", "set_status", "normalize", "export_pdf", "bulk_archive", "delete", "link_initiative", "unlink_initiative", "clear_diagnostic"],
                     "description": (
                         "list: browse deliverables (supports status/type/category/date/workspace filters). "
                         "detail: get full content of a deliverable (pass full=true for uncapped content). "
@@ -4147,7 +4147,8 @@ PA_TOOL_SCHEMAS = [
                         "bulk_archive: archive multiple deliverables by filter (dry_run=true by default). "
                         "delete: PERMANENTLY delete a single deliverable by id. IRREVERSIBLE — cascades to DeliverableExport / DeliverableEvent (audit trail is also erased) / ContentPacketItem (may break content packets). Prefer set_status='archived' or bulk_archive for reversible cleanup. Defaults to dry_run=true (safe preview showing cascade counts). Writes require BOTH dry_run=false AND confirm=true. Rejects status='published' rows unless allow_published=true AND a non-empty reason is provided. Pre-delete WARNING log line records deliverable_id + user_id + trace_id + reason + cascade counts (DeliverableEvent cannot be relied on for audit because it cascades). "
                         "link_initiative: link a deliverable to an initiative (pass deliverable_id + initiative_id). "
-                        "unlink_initiative: remove initiative link from a deliverable (pass deliverable_id)."
+                        "unlink_initiative: remove initiative link from a deliverable (pass deliverable_id). "
+                        "clear_diagnostic: manually clear a `missing_initiative_id` diagnostic (S2868 Ledger #7/#17/#18). Sets diagnostic_status='cleared' (a sticky sentinel — distinct from NULL) so subsequent updates on this row do NOT re-fire the same diagnostic while the underlying alignment condition remains. Preserves prior diagnostic_code + marked_at as audit residue in diagnostic_payload alongside {manually_cleared_at, manual_clear_reason, user_id, trace_id}. Requires id + non-empty reason. Rejects if the row is not currently `diagnostic`. Only suppresses missing_initiative_id re-marks; workspace_mismatch (a stronger integrity signal) still fires on transition."
                     ),
                 },
                 "id": {"type": "string", "description": "UUID of the deliverable (also used as deliverable_id for link/unlink)"},
@@ -4169,7 +4170,7 @@ PA_TOOL_SCHEMAS = [
                 "min_count": {"type": "integer", "description": "For duplicates: minimum group size to surface (default 2). Use 3+ to focus on the heaviest dupes."},
                 "window_days": {"type": "integer", "description": "For duplicates: rolling window in days for last_Nd_count (default 7)."},
                 "exclude_archived": {"type": "boolean", "description": "For duplicates: when true, drop archived rows before grouping. Default false (include archived — useful for hygiene audits). Truthy-only check; Python bool false is treated as autofill and ignored."},
-                "reason": {"type": "string", "description": "For set_status: free-text explanation of why the status was flipped. REQUIRED when flipping completed→ready (the unblock direction); optional on ready→completed. Trimmed; max 500 chars. Persisted under DeliverableEvent.metadata.ctx.reason."},
+                "reason": {"type": "string", "description": "For set_status: free-text explanation of why the status was flipped. REQUIRED when flipping completed→ready (the unblock direction); optional on ready→completed. Trimmed; max 500 chars. Persisted under DeliverableEvent.metadata.ctx.reason. For clear_diagnostic (S2868): also REQUIRED — persisted under diagnostic_payload.manual_clear_reason as the durable justification for the operator's manual clear."},
                 "field": {"type": "string", "description": "For normalize: which field to canonicalize. v1 supports 'agent_name' only."},
                 "full": {"type": "boolean", "description": "For detail: return full content without 8K cap"},
                 "content_offset": {"type": "integer", "description": "For detail: start reading from this char position"},

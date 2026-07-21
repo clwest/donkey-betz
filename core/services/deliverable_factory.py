@@ -1399,9 +1399,25 @@ def _get_or_create_unassigned_workspace_id(user) -> Optional[str]:
 # no-initiative-id-supplied branch below; when the caller supplies a stale/
 # hallucinated initiative_id, or a real workspace_mismatch is detected, the
 # diagnostic still fires — those are real data-integrity signals regardless
-# of type. Conservative v1 set (`ratification_record` only); grow via a
-# second/third independent trigger per Playbook §14.2.
-_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT = frozenset({'ratification_record'})
+# of type.
+#
+# S2868 grew the set from `{ratification_record}` after production ORM
+# telemetry showed four additional types flagged 100% (or ≥33% for
+# session_handoff) with no legit initiative parent:
+#   - engineering_backlog: living backlogs (e.g. Rigby Tool Gap Ledger)
+#     that outlive any single initiative
+#   - engineering_record: session-scoped engineering artifacts
+#   - code_review: per-session code reviews spanning multiple PRs
+#   - session_handoff: session-scoped handoff docs
+# Workspace-mismatch still fires for all types — the exemption is narrowly
+# scoped to `missing_initiative_id` only.
+_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT = frozenset({
+    'ratification_record',
+    'engineering_backlog',
+    'engineering_record',
+    'code_review',
+    'session_handoff',
+})
 
 
 def _evaluate_initiative_alignment(
