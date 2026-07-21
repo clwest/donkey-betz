@@ -3384,6 +3384,7 @@ PA_TOOL_SCHEMAS = [
                         "set_default_cap",
                         "backfill_defaults",
                         "enforcement_report",
+                        "simulate_enforcement",
                     ],
                     "description": (
                         "set_cap: write/update a per-workspace daily cap ($ USD). "
@@ -3457,7 +3458,41 @@ PA_TOOL_SCHEMAS = [
                         "extracted from AutopilotAction.evidence JSON (no FK "
                         "column) — best-effort. Report is diagnostic; the "
                         "point-of-action trust surface is `set_cap`'s inline "
-                        "enforcement_fired payload (S2850 #3.0a)."
+                        "enforcement_fired payload (S2850 #3.0a). "
+                        "S2857 include_simulated (default false) filters out "
+                        "rows written by simulate_enforcement so operator/"
+                        "autopilot counts stay clean. "
+                        "simulate_enforcement: fire the freeze + downgrade "
+                        "enforcer hot-path against a SYNTHETIC daily-spend "
+                        "value without needing to make real LLM calls from "
+                        "a non-PA agent. Motivation: Rigby's calling agent "
+                        "is always 'PersonalAssistant' which bypasses "
+                        "freeze (core/llm_enforcer.py:271 _critical_agents), "
+                        "so operators/customer demos had to drop to Django "
+                        "shell to see enforcement fire. Requires "
+                        "workspace_id + simulated_daily_spend_usd (float "
+                        "≥ 0). dry_run defaults to true — returns the "
+                        "freeze + downgrade decisions (would_freeze / "
+                        "would_set_downgrade / would_clear_downgrade / "
+                        "no_op variants) + computed thresholds (cap, "
+                        "downgrade_set_threshold, downgrade_clear_threshold, "
+                        "currently_frozen, currently_downgraded) without "
+                        "writing state. Pass dry_run=false to actually "
+                        "invoke enforce_workspace_freeze + "
+                        "enforce_workspace_downgrade — real SystemConfig "
+                        "flags are written and llm_enforcer WILL block or "
+                        "downgrade real workspace calls until "
+                        "clear_freeze / clear_downgrade is called. "
+                        "AutopilotAction rows carry "
+                        "evidence.simulated=True + trigger="
+                        "'simulate_enforcement' + actor_user_id — "
+                        "excluded from enforcement_report by default. "
+                        "Requires caller to own the workspace OR be staff "
+                        "(both dry_run and mutation paths — dry_run "
+                        "reveals cap + thresholds so is still a sensitive "
+                        "read). Errors when the workspace has no explicit "
+                        "cap set (enforcer only runs against explicit-"
+                        "cap workspaces)."
                     ),
                 },
                 "workspace_id": {
@@ -3465,9 +3500,9 @@ PA_TOOL_SCHEMAS = [
                     "description": (
                         "UUID of the ProjectWorkspace being managed. Required for "
                         "set_cap, get_status, clear_freeze, clear_downgrade, "
-                        "clear_cap. Optional narrowing filter for "
-                        "enforcement_report (must be in caller's scope). "
-                        "Ignored for list_caps, get_default_cap, "
+                        "clear_cap, simulate_enforcement. Optional narrowing "
+                        "filter for enforcement_report (must be in caller's "
+                        "scope). Ignored for list_caps, get_default_cap, "
                         "set_default_cap, backfill_defaults."
                     ),
                 },
@@ -3553,7 +3588,35 @@ PA_TOOL_SCHEMAS = [
                     "description": (
                         "For backfill_defaults: when true (default), plan only — no "
                         "writes. Response includes the per-workspace 'would_write' "
-                        "list. Pass false to actually write."
+                        "list. Pass false to actually write. "
+                        "For simulate_enforcement: when true (default), returns the "
+                        "freeze + downgrade decisions without writing state. Pass "
+                        "false to actually invoke the enforcer methods — real "
+                        "SystemConfiguration flags are written and llm_enforcer will "
+                        "block/downgrade real workspace calls until clear_freeze / "
+                        "clear_downgrade is called."
+                    ),
+                },
+                "simulated_daily_spend_usd": {
+                    "type": "number",
+                    "description": (
+                        "For simulate_enforcement: the synthetic daily spend value "
+                        "(USD, ≥ 0) to pass through the enforcer decision logic. "
+                        "Required. When dry_run=false the enforcer receives a "
+                        "synthetic spend dict {daily_total: <this>, daily_calls: 0, "
+                        "hourly_total: 0.0, hourly_calls: 0} — real 24h spend is "
+                        "not queried, and any freeze/downgrade flags written "
+                        "reflect this simulated value."
+                    ),
+                },
+                "include_simulated": {
+                    "type": "boolean",
+                    "description": (
+                        "For enforcement_report: when true, include rows where "
+                        "evidence.simulated=True (written by simulate_enforcement). "
+                        "Defaults to false so demo/verification traffic doesn't "
+                        "pollute operator_events_count / auto_events_count. The "
+                        "response's `note` field records which mode was applied."
                     ),
                 },
                 "force": {
