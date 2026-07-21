@@ -394,6 +394,106 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
+    # ── ORM Row Inspector (read-only) — Rigby Tool Gap Ledger #3 / b5a22ea7 (S2866) ──
+    {
+        "type": "function",
+        "name": "orm_inspect_tool",
+        "description": (
+            "Read-only, allowlisted Django ORM row inspection. Use this when "
+            "you need to verify what's actually persisted in the database — "
+            "e.g., 'do rows with source_breakdown.huggingface exist?', 'what "
+            "status is Deliverable X in?', 'how many AutopilotAction rows "
+            "fired today?'. Complements web_fetch_tool (external endpoint "
+            "verify → this = internal DB verify). Closes the S2845-class "
+            "false-negative gap where a tool surface reports 'no data' but "
+            "the rows are actually there under a different filter path. "
+            "NOT a write surface — no create/update/delete. NOT a general "
+            "Django-shell tool — only allowlisted models. Sensitive field "
+            "names (password/secret/token/authorization/etc.) always redacted; "
+            "JSONField values for high-sensitivity models excluded by default."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["list_models", "describe_model", "get", "filter"],
+                    "description": (
+                        "list_models = enumerate the allowlist. "
+                        "describe_model = return field types for one model. "
+                        "get = fetch one row by pk. "
+                        "filter = fetch N rows by filter_kwargs (default 20, max 200)."
+                    ),
+                },
+                "model": {
+                    "type": "string",
+                    "description": (
+                        "Model name (case-sensitive, e.g., 'SignalCluster'). "
+                        "Required for describe_model/get/filter. Must be in the "
+                        "allowlist (call list_models to see it)."
+                    ),
+                },
+                "pk": {
+                    "type": "string",
+                    "description": (
+                        "Primary key value for 'get' action. String form works "
+                        "for both UUID and integer PKs."
+                    ),
+                },
+                "filter_kwargs": {
+                    "type": "object",
+                    "description": (
+                        "Dict of {field_or_field__lookup: value} for 'filter' "
+                        "action. Allowed lookups: exact, iexact, isnull, gt, "
+                        "gte, lt, lte, contains, icontains, startswith, "
+                        "istartswith, in, has_key, has_keys. FK traversal "
+                        "beyond one __ chain rejected. 'in' list capped at 100. "
+                        "Example: {'source_breakdown__has_key': 'huggingface', "
+                        "'signal_count__gte': 3}."
+                    ),
+                },
+                "fields": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Optional explicit field projection. Default returns "
+                        "all fields on the model minus sensitive-name matches "
+                        "(and minus JSONFields for high-sensitivity models "
+                        "unless include_json_fields=true)."
+                    ),
+                },
+                "order_by": {
+                    "type": "string",
+                    "description": (
+                        "Order field for 'filter' action. Allowed: id, "
+                        "created_at, updated_at, detected_at, started_at, "
+                        "first_seen, last_seen (only those that exist on the "
+                        "model). Prefix with '-' for descending. Default '-id'."
+                    ),
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": (
+                        "Max rows returned for 'filter' (default 20, max 200)."
+                    ),
+                },
+                "include_json_fields": {
+                    "type": "boolean",
+                    "description": (
+                        "Include JSONField values in the response. Default "
+                        "true for normal models, false for high-sensitivity "
+                        "models (LLMCallLog, AutopilotAction, OpsRun). When "
+                        "included, values are recursively scanned and any key "
+                        "matching the redaction denylist (token/api_key/"
+                        "authorization/cookie/secret/credential/password/etc.) "
+                        "is replaced with '<redacted>'."
+                    ),
+                },
+            },
+            "required": ["action"],
+        },
+    },
+
     # ── Research and Create ─────────────────────────────────────────────────
     {
         "type": "function",
