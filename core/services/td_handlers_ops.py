@@ -45,6 +45,35 @@ def _tool_error(code: str, message: str, **fields):
     return env
 
 
+def _handler_error(action: str, code: str, message: str, **fields):
+    """S2879 — handler-level structured error envelope (Ledger #22 sunset arc).
+
+    Matches the S2874 canonical shape used by the S2878 ``_handle_bpaas``
+    migration: ``{success: False, error_code, error, action, **fields}``.
+
+    Distinct from the S2875 ``_tool_error`` helper above, which emits the
+    3-key ``{error, error_code, **fields}`` shape used by 12 existing
+    ops-gateway-layer adopters (spider_status_tool / kb_tool paths). Do
+    NOT collapse the two shapes yet — reconciliation is gated on the
+    6-adopter helper-extraction milestone Rigby locked at S2875, and
+    changing ``_tool_error`` in place would silently mutate every
+    existing call site's contract.
+
+    S2879 taxonomy (Rigby pre-code SIGN, kept intentionally minimal):
+      * ``invalid_params`` — missing or invalid input
+      * ``not_found`` — target resource does not exist
+      * ``unknown_action`` — action string not in the valid set
+      * ``dependency_missing`` — optional model/service import failed
+    """
+    return {
+        'success': False,
+        'error_code': code,
+        'error': message,
+        'action': action,
+        **fields,
+    }
+
+
 def _resolve_originating_session(raw):
     """Session 2728 F-SD-1 — LLM-autofill guard for the originating_session
     filter on search_docs.
@@ -314,7 +343,11 @@ class OpsHandlersMixin:
             from core.services.focus_mode import set_config, get_status
             config_updates = payload.get('config_updates', {})
             if not config_updates:
-                return {'error': 'config_updates dict required'}
+                return _handler_error(
+                    'focus_mode_update',
+                    'invalid_params',
+                    'config_updates dict required',
+                )
             set_config(config_updates)
             return {'action': 'focus_mode_update', 'applied': list(config_updates.keys()), **get_status()}
 
@@ -394,7 +427,11 @@ class OpsHandlersMixin:
             return self._ops_recent_recycles(payload, trace_id)
 
         else:
-            return {'error': f'Unknown ops_tool action: {action}'}
+            return _handler_error(
+                action,
+                'unknown_action',
+                f'Unknown ops_tool action: {action}',
+            )
 
     def _ops_version(self, trace_id: str) -> Dict[str, Any]:
         """Return build/deploy metadata for the running process.
@@ -1097,7 +1134,11 @@ class OpsHandlersMixin:
         try:
             from core.models_celery_telemetry import CeleryTaskEvent
         except ImportError:
-            return {'error': 'CeleryTaskEvent model not available'}
+            return _handler_error(
+                'celery_task_history',
+                'dependency_missing',
+                'CeleryTaskEvent model not available',
+            )
 
         task_name = payload.get('task_name', '')
         limit = min(int(payload.get('limit', 20)), 100)
@@ -1166,7 +1207,11 @@ class OpsHandlersMixin:
         try:
             from core.models_ops_runs import OpsRunEvent
         except ImportError:
-            return {'error': 'OpsRunEvent model not available'}
+            return _handler_error(
+                'tenant_boundary_violations',
+                'dependency_missing',
+                'OpsRunEvent model not available',
+            )
 
         window = payload.get('window', '24h')
         hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 24)
@@ -1175,10 +1220,12 @@ class OpsHandlersMixin:
         task_name_filter = payload.get('task_name', '') or ''
         failure_kind_filter = payload.get('failure_kind') or None
         if failure_kind_filter and failure_kind_filter not in self._TENANT_BOUNDARY_FAILURE_KINDS:
-            return {
-                'error': f'invalid failure_kind {failure_kind_filter!r}; '
-                         f'allowed: {list(self._TENANT_BOUNDARY_FAILURE_KINDS)}'
-            }
+            return _handler_error(
+                'tenant_boundary_violations',
+                'invalid_params',
+                f'invalid failure_kind {failure_kind_filter!r}; '
+                f'allowed: {list(self._TENANT_BOUNDARY_FAILURE_KINDS)}',
+            )
         limit = min(max(int(payload.get('limit', 20) or 20), 1), 100)
 
         qs = OpsRunEvent.objects.filter(
@@ -1295,7 +1342,11 @@ class OpsHandlersMixin:
         try:
             from core.models_ops_runs import OpsRunEvent
         except ImportError:
-            return {'error': 'OpsRunEvent model not available'}
+            return _handler_error(
+                'staleness_warnings',
+                'dependency_missing',
+                'OpsRunEvent model not available',
+            )
 
         window = payload.get('window', '24h')
         hours = {'1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720}.get(window, 24)
@@ -1303,10 +1354,12 @@ class OpsHandlersMixin:
 
         verdict_filter = payload.get('verdict') or None
         if verdict_filter and verdict_filter not in self._STALENESS_WARNING_VERDICTS:
-            return {
-                'error': f'invalid verdict {verdict_filter!r}; '
-                         f'allowed: {list(self._STALENESS_WARNING_VERDICTS)}'
-            }
+            return _handler_error(
+                'staleness_warnings',
+                'invalid_params',
+                f'invalid verdict {verdict_filter!r}; '
+                f'allowed: {list(self._STALENESS_WARNING_VERDICTS)}',
+            )
         limit = min(max(int(payload.get('limit', 20) or 20), 1), 100)
 
         qs = OpsRunEvent.objects.filter(
