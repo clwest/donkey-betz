@@ -99,30 +99,129 @@ class GatewayHandlersMixin:
     """Mixin providing handler methods for ToolDispatcher."""
 
     def _handle_repo(self, tool_name: str, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
-        """Read-only codebase introspection: tree, read_file, search, git_info."""
+        """Read-only codebase introspection: tree, read_file, search, git_info, list_repos.
+
+        S2887 — cross-repo scoping via optional `repo_id`. When absent, operates on
+        u-d-b as before. When present, looks up `config/external_repos/<repo_id>.json`
+        and uses that profile's `root_path` (verified as an existing directory).
+        Sibling repos (character-os, context-kit, fleet apps) are readable through the
+        same tool surface without file-per-file bridging.
+        """
         import os
+        import json
         import subprocess
 
         action = payload.get('action', 'tree')
-        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        udb_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-        # Security: block reading secrets
-        BLOCKED_FILES = {'.env', '.env.local', '.env.production', 'credentials.json', 'secrets.yaml'}
-        BLOCKED_DIRS = {'.git/objects', '.git/refs', 'node_modules', '.venv', '__pycache__'}
+        # S2887 — expanded cross-repo security guards. The prior u-d-b-only set was
+        # scoped to what Chris knew was in this repo; sibling repos have different
+        # secret conventions (Node `.npmrc`, cloud SDK creds, SSH keys, TLS certs).
+        # Rigby SIGN Q6 zoom-out at S2887 pushback: exact-match BLOCKED_FILES
+        # insufficient; needs suffix/prefix pattern matching + broader dir list.
+        BLOCKED_FILES = {
+            '.env', '.env.local', '.env.production', '.env.staging',
+            'credentials.json', 'secrets.yaml', 'secrets.yml',
+            '.npmrc', '.pypirc', '.netrc',
+            'id_rsa', 'id_ed25519', 'id_ecdsa', 'id_dsa',
+        }
+        # Pattern-based blocks: any file whose basename matches these suffixes is denied.
+        BLOCKED_FILE_SUFFIXES = ('.pem', '.key', '.pfx', '.p12', '.keystore', '.jks')
+        # Pattern-based blocks: any file whose basename starts with these prefixes.
+        BLOCKED_FILE_PREFIXES = ('.env.',)  # catches .env.foo, .env.local.backup, etc.
+        BLOCKED_DIRS = {
+            '.git/objects', '.git/refs', 'node_modules', '.venv', '__pycache__',
+            '.aws', '.ssh', '.gnupg', 'secrets', '.terraform', '.docker',
+        }
+
+        # Resolve project_root from repo_id if provided.
+        repo_id = payload.get('repo_id')
+        # Per-repo additional protected paths (from profile).
+        _extra_blocked_dirs: set[str] = set()
+        project_root = udb_root
+        _resolved_repo_id: Optional[str] = None
+        if repo_id:
+            # Validate slug shape — strict allowlist. Only alphanumerics + `-` + `_`
+            # (matches every profile filename shipped today). Anything else could
+            # traverse (`../foo`), path-inject (`\foo` on Windows), or resolve to
+            # something surprising. Reject at the earliest boundary.
+            import re as _re
+            _SLUG_RE = _re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9._-]*$')
+            if not isinstance(repo_id, str) or not _SLUG_RE.match(repo_id) or '..' in repo_id:
+                return _tool_error(
+                    'invalid_params',
+                    f'Invalid repo_id: {repo_id!r}',
+                    repo_id=repo_id,
+                    hint='repo_id must match [a-zA-Z0-9][a-zA-Z0-9._-]* and correspond to a config/external_repos/<slug>.json profile',
+                )
+            profile_path = os.path.join(udb_root, 'config', 'external_repos', f'{repo_id}.json')
+            if not os.path.isfile(profile_path):
+                return _tool_error(
+                    'not_found',
+                    f'Unknown repo_id: {repo_id!r}',
+                    repo_id=repo_id,
+                    hint='call repo_tool with action="list_repos" to see the registered profiles',
+                )
+            try:
+                with open(profile_path, 'r', encoding='utf-8') as f:
+                    _profile = json.load(f)
+            except (OSError, json.JSONDecodeError) as e:
+                return _tool_error(
+                    'internal_error',
+                    f'Failed to load profile for repo_id={repo_id!r}: {type(e).__name__}: {e}',
+                    repo_id=repo_id,
+                )
+            _root = _profile.get('root_path')
+            if not _root:
+                return _tool_error(
+                    'internal_error',
+                    f'Profile for repo_id={repo_id!r} is missing root_path',
+                    repo_id=repo_id,
+                )
+            if not os.path.isdir(_root):
+                return _tool_error(
+                    'not_found',
+                    f'Profile root_path does not exist on disk: {_root}',
+                    repo_id=repo_id,
+                    root_path=_root,
+                    hint='the profile likely drifted (e.g. legacy /development/ path); update config/external_repos/<repo_id>.json',
+                )
+            project_root = os.path.abspath(_root)
+            _resolved_repo_id = repo_id
+            # Layer per-repo protected_paths (Session 1119 profile field) onto the
+            # global blocked-dir set. Never removes global guards; only widens.
+            _protected = _profile.get('entry_points', {}).get('protected_paths', [])
+            if isinstance(_protected, list):
+                for p in _protected:
+                    if isinstance(p, str) and p:
+                        _extra_blocked_dirs.add(p)
 
         def _safe_path(rel_path: str) -> str:
-            """Resolve path and ensure it's within project root."""
+            """Resolve path and ensure it's within project root + not a blocked secret."""
             if not rel_path:
                 return project_root
             full = os.path.normpath(os.path.join(project_root, rel_path))
-            if not full.startswith(project_root):
+            # Confine to project_root (must be under it, with a boundary that catches
+            # sibling prefixes — e.g. /root vs /root2).
+            if not (full == project_root or full.startswith(project_root + os.sep)):
                 raise ValueError('Path outside project root')
             basename = os.path.basename(full)
             if basename in BLOCKED_FILES:
-                raise ValueError(f'Access denied: {basename}')
+                raise ValueError(f'Access denied (blocked file): {basename}')
+            _lower = basename.lower()
+            for _sfx in BLOCKED_FILE_SUFFIXES:
+                if _lower.endswith(_sfx):
+                    raise ValueError(f'Access denied (blocked suffix {_sfx}): {basename}')
+            for _pfx in BLOCKED_FILE_PREFIXES:
+                if basename.startswith(_pfx):
+                    raise ValueError(f'Access denied (blocked prefix {_pfx}): {basename}')
             for bd in BLOCKED_DIRS:
                 if bd in full:
-                    raise ValueError(f'Access denied: {bd}')
+                    raise ValueError(f'Access denied (blocked dir): {bd}')
+            for bd in _extra_blocked_dirs:
+                # Match either full-path segment or basename-anywhere-in-path.
+                if bd in full:
+                    raise ValueError(f'Access denied (profile protected_path): {bd}')
             return full
 
         try:
@@ -451,15 +550,71 @@ class GatewayHandlersMixin:
 
                 return {'action': 'git_info', **result}
 
+            elif action == 'list_repos':
+                # S2887 — enumerate registered external repo profiles so callers
+                # can discover which siblings are addressable without probing.
+                # Read-only sweep of config/external_repos/*.json; reports
+                # existence-on-disk per profile so drift is visible without an
+                # extra call. u-d-b itself is not a profile; it's the default
+                # target when repo_id is absent.
+                profile_dir = os.path.join(udb_root, 'config', 'external_repos')
+                repos = []
+                try:
+                    for name in sorted(os.listdir(profile_dir)):
+                        if not name.endswith('.json'):
+                            continue
+                        slug = name[:-5]
+                        full = os.path.join(profile_dir, name)
+                        try:
+                            with open(full, 'r', encoding='utf-8') as f:
+                                p = json.load(f)
+                            root = p.get('root_path') or ''
+                            repos.append({
+                                'repo_id': slug,
+                                'root_path': root,
+                                'exists': bool(root) and os.path.isdir(root),
+                            })
+                        except (OSError, json.JSONDecodeError) as e:
+                            repos.append({
+                                'repo_id': slug,
+                                'root_path': '',
+                                'exists': False,
+                                'profile_error': f'{type(e).__name__}: {e}',
+                            })
+                except OSError as e:
+                    return _tool_error(
+                        'internal_error',
+                        f'Failed to enumerate external_repos: {type(e).__name__}: {e}',
+                    )
+                return {
+                    'action': 'list_repos',
+                    'count': len(repos),
+                    'repos': repos,
+                    'note': 'omit repo_id from other actions to read u-d-b (this repo). Provide repo_id to target a sibling.',
+                }
+
             return _tool_error(
                 'unknown_action',
                 f'Unknown repo_tool action: {action}',
                 action=action,
-                valid_actions=['tree', 'read_file', 'search', 'git_info'],
+                valid_actions=['tree', 'read_file', 'search', 'git_info', 'list_repos'],
             )
 
         except ValueError as e:
-            return _tool_error('value_error', str(e))
+            # S2887 — path-guard rejections now map to the 5-code taxonomy.
+            # `_safe_path` raises ValueError with an 'Access denied' or 'outside
+            # project root' message; both are authz-shaped rejections, so
+            # `permission_denied` is the right code (was out-of-taxonomy
+            # `value_error`). Rigby SIGN Q6 zoom-out fold at S2887.
+            _msg = str(e)
+            if 'Access denied' in _msg or 'outside project root' in _msg:
+                return _tool_error(
+                    'permission_denied',
+                    _msg,
+                    repo_id=_resolved_repo_id,
+                )
+            # Preserve prior code for any other ValueError callers might catch on.
+            return _tool_error('value_error', _msg)
         except Exception as e:
             # Session 2728 F-RT-11 — preserve the response contract (still
             # returns a typed error dict with the error message) but log the
