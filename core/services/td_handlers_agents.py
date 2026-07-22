@@ -76,6 +76,23 @@ class ToolResult:
         return asdict(self)
 
 
+def _handler_error(action: str, code: str, message: str, **fields) -> Dict[str, Any]:
+    """S2884 — handler-level structured error envelope (Ledger #22 sunset arc).
+
+    Local copy of the S2879 helper (also present in ``td_handlers_ops.py``,
+    ``td_handlers_governance.py``, and ``td_handlers_newsletter.py``). Kept
+    file-local per Rigby's S2875 6-adopter gate on ``td_error.py`` extraction
+    — this file is adopter #4 in the S2884 bundle.
+
+    Shape: ``{success: False, error_code, error, action, **fields}``.
+    """
+    return {
+        'success': False,
+        'error_code': code,
+        'error': message,
+        'action': action,
+        **fields,
+    }
 
 
 class AgentHandlersMixin:
@@ -5023,7 +5040,11 @@ class AgentHandlersMixin:
             }
 
         else:
-            return {'error': f'Unknown action: {action}. Supported: summary, top_agents, recent_calls'}
+            return _handler_error(
+                action,
+                'unknown_action',
+                f'Unknown action: {action}. Supported: summary, top_agents, recent_calls',
+            )
 
     def _handle_predictions(
         self,

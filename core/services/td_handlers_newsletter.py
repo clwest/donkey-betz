@@ -19,6 +19,26 @@ from typing import Dict, Any, Optional
 logger = logging.getLogger(__name__)
 
 
+def _handler_error(action: str, code: str, message: str, **fields) -> Dict[str, Any]:
+    """S2884 — handler-level structured error envelope (Ledger #22 sunset arc).
+
+    Local copy of the S2879 helper (also present in ``td_handlers_ops.py`` and
+    ``td_handlers_governance.py``). Kept file-local per Rigby's S2875
+    6-adopter gate on ``td_error.py`` extraction — this slate takes the
+    adopter count to 4 (ops + governance + agents + newsletter), still short
+    of the extraction threshold.
+
+    Shape: ``{success: False, error_code, error, action, **fields}``.
+    """
+    return {
+        'success': False,
+        'error_code': code,
+        'error': message,
+        'action': action,
+        **fields,
+    }
+
+
 class NewsletterHandlersMixin:
     """Mixin providing newsletter_tool handler for ToolDispatcher."""
 
@@ -41,7 +61,11 @@ class NewsletterHandlersMixin:
         elif action == 'sources':
             return self._newsletter_sources(payload, user_id, trace_id)
         else:
-            return {'error': f'Unknown newsletter action: {action}', 'action': action}
+            return _handler_error(
+                action,
+                'unknown_action',
+                f'Unknown newsletter action: {action}',
+            )
 
     # ── prepare ─────────────────────────────────────────────────────────────
 
@@ -82,12 +106,20 @@ class NewsletterHandlersMixin:
         sponsor_email = payload.get('sponsor_email') or saved_config['sponsor_email']
 
         if not deliverable_id:
-            return {'error': 'id (deliverable_id) is required', 'action': 'prepare'}
+            return _handler_error(
+                'prepare',
+                'invalid_params',
+                'id (deliverable_id) is required',
+            )
 
         try:
             deliverable = Deliverable.objects.get(id=deliverable_id)
         except Deliverable.DoesNotExist:
-            return {'error': f'Deliverable {deliverable_id} not found', 'action': 'prepare'}
+            return _handler_error(
+                'prepare',
+                'not_found',
+                f'Deliverable {deliverable_id} not found',
+            )
 
         # Extract issue number from title or metadata
         issue_number = (
@@ -338,12 +370,20 @@ class NewsletterHandlersMixin:
 
         deliverable_id = payload.get('id') or payload.get('deliverable_id')
         if not deliverable_id:
-            return {'error': 'id (deliverable_id) is required', 'action': 'validate'}
+            return _handler_error(
+                'validate',
+                'invalid_params',
+                'id (deliverable_id) is required',
+            )
 
         try:
             deliverable = Deliverable.objects.get(id=deliverable_id)
         except Deliverable.DoesNotExist:
-            return {'error': f'Deliverable {deliverable_id} not found', 'action': 'validate'}
+            return _handler_error(
+                'validate',
+                'not_found',
+                f'Deliverable {deliverable_id} not found',
+            )
 
         sections = _extract_sections(deliverable.content)
         issues = _validate_sections(sections)
@@ -388,12 +428,20 @@ class NewsletterHandlersMixin:
 
         deliverable_id = payload.get('id') or payload.get('deliverable_id')
         if not deliverable_id:
-            return {'error': 'id (deliverable_id) is required', 'action': 'metrics'}
+            return _handler_error(
+                'metrics',
+                'invalid_params',
+                'id (deliverable_id) is required',
+            )
 
         try:
             deliverable = Deliverable.objects.get(id=deliverable_id)
         except Deliverable.DoesNotExist:
-            return {'error': f'Deliverable {deliverable_id} not found', 'action': 'metrics'}
+            return _handler_error(
+                'metrics',
+                'not_found',
+                f'Deliverable {deliverable_id} not found',
+            )
 
         issue_number = (
             deliverable.metadata.get('issue_number')
