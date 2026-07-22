@@ -59,11 +59,16 @@ def _handler_error(action: str, code: str, message: str, **fields):
     changing ``_tool_error`` in place would silently mutate every
     existing call site's contract.
 
-    S2879 taxonomy (Rigby pre-code SIGN, kept intentionally minimal):
+    Taxonomy (S2879 4-code minimal + S2882 5th code):
       * ``invalid_params`` — missing or invalid input
       * ``not_found`` — target resource does not exist
       * ``unknown_action`` — action string not in the valid set
       * ``dependency_missing`` — optional model/service import failed
+      * ``permission_denied`` — caller lacks required authorization
+        (S2882 close: Rigby SIGN + Chris D-verdict added the 5th code
+        so ``_authorize_staff`` not-staff denial gets a structured
+        envelope; scope is strictly authz — do NOT expand to other
+        access-control failures without a fresh SIGN.)
     """
     return {
         'success': False,
@@ -4440,10 +4445,10 @@ class OpsHandlersMixin:
             """None on ok / structured error envelope on deny — staff-only gate.
 
             S2882 slate — takes ``action_name`` so the envelope carries the
-            caller's action label (matches S2879 ``_handler_error`` shape).
-            The not-staff branch below stays on the pre-S2882 bare-return
-            shape: the 4-code taxonomy has no ``permission_denied`` code,
-            and the mapping question is deferred to a Rigby SIGN.
+            caller's action label. All three deny-branches emit structured
+            envelopes via ``_handler_error``: missing user → ``invalid_params``,
+            unknown actor → ``not_found``, not-staff → ``permission_denied``
+            (5th taxonomy code, S2882 close follow-on).
             """
             if user_id is None:
                 return _handler_error(
@@ -4462,12 +4467,15 @@ class OpsHandlersMixin:
                     user_id=user_id,
                 )
             if not getattr(actor, 'is_staff', False):
-                return {
-                    'error': (
+                return _handler_error(
+                    action_name,
+                    'permission_denied',
+                    (
                         f'user_id={user_id} is not staff — this action '
                         f'requires staff privileges'
                     ),
-                }
+                    user_id=user_id,
+                )
             return None
 
         if action == 'get_default_cap':

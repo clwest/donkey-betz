@@ -48,6 +48,9 @@ Run::
     python manage.py test core.tests.test_s2882_ops_execution_auth_error_envelope -v2
 """
 
+from types import SimpleNamespace
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
@@ -155,4 +158,36 @@ class ExecutionAuthMigratedEnvelopeTests(TestCase):
             result.get('user_id'),
             missing_id,
             "not_found envelope must echo the requested user_id",
+        )
+
+    def test_set_default_cap_non_staff_returns_permission_denied(self):
+        """``_authorize_staff`` returns ``permission_denied`` for non-staff actor.
+
+        S2882 close follow-on: 5th taxonomy code added so the not-staff
+        deny branch gets a structured envelope. Chris D-verdict per
+        Rigby SIGN zoom-out (a).
+
+        Mocks ``User.objects.get`` because ``TestCase`` transactions
+        are not visible to the dispatcher's async ORM connection —
+        a real created actor would return DoesNotExist and short-
+        circuit to the ``not_found`` branch instead of exercising
+        the ``is_staff`` check.
+        """
+        User = get_user_model()
+        non_staff_actor = SimpleNamespace(id=99_991, is_staff=False)
+
+        with patch.object(User.objects, 'get', return_value=non_staff_actor):
+            result = self._dispatch_budget(
+                {'action': 'set_default_cap', 'daily_cap_usd': 5.0},
+                user_id=99_991,
+            )
+        _assert_migrated_envelope(
+            self, result,
+            error_code='permission_denied',
+            action='set_default_cap',
+        )
+        self.assertEqual(
+            result.get('user_id'),
+            99_991,
+            "permission_denied envelope must echo the requested user_id",
         )
