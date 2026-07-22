@@ -2658,6 +2658,7 @@ PA_TOOL_SCHEMAS = [
                         "tenant_boundary_violations",
                         "staleness_warnings",
                         "recent_recycles",
+                        "recent_bridge_calls",
                     ],
                     "description": (
                         "overview: one-shot ops snapshot — version + slo_status + top failure_signatures "
@@ -2736,7 +2737,21 @@ PA_TOOL_SCHEMAS = [
                         "'when did we last recycle?', 'which SHAs was the stack bounced at?', "
                         "or to trace a stale-Daphne diagnosis back to a specific merge. "
                         "Limit param (default 10, max 50). Fail-soft: returns empty list with "
-                        "diagnostic note when the log file is missing."
+                        "diagnostic note when the log file is missing. "
+                        "recent_bridge_calls: S2890 — read recent ChatConversation rows whose "
+                        "source starts with 'character-os-' (bridge tools consult_engine / "
+                        "query_spider_data / agent_consult calling u-d-b's /api/pa/chat/). "
+                        "Answers 'what bridge calls hit u-d-b in the last N minutes?' while "
+                        "Chris explores character-os UI. Each item includes tool_name (parsed "
+                        "from source suffix), question preview + truncation flag, "
+                        "answer_preview + truncation flag, latency_ms (from response_time_ms), "
+                        "conversation_id, workspace_id, user, agents_used, created_at. "
+                        "Returns total_count + by_tool aggregate + items (capped at limit). "
+                        "Payload: limit (default 20, max 100), since (ISO-8601), window "
+                        "(1h/6h/24h/7d/30d), bridge_tool_name (optional: consult_engine / "
+                        "query_spider_data / agent_consult to filter), workspace_id "
+                        "(optional). Scoped to the requesting user unless the user is staff. "
+                        "Fail-soft: empty items + diagnostic note when zero rows match."
                     ),
                 },
                 "window": {
@@ -2798,6 +2813,24 @@ PA_TOOL_SCHEMAS = [
                         "max_conversations_per_agent_per_hour (int), "
                         "max_total_conversations_per_hour (int), "
                         "require_north_star_for_autonomous (bool)."
+                    ),
+                },
+                "bridge_tool_name": {
+                    "type": "string",
+                    "enum": ["consult_engine", "query_spider_data", "agent_consult"],
+                    "description": (
+                        "For recent_bridge_calls: filter to a single character-os "
+                        "bridge tool. Omit for all three. The value is matched "
+                        "against the ChatConversation.source suffix "
+                        "(source == 'character-os-<bridge_tool_name>')."
+                    ),
+                },
+                "workspace_id": {
+                    "type": "string",
+                    "description": (
+                        "For recent_bridge_calls: filter to a single workspace UUID. "
+                        "Omit for all workspaces visible to the requesting user. "
+                        "Non-staff callers are always scoped to their own rows regardless."
                     ),
                 },
             },

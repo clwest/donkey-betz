@@ -113,7 +113,7 @@ import time
 import uuid
 import asyncio
 from pathlib import Path
-from typing import Dict, Any, Optional, Callable
+from typing import Dict, Any, List, Optional, Callable
 from dataclasses import dataclass, asdict
 from functools import wraps, lru_cache
 
@@ -401,6 +401,15 @@ class OpsHandlersMixin:
             # (Beat-emitted post-hoc detection) with a first-party operator
             # action timeline.
             return self._ops_recent_recycles(payload, trace_id)
+
+        elif action == 'recent_bridge_calls':
+            # S2890: recent ChatConversation rows sourced from character-os
+            # bridge tools (consult_engine / query_spider_data / agent_consult
+            # calling u-d-b's /api/pa/chat/). Answers 'what bridge calls hit
+            # u-d-b in the last N minutes?' while Chris explores the
+            # character-os SPA. Detection uses source__startswith='character-os-'
+            # per the persistence path at core/tasks_misc.py:4839.
+            return self._ops_recent_bridge_calls(payload, user_id, trace_id)
 
         else:
             return _handler_error(
@@ -1540,6 +1549,184 @@ class OpsHandlersMixin:
             result['malformed_lines_skipped'] = malformed
         if not events:
             result['note'] = 'log file exists but contained no parseable events.'
+        return result
+
+    def _ops_recent_bridge_calls(
+        self,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str,
+    ) -> Dict[str, Any]:
+        """S2890: recent ChatConversation rows from character-os bridge tools.
+
+        Detection: character-os bridge tools (consult_engine /
+        query_spider_data / agent_consult) POST to u-d-b's /api/pa/chat/
+        with source='character-os-<tool_name>'. That string is persisted
+        verbatim to ChatConversation.source at core/tasks_misc.py:4839,
+        so source__startswith='character-os-' is a stable-enough filter
+        for the v1 observability surface.
+
+        Rigby T1 SIGN Fold A (ledger row 155, future_trigger): the
+        source-string sniffing is coarse — if character-os renames its
+        source values, this handler silently returns empty. Fold trigger:
+        (a) character-os renames a source string, (b) 2+ tools confusion,
+        or (c) SDK/API-doc drafting stage. Mitigation for a future
+        MINOR/PATCH: add an explicit `bridge_tool` marker that
+        character-os agrees to send alongside `source`.
+
+        Payload:
+          limit: max items (default 20, max 100)
+          since: ISO-8601 cutoff (overrides window)
+          window: one of {'1h','6h','24h','7d','30d'} (default 24h)
+          bridge_tool_name: filter to a single bridge tool
+            (consult_engine / query_spider_data / agent_consult)
+          workspace_id: filter to a single workspace UUID
+
+        Scoping: non-staff callers see only their own rows regardless of
+        workspace_id. Staff callers see all rows.
+        """
+        from datetime import timedelta
+        from django.contrib.auth import get_user_model
+        from django.db.models import Count, Q
+        from django.utils import timezone
+
+        from core.models.conversations.models import ChatConversation
+
+        # Bounded limit per Rigby SIGN + _ops_recent_recycles precedent.
+        try:
+            limit = int(payload.get('limit', 20) or 20)
+        except (TypeError, ValueError):
+            limit = 20
+        limit = max(1, min(limit, 100))
+
+        # Resolve time cutoff: since (ISO-8601) overrides window; window
+        # default 24h. Kept in sync with the ops_tool schema enum values.
+        since_raw = payload.get('since')
+        window = payload.get('window', '24h') or '24h'
+        window_hours = {
+            '1h': 1, '6h': 6, '24h': 24, '7d': 168, '30d': 720,
+        }.get(window, 24)
+
+        cutoff = None
+        if since_raw:
+            try:
+                from django.utils.dateparse import parse_datetime
+                parsed = parse_datetime(since_raw)
+                if parsed is not None:
+                    cutoff = parsed
+            except (TypeError, ValueError):
+                cutoff = None
+        if cutoff is None:
+            cutoff = timezone.now() - timedelta(hours=window_hours)
+
+        bridge_tool_name = (payload.get('bridge_tool_name') or '').strip() or None
+        workspace_id = (payload.get('workspace_id') or '').strip() or None
+
+        # Base filter: character-os bridge origin + time window.
+        qs = ChatConversation.objects.filter(
+            source__startswith='character-os-',
+            created_at__gte=cutoff,
+        )
+
+        # bridge_tool_name filter: match exact source value. The character-os
+        # source markers use hyphens ('character-os-consult-engine') but the
+        # tool identifiers used everywhere else use underscores
+        # ('consult_engine'). Convert to match the wire format.
+        if bridge_tool_name:
+            source_form = bridge_tool_name.replace('_', '-')
+            qs = qs.filter(source=f'character-os-{source_form}')
+
+        # workspace_id filter: optional, layered on top of user scoping.
+        if workspace_id:
+            qs = qs.filter(workspace_id=workspace_id)
+
+        # User scoping: non-staff callers see only their own rows. Rigby
+        # T1 SIGN Item 4 recommendation to prevent cross-user leakage if
+        # the environment shifts from single-tenant pre-prod.
+        if user_id is not None:
+            User = get_user_model()
+            try:
+                caller = User.objects.get(id=user_id)
+                if not caller.is_staff:
+                    qs = qs.filter(user_id=user_id)
+            except User.DoesNotExist:
+                # Unknown caller: return empty rather than leak.
+                qs = qs.none()
+        else:
+            # No user context: return empty rather than leak.
+            qs = qs.none()
+
+        total_count = qs.count()
+
+        # by_tool aggregate: source → count. Parse the tool_name suffix
+        # for a friendlier key.
+        by_tool_raw = list(
+            qs.values('source').annotate(count=Count('id')).order_by('-count')
+        )
+        by_tool = [
+            {
+                'source': row['source'],
+                # Convert wire-format hyphens back to the canonical
+                # underscore-form tool identifier.
+                'bridge_tool_name': (row['source'] or '')
+                    .removeprefix('character-os-').replace('-', '_'),
+                'count': row['count'],
+            }
+            for row in by_tool_raw
+        ]
+
+        # Items: tail-first, bounded, with per-row preview + truncation flags
+        # per Rigby T1 SIGN Item 3 non-blocking recommendations.
+        PREVIEW_CAP = 200
+        items: List[Dict[str, Any]] = []
+        for row in qs.order_by('-created_at').select_related('user', 'workspace')[:limit]:
+            source_str = row.source or ''
+            # Convert wire-format hyphens back to the canonical underscore
+            # form so callers see 'consult_engine' (matches the enum) not
+            # 'consult-engine' (matches the source marker on the wire).
+            tool_kind = source_str.removeprefix('character-os-').replace('-', '_')
+            question = row.user_message or ''
+            answer = row.assistant_response or ''
+            items.append({
+                'id': str(row.id),
+                'conversation_id': row.conversation_id,
+                'tool_name': tool_kind,
+                'source': source_str,
+                'question': question[:PREVIEW_CAP],
+                'question_truncated': len(question) > PREVIEW_CAP,
+                'answer_preview': answer[:PREVIEW_CAP],
+                'answer_truncated': len(answer) > PREVIEW_CAP,
+                # response_time_ms → latency_ms mapping per Rigby T1 Item 3.
+                'latency_ms': row.response_time_ms,
+                'workspace_id': str(row.workspace_id) if row.workspace_id else None,
+                'user': row.user.username if row.user else None,
+                'agents_used': row.agents_used or [],
+                'created_at': row.created_at.isoformat(),
+            })
+
+        result: Dict[str, Any] = {
+            'action': 'recent_bridge_calls',
+            'window': window,
+            'window_cutoff': cutoff.isoformat(),
+            'bridge_tool_name_filter': bridge_tool_name or '(all)',
+            'workspace_id_filter': workspace_id or '(all visible to caller)',
+            'total_count': total_count,
+            'by_tool': by_tool,
+            'items': items,
+            'limit': limit,
+        }
+
+        if total_count == 0:
+            result['note'] = (
+                f'No character-os bridge calls (consult_engine / '
+                f'query_spider_data / agent_consult) in the last {window} '
+                f'for the calling user. Either no bridge calls have fired, '
+                f'or the calling user is scoped away from those rows. '
+                f"Detection uses source__startswith='character-os-' — if "
+                f'character-os renames its source markers this will read '
+                f'empty (see logs/zoom_out_classifications.jsonl row 155).'
+            )
+
         return result
 
     def _ops_execution_detail(self, payload: Dict[str, Any], trace_id: str) -> Dict[str, Any]:
