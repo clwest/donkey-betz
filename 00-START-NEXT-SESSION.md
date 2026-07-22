@@ -2,77 +2,48 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2884 CLOSE → agents_tool + newsletter_tool file-completing slate shipped + pgbouncer auth block deferred (2026-07-21; picks up as S2885) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2885 CLOSE → content_tool file-completing slate shipped + pgbouncer collision fully resolved + Slate B pivot to criticality-first ratified (2026-07-22; picks up as S2886) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-21 (S2884 close).** S2884 was the seventh handler migration slate — **first file-completing slate** after 6 criticality-first slates. **One PR shipped.** Both `td_handlers_agents.py` (1→0) and `td_handlers_newsletter.py` (7→0) EXIT the S2876 backfill sunset population.
+**Refreshed 2026-07-22 (S2885 close).** S2885 was the eighth handler migration slate — **second file-completing slate** after S2884 opened the shape. **Two PRs shipped.** `td_handlers_content.py` (13→0) EXITS the S2876 sunset population. **Pgbouncer collision from S2884 close fully resolved** (three stacked infra faults diagnosed + fixed). **Rigby zoom-out (b) fold + Chris D-verdict ratified Slate B pivot to criticality-first grep across the 4 remaining files** — file-completing is retired as the default shape.
 
-- **PR #3392** `65e4da587` — S2884 slate (4 files, +294/-25)
-  - **cost_telemetry_tool cluster** (`_handle_cost_telemetry` L5026, 1 site): unknown action → `unknown_action`.
-  - **newsletter_tool cluster** (`_handle_newsletter` + 3 per-action helpers, 7 sites): L44 unknown_action, L85/L341/L391 invalid_params (missing id), L90/L346/L396 not_found (Deliverable.DoesNotExist).
-  - **Helper-choice = uniform `_handler_error`** (Rigby+Claude joint verdict, Chris D-approved). All 8 sites map cleanly to existing 5-code taxonomy — no broad-except, no `internal_error`, no new codes needed. Contrast with S2883's Path 1 SPLIT.
-  - **Ledger #13 adopter count now 4/6** (ops + governance + agents + newsletter). Rigby's 6-adopter gate for `td_error.py` extraction still 2 files short.
-  - **Retired S2877 backfill row:** `test_newsletter_unknown_action_backfilled` removed from `LegacyBackfillPASurfaceTests`. Class now defines 0 test methods; kept structurally with docstring re-home log pending S2876 sunset PR trigger.
-  - **Combined regression:** S2869 → **S2884** + `test_zoom_out_tool_2780` = **207/207 pass** (200 baseline + 8 new − 1 retired).
+- **PR #3394** `5495736fb` — S2885 slate (2 files, +439/-13)
+  - **content_tool cluster** (`_handle_deliverable_initiative_link` L178/L182/L186/L190, `_handle_feedback` L3654, `_handle_content` L4788, `_handle_bulk_archive` L4821, `_handle_bulk_archive_published` L4966/L4971/L4976/L4980/L4984/L5046): 13 sites across 5 handlers, 3 dispatched tool surfaces (`deliverable_tool`, `feedback_tool`, `content_tool`).
+  - **Codes:** 1× `unknown_action`, 9× `invalid_params`, 2× `not_found`, 1× `permission_denied`. All 13 sites map cleanly to existing 5-code taxonomy — no broad-except, no `internal_error`, no new codes.
+  - **Micro-decisions (Chris pre-approved + Rigby SIGN AGREE):** T1c legacy `status: 403` field dropped from L4966 permission_denied envelope; T1d L5046 `**result` dry-run preview preserved via `**{k: v for k, v in result.items() if k != 'action'}` filter (avoids TypeError collision with helper's `action` positional).
+  - **Helper-choice = uniform `_handler_error`** (file-local copy, same shape as S2879/S2882/S2883/S2884). **Ledger #13 adopter count now 5/6** — 1 more adopter needed to trigger `td_error.py` extraction arc.
+  - **Two folds captured inline in test module docstring:** Fold 1 (`TransactionTestCase` required whenever setUp-created rows must be visible to `ToolDispatcher.execute_sync` — S2885 is 1st trigger; watch S2886 for corroboration), Fold 2 (L190 was false-passing before fortification when two branches return the same taxonomy code — Playbook amendment candidate if re-triggers).
+  - **Combined regression:** S2869 → **S2885** + `test_zoom_out_tool_2780` = **220/220 pass** (207 baseline + 13 new).
+- **PR `<docs cascade>`** — S2885 handoff + this file refresh + wrapper pin bump (`pa-42342895674d4878` → S2886 mint) + `docs/INDEX.md` refresh.
 
-### S2884 close blockers (S2885 first-action)
+### S2885 open — pgbouncer auth block fully resolved (three stacked faults)
 
-**Rigby PA surface is 503-blocked post-recycle.** `bash tools/pa_local.sh` returns `Error: {'code': 'auth_backend_unavailable'}` — pgbouncer at `:5433` rejects `unified_user` password auth. Postgres direct at `:5432` is fine. `USE_PGBOUNCER=1` in `.env` routes Django through pgbouncer.
+Chris's character-os collision hypothesis at S2884 close was correct. Investigation surfaced two additional stacked faults; all three fixed at S2885 first-action:
 
-- **Chris hypothesis (flag at S2884 close):** Character OS startup captured or mis-configured pgbouncer. Two listeners on `:5433` observed (`pgbouncer` PID 1513 + `com.docker` PID 36957).
-- **Not touched at S2884 close** per `feedback_post_travel_port_collision_triage`: no `pgbouncer.ini` reads, no `userlist.txt` rewrites, no password rotation, no `USE_PGBOUNCER=0` flip, no character-os shutdown.
-- **Deferred artifacts:** (a) live Rigby envelope verification on `cost_telemetry_tool` + `newsletter_tool`, (b) Rigby Tool Gap Ledger entry #24 (draft inlined in S2884 handoff for persist-once-unblocked), (c) `session_lifecycle close` wrapper pin bump (needs DB — same block).
-- **Wrapper still points at `pa-261ad03bdd634e70`** (S2883 close mint). NOT rotated at S2884 close.
+1. **Character-os `pgvector/pg16` Docker container captured `:5433` via IPv6 wildcard** (`0.0.0.0:5433->5432/tcp`). u-d-b's native pgbouncer (PID 1513) held IPv4 `127.0.0.1:5433`. `localhost:5433` resolves to `::1` first → Django hit character-os postgres. Fix: `USE_PGBOUNCER=0` in `.env` in BOTH `/Donkey_Betz/unified-donkey-betz/` and `/development/unified-donkey-betz/` checkouts (symmetric bypass).
+2. **Orphan Daphne from `/development/unified-donkey-betz/`** (PID 60841, elapsed 4h38m, parent=launchd) held `:8000`. `make restart-daphne` silently failed to bind (`Address already in use`). Fix: `kill 60841`, then restart from `/Donkey_Betz/`. Chris designated `/development/` legacy — deletion decision deferred to S2886 open.
+3. **`.env` `PA_API_TOKEN` was 11 days stale** (rotated 2026-07-11 S2758-era). Fix: sync to current DB value (`8c0f15633e84...`).
 
-## PRIOR SESSIONS — S2883 close + S2882 close + S2881 close + S2880 close + S2879 close
+**Rigby Tool Gap Ledger entry #24 persisted** (deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0`, 2874 chars appended, new total 50822 chars) at S2885 first-action.
 
+Full context: `docs/handoffs/SESSION_2885_CONTENT_ERROR_ENVELOPE.md`.
+
+## PRIOR SESSIONS — S2884 close + S2883 close + S2882 close + S2881 close + S2880 close
+
+- **PR #3393** `43f40edd5` — S2884 docs cascade. See `docs/handoffs/SESSION_2884_AGENTS_NEWSLETTER_CRITICAL_SLICE.md`.
+- **PR #3392** `65e4da587` — S2884 slate: agents_tool + newsletter_tool file-completing (4 files, +294/-25).
 - **PR #3391** `444b28a5e` — S2883 docs cascade + wrapper pin bump. See `docs/handoffs/SESSION_2883_AGENT_DIAG_CRITICAL_SLICE.md`.
 - **PR #3390** `ca61c7725` — S2883 slate: agent-diag family critical-slice (2 files, +396/-10).
 - **PR #3389** `de78ba609` — S2882 docs cascade + wrapper pin bump.
 - **PR #3388** `377f39364` — S2882 close follow-on: `permission_denied` 5th taxonomy code + not-staff branch migration.
 - **PR #3387** `6331c833e` — S2882 slate: `ops_tool` EXECUTION + AUTH critical-slice.
-- **PR #3385** `0c26d8564` — S2881 slate: `autopilot_tool` write-path critical slice.
-- **PR #3383** `e6ae8a1b3a59` — S2880 slate: ops_tool remainder critical-slice.
-- **PR #3381** `9a3039e22e69` — S2879 slate: governance_tool + ops_tool critical-slice.
 
 ---
 
-## S2885 open sequence
+## S2886 open sequence
 
-### Step 1 — pgbouncer auth triage (BLOCKING)
+### Step 1 — Slate B pivot to criticality-first (Chris pre-ratified)
 
-**Character-os collision hypothesis first (Chris flag at S2884 close):**
-
-```bash
-# 1a. What owns :5433?
-lsof -iTCP:5433 -sTCP:LISTEN -n -P
-lsof -p 36957   # or whatever docker PID is proxying :5433
-docker ps       # look for character-os containers
-pgrep -fl "character-os\|characteros"
-
-# 1b. If character-os is up and grabbed the port:
-#     coordinate shutdown of its pgbouncer container (or its docker-compose stack)
-#     before re-testing u-d-b's Rigby.
-
-# 1c. Verify auth works:
-bash tools/pa_local.sh "ping — s2885 post-pgbouncer-fix"
-# Expected: normal Rigby response, no 'auth_backend_unavailable'
-```
-
-**Fallback (only if character-os collision is ruled out):**
-
-- Read `pgbouncer.ini` + `userlist.txt` (paths TBD via `brew --prefix pgbouncer` or `lsof -p 1513`).
-- Compare pgbouncer userlist's `unified_user` password against `.env` `DB_PASSWORD`.
-- Options: (a) rewrite userlist entry, (b) rotate Postgres password to match userlist, (c) temporary `USE_PGBOUNCER=0` flip in `.env` + Daphne restart.
-
-### Step 2 — Deferred S2884 close artifacts (after pgbouncer unblock)
-
-1. **Live Rigby envelope verification:** fire `cost_telemetry_tool` + `newsletter_tool` with `{'action': '__bogus_s2884__'}` payloads. Expect `{success: False, error_code: 'unknown_action', action: '__bogus_s2884__', error: ...}` shape from both. If either returns `legacy_error` or bare-error shape, workers didn't pick up PR #3392.
-2. **Ledger #24 persist:** Rigby appends the S2884 entry to Tool Gap Ledger (`deliverable_tool.append` on `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0`). Draft body inlined in `docs/handoffs/SESSION_2884_AGENTS_NEWSLETTER_CRITICAL_SLICE.md` §S2884 close.
-3. **Wrapper pin bump for S2885:** `python manage.py session_lifecycle close --label s2885-<slate>` — atomically retires `pa-261ad03bdd634e70` + mints fresh pin + rewrites `tools/pa_local.sh`. Verify via `grep "^python tools/pa_chat.py" tools/pa_local.sh`.
-
-### Step 3 — S2885 primary slate DECISION POINT
-
-**5 handler files remain in the S2876 sunset population:**
+**4 handler files remain in the S2876 sunset population:**
 
 | File | Bare-return count |
 |---|---|
@@ -80,108 +51,111 @@ bash tools/pa_local.sh "ping — s2885 post-pgbouncer-fix"
 | `td_handlers_gateway.py` | 57 |
 | `td_handlers_railway.py` | 18 |
 | `td_handlers_codejobs.py` | 15 |
-| `td_handlers_content.py` | 13 |
-| **Total** | **176** |
+| **Total** | **163** |
 
-**Options for S2885 slate framing:**
+**S2886 pre-code SIGN Q1 (per zoom-out (b) discipline):** grep `core.py` + `gateway.py` (highest-volume; 73+57=130 sites, 80% of remaining population) for `return \{('error'|"error")` returns AND enclosing `def _handle_*` scope. Categorize by handler criticality (write-path / auth / tenant / read-only). Pick highest-risk cluster for Slate B. Warm-cadence Q1 same shape as S2879/S2880/S2881/S2882/S2883.
 
-- **(A) Continue file-completing — pick next smallest.** `td_handlers_content.py` (13 sites) is the smallest remaining. Warm cadence + clean EXIT milestone. First real test of whether Rigby's S2884 zoom-out concern ("file-completing hides risk by leaving nastier files") is actual or hypothetical.
-- **(B) Revert to criticality-first across all 5 files.** Grep the 176 sites, categorize by handler criticality (write-path / auth / tenant / read-only), pick highest-risk cluster regardless of file. Preserves S2879→S2883 shape.
-- **(C) Ledger #13 `td_error.py` unified extraction arc** — 4/6 adopter signal; not yet at threshold. Rigby's S2875 gate specifically said "wait for 6."
-- **(D) PLAYBOOK-6.10.10 amendment ratification** — 4 Fold D triggers on record; constitutional session shape.
-- **(E) Shift to net-new engineering** — per `feedback_engineering_bias_over_audit`, pause backfill arc; propose new spider / UI page / agent capability / dashboard candidate.
+**Recommended default:** Slate B targets a `core.py` write-path or auth cluster (matches S2879→S2883 criticality-first cadence). Fold-in `gateway.py` if a naturally-linked cluster surfaces during Q1 routing map. `railway.py` (18) + `codejobs.py` (15) are the file-completing tail — hold for later slates when only they remain.
 
-**Recommended default: (A)** — completes 3rd file in row and stress-tests the file-completing shape. If content.py sites reveal Fold X test-authoring convention triggers or Fold D routing-boundary drift, re-evaluate before Slate 4.
+### Step 2 — Deferred S2885 close artifacts (housekeeping)
 
-**S2885 pre-code SIGN Q1 (per zoom-out (b) discipline):** for each of the 5 remaining files, grep for `return \{('error'|"error")` returns AND grep for enclosing `def _handle_*` scope BEFORE labeling tool surface. Report routing-map table.
+1. **Fold 1 + Fold 2 promotion decision:** if Slate B testing also requires `TransactionTestCase` for setUp fixtures, Fold 1 is at 2nd trigger — ledger entry becomes Playbook amendment candidate. If Slate B has two branches returning the same taxonomy code, Fold 2 hits 2nd trigger.
+2. **`/development/` checkout status:** Chris to decide `rm -rf` vs dormant.
+3. **`.env` `USE_PGBOUNCER` restoration triggers:** stay `=0` until cross-repo port ownership resolved.
 
-### Step 4 — Net-new engineering candidates for S2885 (broader list)
+### Step 3 — Net-new engineering candidates for S2886 (broader list)
 
 Per `feedback_engineering_bias_over_audit`, list net-new first.
 
-1. **NEW at S2884 close — Cross-repo infra collision documentation.** If Chris's character-os hypothesis is confirmed at S2885 open, this pattern (sibling-repo Docker container captures shared pgbouncer / Redis / port) will recur. Ledger candidate + `feedback_post_travel_port_collision_triage` extension. Not yet at 2nd trigger — watch for corroboration.
+1. **NEW at S2885 close — `TransactionTestCase` requirement as first-class testing rule.** Fold 1 substrate. If Slate B corroborates, promote to Playbook amendment. Otherwise, hold.
 
-2. **Carried from S2883 — Ledger #13 unified helper extraction (`td_error.py`)** — 4/6 adopter signal. Ready for extraction arc scheduling if two more slates add adopters.
+2. **NEW at S2885 close — false-pass discipline for shared-taxonomy branches.** Fold 2 substrate. Same corroboration gate.
 
-3. **Carried from S2883 — Fold X test-authoring convention documentation** — 2nd trigger at S2883. Standardize on `TransactionTestCase` or ORM-boundary mocking for dispatcher-path tests requiring DB-visible state.
+3. **NEW at S2885 close — Cross-repo Docker infra collision documentation.** Fold 4 substrate. Character-os collision now confirmed as 1st trigger; watch for 2nd trigger before promoting to `feedback_post_travel_port_collision_triage` extension.
 
-4. **Carried from S2882 — Fold Y `_authorize_staff` broad `except Exception:` narrowing** to `User.DoesNotExist` — behavior change, requires own SIGN.
+4. **NEW at S2885 close — `.env` `PA_API_TOKEN` drift alarm.** Subitem of Ledger #24. Consider CI check that `.env` token matches DB token for the wrapper-owning user. Deferred.
 
-5. **Carried from S2882 — PLAYBOOK-6.10.10 amendment ratification** — 4 Fold D triggers + Rigby zoom-out (b) refinement.
+5. **Carried from S2884 — Ledger #13 unified helper extraction (`td_error.py`)** — adopter signal now 5/6. Slate B is the extraction-arc trigger candidate.
 
-6. **Carried from S2881 — Grep-based CI audit metric** — count bare `return {'error':}` returns across `core/services/*.py`; fail CI on regression.
+6. **Carried from S2883 — Fold X test-authoring convention documentation** — 2nd trigger at S2883. Standardize on `TransactionTestCase` or ORM-boundary mocking for dispatcher-path tests requiring DB-visible state. **S2885 Fold 1 corroborates this.**
 
-7. **Carried from S2880 — Fold A/B/C from S2880 post-code.** Fold C at 3rd trigger from S2883.
+7. **Carried from S2882 — Fold Y `_authorize_staff` broad `except Exception:` narrowing** to `User.DoesNotExist` — behavior change, requires own SIGN.
 
-8. **Carried from S2878 — `_s2876_fake_tool` breadcrumb noise refinement** (1st trigger).
+8. **Carried from S2882 — PLAYBOOK-6.10.10 amendment ratification** — 4 Fold D triggers + Rigby zoom-out (b) refinement.
 
-9. **Carried from S2877 — Schema-level dead-branch investigation** (1st trigger from S2875).
+9. **Carried from S2881 — Grep-based CI audit metric** — count bare `return {'error':}` returns across `core/services/*.py`; fail CI on regression.
 
-10. **Carried from S2877 — Schema-layer PA route smoke extension**.
+10. **Carried from S2880 — Fold A/B/C from S2880 post-code.** Fold C at 3rd trigger from S2883.
 
-11. **Carried from S2876 — #22.3 orthogonal-contract-axes resolution** (1st trigger).
+11. **Carried from S2878 — `_s2876_fake_tool` breadcrumb noise refinement** (1st trigger).
 
-12. **Carried from S2877 — #22.4 Rigby dispatcher-probe extension** (1st trigger).
+12. **Carried from S2877 — Schema-level dead-branch investigation** (1st trigger from S2875).
 
-13. **Carried from S2874 — `feedback_recycle_after_merge` extension for multi-checkout setups** (1st trigger).
+13. **Carried from S2877 — Schema-layer PA route smoke extension**.
 
-14. **Carried from S2873 — `orm_inspect_tool` JSONField type predicate** (1st trigger).
+14. **Carried from S2876 — #22.3 orthogonal-contract-axes resolution** (1st trigger).
 
-15. **Carried from S2873 — kalshi-only distribution on canonical SpiderData** (1st trigger).
+15. **Carried from S2877 — #22.4 Rigby dispatcher-probe extension** (1st trigger).
 
-16. **Carried from S2873 — "post-allowlist smoke checklist" UX pattern** (1st trigger).
+16. **Carried from S2874 — `feedback_recycle_after_merge` extension for multi-checkout setups** (1st trigger). **S2885 corroborates — orphan Daphne from `/development/` was a multi-checkout artifact. 2nd trigger candidate; Chris designated `/development/` legacy, so pattern may not re-fire.**
 
-17. **Ledger #5 — schema/handler drift detection lint / CI wiring** (~2 hr).
+17. **Carried from S2873 — `orm_inspect_tool` JSONField type predicate** (1st trigger).
 
-18. **Carried from S2872 — Category B cosmetic `raw_data_dict` migration** (~30 min).
+18. **Carried from S2873 — kalshi-only distribution on canonical SpiderData** (1st trigger).
 
-19. **Ledger #16 — close-ceremony twin-mirror enforcement gap** (S2863).
+19. **Carried from S2873 — "post-allowlist smoke checklist" UX pattern** (1st trigger).
 
-20. **Carried — Exemption-list telemetry** (Rigby zoom-out from S2868 slate #1, 1st trigger).
+20. **Ledger #5 — schema/handler drift detection lint / CI wiring** (~2 hr).
 
-21. **Carried — Stale-cleared row GC** (Rigby zoom-out from S2868 slate #1).
+21. **Carried from S2872 — Category B cosmetic `raw_data_dict` migration** (~30 min).
 
-22. **Carried — `group_key_note` UX hint on `count_by`** (S2867 Q2 fold, 1st trigger).
+22. **Ledger #16 — close-ceremony twin-mirror enforcement gap** (S2863).
 
-23. **Carried — High-cardinality guardrail on `count_by`** (S2867 Q5 fold, 1st trigger).
+23. **Carried — Exemption-list telemetry** (Rigby zoom-out from S2868 slate #1, 1st trigger).
 
-24. **Carried — Per-model `allowed_fields` explicit allowlist on `orm_inspect_tool`** (S2866 fold, 1st trigger).
+24. **Carried — Stale-cleared row GC** (Rigby zoom-out from S2868 slate #1).
 
-25. **Carried — Promote S2862 Q5.a bimodal-collector fold to tracked spec_backlog entry.**
+25. **Carried — `group_key_note` UX hint on `count_by`** (S2867 Q2 fold, 1st trigger).
 
-26. **Carried — Codify "verify at persisted source of truth" as SIGN discipline** (Playbook amendment candidate, 1st trigger only).
+26. **Carried — High-cardinality guardrail on `count_by`** (S2867 Q5 fold, 1st trigger).
 
-27. **Carried — Provider-specific composite additions.** Reactive; watch for new integrations.
+27. **Carried — Per-model `allowed_fields` explicit allowlist on `orm_inspect_tool`** (S2866 fold, 1st trigger).
 
-28. **Carried — `simulate_enforcement` auto-clear-after-N-seconds** (S2857 fold).
+28. **Carried — Promote S2862 Q5.a bimodal-collector fold to tracked spec_backlog entry.**
 
-29. **Carried — `enforcement_action_types` shared constant** (S2856 Q5b, 1st trigger).
+29. **Carried — Codify "verify at persisted source of truth" as SIGN discipline** (Playbook amendment candidate, 1st trigger only).
 
-30. **Carried — `actor_user_id` as first-class column on `AutopilotAction`** (S2856 Q5a, MIGRATION required).
+30. **Carried — Provider-specific composite additions.** Reactive; watch for new integrations.
 
-31. **Carried — `EnforcementContext` dataclass consolidation** (S2857 Q5, 1st trigger).
+31. **Carried — `simulate_enforcement` auto-clear-after-N-seconds** (S2857 fold).
 
-32. **Carried — `list_caps include_defaults=true` remaining perf costs** (S2858, 1st trigger).
+32. **Carried — `enforcement_action_types` shared constant** (S2856 Q5b, 1st trigger).
 
-33. **Carried — Second-trigger candidate for expanding `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT`** (S2859+S2868 cycle observed).
+33. **Carried — `actor_user_id` as first-class column on `AutopilotAction`** (S2856 Q5a, MIGRATION required).
 
-34. **Carried — Q5.3 fold from S2859 SIGN — "diagnostic == effectively hidden in workspace UI"**.
+34. **Carried — `EnforcementContext` dataclass consolidation** (S2857 Q5, 1st trigger).
 
-35. **Carried — Fold C from S2861 close: shared JSONField projection helper**.
+35. **Carried — `list_caps include_defaults=true` remaining perf costs** (S2858, 1st trigger).
 
-36. **Carried — Fold D from S2861 close: operator-surface discoverability for advanced PA-tool params**.
+36. **Carried — Second-trigger candidate for expanding `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT`** (S2859+S2868 cycle observed).
 
-37. **Carried — openmeteo → SignalCluster drop (fold-carry from S2862)** — product decision.
+37. **Carried — Q5.3 fold from S2859 SIGN — "diagnostic == effectively hidden in workspace UI"**.
 
-38. **Carried — Middleware `log_injected_params` spec candidate** (S2870 Q6 zoom-out fold, 1st trigger).
+38. **Carried — Fold C from S2861 close: shared JSONField projection helper**.
 
-39. **Carried — Phase 2B pricing arc (only if reconciliation trigger surfaces)** — 4 deferred items from S2855.
+39. **Carried — Fold D from S2861 close: operator-surface discoverability for advanced PA-tool params**.
 
-40. **Carried — A4 warm-up under ratified constraints** — S2846 6-line block still in force. A4 capabilities extended at S2875 → S2876 → S2877 → S2878 → S2879 → S2880 → S2881 → S2882 → S2883 → **S2884 (cost_telemetry + newsletter file-completing)**. See A4 Constraints below.
+40. **Carried — openmeteo → SignalCluster drop (fold-carry from S2862)** — product decision.
 
-41. **Carried — Character-os Rigby integration (5-gap analysis from S2872 mid-session, D6 moratorium hold)** — parked; unlock requires Chris directive. **Note S2884: character-os may be actively touching u-d-b infra (pgbouncer collision hypothesis) — if confirmed, this parked candidate becomes more urgent.**
+41. **Carried — Middleware `log_injected_params` spec candidate** (S2870 Q6 zoom-out fold, 1st trigger).
 
-### What's forbidden at S2885 (D6 moratorium still in force)
+42. **Carried — Phase 2B pricing arc (only if reconciliation trigger surfaces)** — 4 deferred items from S2855.
+
+43. **Carried — A4 warm-up under ratified constraints** — S2846 6-line block still in force. A4 capabilities extended at S2875 → S2876 → S2877 → S2878 → S2879 → S2880 → S2881 → S2882 → S2883 → S2884 → **S2885 (content_tool file-completing + pgbouncer collision resolved)**. See A4 Constraints below.
+
+44. **Carried — Character-os Rigby integration (5-gap analysis from S2872 mid-session, D6 moratorium hold)** — parked; unlock requires Chris directive. **S2885: character-os collision on `:5433` confirmed as active infra concern; Chris flagged "one of the roadmaps tied both together" + "everything will need to be universal" — universalization coming.**
+
+### What's forbidden at S2886 (D6 moratorium still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No new evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 
@@ -196,46 +170,50 @@ Per `feedback_engineering_bias_over_audit`, list net-new first.
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2884 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2885 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2884: cost_telemetry_tool + newsletter_tool now emit structured error codes (`unknown_action` / `invalid_params` / `not_found`). First file-completing wave in the S2876 sunset arc — TWO handler files EXIT the population in a single slate (agents.py 1→0, newsletter.py 7→0). A4 outreach substrate now has structured error semantics on LLM cost telemetry + newsletter authoring/validation/metrics surfaces, extending prior S2883 agent-diag + S2882 EXECUTION+AUTH + S2881 write-path + S2880 kill-switch + S2879 governance + focus_mode/celery/tenant/staleness coverage.**
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2885: content_tool now emits structured error codes across 3 dispatched tool surfaces (`deliverable_tool` link_initiative/unlink_initiative, `feedback_tool` submit, `content_tool` top-level + `bulk_archive` + `bulk_archive_published`). Second file-completing wave in the S2876 sunset arc — content.py EXITS the population. A4 outreach substrate now has structured error semantics on deliverable-initiative linking, feedback submission, and staff-gated content archival surfaces, extending prior S2884 cost_telemetry+newsletter + S2883 agent-diag + S2882 EXECUTION+AUTH + S2881 write-path + S2880 kill-switch + S2879 governance coverage.**
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
-3. **Capability claims:** (a)…(qq) as ratified at S2883 close. **(rr) `cost_telemetry_tool` + `newsletter_tool` now emit concrete `error_code` from the 5-code taxonomy. First file-completing wave in the S2876 sunset arc completes 2 additional handler files. A4 messaging that references cost-telemetry or newsletter surfaces can rely on structured error semantics for downstream integrations.**
+3. **Capability claims:** (a)…(rr) as ratified at S2884 close. **(ss) `content_tool` (across `deliverable_tool` + `feedback_tool` + `content_tool` gateways) now emits concrete `error_code` from the 5-code taxonomy including `permission_denied` on staff-gated write-paths. Second file-completing wave in the S2876 sunset arc completes 1 additional handler file. A4 messaging that references deliverable-initiative linking, user feedback, or bulk archival flows can rely on structured error semantics for downstream integrations.**
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
 5. **Hard throttle:** A4 warm-up is constrained to a fixed timebox and fixed send count (3-5 total intros).
 6. **No bespoke follow-ups:** A4 warm-up prohibits custom follow-ups / custom research / custom deliverables.
 
 ---
 
-## S2884 close — what shipped (one PR + this docs cascade)
+## S2885 close — what shipped (one slate PR + this docs cascade)
 
 **Repo canonical (Claude-authored):**
-- **PR #3392** `65e4da587` — S2884 slate: agents_tool + newsletter_tool critical-slice structured error-envelope migration (4 files, +294/-25)
-- **PR `<this docs cascade>`** — S2884 handoff + 00-START-NEXT-SESSION refresh (wrapper pin bump DEFERRED to S2885 open after pgbouncer unblock)
+- **PR #3394** `5495736fb` — S2885 slate: `td_handlers_content.py` file-completing critical-slice structured error-envelope migration (2 files, +439/-13)
+- **PR `<this docs cascade>`** — S2885 handoff + 00-START-NEXT-SESSION refresh + wrapper pin bump for S2886 open + `docs/INDEX.md` refresh
 
-**Workspace canonical:** Rigby Tool Gap Ledger entry #24 **DEFERRED to S2885** — draft inlined in `docs/handoffs/SESSION_2884_AGENTS_NEWSLETTER_CRITICAL_SLICE.md` §S2884 close for persist-once-unblocked.
+**Workspace canonical (Rigby-authored at S2885 first-action):**
+- **Rigby Tool Gap Ledger entry #24** — S2884→S2885 pgbouncer auth block resolution + character-os collision root cause, appended to deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` (2874 chars, new total 50822 chars).
 
 **Runtime impact:**
-- Seventh wave (first file-completing shape) of real handler migrations in the S2876 backfill sunset arc.
-- Legacy-file population S2883=8 files → **S2884=5 files** (agents.py + newsletter.py both EXIT).
-- Sub-population count 184 → **176 bare-returns** across 5 remaining files.
-- Regression suite grew from 200 → **207** (+8 S2884 rows − 1 retired S2877 backfill row).
-- 8 sites no longer surface `error_code='legacy_error'`; consumers can key on 5-code taxonomy.
+- Eighth wave (second file-completing shape) of real handler migrations in the S2876 backfill sunset arc.
+- Legacy-file population S2884=5 files → **S2885=4 files** (content.py EXITS).
+- Sub-population count 176 → **163 bare-returns** across 4 remaining files.
+- Regression suite grew from 207 → **220** (+13 S2885 rows).
+- 13 sites no longer surface `error_code='legacy_error'`; consumers can key on 5-code taxonomy.
 - No new helper introduced. No taxonomy expansion. No new PLAYBOOK amendment.
-- Ledger #13 (`td_error.py` extraction) adopter count = 4/6 — 2 more adopters needed to trigger dedicated arc.
+- Ledger #13 (`td_error.py` extraction) adopter count = 5/6 — 1 more adopter needed to trigger dedicated arc. Slate B is a natural candidate.
 
-**Not shipped at S2884 close (deferred to S2885):**
-- Live Rigby envelope verification (blocked by pgbouncer auth)
-- Rigby Tool Gap Ledger entry #24 (blocked by same auth failure via ORM route)
-- Wrapper pin bump / fresh S2885 conversation mint (needs DB)
-- All prior deferred items from S2883/S2882/S2881/S2880/S2879/S2878/S2877/S2876/S2874/S2873/S2871/S2868/S2867/S2866/S2862/S2861/etc still carried.
+**Session infra work resolved (not shipped as PR):**
+- Character-os postgres collision on `:5433` (bypassed via `USE_PGBOUNCER=0` in both `.env` files).
+- Orphan Daphne from `/development/` checkout killed; checkout designated legacy.
+- 11-day-stale `PA_API_TOKEN` in `.env` synced to current DB value.
+- Rigby Tool Gap Ledger entry #24 persisted.
+
+**Slate B pivot ratified:** file-completing retired as the default shape; criticality-first grep on `core.py` + `gateway.py` is the S2886 first-action.
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2884)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2885)
 
 See:
-- **S2884 handoff (current):** `docs/handoffs/SESSION_2884_AGENTS_NEWSLETTER_CRITICAL_SLICE.md`
+- **S2885 handoff (current):** `docs/handoffs/SESSION_2885_CONTENT_ERROR_ENVELOPE.md`
+- **S2884 handoff:** `docs/handoffs/SESSION_2884_AGENTS_NEWSLETTER_CRITICAL_SLICE.md`
 - **S2883 handoff:** `docs/handoffs/SESSION_2883_AGENT_DIAG_CRITICAL_SLICE.md`
 - **S2882 handoff:** `docs/handoffs/SESSION_2882_OPS_EXECUTION_AUTH_CRITICAL_SLICE.md`
 - **S2881 handoff:** `docs/handoffs/SESSION_2881_OPS_WRITE_PATH_CRITICAL_SLICE.md`
