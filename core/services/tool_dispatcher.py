@@ -58,6 +58,21 @@ _metric_recorder_ok = True
 _last_metric_error_log = 0.0
 _METRIC_LOG_INTERVAL = 60.0  # seconds — rate-limit to avoid log spam
 
+# S2876 (Rigby Tool Gap Ledger #22): dispatcher-layer error_code backfill
+# for legacy handlers that return {'error': msg} without an error_code.
+# S2874/S2875 migrated 17 sites in repo_tool + spider_status_tool + kb_tool
+# read-path handlers to the structured {'error', 'error_code', ...} envelope,
+# but many handlers still ship pre-migration. Consumers programming against
+# error_code can rely on a stable contract across the whole tool surface via
+# this backfill without every legacy tool being migrated first.
+# SUNSET CRITERIA (remove backfill + this state when either):
+#   1) all registered tools emit error_code on error envelopes, OR
+#   2) `legacy_handler_error_envelope_missing_error_code` warning fires for
+#      < 1% of total dispatches for 14 consecutive days
+# Track via: `grep legacy_handler_error_envelope_missing_error_code` in logs.
+_last_legacy_backfill_warning: Dict[str, float] = {}
+_LEGACY_BACKFILL_WARN_INTERVAL = 60.0  # seconds — per-tool rate limit
+
 
 def _record_tool_metric(tool_name: str, action: str, status: str, latency_ms: int):
     """Record a tool call metric in Redis. Fire-and-forget — never raises.
@@ -839,6 +854,36 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
                     result = scrub_dict(result, max_depth=5)
                 except Exception as e:
                     logger.warning(f"[{trace_id}] PII scrub failed for {tool_name}: {e}")
+
+            # S2876 (Rigby Tool Gap Ledger #22): legacy-handler error_code
+            # backfill — temporary compatibility bridge. Migrated handlers
+            # (S2874/S2875) emit {'error', 'error_code', ...}; legacy
+            # handlers return {'error': msg} only. Backfill
+            # error_code='legacy_error' so consumers can program against a
+            # stable contract during the mixed-mode migration window.
+            # Idempotent: presence of error_code short-circuits. Truthy-
+            # error guard skips success dicts that reserve `error` as a
+            # nullable field. Nested errors ({'result': {'error': …}}) are
+            # a handler-domain shape, not the dispatcher's envelope
+            # contract, so top-level only. See sunset criteria near
+            # _last_legacy_backfill_warning.
+            if (
+                isinstance(result, dict)
+                and result.get('error')
+                and 'error_code' not in result
+            ):
+                result['error_code'] = 'legacy_error'
+                _now = time.monotonic()
+                _last = _last_legacy_backfill_warning.get(tool_name, 0.0)
+                if _now - _last >= _LEGACY_BACKFILL_WARN_INTERVAL:
+                    _last_legacy_backfill_warning[tool_name] = _now
+                    logger.warning(
+                        "legacy_handler_error_envelope_missing_error_code — "
+                        "tool=%s action=%s trace=%s (backfilled with "
+                        "error_code='legacy_error'; migrate handler to "
+                        "S2874 structured envelope to eliminate backfill)",
+                        tool_name, action, trace_id,
+                    )
 
             logger.info(f"[{trace_id}] Tool {tool_name} completed in {latency_ms}ms")
 
