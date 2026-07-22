@@ -3564,7 +3564,11 @@ class OpsHandlersMixin:
 
             mode = payload.get('mode', '')
             if not mode:
-                return {'error': 'mode is required (normal/throttle/freeze/safe_mode)'}
+                return _handler_error(
+                    'governance_set_mode',
+                    'invalid_params',
+                    'mode is required (normal/throttle/freeze/safe_mode)',
+                )
 
             engine = GovernanceEngine()
             result = engine.set_mode(
@@ -3582,7 +3586,11 @@ class OpsHandlersMixin:
 
             target = payload.get('target', '')
             if not target:
-                return {'error': 'target is required (scheduler/queue/agent_family/publishing/outbound/deploys)'}
+                return _handler_error(
+                    'governance_kill_switch',
+                    'invalid_params',
+                    'target is required (scheduler/queue/agent_family/publishing/outbound/deploys)',
+                )
 
             engine = GovernanceEngine()
             result = engine.activate_kill_switch(
@@ -3599,7 +3607,11 @@ class OpsHandlersMixin:
 
             switch_id = payload.get('switch_id', '')
             if not switch_id:
-                return {'error': 'switch_id is required'}
+                return _handler_error(
+                    'governance_deactivate_switch',
+                    'invalid_params',
+                    'switch_id is required',
+                )
 
             engine = GovernanceEngine()
             result = engine.deactivate_kill_switch(switch_id)
@@ -5276,7 +5288,11 @@ class OpsHandlersMixin:
         elif action == 'post':
             conversation_id = payload.get('conversation_id')
             if not conversation_id:
-                return {'error': 'conversation_id required for post action'}
+                return _handler_error(
+                    'post',
+                    'invalid_params',
+                    'conversation_id required for post action',
+                )
 
             from core.models import ChatConversation
             from django.contrib.auth import get_user_model
@@ -5305,7 +5321,11 @@ class OpsHandlersMixin:
                 'digest': digest,
             }
 
-        return {'error': f'Unknown action: {action}'}
+        return _handler_error(
+            action,
+            'unknown_action',
+            f'Unknown action: {action}',
+        )
 
     def _ops_timeout_config_read(self, agent_names: list, trace_id: str) -> Dict[str, Any]:
         """
@@ -5999,14 +6019,22 @@ class OpsHandlersMixin:
         if action in ('enable', 'disable'):
             task_id = payload.get('task_id', '') or payload.get('name', '')
             if not task_id:
-                return {'error': 'task_id or name required for enable/disable'}
+                return _handler_error(
+                    action,
+                    'invalid_params',
+                    'task_id or name required for enable/disable',
+                )
             try:
                 task_obj = PeriodicTask.objects.get(name=task_id)
             except PeriodicTask.DoesNotExist:
                 try:
                     task_obj = PeriodicTask.objects.get(id=int(task_id))
                 except (PeriodicTask.DoesNotExist, ValueError):
-                    return {'error': f'Scheduled task not found: {task_id}'}
+                    return _handler_error(
+                        action,
+                        'not_found',
+                        f'Scheduled task not found: {task_id}',
+                    )
             new_state = action == 'enable'
             if task_obj.enabled == new_state:
                 return {'action': action, 'name': task_obj.name, 'already': True, 'enabled': new_state}
