@@ -10,18 +10,18 @@
 
 - **Total tool names:** 161
 - **Per-category breakdown:**
-  - `untested` (untested): **96**
+  - `untested` (untested): **95**
   - `agent_via_run_agent` (agent (via run_agent)): **44**
-  - `validated_full` (validated (full)): **11**
-  - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **8**
-  - `validated_partial` (validated (partial)): **1**
+  - `validated_full` (validated (full)): **12**
+  - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
+  - `validated_partial` (validated (partial)): **2**
   - `meta_no_handler` (meta (no handler by design)): **1**
 
 ## Validation-doc corpus
 
-- **Total `*_validation.md` files:** 30
+- **Total `*_validation.md` files:** 31
 - **Substrate (cross-cutting) docs:** 10 — reduce risk platform-wide but do NOT validate per-tool invariants (S2795 F2 rename).
-- **Per-tool docs:** 20 — of which 12 have an explicit 'Covered actions' section (F1 checklist).
+- **Per-tool docs:** 21 — of which 13 have an explicit 'Covered actions' section (F1 checklist).
 
 ## Schema quality lints (F5 advisory column)
 
@@ -303,7 +303,7 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `work_tool` | ✓✓ | untested | actions_not_mentioned_in_description | `core/services/td_handlers_core.py` |
 | `workflow_orchestration_agent` | ✓✓ | untested | — | `core/services/tool_dispatcher.py` |
 | `workflow_run_tool` | ✓✓ | untested | — | `core/services/td_handlers_core.py` |
-| `workspace_budget_tool` | ✓✓ | untested | — | `core/services/td_handlers_ops.py` |
-| `workspace_tool` | ✓✓ | validated (doc, unknown coverage) | — | `core/services/td_handlers_agents.py` |
+| `workspace_budget_tool` | ✓✓ | validated (full) | — | `core/services/td_handlers_ops.py` |
+| `workspace_tool` | ✓✓ | validated (partial) | — | `core/services/td_handlers_agents.py` |
 | `zoom_out_tool` | ✓✓ | untested | actions_not_mentioned_in_description | `core/services/td_handlers_governance.py` |
 
