@@ -74,6 +74,25 @@ class ToolResult:
         return asdict(self)
 
 
+def _handler_error(action: str, code: str, message: str, **fields) -> Dict[str, Any]:
+    """S2885 — handler-level structured error envelope (Ledger #22 sunset arc).
+
+    Local copy of the S2879 helper (also present in ``td_handlers_ops.py``,
+    ``td_handlers_governance.py``, ``td_handlers_agents.py``, and
+    ``td_handlers_newsletter.py``). Kept file-local per Rigby's S2875
+    6-adopter gate on ``td_error.py`` extraction — this slate takes the
+    adopter count to 5 (ops + governance + agents + newsletter + content),
+    still 1 short of the extraction threshold.
+
+    Shape: ``{success: False, error_code, error, action, **fields}``.
+    """
+    return {
+        'success': False,
+        'error_code': code,
+        'error': message,
+        'action': action,
+        **fields,
+    }
 
 
 class ContentHandlersMixin:
@@ -175,19 +194,19 @@ class ContentHandlersMixin:
         deliverable_id = payload.get('deliverable_id') or payload.get('id')
         initiative_id = payload.get('initiative_id')
         if not deliverable_id:
-            return {'error': 'deliverable_id is required', 'action': action}
+            return _handler_error(action, 'invalid_params', 'deliverable_id is required')
         try:
             deliverable = Deliverable.objects.get(id=deliverable_id)
         except Deliverable.DoesNotExist:
-            return {'error': f'Deliverable {deliverable_id} not found', 'action': action}
+            return _handler_error(action, 'not_found', f'Deliverable {deliverable_id} not found')
 
         if action == 'link_initiative':
             if not initiative_id:
-                return {'error': 'initiative_id is required for link_initiative', 'action': action}
+                return _handler_error(action, 'invalid_params', 'initiative_id is required for link_initiative')
             try:
                 initiative = Initiative.objects.get(id=initiative_id)
             except Initiative.DoesNotExist:
-                return {'error': f'Initiative {initiative_id} not found', 'action': action}
+                return _handler_error(action, 'not_found', f'Initiative {initiative_id} not found')
             deliverable.initiative = initiative
             deliverable.save(update_fields=['initiative'])
             return {
@@ -3651,7 +3670,7 @@ class ContentHandlersMixin:
             target_type = payload.get('target_type', 'general')
 
             if not comment:
-                return {'error': 'comment is required for submit'}
+                return _handler_error('submit', 'invalid_params', 'comment is required for submit')
 
             user = User.objects.filter(id=user_id).first() if user_id else None
             if not user:
@@ -4785,7 +4804,7 @@ class ContentHandlersMixin:
             list(CONTENT_REVIEW_MAP) + ['generate_blog', 'generate_newsletter', 'bulk_archive', 'bulk_archive_published', 'run_cleanup'] + list(DELIVERABLE_MAP)
             + ['podcasts', 'series', 'content_studio', 'initiative_doc']
         )
-        return {'error': f'Unknown content_tool action: {action}. Valid: {", ".join(all_actions)}'}
+        return _handler_error(action, 'unknown_action', f'Unknown content_tool action: {action}. Valid: {", ".join(all_actions)}')
 
     # ── Session 1101: Bulk Archive ─────────────────────────────────────────────
     def _handle_bulk_archive(self, payload: Dict[str, Any], user_id: Optional[int], trace_id: str) -> Dict[str, Any]:
@@ -4818,7 +4837,7 @@ class ContentHandlersMixin:
             raw_statuses = [s.strip() for s in raw_statuses.split(',') if s.strip()]
         safe_statuses = [s for s in raw_statuses if s not in ('published', 'archived')]
         if not safe_statuses:
-            return {'error': 'Cannot bulk archive published/archived items. Valid statuses: ready, draft, completed, approved'}
+            return _handler_error('bulk_archive', 'invalid_params', 'Cannot bulk archive published/archived items. Valid statuses: ready, draft, completed, approved')
 
         qs = base_qs.filter(status__in=safe_statuses)
 
@@ -4963,25 +4982,25 @@ class ContentHandlersMixin:
                     user_id, type(e).__name__, e,
                 )
         if not is_admin:
-            return {'error': 'Permission denied. bulk_archive_published requires admin/staff.', 'status': 403}
+            return _handler_error('bulk_archive_published', 'permission_denied', 'Permission denied. bulk_archive_published requires admin/staff.')
 
         # ── Hard block on blogs ──
         types_filter = payload.get('types', [])
         if types_filter and 'blog' in [t.lower() for t in types_filter]:
-            return {'error': 'Blogs are not supported by bulk_archive_published. Use content_reject for individual blog archival.'}
+            return _handler_error('bulk_archive_published', 'invalid_params', 'Blogs are not supported by bulk_archive_published. Use content_reject for individual blog archival.')
 
         # ── Required params ──
         categories = payload.get('categories')
         if not categories or not isinstance(categories, list):
-            return {'error': 'categories (list of strings) is required. Example: ["initiative_completion"]'}
+            return _handler_error('bulk_archive_published', 'invalid_params', 'categories (list of strings) is required. Example: ["initiative_completion"]')
 
         created_before = payload.get('created_before')
         if not created_before:
-            return {'error': 'created_before (ISO-8601 datetime) is required for safety.'}
+            return _handler_error('bulk_archive_published', 'invalid_params', 'created_before (ISO-8601 datetime) is required for safety.')
 
         dt_before = parse_datetime(created_before)
         if not dt_before:
-            return {'error': f'Invalid created_before datetime: {created_before}. Use ISO-8601 format.'}
+            return _handler_error('bulk_archive_published', 'invalid_params', f'Invalid created_before datetime: {created_before}. Use ISO-8601 format.')
 
         dry_run = payload.get('dry_run', True)
         confirm = payload.get('confirm', False)
@@ -5043,7 +5062,12 @@ class ContentHandlersMixin:
 
         # ── Execute requires confirm ──
         if not confirm:
-            return {'error': 'Execute requires confirm=true. Run with dry_run=true first to preview.', **result}
+            return _handler_error(
+                'bulk_archive_published',
+                'invalid_params',
+                'Execute requires confirm=true. Run with dry_run=true first to preview.',
+                **{k: v for k, v in result.items() if k != 'action'},
+            )
 
         to_archive_ids = list(qs.order_by('created_at').values_list('id', flat=True)[:cap])
         archived_count = Deliverable.objects.filter(id__in=to_archive_ids).update(
