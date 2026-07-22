@@ -228,16 +228,16 @@ class LegacyBackfillPASurfaceTests(TestCase):
 
     * ``newsletter_tool.<bogus>`` — proves backfill fires across
       handler module boundaries (``td_handlers_newsletter.py:44``)
-    * ``ops_tool.<bogus>`` — proves backfill fires on a gateway tool
-      whose migrated actions coexist with legacy ones
-      (``td_handlers_ops.py:397``)
 
-    ``bpaas_tool.generate_close_pack`` was originally in this class as
-    the S2876 F-VERIFIED fixture; it was moved to
-    ``MigratedHandlerPASurfaceTests`` in S2878 when ``_handle_bpaas``
-    migrated to the S2874 structured envelope shape. See
-    ``test_s2878_bpaas_error_envelope.py`` for the migrated-side
-    coverage.
+    Prior rows retired as their handlers were migrated:
+
+    * ``bpaas_tool.generate_close_pack`` — S2876 F-VERIFIED fixture;
+      re-homed to ``test_s2878_bpaas_error_envelope.py`` when
+      ``_handle_bpaas`` migrated to the S2874 shape in S2878.
+    * ``ops_tool.<bogus>`` — S2877 dispatcher-default row; re-homed to
+      ``test_s2879_governance_ops_error_envelope.py`` when the ops
+      unknown-action default at ``td_handlers_ops.py:397`` migrated to
+      the S2874 shape in S2879 (governance + ops critical slice).
     """
 
     @classmethod
@@ -258,14 +258,6 @@ class LegacyBackfillPASurfaceTests(TestCase):
         """Proves backfill fires from td_handlers_newsletter.py:44 site."""
         result = self._dispatch(
             'newsletter_tool', {'action': '__bogus_action_s2877__'},
-        )
-        self.assertEqual(result.get('error_code'), 'legacy_error')
-        self.assertTrue(result.get('error'))
-
-    def test_ops_tool_unknown_action_backfilled(self):
-        """Proves backfill fires from td_handlers_ops.py:397 site."""
-        result = self._dispatch(
-            'ops_tool', {'action': '__bogus_action_s2877__'},
         )
         self.assertEqual(result.get('error_code'), 'legacy_error')
         self.assertTrue(result.get('error'))
