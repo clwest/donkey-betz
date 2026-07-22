@@ -4361,23 +4361,27 @@ PA_TOOL_SCHEMAS = [
             "search/grep across code, and check git status/log. "
             "Use this when you need to answer questions about what code exists, "
             "how features are implemented, file structure, or recent commits. "
-            "Cannot modify files — read-only access only."
+            "Cannot modify files — read-only access only. "
+            "S2887: pass repo_id to target a sibling repo (character-os, context-kit, "
+            "fleet apps); omit to read this repo (u-d-b). Call action='list_repos' "
+            "to discover which siblings are registered."
         ),
         "parameters": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["tree", "read_file", "search", "git_info"],
-                    "description": "tree: list directory contents. read_file: read file contents. search: grep/search code. git_info: branch, recent commits, status.",
+                    "enum": ["tree", "read_file", "search", "git_info", "list_repos"],
+                    "description": "tree: list directory contents. read_file: read file contents. search: grep/search code. git_info: branch, recent commits, status. list_repos: enumerate registered external_repos profiles + on-disk existence.",
                 },
-                "path": {"type": "string", "description": "Relative path from project root (e.g. 'core/agents/', 'mobile/src/screens/')"},
+                "path": {"type": "string", "description": "Relative path from project root (e.g. 'core/agents/', 'mobile/src/screens/'). When repo_id is set, path is resolved against that sibling's root_path."},
                 "depth": {"type": "integer", "description": "Directory depth for tree action (default 2, max 4)"},
                 "query": {"type": "string", "description": "Search query/regex for search action"},
                 "start_line": {"type": "integer", "description": "Line number to start reading from (0-based, default 0). Use with max_lines to read specific sections."},
                 "max_lines": {"type": "integer", "description": "Max lines to return for read_file (default 200, max 500)"},
                 "allow_large": {"type": "boolean", "description": "read_file only: opt in to reading files above the 500KB soft cap. start_line + max_lines still apply; total_lines is skipped over the soft max (returns total_lines_known=false). Default false — the tool returns error_code='file_too_large' with a narrowing_hint pointing at this flag."},
                 "file_type": {"type": "string", "description": "File extension filter for search (e.g. 'py', 'tsx', 'ts')"},
+                "repo_id": {"type": "string", "description": "Optional sibling repo slug (e.g. 'character-os', 'context-kit', 'mentorforge'). Must match a config/external_repos/<slug>.json profile. Omit to read u-d-b. Use action='list_repos' to discover valid slugs."},
             },
             "required": ["action"],
         },
