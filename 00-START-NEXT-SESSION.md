@@ -2,78 +2,56 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2887 CLOSE → S2887 side-step arc shipped (GTM audit + repo_tool cross-repo + Character OS EB.4 + Postgres port collision fix + C3 bridge-answer persistence) (2026-07-22; picks up as S2888) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2888 CLOSE → Ledger #13 `_handler_error` extraction shipped (u-d-b PR #3400 `82191482a`, -70 net lines) (2026-07-22; picks up as S2889) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-22 (S2887 close).** S2887 pivoted at open from the queued Ledger #13 `td_error.py` extraction into a Chris-directed GTM-focused side-step. **4 PRs merged across 2 repos.** All Chris D-verdicts inline in the audit doc; R1a proposal rejected as architectural mis-fit (character-os is not a fleet app); C1 EB.4 + C3 ratified as concrete first + second moves.
+**Refreshed 2026-07-22 (S2888 close).** S2888 shipped the S2887-queued Ledger #13 extraction as a single-PR slate. Rigby SIGN was TOOL-GROUNDED AGREE (7 `repo_tool` calls). Chris chose (B) close-now after PR #3400 merged — Playbook v0.9.0 amendment + EB.4+C3 dogfood queue to S2889.
 
-- **u-d-b PR #3398** `b929e5be7` — `repo_tool` cross-repo scoping (`repo_id` param + `list_repos` action + security widening + `permission_denied` taxonomy fix + 2 profile `root_path` fixes; 57 tests pass).
-- **character-os PR #2** `8cbf181` — EB.4 SPA settings panel for per-workspace `EngineConnection` (476/476 vitest pass; +6 new EB.4 tests).
-- **character-os PR #3** `348aed8` — Postgres port collision fix (docker mapping `5433:5432` → `5434:5432`); companion parent-workspace edits to `scripts/start-character.sh` (source `.env` at startup) + `Makefile` (`:5434` wait-loop).
-- **character-os PR #4** `dc67d2e` — C3 bridge-answer Asset persistence (new `AssetRole.BRIDGE_ANSWER` + migration `0011_c3_bridge_answer_role` + shared `create_bridge_answer_asset` helper + sync dispatch mirror; 912/912 realtime+compositions pass).
+- **u-d-b PR #3400** `82191482a` — extract `_handler_error` to `core/services/td_error.py`. 6 handler files each drop their file-local copy; canonical module carries the 5-key envelope contract + full taxonomy + adopter enumeration + frozen-contract note + "NOT ops gateway" warning. `td_handlers_ops.py` gets a 1-line adjacency note above its file-local `_tool_error` (3-key gateway envelope, stays local). Regression: 100/100 pass (test_s2879 → test_s2886 + test_zoom_out_tool_2780). Net diff: +71 / -141 = **-70 lines**.
 
-Full session context: `docs/handoffs/SESSION_2887_S2887_SIDE_STEP_GTM_AUDIT.md`.
-Audit doc: `docs/investigations/2026-07-22_RIGBY_SAAS_AND_COS_BRIDGE_GTM_GAP_AUDIT.md`.
-Workspace mirror: deliverable `60cc462b-3abf-4cae-a809-cdb3b538f284` in Donkey Betz workspace.
+Full session context: `docs/handoffs/SESSION_2888_TD_ERROR_EXTRACTION.md`.
+Sidecar: Rigby Tool Gap Ledger got 1 new entry (`fleet_health` mis-routing for non-fleet targets, low priority) — deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` in Donkey Betz workspace.
 
 ---
 
-## S2888 open sequence
+## S2889 open sequence
 
-### Step 1 (FIRST THING) — Ledger #13 `td_error.py` extraction
+### Step 1 (FIRST THING) — Playbook v0.9.0 amendment cycle
 
-The **original S2887 first-action** pushed one session by the GTM side-step. Still queued; adopter gate MET at S2886 close (6/6). No architectural change, no design SIGN needed.
+2 rules at 2nd trigger from S2886. Both ratifiable in a single MINOR amendment (v0.9.0) — 2-rule slate matches v0.7.0's shape.
 
-Adopter files (all in `core/services/`): `td_handlers_govern.py`, `td_handlers_ops.py`, `td_handlers_agents.py`, `td_handlers_content.py`, `td_handlers_newsletter.py`, `td_handlers_core.py` (also `td_handlers_gateway.py` has its own `_tool_error` but Rigby said keep that separate at S2875 Q3=A).
+1. **Fold 1: `TransactionTestCase` discipline for dispatcher-DB tests.** S2885 (1st) + S2886 (2nd). Rule shape: "Handler tests that require `setUp`-created ORM fixtures to be visible to `ToolDispatcher.execute_sync` MUST inherit from `TransactionTestCase`, not `TestCase`." Candidate slot: **PLAYBOOK-6.10.11** or **PLAYBOOK-7.4.5**.
+2. **Fold 2: Shared-taxonomy branch fortification.** S2885 (1st) + S2886 (2nd). Rule shape: "When multiple return branches within a single handler emit the same `error_code`, the migrated-envelope test MUST assert either the distinguishing `action` field or a message-body substring to prevent false-pass on branch-crossing." Candidate slot: EXTENDS **PLAYBOOK-6.10.9** or fresh sibling rule.
 
-Extraction plan:
-1. New file `core/services/td_error.py` — module containing the canonical `_handler_error` helper (byte-identical to what's in the 6 adopter files' file-local copies).
-2. Update 6 adopter files' import blocks: `from core.services.td_error import _handler_error`.
-3. Remove 6 file-local `_handler_error` copies (~28 lines × 6 files = ~168 lines removed).
-4. Verify combined regression suite (S2879 → S2886 + `test_zoom_out_tool_2780`) still passes 100/100.
-5. Ensure no circular imports (each adopter file already imports from `core.services.*`; new leaf module should be safe).
+Amendment envelope goes in `docs/research/implementation/RATIFICATION_2026-07-XX_PLAYBOOK_V0_9_0.md` following the v0.8.0 template. Chris D-verdict required.
 
-**Expected diff:** ~30 lines added (new file + 6 import lines), ~168 lines removed. Net **~-140 lines**. Single PR.
+### Step 2 — Live UI dogfood of EB.4 + C3 (Character OS side)
 
-**Rigby SIGN Q1 (routing map):** verify at HEAD that the 6 copies are byte-identical (or differ only in docstring session-number attribution). If they diverge on shape, extraction needs a shape-reconciliation SIGN cycle before proceeding.
-
-**Rigby SIGN Q_zoom_out:** any concerns about naming (`td_error.py` vs `td_handler_error.py` vs `handler_envelope.py`)? Any adopters where the file-local docstring adds meaningful context that would be lost in a shared module?
-
-### Step 2 — Playbook v0.9.0 amendment cycle (2 rules at 2nd trigger from S2886)
-
-1. **Fold 1 (2nd trigger): `TransactionTestCase` discipline for dispatcher-DB tests.** S2885 (1st) + S2886 (2nd). Rule shape: "Handler tests that require `setUp`-created ORM fixtures to be visible to `ToolDispatcher.execute_sync` MUST inherit from `TransactionTestCase`, not `TestCase`." Candidate slot: **PLAYBOOK-6.10.11** or **PLAYBOOK-7.4.5**.
-2. **Fold 2 (2nd trigger): Shared-taxonomy branch fortification.** S2885 (1st) + S2886 (2nd). Rule shape: "When multiple return branches within a single handler emit the same `error_code`, the migrated-envelope test MUST assert either the distinguishing `action` field or a message-body substring to prevent false-pass on branch-crossing." Candidate slot: EXTENDS **PLAYBOOK-6.10.9** or fresh sibling rule.
-
-Both are ratifiable in a single MINOR amendment cycle (v0.9.0) — 2-rule slate at 2nd trigger each is within the shape ratified for v0.7.0 (2-rule slate) and v0.8.0 (1-rule slate).
-
-### Step 3 — Live UI dogfood of EB.4 + C3 (Character OS side)
-
-Reference-customer verification loop. Open the running character-os SPA at `http://localhost:5174`:
+Reference-customer verification loop. Requires character-os SPA running. Open the running character-os SPA at `http://localhost:5173` (per character-os `scripts/start-local-real.sh`; the S2887 audit doc's `:5174` reference was aspirational):
 
 1. Navigate to `/settings/engine-connections`.
 2. Configure a connection: URL = u-d-b's PA endpoint (`http://localhost:8000`), token = a fresh DRF token for Chris's user on u-d-b, label = "Local u-d-b".
-3. Hit `test_ping` — expect 200 with real latency.
+3. Hit `test_ping` — expect 200 with real latency. (Verified reachable at S2888 close: `/health/ping/` 200 in 3ms, `/api/pa/chat/` GET 401 auth-gated.)
 4. Start a realtime session with a spokesperson.
 5. Ask a question that would trigger `consult_engine` (portfolio-level context question).
 6. Verify a fresh `Asset(role=BRIDGE_ANSWER)` appears in `/workspace/assets/?role=bridge_answer` with the answer in `inline_content`.
 
 This is the audit's ratified reference customer path. If any step fails, the failure IS the next item to fix.
 
-### Step 4 — Net-new engineering candidates for S2888 (broader list)
+### Step 3 — Net-new engineering candidates for S2889 (broader list)
 
 Per `feedback_engineering_bias_over_audit`, list net-new first.
 
-1. **NEW at S2887 close — Ledger #13 `td_error.py` extraction.** See Step 1.
-2. **NEW at S2887 close — Playbook v0.9.0 amendment cycle.** See Step 2.
-3. **NEW at S2887 close — EB.4 + C3 live dogfood.** See Step 3.
-4. **NEW at S2887 close — Character OS side C4 PD-1 timeout fix.** Sev-1 defect: Django `MediaEngineClient` 60s timeout fires before media-engine's ~63s Runway poll. Blocks reliable realtime session start in real mode. Character OS-side only.
-5. **NEW at S2887 close — Character OS side C5 non-realtime bridge invocation + C6 tool catalog.** Follow-on from audit §3.2.
-6. **NEW at S2887 close — Rigby Tool Gap Ledger review.** 1 new entry accreted at S2887 open (repo_tool cross-repo, RESOLVED same-session via PR #3398). Consider a slate PR that picks 1-2 open ledger items.
-7. **Carried from S2886 — everything from S2886 open Step 4** items 5-47, unchanged.
+1. **Carried from S2888 close — Playbook v0.9.0 amendment cycle.** See Step 1.
+2. **Carried from S2888 close — EB.4 + C3 live dogfood.** See Step 2.
+3. **Carried from S2887 close — Character OS side C4 PD-1 timeout fix.** Sev-1 defect: Django `MediaEngineClient` 60s timeout fires before media-engine's ~63s Runway poll. Blocks reliable realtime session start in real mode. Character OS-side only.
+4. **Carried from S2887 close — Character OS side C5 non-realtime bridge invocation + C6 tool catalog.** Follow-on from audit §3.2.
+5. **NEW at S2888 close — Rigby Tool Gap Ledger review.** 1 new entry accreted at S2888 (`fleet_health` mis-routing for non-fleet targets, low priority). Total open engineering_backlog rows in Donkey Betz workspace: 4. Consider a slate PR that picks 1-2 open ledger items.
+6. **Carried from S2886 — everything from S2886 open Step 4** items 5-47, unchanged.
 
-### What's forbidden at S2888 (D6 moratorium still in force)
+### What's forbidden at S2889 (D6 moratorium still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No new evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
-- No R1a-shaped proposals (upgrading character-os to fleet HMAC). Rejected at S2887 as architectural mis-fit. See audit §6.5.
+- No R1a-shaped proposals (upgrading character-os to fleet HMAC). Rejected at S2887 as architectural mis-fit.
 
 ### What's queued but deferred (do NOT open unless Chris directs)
 
@@ -87,22 +65,22 @@ Per `feedback_engineering_bias_over_audit`, list net-new first.
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2887 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2888 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2887: no A4 spend this session (side-step to GTM audit + Character OS work). A1 shipping spend was Character OS PR #2/#3/#4 + u-d-b PR #3398.**
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2888: zero A4 spend — pure substrate refactor. A1 shipping spend was u-d-b PR #3400.**
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
-3. **Capability claims:** (a)…(tt) as ratified at S2886 close. **(uu) added at S2887: engine-bridge tool answers now persist as durable workspace-scoped `Asset(role=BRIDGE_ANSWER)` rows — the engine-bridge product pattern creates durable value instead of transient panel-text. Character OS operators can configure per-workspace `EngineConnection` via `/settings/engine-connections/` (EB.4 SPA panel).**
+3. **Capability claims:** (a)…(uu) as ratified at S2887 close. No additions this session.
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
 5. **Hard throttle:** A4 warm-up is constrained to a fixed timebox and fixed send count (3-5 total intros).
 6. **No bespoke follow-ups:** A4 warm-up prohibits custom follow-ups / custom research / custom deliverables.
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2887)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2888)
 
 See:
-- **S2887 handoff (current):** `docs/handoffs/SESSION_2887_S2887_SIDE_STEP_GTM_AUDIT.md`
-- **S2887 audit:** `docs/investigations/2026-07-22_RIGBY_SAAS_AND_COS_BRIDGE_GTM_GAP_AUDIT.md`
+- **S2888 handoff (current):** `docs/handoffs/SESSION_2888_TD_ERROR_EXTRACTION.md`
+- **S2887 handoff + audit:** `docs/handoffs/SESSION_2887_S2887_SIDE_STEP_GTM_AUDIT.md`, `docs/investigations/2026-07-22_RIGBY_SAAS_AND_COS_BRIDGE_GTM_GAP_AUDIT.md`
 - **S2886 handoff:** `docs/handoffs/SESSION_2886_CORE_CRITICALITY_FIRST_ERROR_ENVELOPE.md`
 - **S2885 handoff:** `docs/handoffs/SESSION_2885_CONTENT_ERROR_ENVELOPE.md`
 - **S2884 handoff:** `docs/handoffs/SESSION_2884_AGENTS_NEWSLETTER_CRITICAL_SLICE.md`
