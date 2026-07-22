@@ -2,63 +2,58 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2893 CLOSE → PA tools sweep Slice 1 Batch 2 shipped (4 validation docs, `untested`→`validated_full`) + Chris Option-C reslate deferred `autopilot_tool` to dedicated Slice 1.5 + zoom-out fold row 158 persisted (2026-07-22; picks up as S2894) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2894 CLOSE → PA tools sweep Slice 1 Batch 3 shipped (workspace_budget_tool single-tool batch per Chris D-verdict, `untested`→`validated_full`) + 3 Rigby Tool Gap Ledger candidates + zoom-out fold row 159 (2026-07-22; picks up as S2895) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-22 (S2893 close).** S2893 shipped Batch 2 of Slice 1 (`td_handlers_ops`). Chris ratified Option C at Turn 2: reslate `autopilot_tool` (~130 actions) to its own dedicated Slice 1.5 rather than trying to fit it in a normal 4-tool batch. Batch 2 became governor_tool + ops_digest_tool + scheduled_tasks_tool + spider_status_tool (last one pulled forward from Batch 3). 15 live actions dispatched by Rigby; 14 PASS + 1 canary-excluded (governor_tool.reset_breaker — no breakers tripped). 3 substantive Ledger candidates surfaced.
+**Refreshed 2026-07-22 (S2894 close).** S2894 shipped Batch 3 of Slice 1 (`td_handlers_ops`) as a single-tool batch per Chris D-verdict at Turn 1. Only `workspace_budget_tool` (11 actions, 7 mutations, 2 staff-only) — Rigby zoom-out §4 pushback flagged that mutation-heavy tools warrant single-tool batches, and Chris ratified after joint Claude+Rigby recommendation. 13 canary-safe actions dispatched by Rigby against Agent-Testing workspace (all PASS) + 2 read-only sharpening probes on Donkey Betz (Ledger #1). 3 substantive Rigby Tool Gap Ledger candidates surfaced.
 
 **PRs shipped this session:**
-- u-d-b PR `<TBD>` — S2893 Slice 1 batch 2 (4 validation docs + PA_TOOL_AUDIT.md regen + PA_TOOLS_GAP_MAP.md regen + zoom-out fold row 158 + handoff)
-- u-d-b PR `<TBD>` — S2893 close cascade (wrapper pin bump)
+- u-d-b PR `<TBD>` — S2894 Slice 1 batch 3 (1 validation doc + PA_TOOL_AUDIT.md regen + PA_TOOLS_GAP_MAP.md regen + zoom-out fold row 159 + handoff)
+- u-d-b PR `<TBD>` — S2894 close cascade (wrapper pin bump)
 
 **Gap-map ratchet (before → after this session):**
 ```
-validated_full:   7 → 11 (+4: governor_tool, ops_digest_tool, scheduled_tasks_tool, spider_status_tool)
-untested:       100 → 96 (-4)
-per_tool_docs:   16 → 20
-per_tool_docs_with_covered_actions:  8 → 12
+validated_full:   11 → 12 (+1: workspace_budget_tool)
+untested:         96 → 95 (-1)
+per_tool_docs:    20 → 21
+per_tool_docs_with_covered_actions:  12 → 13
 ```
 
-**Ledger candidates routed to Rigby at close (Rigby Tool Gap Ledger deliverable `5c84e75a-…`):**
-1. `governor_tool.status` intermittent inconsistency with `.coverage` on `circuit_breakers_tripped` — cache / eventual-consistency artifact confirmed by Rigby re-check.
-2. `governor_tool` `reason="aligned"` conflates mission-match vs fail-open — 80 agents show `matched via fail_open: None` in detail; no way to distinguish genuinely-governed from merely-permitted.
-3. `ops_digest_tool.generate` missing staleness heuristic on `autopilot.last_cycle` — 15-day-stale timestamp surfaced raw, not flagged in `degraded_fields`.
+**Ledger candidates routed to Rigby at close (Rigby Tool Gap Ledger deliverable `5c84e75a-…`, 13 → 16 rows):**
 
-**Marginal/pattern-matching (folded into existing S2892 Ledger #1 rather than new rows):** schema-vs-handler required-arg drift on governor_tool.test/reset_breaker, ops_digest_tool.post, spider_status_tool.history/search/detail.
+1. **Row A — DBZ enforcement/attribution divergence (`workspace_budget_tool`).** Donkey Betz shows `daily_total=$12.52` vs explicit `cap=$5.00` (2.5× over) yet `is_frozen=false, is_downgraded=false`. 17 enforcement events in 7d (last 2026-07-20T20:35Z), current flags don't reflect. Discriminator needed: `AutopilotAction.evidence.daily_total` at decision time via `autopilot_tool.history` (Slice 1.5) OR direct ORM.
+2. **Row B — `messaging_tool` lacks send surface.** Read-only (`list_threads`/`get`). Blocks Claude→Rigby→Chris async DM pattern; in-thread reply is the working path.
+3. **Row C — Zoom-out fold canonical location not discoverable via PA tool surface.** Folds live at `logs/zoom_out_classifications.jsonl` (repo file); Rigby can't discover/read/append. Blocks Rigby closing SIGN loops autonomously.
 
-**Zoom-out fold row 158** — `pa_tools_sweep_batch_cadence_outcome_gate`, `future_trigger`. Trigger: 2 consecutive future batches ship pure docs with zero engineering payload (zero Ledger candidates, zero schema fixes, zero observability deltas). If that fires, promote the per-batch outcome gate to the sweep methodology explicitly.
+**Zoom-out fold row 159** — `pa_tools_sweep_mutation_heavy_single_tool_batch`, `same_pr_mitigatable`. Rigby's SIGN §4 pushback: "action-count budgeting" trending toward batch-shape driver risks shallow mutation-gate validation. Mitigation shipped this PR: workspace_budget_tool §5a codifies canary+revert protocol with blast-radius classification table. Future promotion trigger: 1-2 more mutation-heavy tool corroborations → promote canary-revert to first-class sweep-methodology section.
 
-Full session context: `docs/handoffs/SESSION_2893_PA_TOOLS_SWEEP_SLICE_1_BATCH_2.md`.
+Full session context: `docs/handoffs/SESSION_2894_PA_TOOLS_SWEEP_SLICE_1_BATCH_3.md`.
 
 ---
 
-## S2894 open sequence
+## S2895 open sequence
 
-### Step 1 (FIRST THING) — PA tools sweep: Slice 1 batch 3 of `td_handlers_ops`
+### Step 1 (FIRST THING) — decision point: Slice 1.5 vs Slice 1 cleanup vs Slice 2
 
-**Path B is the ratified multi-week arc.** Slice 1 (`td_handlers_ops`) opened at S2892; Batches 1 + 2 shipped. Batch 3 opens at S2894.
+Slice 1 (`td_handlers_ops`) is now 9/10 non-autopilot tools at `validated_full`. Three viable paths for S2895 (present these to Chris at open if not obvious):
 
-**Batch 3 lineup:** `workspace_budget_tool` + 2-3 more from the remaining `td_handlers_ops` untested set. Do NOT include `autopilot_tool` — it is reserved for dedicated Slice 1.5 (S2895 or later, 2 sessions estimated).
+- **Option A (recommended default) — open Slice 1.5 for `autopilot_tool` read-only sweep.** Per S2893 pre-commit note: ~110 read-only actions in one session, ship `validated_partial`; mutation sweep in a follow-on session. Closes the biggest remaining piece.
+- **Option B — dedicated non-sweep session to upgrade 4 doc/unknown/partial ops tools first** (`agent_introspection_tool`, `kb_tool`, `search_docs`, `ops_tool` partial → full). Small doc-only work; fully closes `td_handlers_ops` proper before Slice 1.5.
+- **Option C — skip ahead to Slice 2 (`td_handlers_agents`, 25 tools).** Leaves ops-slice cleanup for later.
 
-Pick the additional tools by re-reading `docs/audits/PA_TOOLS_GAP_MAP.md` "td_handlers_ops" triage slice at S2894 open.
-
-**Execution shape (repeat of S2892/S2893 pattern):**
-1. Enumerate schemas + register sites for the 3-4 selected tools.
-2. Joint SIGN with Rigby before dispatch — pressure-test on which actions are mutating, what state each requires, whether any need a canary agent / workspace / anything.
-3. Rigby exercises every action live. Report tool_runs.
-4. Claude writes validation docs (S2796 shape with bare `## Covered actions` heading + §5a Mutation containment section per S2893 evolution).
-5. Regenerate `docs/PA_TOOL_AUDIT.md` + `docs/audits/PA_TOOLS_GAP_MAP.md`.
-6. Ship PR.
+**If Chris directs a Ledger-row-fix instead of continuing the sweep:** the DBZ enforcement gap (Row A) is the highest-priority ship candidate — customer-facing trust surface, small engineering scope. Discriminator: read the most recent `AutopilotAction` row for DBZ + verify which of buckets (b)/(c)/(e) fires.
 
 ### Step 2 — Net-new engineering candidates (per feedback_engineering_bias_over_audit)
 
-**Path B does NOT preempt engineering-bias.** Still surface 1-3 net-new candidates at any natural pause. Priority order for S2894 (unchanged from S2893):
+**Path B does NOT preempt engineering-bias.** Still surface 1-3 net-new candidates at any natural pause. Priority order for S2895:
 
-1. **`diagnostics_tool.schema_handler_diff` placeholder → implementation** — Rigby self-introspection tool. Would let her answer "what's the current schema-handler drift?" from chat, closes S2892 Ledger candidate #4.
-2. **Ship one S2893 Ledger row** — pick between: (a) `governor_tool.status` cache/consistency fix (single-file, small), (b) `governor_tool.reason` fail-open surfacing (small), (c) `ops_digest_tool` autopilot staleness heuristic (small). Any of these would satisfy fold-158 outcome-gate for S2894.
-3. **Ship one S2892 Ledger row** — `agent_memory_tool` schema tightening or `agent_control_tool.audit_log` rename/history model. Still open.
-4. **PLAYBOOK-3.2.3/3.2.4 compliance sweep** — carried from S2891.
+1. **DBZ enforcement gap fix (S2894 Ledger Row A)** — small, customer-facing trust surface. Discriminator work first.
+2. **`messaging_tool.send` action or in-thread-pattern schema note (S2894 Ledger Row B)** — small; unblocks Rigby async DM routing.
+3. **`zoom_out_tool.record_fold` action OR JSONL→workspace-deliverable mirror (S2894 Ledger Row C)** — closes Rigby's SIGN loop.
+4. **`diagnostics_tool.schema_handler_diff` placeholder → implementation** — carried from S2893. Rigby self-introspection tool.
+5. **Ship one S2893 Ledger row** — `governor_tool.status` cache/consistency fix, `governor_tool.reason` fail-open surfacing, or `ops_digest_tool` autopilot staleness heuristic.
+6. **PLAYBOOK-3.2.3/3.2.4 compliance sweep** — carried from S2891.
 
-### What's forbidden at S2894 (D6 MORATORIUM still in force)
+### What's forbidden at S2895 (D6 MORATORIUM still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 - No R1a-shaped proposals (upgrading character-os to fleet HMAC).
@@ -70,7 +65,8 @@ Pick the additional tools by re-reading `docs/audits/PA_TOOLS_GAP_MAP.md` "td_ha
 - **Bridge call observability rename-risk** — ledger row 155. Unchanged.
 - **Close-ceremony ledger-staleness gate** — ledger row 156. Unchanged.
 - **Sweep shape doc-only defers semantic assertions** — ledger row 157. Unchanged.
-- **Sweep batch cadence outcome gate** — ledger row 158 (new this session). Trigger: 2 consecutive batches ship pure docs with zero engineering payload.
+- **Sweep batch cadence outcome gate** — ledger row 158. Unchanged.
+- **Mutation-heavy single-tool batch pattern** — ledger row 159 (new this session). Mitigation shipped in workspace_budget_tool §5a.
 - **R1 fleet reject-mode flip** — deferred.
 - Docs restructuring arc (`project_docs_restructuring_arc_queued`) — behind sweep.
 - W2 #1 / #2b / #2c — pending Chris re-slate.
@@ -81,12 +77,13 @@ Pick the additional tools by re-reading `docs/audits/PA_TOOLS_GAP_MAP.md` "td_ha
 
 ---
 
-## Sweep progress tracker (Path B ratified S2892, reslated S2893)
+## Sweep progress tracker (Path B ratified S2892)
 
-**Slice 1 — `td_handlers_ops` (10 tools total):**
+**Slice 1 — `td_handlers_ops` (17 registered tools, 11 previously untested):**
 - Batch 1 (S2892): agent_control_tool, agent_memory_tool, heartbeat_history_tool, infra_health_tool ✓
-- Batch 2 (S2893, this session): governor_tool, ops_digest_tool, scheduled_tasks_tool, spider_status_tool ✓
-- Batch 3 (S2894): workspace_budget_tool + 2-3 more (pick from remaining `td_handlers_ops` untested set; DO NOT include autopilot_tool)
+- Batch 2 (S2893): governor_tool, ops_digest_tool, scheduled_tasks_tool, spider_status_tool ✓
+- Batch 3 (S2894, this session): **workspace_budget_tool ✓** (single-tool batch per Chris D-verdict)
+- **Slice 1 non-full remainder:** agent_introspection_tool, kb_tool, search_docs (doc/unknown); ops_tool (partial) — Option B session material
 - Slice 1.5 (post-Slice-1 close): autopilot_tool read-only sweep + autopilot_tool mutations sweep (2 sessions estimated)
 
 **Slice 2 — `td_handlers_agents` (25 tools, ~7 sessions):** queued
@@ -94,10 +91,10 @@ Pick the additional tools by re-reading `docs/audits/PA_TOOLS_GAP_MAP.md` "td_ha
 **Slice 4 — `td_handlers_gateway` (17 tools, ~5 sessions):** queued
 **Slice 5 — `tool_dispatcher` (14 tools, ~4 sessions):** queued
 
-**Total remaining tools to close:** 92 after this batch.
-**Estimated total sessions remaining in arc:** ~25 (was ~24; +1 for autopilot reslate to Slice 1.5).
+**Total remaining tools to close:** 91 after this batch.
+**Estimated total sessions remaining in arc:** ~25.
 
-**Informative per-batch outcome check (S2893 fold-158 hybrid — Rigby SIGN Path C):** In each batch, sanity-check that the sweep produced at least one concrete outcome (Ledger candidate / schema fix / observability delta). If not, tighten scope or reslate next batch to avoid ceremony drift. Informative, not enforcement — row 158 remains `future_trigger`.
+**Informative per-batch outcome check (S2893 fold-158 hybrid — Rigby SIGN Path C):** S2894 met the check naturally — 3 substantive Ledger candidates surfaced. Row 158 remains `future_trigger`; row 159 corroborates the mutation-heavy-single-tool pattern that fold-158 hedges against.
 
 ---
 
@@ -123,9 +120,9 @@ Rulebook: `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`.
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2893 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2894 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2893: zero A4 spend — pure engineering + governance.** A1 shipping spend was the sweep PR + close cascade.
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2894: zero A4 spend — pure engineering + governance.** A1 shipping spend was the sweep PR + close cascade.
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
 3. **Capability claims:** (a)…(uu) as ratified at S2887 close. No additions this session.
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
@@ -134,10 +131,11 @@ Rulebook: `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`.
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2893)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2894)
 
 See:
-- **S2893 handoff (current):** `docs/handoffs/SESSION_2893_PA_TOOLS_SWEEP_SLICE_1_BATCH_2.md`
+- **S2894 handoff (current):** `docs/handoffs/SESSION_2894_PA_TOOLS_SWEEP_SLICE_1_BATCH_3.md`
+- **S2893 handoff:** `docs/handoffs/SESSION_2893_PA_TOOLS_SWEEP_SLICE_1_BATCH_2.md`
 - **S2892 handoff:** `docs/handoffs/SESSION_2892_PA_TOOLS_SWEEP_SLICE_1_BATCH_1.md`
 - **S2891 handoff:** `docs/handoffs/SESSION_2891_BRIDGE_ACTIVITY_DIGEST.md`
 - **S2890 handoff:** `docs/handoffs/SESSION_2890_OPS_TOOL_RECENT_BRIDGE_CALLS.md`
