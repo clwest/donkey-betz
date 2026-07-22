@@ -2,62 +2,68 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2877 CLOSE → PA-surface `error_code` smoke suite shipped (2026-07-21; picks up as S2878) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2878 CLOSE → `bpaas_tool` structured error-envelope migration shipped (2026-07-21; picks up as S2879) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-21 (S2877 close).** S2874 1st-trigger promoted at S2876 close (PA-surface-level smoke test) — Chris ratified at S2877 open; Claude+Rigby executed:
+**Refreshed 2026-07-21 (S2878 close).** S2878 was the first breadcrumb-driven handler migration since the S2876 wrapper + S2877 smoke suite went live. Rigby's F5 zoom-out folded into the S2879 slate selector — see §S2879 open sequence.
 
-- **PR #3377** `52c6d550b` — S2877 slate (1 file, +307/-0)
-  - New test file `core/tests/test_s2877_pa_surface_error_codes_smoke.py` — first suite that exercises the full `_execute_inner` path end-to-end via `ToolDispatcher.execute_sync`. Prior S2874/S2875/S2876 tests call `dispatcher._handle_<x>()` directly and bypass the S2876 dispatcher-layer backfill wrapper.
-  - **3 classes covering all three PA error-envelope planes:**
-    - `MigratedHandlerPASurfaceTests` (14 rows) — migrated handlers pass concrete `error_code` through unchanged (S2874 read_file + S2875 read-path envelope migration).
-    - `LegacyBackfillPASurfaceTests` (3 rows) — legacy handlers get `error_code='legacy_error'` backfilled by S2876 wrapper. Class docstring marked ⚠️ DELETE AFTER S2876 SUNSET with sunset criteria referenced inline.
-    - `DispatcherEnvelopeTests` (1 row) — dispatcher-level unknown-tool failure surfaces at outer `ToolResult.error_code=TOOL_NOT_FOUND` (ok=False).
-  - **Design refinements (Rigby pre-code SIGN, 4 grounded `repo_tool` runs, not rubber-stamp):** F1 envelope shape verified against dispatcher L820-887 + L920-929; F2 3-class split; F3 F-BLOCKING added rows 16-17 (`newsletter_tool` + `ops_tool` unknown-action → `legacy_error`) after Rigby enumerated 39-file bare-`{'error':msg}` population; F4 no `assertLogs` on breadcrumb (rate-limit map global state = flaky).
-  - **Zoom-out mitigations shipped same-PR:** deterministic bogus UUID `00000000-...` (row 8), assertions minimal (`error_code` value + `error` truthy — never full message text), sunset docstring guardrail.
-  - Combined regression suite (S2869 + S2870 + S2871 + S2872 + S2873 + S2874 + S2875 + S2876 + S2877): **135/135 pass**.
-  - Post-code SIGN via Rigby: AGREE on all 5 file-read checks; live probes delegated to CTOAgent async (surfaced Rigby tool-surface gap → observation #22.4).
+- **PR #3379** `ac1854f6d` — S2878 slate (4 files, +178/-18)
+  - **`_handle_bpaas`** (`core/services/td_handlers_agents.py:6234`) migrated from bare `{'success': False, 'error': msg}` returns → S2874 canonical `{success, error_code, error, action}`. 5 sites → 3 canonical codes.
+  - **Codes:** `missing_required_params` (3 sites, taxonomy consolidated per Rigby F3), `unknown_action`, `handler_exception`. All 5 envelopes include `'action': action` per F3 guardrail.
+  - **New test file** `core/tests/test_s2878_bpaas_error_envelope.py` — 5 rows, full `ToolDispatcher.execute_sync` end-to-end path; `handler_exception` row uses `unittest.mock.patch` on the packet_service module-level symbol.
+  - **S2877 file edit** — deleted `test_bpaas_generate_close_pack_empty_packet_backfilled` from `LegacyBackfillPASurfaceTests` (re-homed under S2878 migrated coverage per Rigby F4); class docstring updated (removed bpaas from "representative handlers", added S2878 pointer).
+  - **Bundled `.gitignore` housekeeping** — rule `docs/audits/SESSION_*_SYSTEM_AUDIT_*.md` for auto-generated Session 819 System Audit API snapshots. 19 untracked instances cleaned at S2878 open. Force-add fallback documented in-comment.
+  - Combined regression (S2869 + S2870 + S2871 + S2872 + S2873 + S2874 + S2875 + S2876 + S2877 + S2878): **139/139 pass**.
 
-**New Rigby-observed finding from S2877 post-code SIGN (1st trigger — do NOT auto-promote):**
-1. **#22.4 Rigby cannot dispatch arbitrary tool-name strings.** Her PA tool surface only exposes tools registered in `PA_TOOL_SCHEMAS`. Tests / smoke probes that exercise dispatcher-level branches (e.g., `TOOL_NOT_FOUND` on a name like `__nonexistent_tool_s2877__`) can't be executed by Rigby directly — she must delegate to CTOAgent (async, 180s+ round-trip). Candidate resolutions: (A) extend Rigby's schema with a `dispatcher_probe_tool` action for auth-gated dev-mode smoke probes, (B) accept CTOAgent-delegation pattern as norm, (C) codify Claude self-executes dispatcher-envelope live verification via Python shell. Watch for 2nd trigger before promoting.
+### Why bpaas + only bpaas (breadcrumb-driven pick)
 
-## PRIOR SESSION — S2876 close (dispatcher-layer error_code backfill wrapper)
+Grep of `django_debug.log` for the S2876 `legacy_handler_error_envelope_missing_error_code` breadcrumb: 24 total hits, only real (non-test-fixture) handler is `bpaas_tool.generate_close_pack` (3 hits). All other hits are `_s2876_fake_tool` (S2876 test suite) or S2877 `__bogus_action_s2877__` rows.
 
-- **PR #3375** `1f0882d0a` — S2876 slate (2 files, +262/-0)
-  - Adds temporary compatibility bridge in `ToolDispatcher._execute_inner` between PII scrub (L836-842) and `ToolResult` wrap (L875). Backfills `error_code='legacy_error'` on handler responses matching `{'error': msg}` without an `error_code`.
-  - Idempotent on S2874/S2875 migrated handlers; truthy `.get('error')` guard; top-level only.
-  - Rate-limited (60s per-tool) WARNING breadcrumb `legacy_handler_error_envelope_missing_error_code` for greppable visibility.
-  - Inline sunset criteria: remove when all handlers emit error_code OR breadcrumb fires < 1% for 14d.
+### F5 zoom-out — Rigby-raised concern (forward-carried, NOT altering S2878)
 
-**Working loop observations at S2877:**
-- `feedback_verify_rigby_tool_runs_before_trusting_sign` — pre-code SIGN Rigby ran 4 real tool_runs; post-code SIGN Rigby ran 2 real `repo_tool.read_file` runs on the shipped file. Not rubber-stamp.
-- `feedback_zoom_out_ask_per_rigby_sign` fired 2× — pre-code fold yielded 4 shipped mitigations; post-code fold yielded "wrong kind of stability" observation.
-- `feedback_claude_rigby_agree_first_chris_yes_no` — F3 F-BLOCKING resolved pre-code; shipped without Chris re-routing.
-- `feedback_engineering_bias_over_audit` — net-new engineering ship (first-of-its-kind PA-surface contract enforcement).
-- `feedback_recycle_after_merge` (PLAYBOOK-7.4.4) — clean recycle post-merge (`sha=52c6d550bbe1, surviving=none`).
-- `feedback_read_full_rigby_response_not_just_tail` — pre-code SIGN response truncated at "you're 3"; fetched tail for concerns 3-9.
-- `feedback_local_truth_no_production` — 135/135 local pass IS the deploy step.
+Rigby: *"The dispatcher backfill makes the platform *appear* contract-stable (everything has an `error_code`), which can mask how many handlers are still legacy. If we only migrate breadcrumb-hit handlers, we risk a long tail where most failures still come through as `error_code='legacy_error'`."*
+
+Two costs Rigby named:
+1. **Product/UX cost** — clients depending on meaningful `error_code` taxonomy get "formally present but semantically useless" contracts.
+2. **Migration cost** — sunset criterion #1 (all handlers emit `error_code`) stays out of reach; criterion #2 (<1% for 14d) may pass because paths are *rare*, not because the surface is *clean*.
+
+**S2879 is locked to criticality-first**, not breadcrumb-first. See §S2879 open sequence for candidate targets.
+
+## PRIOR SESSION — S2877 close (PA-surface `error_code` smoke suite)
+
+- **PR #3377** `52c6d550b` — S2877 slate (1 file, +307/-0) — first suite that exercises the full `_execute_inner` path end-to-end via `ToolDispatcher.execute_sync`. 3 classes × 3 envelope planes (migrated pass-through / legacy backfill / dispatcher-level).
+
+**Working loop observations at S2878:**
+- `feedback_verify_rigby_tool_runs_before_trusting_sign` — pre-code SIGN Rigby ran 3 real `repo_tool.read_file` runs; post-code SIGN ran 3 more on shipped files. Not rubber-stamp.
+- `feedback_zoom_out_ask_per_rigby_sign` fired 2× — pre-code F5 → S2879 slate selector forward-carry; post-code V4a/V4b → 1 comment tightening + defense of patch idiom.
+- `feedback_claude_rigby_agree_first_chris_yes_no` — F3 taxonomy + F4 test scope resolved between Claude+Rigby BEFORE Chris D-verdict. Chris got 1 recommendation, not a menu.
+- `feedback_engineering_bias_over_audit` — net-new engineering ship (handler migration + regression coverage).
+- `feedback_recycle_after_merge` (PLAYBOOK-7.4.4) — clean recycle post-merge (`sha=ac1854f6d09a, surviving=none`).
+- `feedback_read_full_rigby_response_not_just_tail` — pre-code SIGN F5 truncated in Claude's stdout; re-fetched cleanly.
+- `feedback_claude_stdout_truncation_vs_ui_truncation` — F5 re-fetch was for Claude's execution context; Chris likely saw full response in Chat UI.
+- `feedback_local_truth_no_production` — 139/139 local pass IS the deploy step.
 - `feedback_rigby_writes_workspace_deliverables` — Rigby Tool Gap Ledger update via Rigby PA at close.
-- `feedback_gh_pr_merge_admin_until_billing_fixed` — merged PR #3377 with `--admin` flag.
+- `feedback_gh_pr_merge_admin_until_billing_fixed` — merged PR #3379 with `--admin` flag.
 
 **Rigby Tool Gap Ledger updates (via Rigby PA per `feedback_rigby_writes_workspace_deliverables`):**
 - Deliverable ID `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0`
-- **#22.4 (Rigby cannot dispatch arbitrary tool-name strings)** → new observation, 1st trigger, do NOT auto-promote
-- **[carried from S2876]** #22.3 (orthogonal-contract-axes in handler error responses) → still 1st trigger, watch for 2nd
+- **#22 (S2876 backfill sunset progress)** → 1 handler migrated (`_handle_bpaas`). Legacy population enumerated at S2877 was 39 files → now 38.
+- **[carried from S2877]** #22.4 (Rigby cannot dispatch arbitrary tool-name strings) → still 1st trigger; NOT observed again at S2878 (post-code was file-read only, no live dispatch delegation).
+- **[carried from S2876]** #22.3 (orthogonal-contract-axes in handler error responses) → S2878 migration produces a datapoint but does NOT resolve the underlying `success:False` vs `error_code`-only convention. Still 1st trigger.
 
-**Session pin `pa-d822f8e637c7449a` (labeled `s2877-cross-tool-error-envelope`) RETIRES at S2877 close.** Fresh mint required at S2878 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
+**Session pin `pa-e869c051b9fd4c0d` (labeled `s2878-legacy-handler-envelope-migration`) RETIRES at S2878 close.** Fresh mint required at S2879 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
 
-**Prior pin:** `pa-f515aa3ca81545d3` (labeled `s2876-cross-tool-error-envelope`) retired at S2876 close.
+**Prior pin retired at S2878 open:** `pa-f45f81cb7ef34005` (minted during S2877 docs cascade PR #3378).
 
 ---
 
-## S2878 open sequence
+## S2879 open sequence
 
 ### Step 1 — Session-open atomic mint (per `feedback_session_open_atomic_mint_before_pa_dispatch`)
 
-Wrapper pin will be rewritten at S2877 close (this PR's cascade). If needed at S2878 open:
+Wrapper pin will be rewritten at S2878 close (this PR's cascade). If needed at S2879 open:
 
 ```bash
-python manage.py session_lifecycle close --label s2878-<slate>
+python manage.py session_lifecycle close --label s2879-<slate>
 ```
 
 Verify:
@@ -65,83 +71,97 @@ Verify:
 grep "^python tools/pa_chat.py" tools/pa_local.sh
 ```
 
-### Step 2 — Net-new engineering candidates for S2878
+### Step 2 — S2879 slate is CRITICALITY-FIRST, not breadcrumb-first (Rigby F5 forward-carry)
+
+Per Rigby's F5 zoom-out at S2878 pre-code SIGN, the next legacy-handler migration slate MUST be picked by failure blast radius, not breadcrumb frequency. Suggest S2879 opens with a Rigby pre-code SIGN that ranks candidates by (a) call frequency in production-adjacent code, (b) failure blast radius, (c) migration complexity.
+
+**Candidate first-look targets (all zero-breadcrumb, all high blast radius):**
+
+1. **`td_handlers_content.py`** (19 `{'error': ...}` sites) — PA content pipeline, high blast radius at publishing/deliverable moments. Content-tool errors surface at operator-facing content authoring / bulk-archive / status-flip points.
+2. **`td_handlers_ops.py`** (26 sites) — ops-tool = admin/operator surface, high blast radius at incident/triage moments. Ops-tool errors surface exactly when operators are trying to understand or fix things.
+3. **`td_handlers_governance.py`** (1 site — small but semantically weighted) — ratification/decision surface, single-site migration = fastest ship if paired with another target.
+
+Not mutually exclusive — a natural pairing might be `td_handlers_governance.py` (1 site, trivial) + `td_handlers_content.py` bulk_archive guards subset (~4 sites, ~L4821-5046) for a single-PR criticality-first pilot.
+
+### Step 3 — Net-new engineering candidates for S2879 (broader list)
 
 Per `feedback_engineering_bias_over_audit`, list net-new first.
 
-1. **NEW at S2877 close — Legacy-handler migration wave driven by S2876 breadcrumb telemetry** (previously #3 at S2877 open, now higher signal). With S2876 backfill live + S2877 smoke suite proving the contract works end-to-end, grep production logs for `legacy_handler_error_envelope_missing_error_code` breadcrumb hits and prioritize migration of top-N legacy handlers to S2874-style `{error, error_code, ...}` envelope. Rigby enumerated 39 legacy files at S2877; concrete targets for first pass: `td_handlers_agents.py` (multiple sites), `td_handlers_content.py`, `td_handlers_governance.py`, `td_handlers_core.py`, `td_handlers_railway.py`. Est ~15-30 min per handler. Sunset criterion for S2876 backfill: all handlers migrated OR breadcrumb <1% for 14d.
+1. **NEW at S2878 close — Criticality-first handler migration (S2879 primary slate driver)** — see §Step 2 above.
 
-2. **NEW at S2877 close — Schema-level dead-branch investigation** (previously #2 at S2877 open, still 1st trigger from S2875 post-code SIGN). Audit which handler branches (`unknown_action` most obviously) are unreachable via the PA tool schema layer due to enum constraints. Decide per handler: (a) keep dead-code for defense-in-depth, (b) loosen schema to allow discovery of new actions, (c) explicitly document reachability class. Est ~1 hr (audit-only, no code). **S2877 note:** the S2877 smoke test's `unknown_action` rows for `repo_tool`/`spider_status_tool`/`kb_tool` prove the branches are reachable via `execute_sync` even if schema blocks the PA route — data point for the audit.
+2. **NEW at S2878 close — `_s2876_fake_tool` breadcrumb noise refinement** (1st trigger observation). S2876 test suite creates a fake tool that legitimately fires the breadcrumb by design; the breadcrumb log doesn't distinguish test-fixture dispatches from real handler hits. Candidate: add a `fixture_marker` to the breadcrumb metadata (e.g., `_s2876_fake_tool` naming convention gets a `test_fixture=True` flag). Est ~30 min. NOT ready to slate — 1st noise observation only, needs 2nd trigger.
 
-3. **NEW at S2877 close — Extend S2877 smoke suite with schema-layer PA route** (extension of just-shipped work). Currently smoke tests dispatch via `ToolDispatcher.execute_sync` which bypasses the PA schema validation layer. A parallel test class could dispatch via the PA endpoint (or `pa_local.sh` wrapper) to catch cases where the schema layer rejects a payload the dispatcher would happily handle (the S2875 `kb_tool.unknown_action` schema-block observation). Est ~1.5 hr.
+3. **Carried from S2877 close — Schema-level dead-branch investigation** (still 1st trigger from S2875 post-code SIGN). Audit which handler branches (`unknown_action` most obviously) are unreachable via the PA tool schema layer due to enum constraints. Est ~1 hr (audit-only, no code).
 
-4. **Carried from S2876 close — #22.3 orthogonal-contract-axes resolution** (1st trigger from S2876 post-code SIGN). NOT ready to slate; needs 2nd independent trigger. When it surfaces, candidate resolutions: (A) standardize handler errors on `{error, error_code, ...}` and drop `success:false` convention entirely; (B) explicitly document `success` as legacy/noise.
+4. **Carried from S2877 close — Schema-layer PA route smoke extension** — dispatch via PA endpoint to catch schema-blocked payloads. Est ~1.5 hr.
 
-5. **NEW at S2877 close — #22.4 Rigby dispatcher-probe extension** (1st trigger from S2877 post-code SIGN F5 delegation). If pattern surfaces again (2nd trigger), evaluate (A) `dispatcher_probe_tool` extension of Rigby's schema for auth-gated dev-mode arbitrary-tool-name dispatch, (B) codify CTOAgent-delegation pattern for dispatcher-envelope work.
+5. **Carried from S2876 close — #22.3 orthogonal-contract-axes resolution** (1st trigger, still). S2878 migration produced 1 datapoint but did not force resolution. Watch for 2nd trigger.
 
-6. **Carried from S2874/S2875 — Cross-tool structured-error-envelope migration EXTENSION** to write-path handlers. Now that read-path is done + S2876 dispatcher backfill provides safety net for any legacy handler + S2877 smoke suite proves the contract works end-to-end. Est ~2 hr if explicit.
+6. **Carried from S2877 close — #22.4 Rigby dispatcher-probe extension** (1st trigger from S2877; NOT re-triggered at S2878). If pattern surfaces again, evaluate (A) `dispatcher_probe_tool` extension, (B) codify CTOAgent-delegation.
 
-7. **Carried from S2874/S2875 — Extract `td_error.py` gateway-layer helper.** Still gated on Rigby confirming shapes are empirically stable. If write-path migration proceeds (#6), that may be the extraction trigger.
+7. **Carried from S2874/S2875 — Cross-tool structured-error-envelope migration EXTENSION to write-path handlers.** After a few more criticality-first migrations land (S2879+), write-path could be the next arc. Est ~2 hr if explicit.
 
-8. **Carried from S2874 — `feedback_recycle_after_merge` extension for multi-checkout setups** (still 1st trigger). Watch for 2nd trigger before formalizing as a feedback rule.
+8. **Carried from S2874/S2875 — Extract `td_error.py` gateway-layer helper.** Gated on Rigby confirming shapes are empirically stable across migrated handlers. Likely trigger: when S2879+ migrations start creating the same envelope-construction boilerplate in a 4th handler.
 
-9. **Carried from S2873 — `orm_inspect_tool` JSONField type predicate** (S2872 Rigby-observed gap #1, still 1st trigger). Would enable direct queries like "count LegacySpiderData rows where raw_data is not a dict" via a `jsonb_typeof`-style predicate.
+9. **Carried from S2874 — `feedback_recycle_after_merge` extension for multi-checkout setups** (still 1st trigger). Watch for 2nd trigger.
 
-10. **Carried from S2873 — kalshi-only distribution on canonical SpiderData** (Rigby zoom-out 1st trigger). 117K rows all attributed to `kalshi` spider — data-shape investigation candidate.
+10. **Carried from S2873 — `orm_inspect_tool` JSONField type predicate** (1st trigger). Would enable direct queries like "count LegacySpiderData rows where raw_data is not a dict" via a `jsonb_typeof`-style predicate.
 
-11. **Carried from S2873 — "post-allowlist smoke checklist" UX pattern** (Rigby zoom-out 1st trigger).
+11. **Carried from S2873 — kalshi-only distribution on canonical SpiderData** (1st trigger). 117K rows all attributed to `kalshi` spider — data-shape investigation candidate.
 
-12. **Ledger #5 — schema/handler drift detection lint / CI wiring** (~2 hr). Command exists at `core/management/commands/check_pa_tool_drift.py` (S2846-authored, 403 lines) but never wired to CI enforcement.
+12. **Carried from S2873 — "post-allowlist smoke checklist" UX pattern** (1st trigger).
 
-13. **Carried from S2872 — Category B cosmetic `raw_data_dict` migration** (~30 min).
+13. **Ledger #5 — schema/handler drift detection lint / CI wiring** (~2 hr). Command exists at `core/management/commands/check_pa_tool_drift.py` (S2846-authored, 403 lines) but never wired to CI enforcement.
 
-14. **Ledger #16 — close-ceremony twin-mirror enforcement gap** (S2863).
+14. **Carried from S2872 — Category B cosmetic `raw_data_dict` migration** (~30 min).
 
-15. **Carried — Exemption-list telemetry** (Rigby zoom-out from S2868 slate #1, 1st trigger).
+15. **Ledger #16 — close-ceremony twin-mirror enforcement gap** (S2863).
 
-16. **Carried — Stale-cleared row GC** (Rigby zoom-out from S2868 slate #1).
+16. **Carried — Exemption-list telemetry** (Rigby zoom-out from S2868 slate #1, 1st trigger).
 
-17. **Carried — `group_key_note` UX hint on `count_by`** (S2867 Q2 fold, 1st trigger).
+17. **Carried — Stale-cleared row GC** (Rigby zoom-out from S2868 slate #1).
 
-18. **Carried — High-cardinality guardrail on `count_by`** (S2867 Q5 fold, 1st trigger).
+18. **Carried — `group_key_note` UX hint on `count_by`** (S2867 Q2 fold, 1st trigger).
 
-19. **Carried — Per-model `allowed_fields` explicit allowlist on `orm_inspect_tool`** (S2866 fold, 1st trigger).
+19. **Carried — High-cardinality guardrail on `count_by`** (S2867 Q5 fold, 1st trigger).
 
-20. **Carried — Promote S2862 Q5.a bimodal-collector fold to tracked spec_backlog entry.** Still 2 independent triggers, not promoted.
+20. **Carried — Per-model `allowed_fields` explicit allowlist on `orm_inspect_tool`** (S2866 fold, 1st trigger).
 
-21. **Carried — Codify "verify at persisted source of truth" as SIGN discipline** (Playbook amendment candidate, 1st trigger only).
+21. **Carried — Promote S2862 Q5.a bimodal-collector fold to tracked spec_backlog entry.** Still 2 independent triggers, not promoted.
 
-22. **Carried — Provider-specific composite additions.** Reactive; watch for new integrations.
+22. **Carried — Codify "verify at persisted source of truth" as SIGN discipline** (Playbook amendment candidate, 1st trigger only).
 
-23. **Carried — `simulate_enforcement` auto-clear-after-N-seconds** (S2857 fold).
+23. **Carried — Provider-specific composite additions.** Reactive; watch for new integrations.
 
-24. **Carried — `enforcement_action_types` shared constant** (S2856 Q5b, 1st trigger).
+24. **Carried — `simulate_enforcement` auto-clear-after-N-seconds** (S2857 fold).
 
-25. **Carried — `actor_user_id` as first-class column on `AutopilotAction`** (S2856 Q5a, MIGRATION required).
+25. **Carried — `enforcement_action_types` shared constant** (S2856 Q5b, 1st trigger).
 
-26. **Carried — `EnforcementContext` dataclass consolidation** (S2857 Q5, 1st trigger).
+26. **Carried — `actor_user_id` as first-class column on `AutopilotAction`** (S2856 Q5a, MIGRATION required).
 
-27. **Carried — `list_caps include_defaults=true` remaining perf costs** (S2858, 1st trigger).
+27. **Carried — `EnforcementContext` dataclass consolidation** (S2857 Q5, 1st trigger).
 
-28. **Carried — Second-trigger candidate for expanding `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT`** (S2859+S2868 cycle observed).
+28. **Carried — `list_caps include_defaults=true` remaining perf costs** (S2858, 1st trigger).
 
-29. **Carried — Q5.3 fold from S2859 SIGN — "diagnostic == effectively hidden in workspace UI"**.
+29. **Carried — Second-trigger candidate for expanding `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT`** (S2859+S2868 cycle observed).
 
-30. **Carried — Fold C from S2861 close: shared JSONField projection helper**.
+30. **Carried — Q5.3 fold from S2859 SIGN — "diagnostic == effectively hidden in workspace UI"**.
 
-31. **Carried — Fold D from S2861 close: operator-surface discoverability for advanced PA-tool params**.
+31. **Carried — Fold C from S2861 close: shared JSONField projection helper**.
 
-32. **Carried — openmeteo → SignalCluster drop (fold-carry from S2862)** — product decision.
+32. **Carried — Fold D from S2861 close: operator-surface discoverability for advanced PA-tool params**.
 
-33. **Carried — Middleware `log_injected_params` spec candidate** (S2870 Q6 zoom-out fold, 1st trigger).
+33. **Carried — openmeteo → SignalCluster drop (fold-carry from S2862)** — product decision.
 
-34. **Carried — Phase 2B pricing arc (only if reconciliation trigger surfaces)** — 4 deferred items from S2855.
+34. **Carried — Middleware `log_injected_params` spec candidate** (S2870 Q6 zoom-out fold, 1st trigger).
 
-35. **Carried — A4 warm-up under ratified constraints** — S2846 6-line block still in force. A4 capabilities extended at S2875, further extended at S2876. See A4 Constraints below.
+35. **Carried — Phase 2B pricing arc (only if reconciliation trigger surfaces)** — 4 deferred items from S2855.
 
-36. **Carried — Character-os Rigby integration (5-gap analysis from S2872 mid-session, D6 moratorium hold)** — DBZ's `/api/pa/chat/` endpoint doesn't recognize `source='character-os-consult-engine'` / `spokesperson_id` / `workspace_id`. Parked under D6 moratorium; unlock requires Chris directive.
+36. **Carried — A4 warm-up under ratified constraints** — S2846 6-line block still in force. A4 capabilities extended at S2875, further extended at S2876, further extended at S2877. See A4 Constraints below.
 
-### What's forbidden at S2878 (D6 moratorium still in force)
+37. **Carried — Character-os Rigby integration (5-gap analysis from S2872 mid-session, D6 moratorium hold)** — parked; unlock requires Chris directive.
+
+### What's forbidden at S2879 (D6 moratorium still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No new evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 
@@ -156,47 +176,48 @@ Per `feedback_engineering_bias_over_audit`, list net-new first.
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2877 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2878 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2877: PA-surface error_code smoke suite now live — enforces the S2874/S2875/S2876 contract end-to-end so future regressions (accidental removal of backfill, contract shape drift, dispatcher refactors) are caught before shipping. A4 outreach substrate has stronger guarantees around error-envelope contract stability.**
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2878: `_handle_bpaas` now emits structured `error_code` — the S2876 backfill wrapper's idempotent guard short-circuits before assigning `legacy_error` for this handler. First real-handler migration of the S2876 sunset arc. A4 outreach substrate has slightly stronger guarantees around error-envelope contract stability at handler-level, not just dispatcher-level.**
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
-3. **Capability claims:** (a)…(jj) as ratified at S2876 close. **(kk) The PA-tool-surface `error_code` contract is now regression-tested at the `execute_sync` boundary — 18 fixtures across 3 envelope planes (migrated handlers pass-through, S2876 backfill, dispatcher-level unknown-tool). Any future PA-tool-surface work can rely on the smoke suite as a shield against contract drift.**
+3. **Capability claims:** (a)…(kk) as ratified at S2877 close. **(ll) `bpaas_tool` handler now emits 3 concrete `error_code` values (`missing_required_params`, `unknown_action`, `handler_exception`) — first real handler-side migration to the S2874 canonical shape. Any A4 messaging that references bpaas-driven consulting deliverables can rely on structured error semantics for downstream integrations.**
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
 5. **Hard throttle:** A4 warm-up is constrained to a fixed timebox and fixed send count (3-5 total intros).
 6. **No bespoke follow-ups:** A4 warm-up prohibits custom follow-ups / custom research / custom deliverables.
 
 ---
 
-## S2877 close — what shipped (one PR + docs cascade)
+## S2878 close — what shipped (one PR + docs cascade)
 
 **Repo canonical (Claude-authored):**
-- **PR #3377** `52c6d550b` — S2877 slate: PA-surface `error_code` smoke suite (1 file, +307/-0)
-- **PR `<this docs cascade>`** — S2877 handoff + 00-START-NEXT-SESSION refresh + wrapper pin bump for S2878 open
+- **PR #3379** `ac1854f6d` — S2878 slate: `_handle_bpaas` structured error-envelope migration + S2877 test re-home + `.gitignore` audit housekeeping (4 files, +178/-18)
+- **PR `<this docs cascade>`** — S2878 handoff + 00-START-NEXT-SESSION refresh + wrapper pin bump for S2879 open
 
-**Workspace canonical:** Rigby Tool Gap Ledger updated via Rigby PA per `feedback_rigby_writes_workspace_deliverables` (#22.4 new 1st-trigger observation logged).
+**Workspace canonical:** Rigby Tool Gap Ledger updated via Rigby PA per `feedback_rigby_writes_workspace_deliverables` (#22 sunset progress: 39→38 legacy population; #22.3 still 1st trigger; #22.4 still 1st trigger).
 
 **Runtime impact:**
-- First test suite that exercises the S2876 dispatcher-layer backfill wrapper end-to-end via `ToolDispatcher.execute_sync`. Prior S2874/S2875/S2876 tests all bypass `_execute_inner`.
-- Contract enforcement across all three PA error-envelope planes: migrated handlers pass-through (14 rows) + S2876 backfill (3 rows) + dispatcher-level unknown-tool (1 row).
-- Sunset guardrail: `LegacyBackfillPASurfaceTests` class explicitly marked DELETE AFTER S2876 SUNSET with criteria referenced inline — removal is mechanical, not a class-level rewrite.
-- Combined regression suite (S2869 + S2870 + S2871 + S2872 + S2873 + S2874 + S2875 + S2876 + S2877): **135/135 pass**.
+- First real handler migrated in the S2876 backfill sunset arc. Legacy population enumerated at S2877: 39 files. Post-S2878: 38 files.
+- Regression suite grew from 135 → 139 (+5 new S2878 rows − 1 deleted S2877 row = +4 net). All still pass end-to-end via `execute_sync`.
+- `_handle_bpaas` (`bpaas_tool` — sole real breadcrumb hitter in local logs) will no longer surface `error_code='legacy_error'`; consumers can key on the concrete codes.
 
-**Not shipped at S2877 close (deferred to S2878 or later):**
-- Legacy-handler migration wave driven by S2876 breadcrumb telemetry (now higher priority given S2877 smoke coverage)
-- Schema-level dead-branch investigation (still 1st trigger from S2875 post-code SIGN — S2877 smoke provides data)
-- Schema-layer PA route smoke extension (new candidate — dispatch via PA endpoint to catch schema-blocked payloads)
-- #22.3 orthogonal-contract-axes resolution (still 1st trigger)
-- #22.4 Rigby dispatcher-probe extension (new 1st trigger)
+**Not shipped at S2878 close (deferred to S2879 or later):**
+- Criticality-first handler migration (S2879 primary slate driver — Rigby F5 forward-carry)
+- `_s2876_fake_tool` breadcrumb noise refinement (1st trigger only)
+- Schema-level dead-branch investigation (still 1st trigger from S2875)
+- Schema-layer PA route smoke extension
+- #22.3 orthogonal-contract-axes resolution
+- #22.4 Rigby dispatcher-probe extension
 - Write-path handler envelope migration
 - Extract `td_error.py` gateway helper
-- All prior deferred items from S2874/S2873/S2871/S2868/S2867/S2866/S2862/S2861/etc still carried
+- All prior deferred items from S2877/S2874/S2873/S2871/S2868/S2867/S2866/S2862/S2861/etc still carried
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2877)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2878)
 
 See:
-- **S2877 handoff (current):** `docs/handoffs/SESSION_2877_PA_SURFACE_ERROR_CODES_SMOKE.md`
+- **S2878 handoff (current):** `docs/handoffs/SESSION_2878_BPAAS_ERROR_ENVELOPE.md`
+- **S2877 handoff:** `docs/handoffs/SESSION_2877_PA_SURFACE_ERROR_CODES_SMOKE.md`
 - **S2876 handoff:** `docs/handoffs/SESSION_2876_DISPATCHER_ERROR_CODE_BACKFILL.md`
 - **S2875 handoff:** `docs/handoffs/SESSION_2875_CROSS_TOOL_ERROR_ENVELOPE.md`
 - **S2874 handoff:** `docs/handoffs/SESSION_2874_REPO_TOOL_READ_FILE_PAGING.md`
