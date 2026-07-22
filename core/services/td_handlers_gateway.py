@@ -48,6 +48,25 @@ from functools import wraps
 logger = logging.getLogger(__name__)
 
 
+def _tool_error(code: str, message: str, **fields):
+    """S2875 — cross-tool structured-error envelope (Ledger #2 promoted).
+
+    Extends the S2874 `_read_file_error` shape to sibling read-path handlers
+    in this file. Kept local per Rigby's Q3=A recommendation — do NOT extract
+    to a shared `td_error.py` gateway helper until 6+ adopters have stabilized
+    (avoids signature churn while the shape is still empirically forming).
+
+    Envelope contract:
+        {'error': <human-readable>, 'error_code': <machine-readable>, **fields}
+
+    Downstream consumer note: `error_code` may be absent during mixed-mode
+    migration; callers must treat it as optional (`resp.get('error_code')`).
+    """
+    env = {'error': message, 'error_code': code}
+    env.update(fields)
+    return env
+
+
 # Error codes for structured failures
 class ToolErrorCode:
     TOOL_NOT_FOUND = "TOOL_NOT_FOUND"
@@ -123,7 +142,11 @@ class GatewayHandlersMixin:
                 _depth_capped = _requested_depth_int > _DEPTH_HARD_MAX
                 full_path = _safe_path(rel_path)
                 if not os.path.isdir(full_path):
-                    return {'error': f'Not a directory: {rel_path}'}
+                    return _tool_error(
+                        'not_a_directory',
+                        f'Not a directory: {rel_path}',
+                        path=rel_path,
+                    )
 
                 # Session 2728 F-RT-2 — track when the per-directory file cap
                 # and the total-entries cap fire so the response carries a
@@ -283,7 +306,10 @@ class GatewayHandlersMixin:
             elif action == 'search':
                 query = payload.get('query', '')
                 if not query:
-                    return {'error': 'query is required for search'}
+                    return _tool_error(
+                        'query_required',
+                        'query is required for search',
+                    )
                 search_path = payload.get('path', '')
                 file_type = payload.get('file_type', '')
                 full_path = _safe_path(search_path)
@@ -425,10 +451,15 @@ class GatewayHandlersMixin:
 
                 return {'action': 'git_info', **result}
 
-            return {'error': f'Unknown repo_tool action: {action}'}
+            return _tool_error(
+                'unknown_action',
+                f'Unknown repo_tool action: {action}',
+                action=action,
+                valid_actions=['tree', 'read_file', 'search', 'git_info'],
+            )
 
         except ValueError as e:
-            return {'error': str(e)}
+            return _tool_error('value_error', str(e))
         except Exception as e:
             # Session 2728 F-RT-11 — preserve the response contract (still
             # returns a typed error dict with the error message) but log the
@@ -446,7 +477,11 @@ class GatewayHandlersMixin:
                 type(e).__name__, payload.get('action', 'tree'), e,
                 exc_info=True,
             )
-            return {'error': f'repo_tool error: {str(e)}'}
+            return _tool_error(
+                'internal_error',
+                f'repo_tool error: {str(e)}',
+                exception_type=type(e).__name__,
+            )
 
     # ── Analytics / Event Queries ────────────────────────────────────────────
 
