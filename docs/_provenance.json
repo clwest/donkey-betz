@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "generated": "2026-07-21T04:10:15+00:00",
+    "generated": "2026-07-22T00:24:32+00:00",
     "command": "python manage.py build_docs_provenance",
-    "git_head": "7a7bea22f44f",
-    "doc_count": 2730,
-    "commit_count": 8261,
+    "git_head": "6ec76f9a8fef",
+    "doc_count": 2747,
+    "commit_count": 8326,
     "confidence_breakdown": {
-      "HIGH": 1716,
-      "MEDIUM": 412,
+      "HIGH": 1732,
+      "MEDIUM": 413,
       "LOW": 40,
       "UNKNOWN": 562
     },
@@ -2596,9 +2596,10 @@
         2808,
         2830,
         2847,
-        2855
+        2855,
+        2858
       ],
-      "commit_count": 1436,
+      "commit_count": 1440,
       "prs": [
         10,
         11,
@@ -3267,7 +3268,9 @@
         3325,
         3327,
         3330,
-        3332
+        3332,
+        3335,
+        3344
       ]
     },
     "docs/INTEGRATION_GAP_ANALYSIS.md": {
@@ -7637,9 +7640,10 @@
         2808,
         2830,
         2847,
-        2855
+        2855,
+        2858
       ],
-      "commit_count": 366,
+      "commit_count": 368,
       "prs": [
         2213,
         2219,
@@ -7902,7 +7906,8 @@
         3323,
         3325,
         3327,
-        3330
+        3330,
+        3335
       ]
     },
     "docs/adr/ADR-0001-establish-adr-corpus.md": {
@@ -21456,6 +21461,267 @@
       "commit_count": 2,
       "prs": [
         3332
+      ]
+    },
+    "docs/handoffs/SESSION_2858_CLEAR_STATUS_CONTEXT_AND_LIST_CAPS_N1_SHIPPED.md": {
+      "originating_session": 2858,
+      "confidence": "MEDIUM",
+      "match_source": "body",
+      "first_commit_sha": "fd3793e8",
+      "first_commit_date": "2026-07-20",
+      "first_commit_subject": "docs(session): S2858 close \u2014 clear_* status_context + list_caps N+1 shipped + docs cascade (#3335)",
+      "sessions_touched": [
+        2858
+      ],
+      "commit_count": 2,
+      "prs": [
+        3335
+      ]
+    },
+    "docs/handoffs/SESSION_2859_DELIVERABLE_TOOL_GOTCHAS_LEDGER_8_9_SHIPPED.md": {
+      "originating_session": 2859,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "e0cc5f0f",
+      "first_commit_date": "2026-07-20",
+      "first_commit_subject": "docs(session): S2859 close \u2014 Ledger #8 + #9 deliverable_tool.create fix shipped + docs cascade",
+      "sessions_touched": [
+        2859
+      ],
+      "commit_count": 2,
+      "prs": [
+        3338
+      ]
+    },
+    "docs/handoffs/SESSION_2860_DELIVERABLE_TOOL_DELETE_SHIPPED.md": {
+      "originating_session": 2860,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "154c90b3",
+      "first_commit_date": "2026-07-20",
+      "first_commit_subject": "docs(session): S2860 close \u2014 Ledger #10 deliverable_tool.delete shipped + docs cascade",
+      "sessions_touched": [
+        2860
+      ],
+      "commit_count": 2,
+      "prs": [
+        10,
+        3340
+      ]
+    },
+    "docs/handoffs/SESSION_2861_AUTOPILOT_SELECTED_FIELDS_SHIPPED.md": {
+      "originating_session": 2861,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "33ac72a1",
+      "first_commit_date": "2026-07-21",
+      "first_commit_subject": "docs(session): S2861 close \u2014 autopilot_tool.history selected_fields shipped + docs cascade (#3342)",
+      "sessions_touched": [
+        2861
+      ],
+      "commit_count": 2,
+      "prs": [
+        3342
+      ]
+    },
+    "docs/handoffs/SESSION_2862_HUGGINGFACE_SIGNAL_EXTRACTION_FIX.md": {
+      "originating_session": 2862,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "038ccd80",
+      "first_commit_date": "2026-07-21",
+      "first_commit_subject": "docs(session): S2862 close \u2014 huggingface signal drop fixed + docs cascade (#3344)",
+      "sessions_touched": [
+        2862
+      ],
+      "commit_count": 2,
+      "prs": [
+        3344
+      ]
+    },
+    "docs/handoffs/SESSION_2863_HF_HUB_API_SORT_DOWNLOADS.md": {
+      "originating_session": 2863,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "d6f95694",
+      "first_commit_date": "2026-07-21",
+      "first_commit_subject": "docs(session): S2863 close \u2014 HF Hub API sort=downloads shipped + docs cascade (#3346)",
+      "sessions_touched": [
+        2863
+      ],
+      "commit_count": 2,
+      "prs": [
+        3346
+      ]
+    },
+    "docs/handoffs/SESSION_2864_HF_BACKFILL_VIEW_CLEANUP.md": {
+      "originating_session": 2864,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "9a4d42af",
+      "first_commit_date": "2026-07-21",
+      "first_commit_subject": "docs(session): S2864 close \u2014 HF backfill + view-cleanup shipped + docs cascade (#3348)",
+      "sessions_touched": [
+        2864
+      ],
+      "commit_count": 2,
+      "prs": [
+        3348
+      ]
+    },
+    "docs/handoffs/SESSION_2865_WEB_FETCH_TOOL.md": {
+      "originating_session": 2865,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "ba1614ef",
+      "first_commit_date": "2026-07-21",
+      "first_commit_subject": "docs(session): S2865 close \u2014 web_fetch_tool shipped + docs cascade (#3350)",
+      "sessions_touched": [
+        2865
+      ],
+      "commit_count": 2,
+      "prs": [
+        3350
+      ]
+    },
+    "docs/handoffs/SESSION_2866_ORM_INSPECT_TOOL.md": {
+      "originating_session": 2866,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "54e27bb3",
+      "first_commit_date": "2026-07-21",
+      "first_commit_subject": "docs(session): S2866 close \u2014 orm_inspect_tool shipped + docs cascade (#3352)",
+      "sessions_touched": [
+        2866
+      ],
+      "commit_count": 2,
+      "prs": [
+        3352
+      ]
+    },
+    "docs/handoffs/SESSION_2867_ORM_COUNT_BY.md": {
+      "originating_session": 2867,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "2ac5ab04",
+      "first_commit_date": "2026-07-21",
+      "first_commit_subject": "docs(session): S2867 close \u2014 count_by shipped + docs cascade (#3354)",
+      "sessions_touched": [
+        2867
+      ],
+      "commit_count": 2,
+      "prs": [
+        3354
+      ]
+    },
+    "docs/handoffs/SESSION_2868_DELIVERABLE_DIAGNOSTIC_AND_SPIDER_STATUS_PAGINATION.md": {
+      "originating_session": 2868,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "e63800a7",
+      "first_commit_date": "2026-07-21",
+      "first_commit_subject": "docs(session): S2868 close \u2014 2-item slate shipped + docs cascade (#3358)",
+      "sessions_touched": [
+        2868
+      ],
+      "commit_count": 2,
+      "prs": [
+        3358
+      ]
+    },
+    "docs/handoffs/SESSION_2869_SPIDER_SEARCH_PREVIEW_AND_SIGNAL_CLUSTERS_MULTISOURCE.md": {
+      "originating_session": 2869,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "67f606c8",
+      "first_commit_date": "2026-07-21",
+      "first_commit_subject": "docs(session): S2869 close \u2014 2-item slate shipped (Ledger #2 + #4) + docs cascade (#3360)",
+      "sessions_touched": [
+        2869
+      ],
+      "commit_count": 2,
+      "prs": [
+        3360
+      ]
+    },
+    "docs/handoffs/SESSION_2870_INJECTION_HARDENING_AND_RAW_DATA_GUARD.md": {
+      "originating_session": 2870,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "53325432",
+      "first_commit_date": "2026-07-21",
+      "first_commit_subject": "docs(session): S2870 close \u2014 2-item slate shipped (Ledger #20 + #21) + docs cascade (#3362)",
+      "sessions_touched": [
+        2870
+      ],
+      "commit_count": 1,
+      "prs": [
+        20,
+        21,
+        3362
+      ]
+    },
+    "docs/handoffs/SESSION_2871_RAW_DATA_DICT_PROPERTY_ORM_INSPECT_LEGACY_SPIDER_DATA_CONDITIONAL_TIMEOUT.md": {
+      "originating_session": 2871,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "b9892101",
+      "first_commit_date": "2026-07-21",
+      "first_commit_subject": "docs(session): S2871 close \u2014 3-item slate shipped (Ledger #22 + #23 + #24) + docs cascade (#3364)",
+      "sessions_touched": [
+        2871
+      ],
+      "commit_count": 1,
+      "prs": [
+        22,
+        23,
+        24,
+        3364
+      ]
+    },
+    "docs/handoffs/SESSION_2872_RAW_DATA_DICT_SWEEP_LEDGER_22B_TELEMETRY.md": {
+      "originating_session": 2872,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "ee97196a",
+      "first_commit_date": "2026-07-21",
+      "first_commit_subject": "docs(session): S2872 close \u2014 Ledger #22b sweep shipped (44 sites) + docs cascade (#3366)",
+      "sessions_touched": [
+        2872
+      ],
+      "commit_count": 1,
+      "prs": [
+        3366
+      ]
+    },
+    "docs/handoffs/SESSION_2873_ORM_INSPECT_SPIDER_DATA_OPPORTUNITY.md": {
+      "originating_session": 2873,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "4931b40b",
+      "first_commit_date": "2026-07-21",
+      "first_commit_subject": "docs(session): S2873 close \u2014 orm_inspect_tool allowlist +2 shipped + docs cascade (#3368)",
+      "sessions_touched": [
+        2873
+      ],
+      "commit_count": 1,
+      "prs": [
+        3368
+      ]
+    },
+    "docs/handoffs/SESSION_2874_REPO_TOOL_READ_FILE_PAGING.md": {
+      "originating_session": 2874,
+      "confidence": "HIGH",
+      "match_source": "filename",
+      "first_commit_sha": "6ec76f9a",
+      "first_commit_date": "2026-07-21",
+      "first_commit_subject": "docs(session): S2874 close \u2014 repo_tool.read_file paging shipped + docs cascade (#3370)",
+      "sessions_touched": [
+        2874
+      ],
+      "commit_count": 2,
+      "prs": [
+        3370
       ]
     },
     "docs/handoffs/SESSION_293_COMPETITIVE_ANALYSIS_UI.md": {
