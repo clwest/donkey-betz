@@ -180,18 +180,52 @@ class GatewayHandlersMixin:
                 return _tree_response
 
             elif action == 'read_file':
+                # S2874 Ledger #2 promote (2nd trigger observed at S2873) —
+                # large-file paging opt-in. Prior behavior: the hard 500KB
+                # byte cap short-circuited BEFORE the existing
+                # start_line/max_lines paging params fired, so files like
+                # `core/models_unified_system.py` (~760KB) were unreachable
+                # via `read_file` at all. Now callers opt in with
+                # `allow_large=true`; the total_lines second-pass is skipped
+                # unconditionally over the soft max (Rigby Q2 fold — no
+                # double I/O tax for metadata even in opt-in mode).
+                _SIZE_SOFT_MAX = 500_000
+
+                def _read_file_error(code: str, message: str, **fields):
+                    """Local shape-consistent error envelope (Rigby Q4 fold)."""
+                    env = {'error': message, 'error_code': code}
+                    env.update(fields)
+                    return env
+
                 rel_path = payload.get('path', '')
                 if not rel_path:
-                    return {'error': 'path is required for read_file'}
+                    return _read_file_error('path_required', 'path is required for read_file')
                 max_lines = min(payload.get('max_lines', 200), 500)
                 start_line = max(int(payload.get('start_line', 0)), 0)
+                allow_large = bool(payload.get('allow_large', False))
                 full_path = _safe_path(rel_path)
                 if not os.path.isfile(full_path):
-                    return {'error': f'File not found: {rel_path}'}
+                    return _read_file_error(
+                        'file_not_found',
+                        f'File not found: {rel_path}',
+                        path=rel_path,
+                    )
 
                 size = os.path.getsize(full_path)
-                if size > 500_000:
-                    return {'error': f'File too large: {size} bytes. Use search instead.'}
+                if size > _SIZE_SOFT_MAX and not allow_large:
+                    return _read_file_error(
+                        'file_too_large',
+                        f'File too large: {size} bytes (soft max {_SIZE_SOFT_MAX}). '
+                        f'Set allow_large=true to opt into paged read (start_line + max_lines still apply), '
+                        f'or use search instead.',
+                        path=rel_path,
+                        file_size_bytes=size,
+                        size_hard_max=_SIZE_SOFT_MAX,
+                        narrowing_hint={
+                            'set_allow_large': True,
+                            'suggested_max_lines': 200,
+                        },
+                    )
 
                 with open(full_path, 'r', errors='replace') as f:
                     lines = []
@@ -202,18 +236,49 @@ class GatewayHandlersMixin:
                             break
                         lines.append(f'{i + 1}: {line.rstrip(chr(10))}')
 
-                total_lines = sum(1 for _ in open(full_path, 'r', errors='replace'))
                 end_line = start_line + len(lines)
-                return {
-                    'action': 'read_file',
-                    'path': rel_path,
-                    'start_line': start_line,
-                    'end_line': end_line,
-                    'lines': len(lines),
-                    'total_lines': total_lines,
-                    'truncated': end_line < total_lines,
-                    'content': '\n'.join(lines),
-                }
+
+                if size > _SIZE_SOFT_MAX:
+                    # Large-file branch: skip the second full-file scan.
+                    # `truncated` heuristic — if the read returned fewer than
+                    # requested we hit EOF; otherwise assume more remains.
+                    hit_eof = len(lines) < max_lines
+                    response = {
+                        'action': 'read_file',
+                        'path': rel_path,
+                        'file_size_bytes': size,
+                        'start_line': start_line,
+                        'end_line': end_line,
+                        'lines': len(lines),
+                        'total_lines_known': False,
+                        'truncated': not hit_eof,
+                        'content': '\n'.join(lines),
+                    }
+                else:
+                    # Small-file branch preserves prior behavior + adds
+                    # `file_size_bytes` and `total_lines_known=True` for
+                    # response-shape parity with the large-file branch.
+                    total_lines = sum(1 for _ in open(full_path, 'r', errors='replace'))
+                    response = {
+                        'action': 'read_file',
+                        'path': rel_path,
+                        'file_size_bytes': size,
+                        'start_line': start_line,
+                        'end_line': end_line,
+                        'lines': len(lines),
+                        'total_lines': total_lines,
+                        'total_lines_known': True,
+                        'truncated': end_line < total_lines,
+                        'content': '\n'.join(lines),
+                    }
+
+                # Rigby Q3 fold — 0 lines returned means either past EOF or
+                # an empty file. Surface a soft warning field (not a hard
+                # error) so scripts can branch on shape, not exception class.
+                if len(lines) == 0:
+                    response['warning_code'] = 'start_line_past_eof_or_empty_file'
+
+                return response
 
             elif action == 'search':
                 query = payload.get('query', '')
