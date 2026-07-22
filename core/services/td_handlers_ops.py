@@ -411,6 +411,15 @@ class OpsHandlersMixin:
             # per the persistence path at core/tasks_misc.py:4839.
             return self._ops_recent_bridge_calls(payload, user_id, trace_id)
 
+        elif action == 'bridge_activity_digest':
+            # S2891: Rigby-narratable natural-language summary of the same
+            # recent_bridge_calls data. Chris asks casually ('what's
+            # character-os been up to?') and gets a plain-English sentence
+            # + a minimal structured_facts block, no raw items[]. Delegates
+            # to _ops_recent_bridge_calls for the qs computation + scoping;
+            # reshapes into narrative form.
+            return self._ops_bridge_activity_digest(payload, user_id, trace_id)
+
         else:
             return _handler_error(
                 action,
@@ -1728,6 +1737,155 @@ class OpsHandlersMixin:
             )
 
         return result
+
+    def _ops_bridge_activity_digest(
+        self,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str,
+    ) -> Dict[str, Any]:
+        """S2891: Rigby-narratable digest of recent character-os bridge calls.
+
+        Delegates to _ops_recent_bridge_calls for filter + scoping + qs
+        computation, then reshapes into a plain-English narrative + minimal
+        structured_facts. Used when Chris asks casually ('what's character-os
+        been up to?') and doesn't want the raw items[] envelope.
+
+        Design notes (S2891 joint SIGN with Rigby):
+          - Narrative built server-side deterministically (testable, no extra
+            LLM roundtrip). Rigby can still re-narrate in her own voice.
+          - median_latency_ms is defined over the *returned* items only, not
+            the full-population window (Rigby Q1c tweak — avoids implying
+            full-population accuracy).
+          - No error_count field: ChatConversation has no dedicated error /
+            status column, and metadata.error is not a stable bridge-caller
+            convention (Rigby Q1d verified against
+            core/models/conversations/models.py). Omit rather than invent.
+
+        Payload: same as recent_bridge_calls (limit, since, window,
+        bridge_tool_name, workspace_id).
+        """
+        from datetime import datetime
+
+        from django.utils import timezone
+
+        # Delegate to the raw handler for filter + scoping + qs computation.
+        # Reusing the same code path guarantees narrative + structured_facts
+        # stay consistent with recent_bridge_calls output (both surfaces read
+        # the same underlying rows under the same scoping rules).
+        raw = self._ops_recent_bridge_calls(payload, user_id, trace_id)
+
+        window = raw.get('window', payload.get('window') or '24h')
+        window_cutoff = raw.get('window_cutoff')
+        total = raw.get('total_count', 0)
+        by_tool = raw.get('by_tool', [])
+        items = raw.get('items', [])
+
+        # Empty state: deterministic no-activity narrative.
+        if total == 0:
+            return {
+                'action': 'bridge_activity_digest',
+                'window': window,
+                'window_cutoff': window_cutoff,
+                'narrative': (
+                    f'No character-os bridge calls in the last {window}.'
+                ),
+                'structured_facts': {
+                    'total_count': 0,
+                    'by_tool': [],
+                    'most_recent': None,
+                    'median_latency_ms': None,
+                    'window': window,
+                },
+            }
+
+        # by_tool phrase for narrative: '2 consult_engine, 1 query_spider_data'.
+        by_tool_phrase = ', '.join(
+            f"{row['count']} {row['bridge_tool_name']}" for row in by_tool
+        )
+
+        # median_latency_ms: over returned items only (Rigby Q1c). None-safe.
+        latencies = sorted(
+            item['latency_ms'] for item in items
+            if item.get('latency_ms') is not None
+        )
+        median_ms: Optional[int] = None
+        if latencies:
+            n = len(latencies)
+            if n % 2 == 1:
+                median_ms = latencies[n // 2]
+            else:
+                median_ms = (latencies[n // 2 - 1] + latencies[n // 2]) // 2
+
+        # most_recent: items are ordered created_at desc by _ops_recent_bridge_calls.
+        recent = items[0]
+        try:
+            recent_dt = datetime.fromisoformat(recent['created_at'])
+            delta = timezone.now() - recent_dt
+            minutes_ago = max(0, int(delta.total_seconds() // 60))
+        except (TypeError, ValueError, KeyError):
+            minutes_ago = None
+
+        question_full = recent.get('question') or ''
+        QUESTION_PREVIEW_CAP = 80
+        if len(question_full) > QUESTION_PREVIEW_CAP:
+            question_preview = question_full[:QUESTION_PREVIEW_CAP] + '…'
+        else:
+            question_preview = question_full
+
+        most_recent = {
+            'tool_name': recent.get('tool_name'),
+            'question_preview': question_preview,
+            'minutes_ago': minutes_ago,
+            'latency_ms': recent.get('latency_ms'),
+            'user': recent.get('user'),
+            'workspace_id': recent.get('workspace_id'),
+            'conversation_id': recent.get('conversation_id'),
+        }
+
+        # Narrative assembly. Sentence structure:
+        #   "In the last {window}, character-os called u-d-b {N} time(s) —
+        #    {by_tool breakdown}. [Median latency X ms.] Most recent {M} min
+        #    ago via {tool_name}[ asking \"{question}\"] (user {u})."
+        call_word = 'time' if total == 1 else 'times'
+        sentences: List[str] = [
+            f'In the last {window}, character-os called u-d-b '
+            f'{total} {call_word} — {by_tool_phrase}.'
+        ]
+        if median_ms is not None:
+            sentences.append(f'Median latency {median_ms}ms.')
+
+        recent_bits = [f'Most recent']
+        if minutes_ago is not None:
+            recent_bits.append(f'{minutes_ago} min ago')
+        recent_bits.append(f'via {most_recent["tool_name"]}')
+        if question_preview:
+            recent_bits.append(f'asking "{question_preview}"')
+        recent_tail = ' '.join(recent_bits)
+        user_label = most_recent['user'] or 'unknown'
+        sentences.append(f'{recent_tail} (user {user_label}).')
+
+        narrative = ' '.join(sentences)
+
+        return {
+            'action': 'bridge_activity_digest',
+            'window': window,
+            'window_cutoff': window_cutoff,
+            'narrative': narrative,
+            'structured_facts': {
+                'total_count': total,
+                'by_tool': [
+                    {
+                        'bridge_tool_name': row['bridge_tool_name'],
+                        'count': row['count'],
+                    }
+                    for row in by_tool
+                ],
+                'most_recent': most_recent,
+                'median_latency_ms': median_ms,
+                'window': window,
+            },
+        }
 
     def _ops_execution_detail(self, payload: Dict[str, Any], trace_id: str) -> Dict[str, Any]:
         """Look up a single AgentExecution by ID, including heartbeat."""

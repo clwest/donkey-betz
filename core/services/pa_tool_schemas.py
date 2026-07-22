@@ -2659,6 +2659,7 @@ PA_TOOL_SCHEMAS = [
                         "staleness_warnings",
                         "recent_recycles",
                         "recent_bridge_calls",
+                        "bridge_activity_digest",
                     ],
                     "description": (
                         "overview: one-shot ops snapshot — version + slo_status + top failure_signatures "
@@ -2751,7 +2752,20 @@ PA_TOOL_SCHEMAS = [
                         "(1h/6h/24h/7d/30d), bridge_tool_name (optional: consult_engine / "
                         "query_spider_data / agent_consult to filter), workspace_id "
                         "(optional). Scoped to the requesting user unless the user is staff. "
-                        "Fail-soft: empty items + diagnostic note when zero rows match."
+                        "Fail-soft: empty items + diagnostic note when zero rows match. "
+                        "bridge_activity_digest: S2891 — casual plain-English summary of "
+                        "the same recent_bridge_calls data. Use when the operator asks "
+                        "'what has character-os been up to?' and doesn't want the raw "
+                        "items[] envelope. Returns narrative (one-sentence server-side "
+                        "template) + structured_facts (total_count, by_tool, most_recent "
+                        "{tool_name, question_preview, minutes_ago, latency_ms, user, "
+                        "workspace_id, conversation_id}, median_latency_ms defined over "
+                        "returned items only, window). No error_count field: "
+                        "ChatConversation has no dedicated error/status column and "
+                        "metadata.error is not a stable bridge-caller contract. Same "
+                        "payload params + same scoping as recent_bridge_calls (delegates "
+                        "internally). Fail-soft: 'No character-os bridge calls in the "
+                        "last {window}.' narrative + empty structured_facts."
                     ),
                 },
                 "window": {
