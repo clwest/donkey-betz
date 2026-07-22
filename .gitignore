@@ -401,3 +401,9 @@ frontend/components/generated/
 # triggering "Warning: 1 uncommitted change" on every PR open.
 .obsidian/
 **/.obsidian/
+
+# Session 2878: auto-generated periodic snapshots from the Session 819
+# System Audit API. Regenerable; span many timestamps; pollute git status.
+# If a specific audit snapshot ever needs to be canonicalized as evidence,
+# force-add it with `git add -f docs/audits/SESSION_<n>_SYSTEM_AUDIT_<ts>.md`.
+docs/audits/SESSION_*_SYSTEM_AUDIT_*.md
