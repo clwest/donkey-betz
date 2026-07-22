@@ -25,6 +25,26 @@ def _d14_resolve_min_session(raw):
     return v if v > 0 else None
 
 
+def _tool_error(code: str, message: str, **fields):
+    """S2875 — cross-tool structured-error envelope (Ledger #2 promoted).
+
+    Extends the S2874 `_read_file_error` shape (in td_handlers_gateway.py)
+    to the spider_status_tool + kb_tool handlers in this file. Kept local
+    per Rigby's Q3=A recommendation — do NOT extract to a shared
+    `td_error.py` gateway helper until 6+ adopters have stabilized (avoids
+    signature churn while the shape is still empirically forming).
+
+    Envelope contract:
+        {'error': <human-readable>, 'error_code': <machine-readable>, **fields}
+
+    Downstream consumer note: `error_code` may be absent during mixed-mode
+    migration; callers must treat it as optional (`resp.get('error_code')`).
+    """
+    env = {'error': message, 'error_code': code}
+    env.update(fields)
+    return env
+
+
 def _resolve_originating_session(raw):
     """Session 2728 F-SD-1 — LLM-autofill guard for the originating_session
     filter on search_docs.
@@ -6487,7 +6507,10 @@ class OpsHandlersMixin:
             elif action == 'history':
                 spider_name = payload.get('spider_name', '')
                 if not spider_name:
-                    return {'error': 'spider_name required for history action'}
+                    return _tool_error(
+                        'spider_name_required',
+                        'spider_name required for history action',
+                    )
 
                 runs = (
                     LegacySpiderData.objects
@@ -6511,11 +6534,18 @@ class OpsHandlersMixin:
             elif action == 'detail':
                 item_id = payload.get('item_id', '') or payload.get('id', '')
                 if not item_id:
-                    return {'error': 'item_id required for detail action'}
+                    return _tool_error(
+                        'item_id_required',
+                        'item_id required for detail action',
+                    )
                 try:
                     item = LegacySpiderData.objects.get(id=item_id)
                 except LegacySpiderData.DoesNotExist:
-                    return {'error': f'LegacySpiderData {item_id} not found'}
+                    return _tool_error(
+                        'item_not_found',
+                        f'LegacySpiderData {item_id} not found',
+                        item_id=str(item_id),
+                    )
                 return {
                     'action': 'detail',
                     'id': str(item.id),
@@ -6533,7 +6563,10 @@ class OpsHandlersMixin:
                 data_type = payload.get('data_type', '').strip()
                 spider_name = payload.get('spider_name', '').strip()
                 if not query and not data_type and not spider_name:
-                    return {'error': 'At least one of query, data_type, or spider_name required'}
+                    return _tool_error(
+                        'filters_required',
+                        'At least one of query, data_type, or spider_name required',
+                    )
 
                 qs = LegacySpiderData.objects.all()
                 if spider_name:
@@ -6578,11 +6611,21 @@ class OpsHandlersMixin:
                 } for r in qs]
                 return {'action': 'search', 'count': len(items), 'items': items}
 
-            return {'error': f'Unknown spider_status action: {action}. Valid: list, history, detail, search'}
+            return _tool_error(
+                'unknown_action',
+                f'Unknown spider_status action: {action}. Valid: list, history, detail, search',
+                action=action,
+                valid_actions=['list', 'history', 'detail', 'search'],
+            )
 
         except Exception as e:
             logger.error(f"[SPIDER_STATUS] {action} error: {e}", exc_info=True)
-            return {'error': str(e)}
+            return _tool_error(
+                'internal_error',
+                str(e),
+                action=action,
+                exception_type=type(e).__name__,
+            )
 
     def _handle_agent_memory(self, tool_name, payload, user_id, trace_id):
         """Gap 2: Agent-scoped memory and knowledge inspection."""
@@ -7161,7 +7204,10 @@ class OpsHandlersMixin:
             elif action == 'chunks':
                 doc_id = payload.get('document_id', '') or payload.get('id', '')
                 if not doc_id:
-                    return {'error': 'document_id required for chunks action'}
+                    return _tool_error(
+                        'document_id_required',
+                        'document_id required for chunks action',
+                    )
                 from content.models import DocumentEmbedding
                 chunks = DocumentEmbedding.objects.filter(document_id=doc_id).order_by('chunk_index')[:limit]
                 return _apply_limit_envelope({
@@ -7180,7 +7226,10 @@ class OpsHandlersMixin:
                 query = payload.get('query', '').strip()
                 content_type = payload.get('content_type', '').strip()
                 if not query and not content_type:
-                    return {'error': 'query or content_type required for search_embeddings'}
+                    return _tool_error(
+                        'filters_required',
+                        'query or content_type required for search_embeddings',
+                    )
                 from persistence.models import UnifiedEmbedding
                 qs = UnifiedEmbedding.objects.all()
                 if content_type:
@@ -7219,7 +7268,10 @@ class OpsHandlersMixin:
 
                 query = (payload.get('query') or '').strip()
                 if not query:
-                    return {'error': 'query is required for semantic_search'}
+                    return _tool_error(
+                        'query_required',
+                        'query is required for semantic_search',
+                    )
 
                 # Session 1234 D15 — default lowered from 0.6 to 0.4.
                 # Chris's first verification run with the 0.6 default
@@ -7415,11 +7467,21 @@ class OpsHandlersMixin:
                     },
                 })
 
-            return {'error': f'Unknown kb_tool action: {action}. Valid: stats, documents, chunks, search_embeddings, semantic_search'}
+            return _tool_error(
+                'unknown_action',
+                f'Unknown kb_tool action: {action}. Valid: stats, documents, chunks, search_embeddings, semantic_search',
+                action=action,
+                valid_actions=['stats', 'documents', 'chunks', 'search_embeddings', 'semantic_search'],
+            )
 
         except Exception as e:
             logger.error(f"[KB_BROWSE] {action} error: {e}", exc_info=True)
-            return {'error': str(e)}
+            return _tool_error(
+                'internal_error',
+                str(e),
+                action=action,
+                exception_type=type(e).__name__,
+            )
 
     # =========================================================================
     # Session 1142: search_docs — semantic-ish doc search over .rag/corpus.jsonl
