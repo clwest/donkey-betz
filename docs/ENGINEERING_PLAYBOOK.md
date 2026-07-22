@@ -1,31 +1,31 @@
 ---
 title: "Donkey Betz Engineering Playbook"
-version: "0.8.0"
+version: "0.9.0"
 version_status: ratified
 scope: platform
-parent_version: "0.7.0"
+parent_version: "0.8.0"
 supersedes: []
-compatible_with: ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.4.1", "0.5.0", "0.6.0", "0.7.0"]
+compatible_with: ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.4.1", "0.5.0", "0.6.0", "0.7.0", "0.8.0"]
 ratifier: chris
-ratified_date: 2026-07-14
+ratified_date: 2026-07-22
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
   deliverable_id: PLACEHOLDER_FILLED_AT_RATIFICATION
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
-branch_authored: playbook/v0.8.0-evidence-admission-fold-authoring
+branch_authored: playbook/v0.9.0-handler-test-authoring-discipline
 commit_sha: PLACEHOLDER_FILLED_AT_MERGE
 content_hash: PLACEHOLDER_FILLED_AT_MERGE
-git_tag: playbook-v0.8.0
+git_tag: playbook-v0.9.0
 schema_version: 1
 prior_ratification:
-  version: "0.7.0"
-  ratified_date: 2026-07-13
+  version: "0.8.0"
+  ratified_date: 2026-07-14
   deliverable_id: PLACEHOLDER_FILLED_AT_RATIFICATION
   commit_sha: PLACEHOLDER_FILLED_AT_MERGE
   content_hash: PLACEHOLDER_FILLED_AT_MERGE
-  git_tag: playbook-v0.7.0
-authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740, 2742, 2752, 2753, 2766, 2778, 2786]
+  git_tag: playbook-v0.8.0
+authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740, 2742, 2752, 2753, 2766, 2778, 2786, 2889]
 correction_sessions: [2723, 2725, 2727]
 audit_sessions: [2722, 2724, 2725, 2727, 2738, 2740, 2742, 2752]
 ratification_package_session: 2726
@@ -47,7 +47,9 @@ v0_7_0_authoring_session: 2778
 v0_7_0_ratification_session: 2778
 v0_8_0_authoring_session: 2786
 v0_8_0_ratification_session: 2786
-rule_count: 205
+v0_9_0_authoring_session: 2889
+v0_9_0_ratification_session: 2889
+rule_count: 207
 rules_added_v0_2_0: [PLAYBOOK-5.2.2, PLAYBOOK-2.2.2, PLAYBOOK-3.2.2]
 rules_added_v0_3_0: [PLAYBOOK-6.6.14, PLAYBOOK-6.10.5]
 rules_added_v0_4_0: [PLAYBOOK-6.10.6]
@@ -55,10 +57,11 @@ rules_added_v0_5_0: [PLAYBOOK-7.4.1, PLAYBOOK-7.4.2, PLAYBOOK-7.4.3, PLAYBOOK-7.
 rules_added_v0_6_0: [PLAYBOOK-7.4.4]
 rules_added_v0_7_0: [PLAYBOOK-6.10.7, PLAYBOOK-6.10.8]
 rules_added_v0_8_0: [PLAYBOOK-6.10.9]
+rules_added_v0_9_0: [PLAYBOOK-3.2.3, PLAYBOOK-3.2.4]
 evidence_manifest: docs/research/platform/engineering_playbook_evidence_manifest.md
 ---
 
-# Donkey Betz Engineering Playbook v0.8.0
+# Donkey Betz Engineering Playbook v0.9.0
 
 # Chapter 0 — Preamble and How to Read This Playbook
 
@@ -528,10 +531,10 @@ The Engineering Playbook does not create rules. It records rules whose existence
 
 **Chapter ID:** PLAYBOOK-CH-3
 **Purpose:** Establish constitutional scope for implementation discipline as it applies to platform code changes and ADR authoring. Reference the peer Implementation Operating System.
-**Scope:** Platform code changes with ADR intent; ADR authoring discipline; verify-before-build patterns; acceptance-tests-first discipline for engineering campaigns.
-**Status:** STUB (v0.1). Partial normative content added in v0.2.0 MINOR (PLAYBOOK-3.2.2). Further content deferred to future MINOR amendments.
+**Scope:** Platform code changes with ADR intent; ADR authoring discipline; verify-before-build patterns; acceptance-tests-first discipline for engineering campaigns; handler-test authoring discipline (test-class selection + shared-taxonomy branch disambiguation).
+**Status:** STUB (v0.1). Partial normative content added in v0.2.0 MINOR (PLAYBOOK-3.2.2 acceptance-tests-first) and extended in v0.9.0 MINOR (PLAYBOOK-3.2.3 dispatcher-DB TransactionTestCase discipline + PLAYBOOK-3.2.4 shared-taxonomy branch fortification). Further content deferred to future MINOR amendments.
 **Introduced in:** v0.1.0
-**Last substantive change:** v0.2.0
+**Last substantive change:** v0.9.0
 **Evidence anchor:** `docs/research/platform/engineering_playbook_evidence_manifest.md`
 **Statement classes present:** [EP], [GR]
 **Rule ID range:** PLAYBOOK-3.1.1 through PLAYBOOK-3.3.1
@@ -550,6 +553,12 @@ The Engineering Playbook does not create rules. It records rules whose existence
 
 > **Commentary:** PLAYBOOK-3.2.2 prevents the "assumed gap" failure mode named in the first two ratified Capability Discovery Records. Without acceptance tests written pre-implementation, an engineering campaign can drift into reorganization of shipped substrate rather than delivering new capability — the campaign satisfies its own assumptions rather than the capability specification. The rule's mechanism is the same discipline that produced 51/51 passing tests at Session 2736 close with zero regression across six sequential phases: define the observable property, write the test that asserts it, then ship the implementation until the test passes. The `@expectedFailure` marker convention preserves the test-authorship provenance across the phase boundary; a reviewer inspecting the diff observes both the test-body edit and the marker-removal as separate signals, closing the reverse-engineering loophole.
 
+**[GR] PLAYBOOK-3.2.3** When authoring a handler regression test whose exercised code path materializes a separate Django database connection that does not participate in the test's wrapping transaction — for example dispatch through `ToolDispatcher.execute_sync`, which runs the handler on a fresh asyncio event loop that produces a separate DB connection — the test class MUST inherit from `django.test.TransactionTestCase` (not `django.test.TestCase`) whenever the dispatched handler reads ORM state that the test's `setUp` (or fixture-loading equivalent) creates. Rationale: plain `django.test.TestCase` wraps each test in a transaction that other Django DB connections do not see; `setUp`-created fixtures are therefore invisible to any handler that runs on a separate connection. The dispatcher's fresh-event-loop mechanism is one implementation cause of this cross-connection visibility gap; the rule scopes to the transaction-visibility invariant, not to any single dispatch mechanism, so it continues to apply if `execute_sync`'s internals change or if a new dispatcher entry point produces the same DB-connection boundary. A test author MAY use plain `django.test.TestCase` ONLY when the handler under test requires no `setUp`-created ORM fixtures — for example when the assertion is that a lookup for a nonexistent UUID returns the `not_found` envelope regardless of database visibility. When `TransactionTestCase` is required, the choice MUST be recorded in the test file's module docstring citing this rule. This rule EXTENDS PLAYBOOK-3.2.2 (acceptance-tests-first) with a test-class-selection requirement scoped to any handler test that crosses a DB-connection boundary. [E2: RATIFICATION_2026-07-22_PLAYBOOK_V0_9_0.md §3 (two-trigger corpus enumerating S2885 + S2886 fixture-visibility failures, backfilled to `logs/zoom_out_classifications.jsonl` rows 149 + 150); E4: `core/services/tool_dispatcher.py:1160` (the `asyncio.new_event_loop().run_until_complete(...)` call that produces the fresh DB connection — one instance of the invariant, not the invariant itself); E5: `core/tests/test_s2885_content_error_envelope.py` (S2885 first-trigger — `DeliverableInitiativeLinkMigratedEnvelopeTests` + `ContentToolMigratedEnvelopeTests` inherit `TransactionTestCase`); E5: `core/tests/test_s2886_core_error_envelope.py` (S2886 second-trigger — `RememberToolMigratedEnvelopeTests` + `MessagingToolMigratedEnvelopeTests` inherit `TransactionTestCase`, Rigby S2886 Q3 zoom-out Concern B predicted then materialized); E6: `docs/handoffs/SESSION_2885_CONTENT_ERROR_ENVELOPE.md` §Fold 1 (first-trigger record); E6: `docs/handoffs/SESSION_2886_CORE_CRITICALITY_FIRST_ERROR_ENVELOPE.md` §Fold 1 (second-trigger record + Playbook amendment candidacy flag)]
+
+**[GR] PLAYBOOK-3.2.4** When a handler under test has two or more return branches that emit the same taxonomy `error_code` (for example: two `not_found` branches distinguished only by which entity is missing, or three `invalid_params` branches distinguished only by which parameter is missing), a migrated-envelope regression test asserting that `error_code` MUST additionally assert one of: (a) the value of the envelope's `action` field, when the branches emit distinct actions; OR (b) a distinguishing substring in the envelope's `error` message body, when the branches share an action. The intent is to prevent a false-pass in which a regression breaks branch B but the test asserting branch B's behavior continues to pass because the assertion is also satisfied by branch A's still-passing envelope. Rationale: `_assert_migrated_envelope` and equivalent taxonomy helpers check the envelope's `success=False` + `error_code` + envelope shape but do not distinguish which internal branch fired. When two branches share a code, the test MUST close the disambiguation via `action` or error-body substring. This rule EXTENDS PLAYBOOK-3.2.2 (acceptance-tests-first) with a branch-disambiguation requirement scoped to shared-taxonomy handler tests. It complements PLAYBOOK-3.2.3 (dispatcher-path DB visibility) — Rule 3.2.4 was first observed in the S2885 slate where plain-`TestCase` fixture invisibility masked the branch-crossing failure mode; but the underlying discipline is orthogonal to Rule 3.2.3 and applies to any shared-taxonomy test regardless of dispatcher path. [E2: RATIFICATION_2026-07-22_PLAYBOOK_V0_9_0.md §3 (two-trigger corpus enumerating S2885 + S2886 shared-taxonomy false-pass patterns, backfilled to `logs/zoom_out_classifications.jsonl` rows 151 + 152); E4: `core/tests/test_s2885_content_error_envelope.py:test_deliverable_initiative_link_missing_initiative_returns_not_found` (S2885 first-trigger — L182+L190 both return `not_found`; test asserts `'Initiative' in error` to disambiguate); E4: `core/tests/test_s2886_core_error_envelope.py` (S2886 second-trigger — L3849+L3986 both return `not_found`, disambiguated by `'Thread not found or access denied'` substring + action; L2230+L2331+L2345 all return `invalid_params`, disambiguated by action field via `_assert_migrated_envelope`'s action-awareness); E6: `docs/handoffs/SESSION_2885_CONTENT_ERROR_ENVELOPE.md` §Fold 2 (first-trigger record); E6: `docs/handoffs/SESSION_2886_CORE_CRITICALITY_FIRST_ERROR_ENVELOPE.md` §Fold 2 (second-trigger record + Playbook amendment candidacy flag)]
+
+> **Commentary:** PLAYBOOK-3.2.3 and PLAYBOOK-3.2.4 both codify test-authoring discipline that only surfaces at the moment a regression test would silently mask a real failure. §3.2.3 defends against fixture-invisibility on cross-connection dispatch — a silent `not_found` envelope from a `DoesNotExist` lookup that the test's `setUp` "created". §3.2.4 defends against branch-crossing on shared taxonomy — a still-passing assertion driven by an unrelated branch's still-correct envelope. Neither failure mode is caught by envelope-shape assertions or by taxonomy-code assertions alone; both require positive discipline at test-authoring time. The rules extend PLAYBOOK-3.2.2's acceptance-tests-first spirit into the migration-slate cadence exercised across S2879 → S2886, where handler regression tests exercise `ToolDispatcher.execute_sync` on multi-branch handlers that emit a shared 5-code taxonomy. Together they cost roughly ten lines of test-authoring discipline per slate and prevent a class of silent regression that would otherwise land undetected until the next site touched the same branch pair.
+
 ## 3.3 Extension deferred
 
 **[EP] PLAYBOOK-3.3.1** Full authoring of Chapter 3's constitutional treatment of implementation discipline is deferred to a future MINOR amendment when experience with the discipline produces sufficient evidence to codify additional rules. Until then, the Implementation Operating System and the repository ADR corpus remain the authoritative sources for implementation methodology. [E3: 2712 §16.9 (stub-chapter deferral discipline) — part of the convergent 2708-2714 research chain per manifest §2.3]
@@ -564,10 +573,11 @@ The Engineering Playbook does not create rules. It records rules whose existence
 
 ## 3.5 Extension points (informative)
 
-- Verify-before-build discipline codification.
+- Verify-before-build discipline codification (informatively partially exercised at v0.9.0 for test authoring — PLAYBOOK-3.2.3 verifies DB visibility before writing the test; PLAYBOOK-3.2.4 verifies branch coverage before asserting the envelope. Full codification of "verify-before-build" for engineering campaign work remains a future MINOR).
 - ADR authoring templates and conventions.
 - Reversibility scoring for implementation decisions.
 - Cross-corpus consistency between repository and workspace ADRs.
+- Dedicated "Testing Discipline" chapter — v0.9.0 zoom-out Fold B (`future_trigger`, ledger row 154) recorded that Chapter 3 extension after 8-version gap signals testing-discipline is accreting inside implementation-discipline. Trigger for a future MINOR promoting testing discipline out of §3.2 into a dedicated chapter: 2 more test-authoring rules land in §3.2 before Chapter 3 is promoted to FULL, OR one SIGN cycle blocked by ambiguous test-authoring slot placement.
 
 ---
 
@@ -1345,3 +1355,4 @@ The Constitutional Debt Register records items intentionally deferred by prior a
 | v0.6.0 | v0.5.0 | [] | 2026-07-11 | playbook-v0.6.0 | MINOR — codify recycle-after-merge as PLAYBOOK-7.4.4 (new [GR] rule under §7.4 Close-ceremony delivery discipline). Corroboration ladder: 4 negative signals (S2758/S2759/S2760/S2761 STALE_BOTH next-session-opens under pre-convention) + 3 positive signals (S2763/S2764/S2765 FRESH · SHA-match under post-convention). Chris D-verdict at S2766. Rule count 201 → 202. Reclassified from Chris's originally-labeled "v0.5.1 PATCH" framing to MINOR per PLAYBOOK-10.4.1 constitutional constraint (PATCH cannot introduce rules) — joint Claude+Rigby W1 finding at S2766 SIGN batch. |
 | v0.7.0 | v0.6.0 | [] | 2026-07-13 | playbook-v0.7.0 | MINOR — codify zoom-out ask + fold-classification SIGN discipline as PLAYBOOK-6.10.7 (zoom-out ask mandate for joint SIGN routings) + PLAYBOOK-6.10.8 (classify {`same_pr_actionable` / `same_pr_mitigatable` / `future_trigger`} + persist to `logs/zoom_out_classifications.jsonl` via `record_zoom_out_concern` before D-verdict; no-folds carve-out; graceful-degradation clause for command failure). Evidence: 7-session S2771–S2777 corroboration streak (2 F-BLOCKING DISAGREEs that prevented ship-time incorrect artifacts) + N22 classification substrate shipped S2777 (13-row seed ledger). Chris D-verdict at S2778. Rule count 202 → 204. Author-side sequencing note: I-0302 three-PR pattern candidacy (previously proposed for PLAYBOOK-6.10.7 in RATIFICATION_2026-07-10_i0302_arc_close.md §11) re-slotted to PLAYBOOK-6.10.9 per PLAYBOOK-10.7.5 next-integer rule — pre-allocation in a candidate document does not constitute ratified reservation. Rules dogfooded at authoring: 4 same_pr_actionable folds from this amendment's own SIGN incorporated pre-D-verdict; ledger grew 13 → 17 rows during S2778. |
 | v0.8.0 | v0.7.0 | [] | 2026-07-14 | playbook-v0.8.0 | MINOR — codify fold-authoring evidence-admission discipline as PLAYBOOK-6.10.9 (a new [GR] rule under §6.10 that EXTENDS PLAYBOOK-6.10.8 for the fold-authoring-turn scope). Rule requires zoom-out folds asserting concrete code-state facts to admit stable-state-pointer + file+line evidence with an (i)/(ii)/(iii) verified-state outcome inline in the SIGN attestation, before classify + persist. Two-trigger corpus: `logs/zoom_out_classifications.jsonl` row 31 (S2784 T2 SIGN Fold 4 — "no auth gating" overstated actual authN-present/authZ-absent) + row 32 (S2785 T1 SIGN Fold 1 — "completely ungated" overstated actual inline-authN-with-Token-fallback). Chris D-verdict at S2786. Rule count 204 → 205. Author-side sequencing note: I-0302 three-PR pattern candidacy (previously re-slotted to PLAYBOOK-6.10.9 in v0.7.0 provenance) again re-slotted forward to PLAYBOOK-6.10.10 per PLAYBOOK-10.7.5 next-integer rule — pre-allocation in a candidate document still does not constitute ratified reservation. Rules dogfooded at authoring: 2 folds from this amendment's own SIGN persisted BEFORE D-verdict per PLAYBOOK-6.10.8 — Fold A `same_pr_mitigatable` (drove reframing of "fold-authoring hygiene" to "evidence admission" throughout rule text and title), Fold B `future_trigger` (recorded as §6.12 extension-point note for a pattern-matching helper). Also dogfooded at authoring: SIGN turn 2 F-BLOCKING DISAGREE from Rigby on "at HEAD" underspecification drove the "stable state pointer (commit SHA; if PR/branch used, MUST include SHA under review)" text — a T4 revision cycle before final D-verdict. Ledger grew 34 → 36 rows during S2786. §6.12 extension-point note added for the Fold B helper candidacy. |
+| v0.9.0 | v0.8.0 | [] | 2026-07-22 | playbook-v0.9.0 | MINOR — codify handler-test-authoring discipline as PLAYBOOK-3.2.3 (dispatcher-DB TransactionTestCase requirement scoped to the transaction-visibility invariant, not the fresh-event-loop mechanism) + PLAYBOOK-3.2.4 (shared-taxonomy branch fortification — assert action field or error-body substring to prevent branch-crossing false-pass). First Chapter 3 extension since v0.2.0 (8-version gap). Two-trigger corpus: `logs/zoom_out_classifications.jsonl` rows 149 + 151 (S2885 first-triggers for Fold 1 + Fold 2) + rows 150 + 152 (S2886 second-triggers for Fold 1 + Fold 2), all four backfilled at S2889 per PLAYBOOK-6.10.8 graceful-degradation clause because the originating sessions failed to persist the folds at trigger time. Chris D-verdict at S2889. Rule count 205 → 207. First amendment to bundle two rules that share an authoring surface (handler tests exercising `ToolDispatcher.execute_sync` on shared taxonomy) — Rigby T2 confirmed KEEP TWO SEPARATE RULES because 3.2.4 applies regardless of dispatcher path while 3.2.3 is dispatcher/fixture-visibility-specific. First amendment where retroactive ledger backfill precedes T1 SIGN routing rather than following it, because the amendment's §3 corpus depended on ledger-enumerable rows. Rules dogfooded at authoring: 2 folds from this amendment's own SIGN persisted BEFORE D-verdict per PLAYBOOK-6.10.8 — Fold A `same_pr_mitigatable` at row 153 (drove reframing of 3.2.3 rationale from mechanism-detail to transaction-visibility invariant), Fold B `future_trigger` at row 154 (recorded as §3.5 extension-point note for a dedicated future "Testing Discipline" chapter). Ledger grew 148 → 154 rows during S2889 (6 rows: 4 backfilled S2885/S2886 + 2 live S2889). §3.5 extension-point note added for the Testing Discipline chapter candidacy. Chapter 3 remains STUB; two new rules do not promote it to FULL. |
