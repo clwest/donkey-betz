@@ -6779,7 +6779,11 @@ class OpsHandlersMixin:
                 }
 
             if not agent_name:
-                return {'error': 'agent_name is required. Use stats action without agent_name for global stats.', 'action': action}
+                return _handler_error(
+                    action,
+                    'invalid_params',
+                    'agent_name is required. Use stats action without agent_name for global stats.',
+                )
 
             # Resolve agent — support snake_case
             if '_' in agent_name:
@@ -6796,7 +6800,12 @@ class OpsHandlersMixin:
                     agent = Agent.objects.filter(name__icontains=clean, is_active=True).first()
 
             if not agent:
-                return {'error': f'Agent not found: {agent_name}', 'action': action}
+                return _handler_error(
+                    action,
+                    'not_found',
+                    f'Agent not found: {agent_name}',
+                    agent_name=agent_name,
+                )
 
             if action == 'list':
                 memories = AgentMemory.objects.filter(agent=agent).order_by('-created_at')
@@ -6870,11 +6879,21 @@ class OpsHandlersMixin:
                     'avg_importance': round(float(avg_importance or 0), 3),
                 }
 
-            return {'error': f'Unknown agent_memory action: {action}. Valid: list, knowledge, stats'}
+            return _handler_error(
+                action,
+                'unknown_action',
+                f'Unknown agent_memory action: {action}. Valid: list, knowledge, stats',
+                valid_actions=['list', 'knowledge', 'stats'],
+            )
 
         except Exception as e:
             logger.error(f"[AGENT_MEMORY] {action} error: {e}", exc_info=True)
-            return {'error': str(e)}
+            return _tool_error(
+                'internal_error',
+                str(e),
+                action=action,
+                exception_type=type(e).__name__,
+            )
 
     def _handle_heartbeat_history(self, tool_name, payload, user_id, trace_id):
         """Gap 8: Heartbeat time-series and historical vitals."""
@@ -6939,11 +6958,21 @@ class OpsHandlersMixin:
                     'status_distribution': status_counts,
                 }
 
-            return {'error': f'Unknown heartbeat_history action: {action}. Valid: recent, trends'}
+            return _handler_error(
+                action,
+                'unknown_action',
+                f'Unknown heartbeat_history action: {action}. Valid: recent, trends',
+                valid_actions=['recent', 'trends'],
+            )
 
         except Exception as e:
             logger.error(f"[HEARTBEAT] {action} error: {e}", exc_info=True)
-            return {'error': str(e)}
+            return _tool_error(
+                'internal_error',
+                str(e),
+                action=action,
+                exception_type=type(e).__name__,
+            )
 
     def _handle_infra_health(self, tool_name, payload, user_id, trace_id):
         """Gaps 11-14: Redis health, DB perf, dependency matrix, runtime metrics."""
@@ -7160,11 +7189,21 @@ class OpsHandlersMixin:
                 }
 
             all_actions = ['redis_health', 'db_perf', 'dependency_matrix', 'runtime_metrics']
-            return {'error': f'Unknown infra_health action: {action}. Valid: {", ".join(all_actions)}'}
+            return _handler_error(
+                action,
+                'unknown_action',
+                f'Unknown infra_health action: {action}. Valid: {", ".join(all_actions)}',
+                valid_actions=all_actions,
+            )
 
         except Exception as e:
             logger.error(f"[INFRA_HEALTH] {action} error: {e}", exc_info=True)
-            return {'error': str(e)}
+            return _tool_error(
+                'internal_error',
+                str(e),
+                action=action,
+                exception_type=type(e).__name__,
+            )
 
     # =========================================================================
     # R2-6: KB / Embedding browsing tool
@@ -7612,7 +7651,11 @@ class OpsHandlersMixin:
         """
         query = (payload.get('query') or '').strip()
         if not query:
-            return {'error': 'query is required'}
+            return _handler_error(
+                'search_docs',
+                'invalid_params',
+                'query is required',
+            )
         try:
             k = max(1, min(int(payload.get('k', 8) or 8), 20))
         except (TypeError, ValueError):
@@ -7759,7 +7802,13 @@ class OpsHandlersMixin:
 
         except Exception as e:
             logger.error(f"[SEARCH_DOCS] error: {e}", exc_info=True)
-            return {'error': str(e), 'query': query}
+            return _tool_error(
+                'internal_error',
+                str(e),
+                action='search_docs',
+                exception_type=type(e).__name__,
+                query=query,
+            )
 
     # =========================================================================
     # Session 1031: Dream Tool — browse, approve, dismiss dreams via PA
