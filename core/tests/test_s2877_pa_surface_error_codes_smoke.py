@@ -216,20 +216,20 @@ class LegacyBackfillPASurfaceTests(TestCase):
     own ``error_code`` on error envelopes, OR the backfill breadcrumb
     fires < 1% of total dispatches for 14 consecutive days.
 
-    When those criteria are met, ``ops_tool`` / ``newsletter_tool`` /
-    ``bpaas_tool`` will emit concrete codes and these ``legacy_error``
-    equality assertions will fail — delete the class as part of the
-    sunset PR rather than migrating the assertions.
+    When those criteria are met, remaining bare-return handlers (in
+    ``td_handlers_core.py``, ``td_handlers_gateway.py``,
+    ``td_handlers_railway.py``, ``td_handlers_codejobs.py``, and
+    ``td_handlers_content.py``) will emit concrete codes and these
+    ``legacy_error`` equality assertions will fail — delete the class
+    as part of the sunset PR rather than migrating the assertions.
 
     Rigby enumerated the current legacy population (S2877 pre-code
     SIGN, ``repo_tool.search query="return {'error':"``): 39 files
     across ``core/services/`` still return bare ``{'error': msg}``.
-    Handlers picked for the smoke matrix:
+    Post-S2884 handler-file population: 5 files remaining (see above).
 
-    * ``newsletter_tool.<bogus>`` — proves backfill fires across
-      handler module boundaries (``td_handlers_newsletter.py:44``)
-
-    Prior rows retired as their handlers were migrated:
+    All smoke rows previously in this class have been retired as
+    their handlers were migrated:
 
     * ``bpaas_tool.generate_close_pack`` — S2876 F-VERIFIED fixture;
       re-homed to ``test_s2878_bpaas_error_envelope.py`` when
@@ -238,6 +238,17 @@ class LegacyBackfillPASurfaceTests(TestCase):
       ``test_s2879_governance_ops_error_envelope.py`` when the ops
       unknown-action default at ``td_handlers_ops.py:397`` migrated to
       the S2874 shape in S2879 (governance + ops critical slice).
+    * ``newsletter_tool.<bogus>`` — S2877 cross-module-boundary row;
+      re-homed to ``test_s2884_agents_newsletter_error_envelope.py``
+      when ``_handle_newsletter`` migrated at
+      ``td_handlers_newsletter.py:44`` in S2884 (agents + newsletter
+      file-completing slate).
+
+    The class currently defines no test methods — the backfill wrapper
+    is exercised indirectly by any unmigrated site's default behavior
+    at runtime. Future slates may re-add a smoke row anchored on a
+    remaining unmigrated file (e.g. ``td_handlers_content.py``) if the
+    backfill sunset arc extends past the current cadence.
     """
 
     @classmethod
@@ -253,14 +264,6 @@ class LegacyBackfillPASurfaceTests(TestCase):
         )
         self.assertIsInstance(tool_result.result, dict)
         return tool_result.result
-
-    def test_newsletter_unknown_action_backfilled(self):
-        """Proves backfill fires from td_handlers_newsletter.py:44 site."""
-        result = self._dispatch(
-            'newsletter_tool', {'action': '__bogus_action_s2877__'},
-        )
-        self.assertEqual(result.get('error_code'), 'legacy_error')
-        self.assertTrue(result.get('error'))
 
 
 # ────────────────────────────────────────────────────────────────────────
