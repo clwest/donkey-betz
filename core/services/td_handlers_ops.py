@@ -1573,12 +1573,21 @@ class OpsHandlersMixin:
 
         execution_id = payload.get('execution_id', '')
         if not execution_id:
-            return {'error': 'execution_id required'}
+            return _handler_error(
+                'execution_detail',
+                'invalid_params',
+                'execution_id required',
+            )
 
         try:
             ex = AgentExecution.objects.select_related('agent').get(id=execution_id)
         except AgentExecution.DoesNotExist:
-            return {'error': f'Execution {execution_id} not found'}
+            return _handler_error(
+                'execution_detail',
+                'not_found',
+                f'Execution {execution_id} not found',
+                execution_id=execution_id,
+            )
 
         now = timezone.now()
         hb = getattr(ex, 'last_heartbeat_at', None)
@@ -4427,15 +4436,31 @@ class OpsHandlersMixin:
 
         # S2849 W2 #2a — global default cap + backfill actions. These are
         # staff-only (no workspace to own).
-        def _authorize_staff():
-            """None on ok / error dict on deny — staff-only gate."""
+        def _authorize_staff(action_name):
+            """None on ok / structured error envelope on deny — staff-only gate.
+
+            S2882 slate — takes ``action_name`` so the envelope carries the
+            caller's action label (matches S2879 ``_handler_error`` shape).
+            The not-staff branch below stays on the pre-S2882 bare-return
+            shape: the 4-code taxonomy has no ``permission_denied`` code,
+            and the mapping question is deferred to a Rigby SIGN.
+            """
             if user_id is None:
-                return {'error': 'authentication required for this action'}
+                return _handler_error(
+                    action_name,
+                    'invalid_params',
+                    'authentication required for this action',
+                )
             try:
                 User = get_user_model()
                 actor = User.objects.get(id=user_id)
             except Exception:
-                return {'error': f'actor user_id={user_id} not found'}
+                return _handler_error(
+                    action_name,
+                    'not_found',
+                    f'actor user_id={user_id} not found',
+                    user_id=user_id,
+                )
             if not getattr(actor, 'is_staff', False):
                 return {
                     'error': (
@@ -4466,7 +4491,7 @@ class OpsHandlersMixin:
             }
 
         if action == 'set_default_cap':
-            auth_err = _authorize_staff()
+            auth_err = _authorize_staff(action)
             if auth_err is not None:
                 return {'action': action, **auth_err}
             if daily_cap_usd is None:
@@ -4493,7 +4518,7 @@ class OpsHandlersMixin:
             }
 
         if action == 'backfill_defaults':
-            auth_err = _authorize_staff()
+            auth_err = _authorize_staff(action)
             if auth_err is not None:
                 return {'action': action, **auth_err}
             dry_run = payload.get('dry_run')
