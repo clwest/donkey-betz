@@ -2,76 +2,66 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2892 CLOSE → PA tools systematic sweep (Path B) opened + Slice 1 batch 1 of `td_handlers_ops` shipped (4 validation docs, `untested`→`validated_full`) + zoom-out fold row 157 persisted (2026-07-22; picks up as S2893) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2893 CLOSE → PA tools sweep Slice 1 Batch 2 shipped (4 validation docs, `untested`→`validated_full`) + Chris Option-C reslate deferred `autopilot_tool` to dedicated Slice 1.5 + zoom-out fold row 158 persisted (2026-07-22; picks up as S2894) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-22 (S2892 close).** S2892 opened the systematic PA tools validation sweep (Path B) at Chris's direction. Slice 1 (`td_handlers_ops`, 10 untested tools) opened with batch 1: 4 tools exercised live via Rigby (14 total actions), 4 validation docs shipped, gap-map ratchet applied. Two Ledger-worthy gaps + one semantic-signal anomaly surfaced.
+**Refreshed 2026-07-22 (S2893 close).** S2893 shipped Batch 2 of Slice 1 (`td_handlers_ops`). Chris ratified Option C at Turn 2: reslate `autopilot_tool` (~130 actions) to its own dedicated Slice 1.5 rather than trying to fit it in a normal 4-tool batch. Batch 2 became governor_tool + ops_digest_tool + scheduled_tasks_tool + spider_status_tool (last one pulled forward from Batch 3). 15 live actions dispatched by Rigby; 14 PASS + 1 canary-excluded (governor_tool.reset_breaker — no breakers tripped). 3 substantive Ledger candidates surfaced.
 
 **PRs shipped this session:**
-- u-d-b PR `<TBD>` — S2892 Slice 1 batch 1 (4 validation docs + PA_TOOL_AUDIT.md regen + PA_TOOLS_GAP_MAP.md regen + zoom-out fold row 157)
-- u-d-b PR `<TBD>` — S2892 close cascade
+- u-d-b PR `<TBD>` — S2893 Slice 1 batch 2 (4 validation docs + PA_TOOL_AUDIT.md regen + PA_TOOLS_GAP_MAP.md regen + zoom-out fold row 158 + handoff)
+- u-d-b PR `<TBD>` — S2893 close cascade (wrapper pin bump)
 
 **Gap-map ratchet (before → after this session):**
 ```
-validated_full:   3 → 7  (+4: agent_control_tool, agent_memory_tool, heartbeat_history_tool, infra_health_tool)
-untested:       104 → 100  (-4)
-per_tool_docs:   12 → 16
-per_tool_docs_with_covered_actions:  4 → 8
+validated_full:   7 → 11 (+4: governor_tool, ops_digest_tool, scheduled_tasks_tool, spider_status_tool)
+untested:       100 → 96 (-4)
+per_tool_docs:   16 → 20
+per_tool_docs_with_covered_actions:  8 → 12
 ```
 
-**Ledger candidates routed to Rigby at close (Ledger deliverable `5c84e75a-…`):**
-1. `agent_memory_tool.list/.knowledge` require `agent_name` at handler; schema doesn't declare it required — invalid_params drift.
-2. `agent_control_tool.audit_log` is misnamed — returns current state per agent, not append-only history. `AgentControlEntry` is update_or_create; block→unblock overwrites the row. Rename schema action to `recent` OR implement `AgentControlEventLog` append-only rows.
-3. `agent_control_tool.block` doesn't validate `agent_name` against AGENT_MAP — silent-persist risk. Optional soft-check.
-4. Inventory schema-count drift: inventory says 113 schemas + 156 handlers; live is 117 + 160. Regen cadence lapsed.
-5. Latency reporting inconsistency across handlers.
+**Ledger candidates routed to Rigby at close (Rigby Tool Gap Ledger deliverable `5c84e75a-…`):**
+1. `governor_tool.status` intermittent inconsistency with `.coverage` on `circuit_breakers_tripped` — cache / eventual-consistency artifact confirmed by Rigby re-check.
+2. `governor_tool` `reason="aligned"` conflates mission-match vs fail-open — 80 agents show `matched via fail_open: None` in detail; no way to distinguish genuinely-governed from merely-permitted.
+3. `ops_digest_tool.generate` missing staleness heuristic on `autopilot.last_cycle` — 15-day-stale timestamp surfaced raw, not flagged in `degraded_fields`.
 
-**Semantic-signal candidates (NOT tool defects; operational-signal work):**
-- Heartbeat score collapsed to 87.5 flat across 137 heartbeats/24h — one component perpetually degrades (7/8 = 87.5). Which component?
-- Redis hit_rate_pct 59.5% (below 80%+ target).
-- Postgres longest_query_secs 2302 (~38 min stuck query).
-- Postgres cache_hit_ratio_pct 62.51% (below 90%+ target).
-- Redis blocked_clients=5.
+**Marginal/pattern-matching (folded into existing S2892 Ledger #1 rather than new rows):** schema-vs-handler required-arg drift on governor_tool.test/reset_breaker, ops_digest_tool.post, spider_status_tool.history/search/detail.
 
-**Zoom-out fold row 157** — `sweep_shape_doc_only_defers_semantic_assertions`, `future_trigger`. Trigger: 2+ later validation docs prove to have missed a semantic defect a per-action assertion would have caught, OR Chris explicitly asks for semantic-correctness coverage (e.g. reacting to an incident).
+**Zoom-out fold row 158** — `pa_tools_sweep_batch_cadence_outcome_gate`, `future_trigger`. Trigger: 2 consecutive future batches ship pure docs with zero engineering payload (zero Ledger candidates, zero schema fixes, zero observability deltas). If that fires, promote the per-batch outcome gate to the sweep methodology explicitly.
 
-Full session context: `docs/handoffs/SESSION_2892_PA_TOOLS_SWEEP_SLICE_1_BATCH_1.md`.
+Full session context: `docs/handoffs/SESSION_2893_PA_TOOLS_SWEEP_SLICE_1_BATCH_2.md`.
 
 ---
 
-## S2893 open sequence
+## S2894 open sequence
 
-### Step 1 (FIRST THING) — PA tools sweep: Slice 1 batch 2 of `td_handlers_ops`
+### Step 1 (FIRST THING) — PA tools sweep: Slice 1 batch 3 of `td_handlers_ops`
 
-**Path B is the ratified multi-week arc.** Slice 1 (`td_handlers_ops`) has 3 batches total; batch 1 shipped this session. Batch 2 opens at S2893.
+**Path B is the ratified multi-week arc.** Slice 1 (`td_handlers_ops`) opened at S2892; Batches 1 + 2 shipped. Batch 3 opens at S2894.
 
-**Batch 2 lineup:** 4 tools, one session (matches S2892 pace).
-1. `autopilot_tool` — schema at `pa_tool_schemas.py`, handler at `td_handlers_ops.py`
-2. `governor_tool` — per-agent execution budget controls
-3. `ops_digest_tool` — daily/weekly/hourly digest rollups
-4. `scheduled_tasks_tool` — PeriodicTask surface
+**Batch 3 lineup:** `workspace_budget_tool` + 2-3 more from the remaining `td_handlers_ops` untested set. Do NOT include `autopilot_tool` — it is reserved for dedicated Slice 1.5 (S2895 or later, 2 sessions estimated).
 
-**Execution shape (repeat of S2892 T1 pattern):**
-1. Enumerate schemas + register sites.
-2. Joint SIGN with Rigby before dispatch — pressure-test on which actions are mutating, what state each requires, whether any of these need a canary agent / workspace / anything.
+Pick the additional tools by re-reading `docs/audits/PA_TOOLS_GAP_MAP.md` "td_handlers_ops" triage slice at S2894 open.
+
+**Execution shape (repeat of S2892/S2893 pattern):**
+1. Enumerate schemas + register sites for the 3-4 selected tools.
+2. Joint SIGN with Rigby before dispatch — pressure-test on which actions are mutating, what state each requires, whether any need a canary agent / workspace / anything.
 3. Rigby exercises every action live. Report tool_runs.
-4. Claude writes 4 validation docs (S2796 shape with `## Covered actions` heading).
+4. Claude writes validation docs (S2796 shape with bare `## Covered actions` heading + §5a Mutation containment section per S2893 evolution).
 5. Regenerate `docs/PA_TOOL_AUDIT.md` + `docs/audits/PA_TOOLS_GAP_MAP.md`.
 6. Ship PR.
 
 ### Step 2 — Net-new engineering candidates (per feedback_engineering_bias_over_audit)
 
-**Path B does NOT preempt engineering-bias.** Still surface 1-3 net-new candidates at any natural pause. Priority order for S2893:
+**Path B does NOT preempt engineering-bias.** Still surface 1-3 net-new candidates at any natural pause. Priority order for S2894 (unchanged from S2893):
 
-1. **`diagnostics_tool.schema_handler_diff` placeholder → implementation** — Rigby self-introspection tool. Would let her answer "what's the current schema-handler drift?" from chat, closes Ledger candidate #4 (inventory drift detection).
-2. **Ledger row shipment from S2892 sweep candidates #1 + #2** — agent_memory_tool schema tightening + agent_control_tool.audit_log rename or history model. Small-scope engineering PRs.
-3. **PLAYBOOK-3.2.3/3.2.4 compliance sweep** — carried from S2891, still open.
-4. **Explicit `bridge_tool` marker on character-os side** — cross-repo; deferred pending character-os side pause.
-5. **LLMCallLog cost join for bridge calls** — deferred, requires joinability verification.
+1. **`diagnostics_tool.schema_handler_diff` placeholder → implementation** — Rigby self-introspection tool. Would let her answer "what's the current schema-handler drift?" from chat, closes S2892 Ledger candidate #4.
+2. **Ship one S2893 Ledger row** — pick between: (a) `governor_tool.status` cache/consistency fix (single-file, small), (b) `governor_tool.reason` fail-open surfacing (small), (c) `ops_digest_tool` autopilot staleness heuristic (small). Any of these would satisfy fold-158 outcome-gate for S2894.
+3. **Ship one S2892 Ledger row** — `agent_memory_tool` schema tightening or `agent_control_tool.audit_log` rename/history model. Still open.
+4. **PLAYBOOK-3.2.3/3.2.4 compliance sweep** — carried from S2891.
 
-### What's forbidden at S2893 (D6 MORATORIUM still in force)
+### What's forbidden at S2894 (D6 MORATORIUM still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
-- No R1a-shaped proposals (upgrading character-os to fleet HMAC). Rejected at S2887.
+- No R1a-shaped proposals (upgrading character-os to fleet HMAC).
 
 ### What's queued but deferred (do NOT open unless Chris directs)
 
@@ -79,7 +69,8 @@ Full session context: `docs/handoffs/SESSION_2892_PA_TOOLS_SWEEP_SLICE_1_BATCH_1
 - **Testing Discipline chapter candidacy** — ledger row 154 `future_trigger`. Unchanged.
 - **Bridge call observability rename-risk** — ledger row 155. Unchanged.
 - **Close-ceremony ledger-staleness gate** — ledger row 156. Unchanged.
-- **Sweep shape doc-only defers semantic assertions** — ledger row 157 (new this session). Unchanged.
+- **Sweep shape doc-only defers semantic assertions** — ledger row 157. Unchanged.
+- **Sweep batch cadence outcome gate** — ledger row 158 (new this session). Trigger: 2 consecutive batches ship pure docs with zero engineering payload.
 - **R1 fleet reject-mode flip** — deferred.
 - Docs restructuring arc (`project_docs_restructuring_arc_queued`) — behind sweep.
 - W2 #1 / #2b / #2c — pending Chris re-slate.
@@ -90,20 +81,34 @@ Full session context: `docs/handoffs/SESSION_2892_PA_TOOLS_SWEEP_SLICE_1_BATCH_1
 
 ---
 
-## Sweep progress tracker (Path B ratified S2892)
+## Sweep progress tracker (Path B ratified S2892, reslated S2893)
 
-**Slice 1 — `td_handlers_ops` (10 tools):**
-- Batch 1 (this session): agent_control_tool, agent_memory_tool, heartbeat_history_tool, infra_health_tool ✓
-- Batch 2 (next): autopilot_tool, governor_tool, ops_digest_tool, scheduled_tasks_tool
-- Batch 3: spider_status_tool, workspace_budget_tool (+ 1 slack for surprises)
+**Slice 1 — `td_handlers_ops` (10 tools total):**
+- Batch 1 (S2892): agent_control_tool, agent_memory_tool, heartbeat_history_tool, infra_health_tool ✓
+- Batch 2 (S2893, this session): governor_tool, ops_digest_tool, scheduled_tasks_tool, spider_status_tool ✓
+- Batch 3 (S2894): workspace_budget_tool + 2-3 more (pick from remaining `td_handlers_ops` untested set; DO NOT include autopilot_tool)
+- Slice 1.5 (post-Slice-1 close): autopilot_tool read-only sweep + autopilot_tool mutations sweep (2 sessions estimated)
 
 **Slice 2 — `td_handlers_agents` (25 tools, ~7 sessions):** queued
 **Slice 3 — `td_handlers_core` (22 tools, ~6 sessions):** queued
 **Slice 4 — `td_handlers_gateway` (17 tools, ~5 sessions):** queued
 **Slice 5 — `tool_dispatcher` (14 tools, ~4 sessions):** queued
 
-**Total remaining tools to close:** 96 after this batch.
-**Estimated total sessions remaining in arc:** ~24.
+**Total remaining tools to close:** 92 after this batch.
+**Estimated total sessions remaining in arc:** ~25 (was ~24; +1 for autopilot reslate to Slice 1.5).
+
+**Informative per-batch outcome check (S2893 fold-158 hybrid — Rigby SIGN Path C):** In each batch, sanity-check that the sweep produced at least one concrete outcome (Ledger candidate / schema fix / observability delta). If not, tighten scope or reslate next batch to avoid ceremony drift. Informative, not enforcement — row 158 remains `future_trigger`.
+
+---
+
+## Autopilot Slice 1.5 pre-commit note (per S2893 Rigby SIGN zoom-out #4)
+
+When `autopilot_tool` is eventually swept, the template MUST differ from the batch shape used through Slice 1:
+
+1. **Read-only first sweep** — exercise ~110 read-only actions (all `_report`, `_queue`, `_forecast`, `_scan`, `status`, `history`, `dry_run_report`). Ship `validated_partial`.
+2. **Sandboxed / explicitly gated mutations second sweep** — exercise ~20 mutating actions with extra scrutiny on `dry_run` + `confirm` two-factor gating (already present on `security_containment_plan` per S1228 PR-A), audit trails, `ttl_hours` expiries.
+
+Do NOT try to sweep both categories in one session.
 
 ---
 
@@ -118,9 +123,9 @@ Rulebook: `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`.
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2892 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2893 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2892: zero A4 spend — pure engineering + governance.** A1 shipping spend was the sweep PR + close cascade.
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2893: zero A4 spend — pure engineering + governance.** A1 shipping spend was the sweep PR + close cascade.
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
 3. **Capability claims:** (a)…(uu) as ratified at S2887 close. No additions this session.
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
@@ -129,17 +134,16 @@ Rulebook: `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`.
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2892)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2893)
 
 See:
-- **S2892 handoff (current):** `docs/handoffs/SESSION_2892_PA_TOOLS_SWEEP_SLICE_1_BATCH_1.md`
+- **S2893 handoff (current):** `docs/handoffs/SESSION_2893_PA_TOOLS_SWEEP_SLICE_1_BATCH_2.md`
+- **S2892 handoff:** `docs/handoffs/SESSION_2892_PA_TOOLS_SWEEP_SLICE_1_BATCH_1.md`
 - **S2891 handoff:** `docs/handoffs/SESSION_2891_BRIDGE_ACTIVITY_DIGEST.md`
 - **S2890 handoff:** `docs/handoffs/SESSION_2890_OPS_TOOL_RECENT_BRIDGE_CALLS.md`
 - **S2889 handoff:** `docs/handoffs/SESSION_2889_PLAYBOOK_V0_9_0_RATIFIED.md`
 - **S2888 handoff:** `docs/handoffs/SESSION_2888_TD_ERROR_EXTRACTION.md`
 - **S2887 handoff + audit:** `docs/handoffs/SESSION_2887_S2887_SIDE_STEP_GTM_AUDIT.md`
-- **S2886 handoff:** `docs/handoffs/SESSION_2886_CORE_CRITICALITY_FIRST_ERROR_ENVELOPE.md`
-- **S2885 handoff:** `docs/handoffs/SESSION_2885_CONTENT_ERROR_ENVELOPE.md`
 - **A4↔A1 ratification:** current `00-START-NEXT-SESSION.md` §A4 Constraints (this file, above)
 - **Parent strategic discovery:** `docs/research/platform/S2841_STRATEGIC_DISCOVERY_WHAT_DBZ_ACTUALLY_IS.md`
 - **Pressure-test addendum:** `docs/research/platform/S2841_PRESSURE_TEST_ADDENDUM.md`
