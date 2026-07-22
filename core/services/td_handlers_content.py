@@ -2,6 +2,7 @@
 ToolDispatcher ContentHandlersMixin — extracted handler methods.
 """
 from core.services.pa_identity import PA_IDENTITY
+from core.services.td_error import _handler_error
 
 """
 Tool Dispatcher - Centralized Tool Execution with No Silent Failures
@@ -72,27 +73,6 @@ class ToolResult:
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
-
-
-def _handler_error(action: str, code: str, message: str, **fields) -> Dict[str, Any]:
-    """S2885 — handler-level structured error envelope (Ledger #22 sunset arc).
-
-    Local copy of the S2879 helper (also present in ``td_handlers_ops.py``,
-    ``td_handlers_governance.py``, ``td_handlers_agents.py``, and
-    ``td_handlers_newsletter.py``). Kept file-local per Rigby's S2875
-    6-adopter gate on ``td_error.py`` extraction — this slate takes the
-    adopter count to 5 (ops + governance + agents + newsletter + content),
-    still 1 short of the extraction threshold.
-
-    Shape: ``{success: False, error_code, error, action, **fields}``.
-    """
-    return {
-        'success': False,
-        'error_code': code,
-        'error': message,
-        'action': action,
-        **fields,
-    }
 
 
 class ContentHandlersMixin:

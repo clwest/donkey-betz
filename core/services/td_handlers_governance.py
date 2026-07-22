@@ -17,28 +17,7 @@ Current handlers:
 """
 from typing import Any, Dict
 
-
-def _handler_error(action: str, code: str, message: str, **fields) -> Dict[str, Any]:
-    """S2879 — handler-level structured error envelope.
-
-    Matches the S2874 canonical shape used by the S2878 ``_handle_bpaas``
-    migration: ``{success: False, error_code, error, action, **fields}``.
-
-    Distinct from the S2875 ``_tool_error`` helper in ``td_handlers_ops.py``
-    (which emits the 3-key ``{error, error_code, **fields}`` shape used by
-    the ops tool-gateway layer's 12 existing adopters). Reconciliation of
-    the two shapes is deferred until the 6-adopter-gate helper-extraction
-    phase Rigby set at S2875 (see docstring on that helper). Introducing
-    a distinct name here prevents silent contract drift on any existing
-    ``_tool_error`` call site.
-    """
-    return {
-        'success': False,
-        'error_code': code,
-        'error': message,
-        'action': action,
-        **fields,
-    }
+from core.services.td_error import _handler_error
 
 
 class GovernanceHandlersMixin:
