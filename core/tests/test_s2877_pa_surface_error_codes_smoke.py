@@ -224,15 +224,20 @@ class LegacyBackfillPASurfaceTests(TestCase):
     Rigby enumerated the current legacy population (S2877 pre-code
     SIGN, ``repo_tool.search query="return {'error':"``): 39 files
     across ``core/services/`` still return bare ``{'error': msg}``.
-    Three representative handlers picked for the smoke matrix:
+    Handlers picked for the smoke matrix:
 
-    * ``bpaas_tool.generate_close_pack`` — original S2876 F-VERIFIED
-      fixture from post-code live SIGN (regression guarantee)
     * ``newsletter_tool.<bogus>`` — proves backfill fires across
       handler module boundaries (``td_handlers_newsletter.py:44``)
     * ``ops_tool.<bogus>`` — proves backfill fires on a gateway tool
       whose migrated actions coexist with legacy ones
       (``td_handlers_ops.py:397``)
+
+    ``bpaas_tool.generate_close_pack`` was originally in this class as
+    the S2876 F-VERIFIED fixture; it was moved to
+    ``MigratedHandlerPASurfaceTests`` in S2878 when ``_handle_bpaas``
+    migrated to the S2874 structured envelope shape. See
+    ``test_s2878_bpaas_error_envelope.py`` for the migrated-side
+    coverage.
     """
 
     @classmethod
@@ -248,15 +253,6 @@ class LegacyBackfillPASurfaceTests(TestCase):
         )
         self.assertIsInstance(tool_result.result, dict)
         return tool_result.result
-
-    def test_bpaas_generate_close_pack_empty_packet_backfilled(self):
-        """S2876 F-VERIFIED fixture — regression guard on the original probe."""
-        result = self._dispatch(
-            'bpaas_tool',
-            {'action': 'generate_close_pack', 'packet': {}},
-        )
-        self.assertEqual(result.get('error_code'), 'legacy_error')
-        self.assertTrue(result.get('error'))
 
     def test_newsletter_unknown_action_backfilled(self):
         """Proves backfill fires from td_handlers_newsletter.py:44 site."""
