@@ -10,18 +10,18 @@
 
 - **Total tool names:** 161
 - **Per-category breakdown:**
-  - `untested` (untested): **100**
+  - `untested` (untested): **96**
   - `agent_via_run_agent` (agent (via run_agent)): **44**
+  - `validated_full` (validated (full)): **11**
   - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **8**
-  - `validated_full` (validated (full)): **7**
   - `validated_partial` (validated (partial)): **1**
   - `meta_no_handler` (meta (no handler by design)): **1**
 
 ## Validation-doc corpus
 
-- **Total `*_validation.md` files:** 26
+- **Total `*_validation.md` files:** 30
 - **Substrate (cross-cutting) docs:** 10 — reduce risk platform-wide but do NOT validate per-tool invariants (S2795 F2 rename).
-- **Per-tool docs:** 16 — of which 8 have an explicit 'Covered actions' section (F1 checklist).
+- **Per-tool docs:** 20 — of which 12 have an explicit 'Covered actions' section (F1 checklist).
 
 ## Schema quality lints (F5 advisory column)
 
@@ -208,7 +208,7 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `get_body_vitals` | ✓✓ | untested | no_properties, no_required | `core/services/td_handlers_agents.py` |
 | `get_system_alerts` | ✓✓ | untested | no_required | `core/services/td_handlers_agents.py` |
 | `governance_tool` | ✓✓ | untested | actions_not_mentioned_in_description | `core/services/td_handlers_core.py` |
-| `governor_tool` | ✓✓ | untested | — | `core/services/td_handlers_ops.py` |
+| `governor_tool` | ✓✓ | validated (full) | — | `core/services/td_handlers_ops.py` |
 | `heartbeat_history_tool` | ✓✓ | validated (full) | — | `core/services/td_handlers_ops.py` |
 | `http_smoke_test` | ✓✓ | untested | no_required | `core/services/td_handlers_core.py` |
 | `image_editing_agent` | ✓✓ | untested | — | `core/services/tool_dispatcher.py` |
@@ -235,7 +235,7 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `opportunity_manager_tool` | ✓✓ | untested | — | `core/services/td_handlers_agents.py` |
 | `opportunity_pipeline_agent` | handler | agent (via run_agent) | — | `core/services/tool_dispatcher.py` |
 | `opportunity_scoring_agent` | handler | agent (via run_agent) | — | `core/services/tool_dispatcher.py` |
-| `ops_digest_tool` | ✓✓ | untested | — | `core/services/td_handlers_ops.py` |
+| `ops_digest_tool` | ✓✓ | validated (full) | — | `core/services/td_handlers_ops.py` |
 | `ops_tool` | ✓✓ | validated (partial) | actions_not_mentioned_in_description | `core/services/td_handlers_ops.py` |
 | `orm_inspect_tool` | ✓✓ | untested | — | `core/services/td_handlers_agents.py` |
 | `paid_interest_status` | ✓✓ | untested | no_required | `core/services/td_handlers_core.py` |
@@ -264,7 +264,7 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `rigby_work_item` | ✓✓ | untested | actions_not_mentioned_in_description | `core/services/td_handlers_rigby_work_queue.py` |
 | `run_agent` | schema | meta (no handler by design) | — | `—` |
 | `schedule_followup` | ✓✓ | untested | no_required | `core/services/td_handlers_agents.py` |
-| `scheduled_tasks_tool` | ✓✓ | untested | no_required | `core/services/td_handlers_ops.py` |
+| `scheduled_tasks_tool` | ✓✓ | validated (full) | no_required | `core/services/td_handlers_ops.py` |
 | `search_docs` | ✓✓ | validated (doc, unknown coverage) | — | `core/services/td_handlers_ops.py` |
 | `security_agent` | handler | agent (via run_agent) | — | `core/services/tool_dispatcher.py` |
 | `self_awareness_tool` | ✓✓ | untested | — | `core/services/td_handlers_gateway.py` |
@@ -274,7 +274,7 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `signal_studio_judge_stats` | ✓✓ | untested | no_required | `core/services/td_handlers_core.py` |
 | `social_media_agent` | handler | agent (via run_agent) | — | `core/services/tool_dispatcher.py` |
 | `spider_data_aggregation_tool` | ✓✓ | untested | actions_not_mentioned_in_description | `core/services/spider_data_aggregation_tool.py` |
-| `spider_status_tool` | ✓✓ | untested | — | `core/services/td_handlers_ops.py` |
+| `spider_status_tool` | ✓✓ | validated (full) | — | `core/services/td_handlers_ops.py` |
 | `status_snapshot_tool` | ✓✓ | validated (full) | no_required | `core/services/td_handlers_ops.py` |
 | `stock_analyst_agent` | handler | agent (via run_agent) | — | `core/services/tool_dispatcher.py` |
 | `stock_audit_coordinator` | handler | agent (via run_agent) | — | `core/services/tool_dispatcher.py` |
