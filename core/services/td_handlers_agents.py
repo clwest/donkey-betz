@@ -6231,10 +6231,21 @@ class AgentHandlersMixin:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Handle BPaaS tool — create projects from build packets, generate close packs."""
+        """Handle BPaaS tool — create projects from build packets, generate close packs.
+
+        S2878: error envelopes migrated to structured shape per S2874 canonical
+        (`{success, error_code, error, action}`). Eliminates dispatcher-layer
+        `legacy_error` backfill for this handler (S2876 breadcrumb telemetry
+        showed `bpaas_tool.generate_close_pack` as the only real production hit).
+        """
         action = payload.get('action')
         if not action:
-            return {'success': False, 'error': 'action is required'}
+            return {
+                'success': False,
+                'error_code': 'missing_required_params',
+                'error': 'action is required',
+                'action': action,
+            }
 
         try:
             if action == 'create_project':
@@ -6246,7 +6257,12 @@ class AgentHandlersMixin:
                 workspace_id = payload.get('workspace_id')
                 packet = payload.get('packet')
                 if not workspace_id or not packet:
-                    return {'success': False, 'error': 'workspace_id and packet are required'}
+                    return {
+                        'success': False,
+                        'error_code': 'missing_required_params',
+                        'error': 'workspace_id and packet are required',
+                        'action': action,
+                    }
 
                 workspace = ProjectWorkspace.objects.get(id=workspace_id)
                 user = User.objects.get(id=user_id) if user_id else None
@@ -6258,7 +6274,12 @@ class AgentHandlersMixin:
 
                 packet = payload.get('packet')
                 if not packet:
-                    return {'success': False, 'error': 'packet is required'}
+                    return {
+                        'success': False,
+                        'error_code': 'missing_required_params',
+                        'error': 'packet is required',
+                        'action': action,
+                    }
                 return {'success': True, 'action': 'generate_close_pack', **generate_close_pack(packet)}
 
             elif action == 'get_schema':
@@ -6270,11 +6291,21 @@ class AgentHandlersMixin:
                 return {'success': True, 'action': 'get_example', 'example': NORMAN_HANDYMAN_EXAMPLE}
 
             else:
-                return {'success': False, 'error': f"Unknown action: {action}. Valid: create_project, generate_close_pack, get_schema, get_example"}
+                return {
+                    'success': False,
+                    'error_code': 'unknown_action',
+                    'error': f"Unknown action: {action}. Valid: create_project, generate_close_pack, get_schema, get_example",
+                    'action': action,
+                }
 
         except Exception as e:
             logger.error(f"[bpaas_tool] Error: {e}", exc_info=True)
-            return {'success': False, 'error': str(e)}
+            return {
+                'success': False,
+                'error_code': 'handler_exception',
+                'error': str(e),
+                'action': action,
+            }
 
 
     # ── Session 1174 PR-2b-1: schedule_followup ──────────────────────────────
