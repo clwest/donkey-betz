@@ -2,6 +2,7 @@
 ToolDispatcher OpsHandlersMixin — extracted handler methods.
 """
 from core.services.pa_identity import PA_IDENTITY
+from core.services.td_error import _handler_error
 
 
 def _d14_resolve_min_session(raw):
@@ -25,14 +26,18 @@ def _d14_resolve_min_session(raw):
     return v if v > 0 else None
 
 
+# NOTE: `_tool_error` below is the ops tool-gateway envelope (3-key shape,
+# 12 gateway-layer adopters). The handler-level envelope (5-key shape) lives
+# in `core/services/td_error.py` and is imported above as `_handler_error`.
+# Do NOT collapse the two — they serve different call sites.
 def _tool_error(code: str, message: str, **fields):
     """S2875 — cross-tool structured-error envelope (Ledger #2 promoted).
 
     Extends the S2874 `_read_file_error` shape (in td_handlers_gateway.py)
     to the spider_status_tool + kb_tool handlers in this file. Kept local
-    per Rigby's Q3=A recommendation — do NOT extract to a shared
-    `td_error.py` gateway helper until 6+ adopters have stabilized (avoids
-    signature churn while the shape is still empirically forming).
+    per Rigby's Q3=A recommendation — the handler-level 5-key shape has
+    since been extracted to `core/services/td_error.py` (S2888 Ledger #13);
+    this 3-key ops-gateway shape stays local.
 
     Envelope contract:
         {'error': <human-readable>, 'error_code': <machine-readable>, **fields}
@@ -43,40 +48,6 @@ def _tool_error(code: str, message: str, **fields):
     env = {'error': message, 'error_code': code}
     env.update(fields)
     return env
-
-
-def _handler_error(action: str, code: str, message: str, **fields):
-    """S2879 — handler-level structured error envelope (Ledger #22 sunset arc).
-
-    Matches the S2874 canonical shape used by the S2878 ``_handle_bpaas``
-    migration: ``{success: False, error_code, error, action, **fields}``.
-
-    Distinct from the S2875 ``_tool_error`` helper above, which emits the
-    3-key ``{error, error_code, **fields}`` shape used by 12 existing
-    ops-gateway-layer adopters (spider_status_tool / kb_tool paths). Do
-    NOT collapse the two shapes yet — reconciliation is gated on the
-    6-adopter helper-extraction milestone Rigby locked at S2875, and
-    changing ``_tool_error`` in place would silently mutate every
-    existing call site's contract.
-
-    Taxonomy (S2879 4-code minimal + S2882 5th code):
-      * ``invalid_params`` — missing or invalid input
-      * ``not_found`` — target resource does not exist
-      * ``unknown_action`` — action string not in the valid set
-      * ``dependency_missing`` — optional model/service import failed
-      * ``permission_denied`` — caller lacks required authorization
-        (S2882 close: Rigby SIGN + Chris D-verdict added the 5th code
-        so ``_authorize_staff`` not-staff denial gets a structured
-        envelope; scope is strictly authz — do NOT expand to other
-        access-control failures without a fresh SIGN.)
-    """
-    return {
-        'success': False,
-        'error_code': code,
-        'error': message,
-        'action': action,
-        **fields,
-    }
 
 
 def _resolve_originating_session(raw):
