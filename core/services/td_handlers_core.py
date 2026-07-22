@@ -74,6 +74,26 @@ class ToolResult:
         return asdict(self)
 
 
+def _handler_error(action: str, code: str, message: str, **fields) -> Dict[str, Any]:
+    """S2886 — handler-level structured error envelope (Ledger #22 sunset arc).
+
+    Local copy of the S2879 helper (also present in ``td_handlers_ops.py``,
+    ``td_handlers_governance.py``, ``td_handlers_agents.py``,
+    ``td_handlers_newsletter.py``, and ``td_handlers_content.py``). Kept
+    file-local per Rigby's S2875 6-adopter gate on ``td_error.py``
+    extraction — this slate takes the adopter count to 6 (ops + governance
+    + agents + newsletter + content + core), meeting the extraction
+    threshold. Extraction arc queued as S2887 follow-on.
+
+    Shape: ``{success: False, error_code, error, action, **fields}``.
+    """
+    return {
+        'success': False,
+        'error_code': code,
+        'error': message,
+        'action': action,
+        **fields,
+    }
 
 
 _ACTIVE_REPO_TTL_SECONDS = 7 * 24 * 60 * 60  # 7 days
@@ -2221,13 +2241,13 @@ RESEARCH DATA:
         action = payload.get('action', 'save')
 
         if not user_id:
-            return {'error': 'User context required for memory operations'}
+            return _handler_error(action, 'permission_denied', 'User context required for memory operations')
         user = User.objects.get(id=user_id)
 
         if action == 'save':
             content = (payload.get('content') or '').strip()
             if not content:
-                return {'error': 'content is required for save action'}
+                return _handler_error('save', 'invalid_params', 'content is required for save action')
 
             # Secret redaction
             from core.services.tool_dispatcher import _redact_secrets
@@ -2328,7 +2348,7 @@ RESEARCH DATA:
         elif action == 'delete':
             memory_id = payload.get('memory_id')
             if not memory_id:
-                return {'error': 'memory_id required for delete action'}
+                return _handler_error('delete', 'invalid_params', 'memory_id required for delete action')
             deleted, _ = UserMemoryContext.objects.filter(user=user, id=memory_id).delete()
             if deleted:
                 svc = get_memory_context_service()
@@ -2342,7 +2362,7 @@ RESEARCH DATA:
         elif action == 'search':
             query = (payload.get('query') or '').strip()
             if not query:
-                return {'error': 'query required for search action'}
+                return _handler_error('search', 'invalid_params', 'query required for search action')
             results = UserMemoryContext.objects.filter(
                 user=user,
                 content__icontains=query,
@@ -2362,7 +2382,7 @@ RESEARCH DATA:
                 ],
             }
 
-        return {'error': f'Unknown action: {action}'}
+        return _handler_error(action, 'unknown_action', f'Unknown action: {action}')
 
 
     # ── Session 1078: Work Tool (Gateway) ──────────────────────────────────────
@@ -3841,12 +3861,12 @@ RESEARCH DATA:
         action = payload.get('action', '')
 
         if not user_id:
-            return {'error': 'Authentication required for messaging'}
+            return _handler_error(action, 'permission_denied', 'Authentication required for messaging')
 
         try:
             sender = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return {'error': 'User not found'}
+            return _handler_error(action, 'not_found', 'User not found')
 
         if action == 'send_message':
             # Session 1253 PR 4: defense-in-depth guard. The schema's
@@ -3872,9 +3892,9 @@ RESEARCH DATA:
             message_body = payload.get('message', '').strip()
 
             if not recipient_username:
-                return {'error': 'recipient_username is required'}
+                return _handler_error('send_message', 'invalid_params', 'recipient_username is required')
             if not message_body:
-                return {'error': 'message is required'}
+                return _handler_error('send_message', 'invalid_params', 'message is required')
 
             try:
                 recipient = User.objects.get(username=recipient_username)
@@ -3976,14 +3996,19 @@ RESEARCH DATA:
         elif action == 'get_thread':
             thread_id = payload.get('thread_id', '')
             if not thread_id:
-                return {'error': 'thread_id is required'}
+                return _handler_error('get_thread', 'invalid_params', 'thread_id is required')
 
             try:
                 participant = ThreadParticipant.objects.get(
                     thread_id=thread_id, user=sender
                 )
             except ThreadParticipant.DoesNotExist:
-                return {'error': 'Thread not found or access denied'}
+                # Preserve dual-semantic message per Rigby SIGN F2:
+                # participant lookup collapses "thread does not exist" and
+                # "requester is not a participant" into a single error to
+                # avoid an enumeration oracle (leaks whether a thread with
+                # this id exists to non-participants).
+                return _handler_error('get_thread', 'not_found', 'Thread not found or access denied')
 
             messages = (
                 DirectMessage.objects
@@ -4015,7 +4040,7 @@ RESEARCH DATA:
             }
 
         valid = ['send_message', 'list_threads', 'get_thread', 'unread_count']
-        return {'error': f'Unknown messaging_tool action: {action}. Valid: {", ".join(valid)}'}
+        return _handler_error(action, 'unknown_action', f'Unknown messaging_tool action: {action}. Valid: {", ".join(valid)}')
 
     # ── Session tool: conversation health + fresh session creation ──────────────
 
@@ -4028,7 +4053,7 @@ RESEARCH DATA:
 
             conversation_id = payload.get('conversation_id') or getattr(self, '_current_conversation_id', None)
             if not conversation_id:
-                return {'error': 'No conversation_id provided and no current conversation context.'}
+                return _handler_error('health_check', 'invalid_params', 'No conversation_id provided and no current conversation context.')
 
             health = get_session_health(conversation_id, user_id)
             return {
@@ -4203,7 +4228,7 @@ RESEARCH DATA:
 
             target = (payload.get('conversation_id') or '').strip()
             if not target:
-                return {'error': 'session_tool.retire requires conversation_id.'}
+                return _handler_error('retire', 'invalid_params', 'session_tool.retire requires conversation_id.')
 
             bound = (payload.get('_bound_conversation_id') or '').strip()
             is_current_bound = bool(bound) and target == bound
@@ -4308,7 +4333,7 @@ RESEARCH DATA:
 
             target = (payload.get('conversation_id') or '').strip()
             if not target:
-                return {'error': 'session_tool.set_active requires conversation_id.'}
+                return _handler_error('set_active', 'invalid_params', 'session_tool.set_active requires conversation_id.')
 
             qs = ChatConversation.objects.filter(conversation_id=target, user_id=user_id)
             if not qs.exists():
@@ -4344,7 +4369,7 @@ RESEARCH DATA:
             target = (payload.get('conversation_id') or '').strip()
             content = (payload.get('content') or '').strip()
             if not target:
-                return {'error': 'session_tool.seed requires conversation_id.'}
+                return _handler_error('seed', 'invalid_params', 'session_tool.seed requires conversation_id.')
             if not content:
                 return {
                     'error': (
@@ -4386,6 +4411,6 @@ RESEARCH DATA:
             }
 
         valid = ['health_check', 'create_fresh', 'list_recent', 'whoami', 'retire', 'set_active', 'seed']
-        return {'error': f'Unknown session_tool action: {action}. Valid: {", ".join(valid)}'}
+        return _handler_error(action, 'unknown_action', f'Unknown session_tool action: {action}. Valid: {", ".join(valid)}')
 
     # ── Session 1079: Content Tool (gateway) ─────────────────────────────────────
