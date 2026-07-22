@@ -3309,7 +3309,7 @@ class OpsHandlersMixin:
             draft_id = payload.get('draft_id', '')
             edited_text = payload.get('edited_text', '')
             if not draft_id:
-                return {'error': 'draft_id is required'}
+                return _handler_error('outreach_approve', 'invalid_params', 'draft_id is required')
             sequencer = OutreachSequencer()
             result = sequencer.approve_draft(draft_id, edited_text)
             return {'action': 'outreach_approve', **result}
@@ -3321,7 +3321,7 @@ class OpsHandlersMixin:
             draft_id = payload.get('draft_id', '')
             reason = payload.get('reason', '')
             if not draft_id:
-                return {'error': 'draft_id is required'}
+                return _handler_error('outreach_reject', 'invalid_params', 'draft_id is required')
             sequencer = OutreachSequencer()
             result = sequencer.reject_draft(draft_id, reason)
             return {'action': 'outreach_reject', **result}
@@ -3361,7 +3361,7 @@ class OpsHandlersMixin:
             timeline_days = payload.get('timeline_days', 14)
 
             if not price:
-                return {'error': 'price is required for close_pack_generate'}
+                return _handler_error('close_pack_generate', 'invalid_params', 'price is required for close_pack_generate')
 
             engine = CloseTheDealEngine()
             result = engine.generate_pack(
@@ -3387,7 +3387,7 @@ class OpsHandlersMixin:
 
             pack_id = payload.get('pack_id')
             if not pack_id:
-                return {'error': 'pack_id is required for close_pack_approve'}
+                return _handler_error('close_pack_approve', 'invalid_params', 'pack_id is required for close_pack_approve')
 
             engine = CloseTheDealEngine()
             result = engine.approve_pack(pack_id)
@@ -3419,7 +3419,7 @@ class OpsHandlersMixin:
             event_id = payload.get('event_id')
             intent = payload.get('intent')
             if not event_id or not intent:
-                return {'error': 'event_id and intent are required'}
+                return _handler_error('engagement_classify', 'invalid_params', 'event_id and intent are required')
 
             engine = EngagementEngine()
             result = engine.classify_event(
@@ -3436,7 +3436,7 @@ class OpsHandlersMixin:
             event_id = payload.get('event_id')
             reply_text = payload.get('reply_text')
             if not event_id or not reply_text:
-                return {'error': 'event_id and reply_text are required'}
+                return _handler_error('engagement_draft_reply', 'invalid_params', 'event_id and reply_text are required')
 
             engine = EngagementEngine()
             result = engine.draft_reply(event_id=event_id, reply_text=reply_text)
@@ -3448,7 +3448,7 @@ class OpsHandlersMixin:
 
             event_id = payload.get('event_id')
             if not event_id:
-                return {'error': 'event_id is required'}
+                return _handler_error('engagement_approve_reply', 'invalid_params', 'event_id is required')
 
             engine = EngagementEngine()
             result = engine.approve_reply(
@@ -3463,7 +3463,7 @@ class OpsHandlersMixin:
 
             event_id = payload.get('event_id')
             if not event_id:
-                return {'error': 'event_id is required'}
+                return _handler_error('engagement_disqualify', 'invalid_params', 'event_id is required')
 
             engine = EngagementEngine()
             result = engine.disqualify(
@@ -3487,7 +3487,7 @@ class OpsHandlersMixin:
 
             scheduled_at = payload.get('scheduled_at')
             if not scheduled_at:
-                return {'error': 'scheduled_at is required (ISO datetime)'}
+                return _handler_error('meeting_create', 'invalid_params', 'scheduled_at is required (ISO datetime)')
 
             engine = MeetingEngine()
             result = engine.create_meeting(
@@ -3518,7 +3518,7 @@ class OpsHandlersMixin:
 
             meeting_id = payload.get('meeting_id')
             if not meeting_id:
-                return {'error': 'meeting_id is required'}
+                return _handler_error('meeting_brief', 'invalid_params', 'meeting_id is required')
 
             engine = MeetingEngine()
             result = engine.generate_brief(meeting_id=meeting_id)
@@ -3530,7 +3530,7 @@ class OpsHandlersMixin:
 
             meeting_id = payload.get('meeting_id')
             if not meeting_id:
-                return {'error': 'meeting_id is required'}
+                return _handler_error('meeting_recap', 'invalid_params', 'meeting_id is required')
 
             engine = MeetingEngine()
             result = engine.add_recap(
