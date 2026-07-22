@@ -2,64 +2,65 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2875 CLOSE → cross-tool structured-error-envelope migration shipped (2026-07-21; picks up as S2876) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2876 CLOSE → dispatcher-layer error_code backfill wrapper shipped (2026-07-21; picks up as S2877) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-21 (S2875 close).** Rigby Tool Gap Ledger #2 (2nd trigger promoted at S2874 close) — Chris ratified at S2875 open; Claude+Rigby executed:
+**Refreshed 2026-07-21 (S2876 close).** Rigby Tool Gap Ledger #22.2 (1st trigger promoted at S2875 close from Rigby zoom-out fold) — Chris ratified at S2876 open; Claude+Rigby executed:
+
+- **PR #3375** `1f0882d0a` — S2876 slate (2 files, +262/-0)
+  - Adds temporary compatibility bridge in `ToolDispatcher._execute_inner` between PII scrub (L836-842) and `ToolResult` wrap (L875). Backfills `error_code='legacy_error'` on handler responses matching `{'error': msg}` without an `error_code`.
+  - Idempotent on S2874/S2875 migrated handlers; truthy `.get('error')` guard skips success dicts with nullable `error`; top-level only (nested errors are handler-domain).
+  - **Design refinements (Rigby pre-code SIGN, 5 real repo_tool runs, not rubber-stamp):** F1 → `'legacy_error'` (not `'unknown_error'` — distinct from future "truly unknown in migrated taxonomy"); F2 → truthy guard (safer default); F3/F4/F5 F-VERIFIED.
+  - **Zoom-out mitigations shipped same-PR (anti-compat-blanket):** (1+2) rate-limited (60s per-tool) WARNING breadcrumb `legacy_handler_error_envelope_missing_error_code` with structured tool/action/trace fields — greppable visibility counter; (3) inline sunset criteria (remove when all handlers emit error_code OR breadcrumb fires < 1% for 14d).
+  - New test file `core/tests/test_s2876_dispatcher_error_code_backfill.py` — 13 tests across 4 test classes (core 5 + scope 2 + isolation 1 + breadcrumb 5).
+  - Combined regression suite (S2869 + S2870 + S2871 + S2872 + S2873 + S2874 + S2875 + S2876): **117/117 pass**.
+  - Post-code live SIGN via Rigby: **F-VERIFIED** on live PA surface — `bpaas_tool.generate_close_pack {packet:{}}` returned `{success:false, error:'packet is required', error_code:'legacy_error'}`, backfill wrapper firing as designed.
+
+**New Rigby-observed finding from S2876 post-code live SIGN (1st trigger — do NOT auto-promote):**
+1. **#22.3 Orthogonal contract axes in handler error responses.** Some handlers return `{success:false, error:msg}` — post-S2876 the `error_code` is now backfilled, but `success:false` was already there. Three orthogonal axes now live (outer `ToolResult.ok` / inner `result.success` / inner `result.error_code`). Consumers may key on one and ignore others. Candidate resolutions: (A) standardize handler errors on `{error, error_code, ...}` and drop `success:false` convention, OR (B) explicitly document `success` as legacy/noise while outer envelope + inner error fields are authoritative. Watch for 2nd independent trigger before promoting to slate candidate.
+
+## PRIOR SESSION — S2875 close (cross-tool structured-error-envelope migration)
 
 - **PR #3372** `a89dc0a001e4` — S2875 slate (4 files, +405/-17)
-  - Extends S2874's structured-error-envelope shape (`{error, error_code, ...optional_fields}`) from `repo_tool.read_file` to 3 sibling read-path handlers.
-  - **17 migration sites** across `repo_tool` (5 sites in `td_handlers_gateway.py`) + `spider_status_tool` (6 sites in `td_handlers_ops.py`) + `kb_tool` (6 sites in `td_handlers_ops.py`).
-  - **Scope expansion:** Rigby's Q1 initial pass identified 11 sites; full-coverage sweep found 5 within-handler sites she missed (kb.chunks / kb.search_embeddings / kb.semantic_search, spider_status.history). Migrated all 17 for internal consistency across sibling actions.
-  - **Envelope shape corrected mid-flight (Q2 fold):** S2874 uses `{error, error_code, ...}` — NO `success: false` key. Original proposal dropped that key.
-  - **Helper design (Q3=A DEFER):** local module-level `_tool_error(code, message, **fields)` per file. Do NOT extract `td_error.py` gateway helper until 6+ adopters stable + shapes empirically settle. S2874's local `_read_file_error` untouched (zero retrofit).
-  - **Q4 folds applied inline:** preserve exact error message text (no rephrasing → no substring-match regressions); `error_code` documented as optional during mixed-mode migration; partial-success `warnings:[]`/`errors:[]` convention deferred.
-  - New test file `core/tests/test_s2875_cross_tool_error_envelope.py` — 18 tests across 4 test classes (repo_tool 5 + spider_status_tool 6 + kb_tool 4 + cross-tool parity 3).
-  - Combined regression suite (S2869 + S2870 + S2871 + S2872 + S2873 + S2874 + S2875): **104/104 pass**.
-  - Post-code SIGN via Rigby (live PA surface): 3/4 F-VERIFIED (`repo_tool.tree`, `spider_status_tool.detail`, `repo_tool.search`); 1 F-BLOCKED at PA-schema layer (`kb_tool unknown_action` — enum-constrained action param rejects invalid strings at schema validation before reaching handler — see new-finding #1 below).
+  - Extended S2874's `{error, error_code, ...optional_fields}` envelope shape from `repo_tool.read_file` to 3 sibling read-path handlers: `repo_tool` (5 sites in `td_handlers_gateway.py`) + `spider_status_tool` (6 sites in `td_handlers_ops.py`) + `kb_tool` (6 sites in `td_handlers_ops.py`) — 17 sites total.
+  - Helper design (Q3=A DEFER): local module-level `_tool_error(code, message, **fields)` per file — S2876 dispatcher backfill wrapper is candidate replacement / natural extraction trigger for future `td_error.py` gateway helper.
+  - Post-code SIGN: 3/4 F-VERIFIED live; 1 F-BLOCKED at PA-schema layer (`kb_tool unknown_action` — enum-constrained action param rejects invalid strings at schema validation before reaching handler → still-1st-trigger observation for schema-level dead branches).
 
 ## PRIOR SESSION — S2874 close (repo_tool.read_file large-file paging)
 
 - **PR #3369** `cc889af1f` — S2874 slate (3 files, +295/-15)
-  - `repo_tool.read_file` gained `allow_large: bool = False` opt-in that lifts the 500KB soft cap for paged reads. Default over-cap responses ship a structured `error_code='file_too_large'` envelope with `path` / `file_size_bytes` / `size_hard_max` / `narrowing_hint`. `allow_large=true` path skips the `total_lines` second-pass over the soft max (`total_lines_known=false`) — no double I/O for metadata even in opt-in mode. `start_line` past EOF → soft `warning_code='start_line_past_eof_or_empty_file'` (not a hard error).
-  - New test file `core/tests/test_s2874_repo_tool_read_file_paging.py` — 13 tests across 4 test classes.
+  - `repo_tool.read_file` gained `allow_large: bool = False` opt-in that lifts the 500KB soft cap for paged reads.
 
-## PRIOR SESSION — S2873 close (orm_inspect_tool allowlist +2)
-
-- **PR #3367** `8423e946b` — S2873 slate (2 files, +253/-0)
-  - `orm_inspect_tool` `_MODEL_POLICIES` extended from 9 → 11 models (`persistence.SpiderData` 116K rows + `core.Opportunity` 2.6K rows).
-
-**Working loop observations at S2875:**
-- `feedback_verify_rigby_tool_runs_before_trusting_sign` fired 3× (12 tool_runs total, all grounded — never rubber-stamping).
-- `feedback_zoom_out_ask_per_rigby_sign` yielded 2 usable folds — 1 applied inline (Q4b contract test class), 1 promoted to ledger candidate (dispatcher backfill wrapper).
-- `feedback_claude_rigby_agree_first_chris_yes_no` — presented Chris one recommendation with envelope-shape correction.
+**Working loop observations at S2876:**
+- `feedback_verify_rigby_tool_runs_before_trusting_sign` — pre-code SIGN Rigby ran 5 real `repo_tool.read_file` + `repo_tool.search` runs (all grounded); post-code SIGN Rigby ran 1 real live PA dispatch (F-VERIFIED end-to-end); ledger update Rigby ran 3 real `deliverable_tool.detail` + 1 real `deliverable_tool.append` + 1 real `deliverable_tool.detail` (write verified via tail slice).
+- `feedback_zoom_out_ask_per_rigby_sign` fired 2× — pre-code fold yielded 3 shipped mitigations (rate-limited warning, sunset criteria, structured log fields); post-code fold surfaced #22.3 orthogonal-contract-axes as new 1st-trigger observation.
+- `feedback_claude_rigby_agree_first_chris_yes_no` — reached agreement pre-code with 2 F-BLOCKING fold-ins (F1 `legacy_error`, F2 truthy guard); shipped without Chris re-routing.
 - `feedback_engineering_bias_over_audit` — net-new engineering ship, not audit.
-- `feedback_recycle_after_merge` (PLAYBOOK-7.4.4) — clean recycle post-merge in `development/` checkout (`sha=a89dc0a001e4, surviving=none`).
-- `feedback_read_full_rigby_response_not_just_tail` — stdout truncated TWICE mid-Rigby-response; re-fetched via targeted continuation asks. No `### Important note` prose was hidden.
-- `feedback_local_truth_no_production` — 104/104 local pass IS the deploy step per Chris directive.
-- **Candidate feedback rule (1st trigger):** stdout-truncation-forces-continuation is a Claude execution-context tax that inflates SIGN cycle count. Watch for 2nd trigger before formalizing.
-
-**New Rigby-observed tool-surface gaps (candidates for future ledger entries, NOT logged yet — watch for second-trigger):**
-1. **Schema-level dead branches** (1st trigger). Handlers with enum-constrained `action` params in PA tool schema (`kb_tool`, `repo_tool`, `spider_status_tool`) cannot have their `unknown_action` branches exercised via the PA tool surface — GPT-5.2 rejects invalid actions at schema validation before dispatch reaches the handler. Migration is correct per unit tests; branch is unreachable in the live PA-surface path (still reachable via direct handler invocation / batch callers / buggy code).
-2. **Dispatcher-layer `error_code` backfill wrapper** (1st trigger, Rigby zoom-out). A lightweight dispatcher wrapper backfilling `error_code='unknown_error'` on tool responses that have `error` but no `error_code` would give consumers a stable contract during mid-migration — eliminates the "hit sibling tool with old shape, crash on assumed key" failure mode.
+- `feedback_recycle_after_merge` (PLAYBOOK-7.4.4) — clean recycle post-merge (`sha=1f0882d0a49a, surviving=none`).
+- `feedback_read_full_rigby_response_not_just_tail` — pre-code SIGN response was 36.7KB; targeted continuation to fetch truncated zoom-out fold tail.
+- `feedback_local_truth_no_production` — 117/117 local pass IS the deploy step per Chris directive.
+- `feedback_rigby_writes_workspace_deliverables` — routed ledger #22.2 SHIPPED update + #22.3 candidate to Rigby PA; she refused destructive `update` (large content + truncated prior read), proposed `deliverable_tool.append` as safer path (2861 chars appended, total 27,999 chars, verified via detail tail).
+- `feedback_gh_pr_merge_admin_until_billing_fixed` — merged PR #3375 with `--admin` flag.
+- **Candidate feedback rule (2nd trigger candidate — 1st was S2875):** Rigby refuses destructive `deliverable_tool.update` operations on large-content deliverables when prior read was truncated; she asks `Use append` or `Force update` explicitly. Watch for 3rd trigger before promoting as a Rigby-tool-surface UX pattern.
 
 **Rigby Tool Gap Ledger updates (via Rigby PA per `feedback_rigby_writes_workspace_deliverables`):**
 - Deliverable ID `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0`
-- **#2 (structured-error envelope migration)** → `shipped_in_pr_S2875` (17 sites / 3 files / 18 tests / 104/104 combined regression)
+- **#22.2 (dispatcher-layer error_code backfill wrapper)** → `shipped_in_pr_S2876` (2 files / +262 lines / 13 new tests / 117/117 combined regression / live F-VERIFIED via `bpaas_tool.generate_close_pack`)
+- **#22.3 (orthogonal-contract-axes in handler error responses)** → new observation, 1st trigger, do NOT auto-promote
 
-**Session pin `pa-158b00decda0491d` (labeled `s2875-cross-tool-error-envelope`) RETIRES at S2875 close.** Fresh mint required at S2876 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
+**Session pin `pa-f515aa3ca81545d3` (labeled `s2876-cross-tool-error-envelope`) RETIRES at S2876 close.** Fresh mint required at S2877 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
 
-**Prior pin:** `pa-54eed7894ce845ed` (labeled `s2874-repo-tool-read-file-paging`) retired at S2874 close.
+**Prior pin:** `pa-158b00decda0491d` (labeled `s2875-cross-tool-error-envelope`) retired at S2875 close.
 
 ---
 
-## S2876 open sequence
+## S2877 open sequence
 
 ### Step 1 — Session-open atomic mint (per `feedback_session_open_atomic_mint_before_pa_dispatch`)
 
-Wrapper pin rewritten at S2875 close. If needed at S2876 open:
+Wrapper pin rewritten at S2876 close. If needed at S2877 open:
 
 ```bash
-python manage.py session_lifecycle close --label s2876-<slate>
+python manage.py session_lifecycle close --label s2877-<slate>
 ```
 
 Verify:
@@ -67,19 +68,21 @@ Verify:
 grep "^python tools/pa_chat.py" tools/pa_local.sh
 ```
 
-### Step 2 — Net-new engineering candidates for S2876
+### Step 2 — Net-new engineering candidates for S2877
 
 Per `feedback_engineering_bias_over_audit`, list net-new first.
 
-1. **NEW at S2875 close — Dispatcher-layer `error_code` backfill wrapper** (Rigby zoom-out 1st trigger, highest signal). Wrap the dispatcher output path to backfill `error_code='unknown_error'` on any tool response that has `error` but no `error_code`. Solves the mixed-mode migration friction from S2875 without forcing every legacy tool to migrate first. Est ~45 min (small wrapper + unit tests + verify no double-wrap). Consider whether this becomes the promoted `td_error.py` extraction trigger.
+1. **NEW at S2876 close — PA-surface-level smoke test** (still 1st trigger from S2874, high signal, promoted to top slot now that S2876 dispatcher backfill is live). Would catch stale-worker false negatives immediately + verify migrated envelopes end-to-end (including newly-backfilled `legacy_error` from S2876). Lightweight suite dispatching through the PA tool surface (not just handler unit tests) against known-error fixtures asserting `error_code='<expected>'`. Est ~1–1.5 hr.
 
-2. **NEW at S2875 close — PA-surface-level smoke test** (still 1st trigger from S2874, high signal). Would catch stale-worker false negatives immediately + verify migrated envelopes end-to-end. Lightweight suite dispatching through the PA tool surface (not just handler unit tests) against known-error fixtures asserting `error_code='<expected>'`. Est ~1–1.5 hr.
+2. **NEW at S2876 close — Schema-level dead-branch investigation** (1st trigger from S2875 post-code SIGN). Audit which handler branches (`unknown_action` most obviously) are unreachable via the PA tool schema layer due to enum constraints. Decide per handler whether to (a) keep dead-code for defense-in-depth, (b) loosen schema to allow discovery of new actions, (c) explicitly document reachability class. Est ~1 hr (audit-only, no code).
 
-3. **NEW at S2875 close — Schema-level dead-branch investigation** (1st trigger from S2875 post-code SIGN). Audit which handler branches (`unknown_action` most obviously) are unreachable via the PA tool schema layer due to enum constraints. Decide per handler whether to (a) keep dead-code for defense-in-depth, (b) loosen schema to allow discovery of new actions, (c) explicitly document reachability class. Est ~1 hr (audit-only, no code).
+3. **NEW at S2876 close — Legacy-handler migration wave, driven by breadcrumb telemetry.** Now that S2876 backfill fires + emits rate-limited WARNING per legacy tool, grep logs after ~1 hour of platform activity to enumerate which handlers still return bare `{error: msg}`. Prioritize handlers that fired the breadcrumb most, migrate to S2874-style `{error, error_code, ...}` envelope. Sunset criterion for backfill: all handlers migrated OR breadcrumb fire-rate <1% for 14d. Est varies (~15 min per handler once cataloged).
 
-4. **Carried from S2874 — Cross-tool structured-error-envelope migration EXTENSION** to write-path handlers. Now that read-path is done + we've observed 6+ adopters, evaluate whether write-path (create/update/delete) migration is warranted. Est ~2 hr.
+4. **NEW at S2876 close — #22.3 orthogonal-contract-axes resolution** (1st trigger from S2876 post-code SIGN live PA finding). NOT ready to slate; needs 2nd independent trigger. When it surfaces, candidate resolutions: (A) standardize handler errors on `{error, error_code, ...}` and drop `success:false` convention entirely; (B) explicitly document `success` as legacy/noise. Watch for.
 
-5. **Carried from S2874 — Extract `td_error.py` gateway-layer helper** (blocks on Rigby confirming shapes are empirically stable). S2875 shipped 6+ adopters but Q3=A said wait until "one weird envelope need in the wild." Not yet promoted — dispatcher backfill (candidate #1) may become the extraction trigger instead.
+5. **Carried from S2874/S2875 — Cross-tool structured-error-envelope migration EXTENSION** to write-path handlers. Now that read-path is done + S2876 dispatcher backfill provides safety net for any legacy handler, evaluate whether explicit write-path (create/update/delete) migration is warranted or whether backfill + gradual migration wave (#3 above) suffices. Est ~2 hr if explicit.
+
+6. **Carried from S2874/S2875 — Extract `td_error.py` gateway-layer helper.** S2876 didn't force this; dispatcher backfill provides different lever. Still gated on Rigby confirming shapes are empirically stable. If write-path migration proceeds (#5), that may be the extraction trigger.
 
 6. **Carried from S2874 — `feedback_recycle_after_merge` extension for multi-checkout setups** (still 1st trigger). Watch for 2nd trigger before formalizing as a feedback rule.
 
@@ -139,7 +142,7 @@ Per `feedback_engineering_bias_over_audit`, list net-new first.
 
 34. **Carried — Character-os Rigby integration (5-gap analysis from S2872 mid-session, D6 moratorium hold)** — DBZ's `/api/pa/chat/` endpoint doesn't recognize `source='character-os-consult-engine'` / `spokesperson_id` / `workspace_id`. Parked under D6 moratorium; unlock requires Chris directive.
 
-### What's forbidden at S2876 (D6 moratorium still in force)
+### What's forbidden at S2877 (D6 moratorium still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No new evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 
@@ -154,45 +157,47 @@ Per `feedback_engineering_bias_over_audit`, list net-new first.
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2875 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2876 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2875: `repo_tool` + `spider_status_tool` + `kb_tool` error paths now return structured `{error, error_code, ...optional_fields}` envelopes matching the S2874 shape — Rigby (and every future caller including A4 outreach substrate) can program against `error_code` for reliable failure classification across 17 sibling sites in read-path handlers, not just `repo_tool.read_file`.**
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2876: dispatcher-layer error_code backfill wrapper now landed — Rigby (and every future caller including A4 outreach substrate) can program against `error_code` uniformly across the WHOLE PA tool surface (not just S2874/S2875 migrated 17 sites). Legacy handlers returning `{error: msg}` get automatic `error_code='legacy_error'` backfill; migrated handlers pass through with their concrete codes. Rate-limited breadcrumb log signals when a legacy handler fires so migration priority can be data-driven.**
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
-3. **Capability claims:** (a)…(hh) as ratified at S2874 close. **(ii) All 17 sibling error paths in `repo_tool` (tree / search / shared catchers) + `spider_status_tool` (history / detail / search / shared catchers) + `kb_tool` (chunks / search_embeddings / semantic_search / shared catchers) now return `{error, error_code, ...optional_fields}` envelopes with machine-actionable `error_code` values (`not_a_directory` / `query_required` / `unknown_action` / `value_error` / `internal_error` / `spider_name_required` / `item_id_required` / `item_not_found` / `filters_required` / `document_id_required`); message text preserved verbatim from pre-migration (no downstream substring-match regressions); `error_code` documented as optional during mixed-mode migration.**
+3. **Capability claims:** (a)…(ii) as ratified at S2875 close. **(jj) Every PA tool response with a top-level error now carries an `error_code` field — either the handler's own migrated code (S2874/S2875 style) or the dispatcher-backfilled `'legacy_error'` (S2876 wrapper). A4 outreach substrate can rely on `error_code` presence as a stable contract without conditional substring-matching on `error` text. Sunset criterion for backfill: all handlers migrated OR breadcrumb fire-rate <1% for 14d.**
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
 5. **Hard throttle:** A4 warm-up is constrained to a fixed timebox and fixed send count (3-5 total intros).
 6. **No bespoke follow-ups:** A4 warm-up prohibits custom follow-ups / custom research / custom deliverables.
 
 ---
 
-## S2875 close — what shipped (one PR + docs cascade)
+## S2876 close — what shipped (one PR + docs cascade)
 
 **Repo canonical (Claude-authored):**
-- **PR #3372** `a89dc0a001e4` — S2875 slate: cross-tool structured-error-envelope migration (4 files, +405/-17)
-- **PR `<this docs cascade>`** — S2875 handoff + 00-START-NEXT-SESSION refresh + wrapper pin bump for S2876 open
+- **PR #3375** `1f0882d0a` — S2876 slate: dispatcher-layer error_code backfill wrapper (2 files, +262/-0)
+- **PR `<this docs cascade>`** — S2876 handoff + 00-START-NEXT-SESSION refresh + wrapper pin bump for S2877 open
 
-**Workspace canonical:** Rigby Tool Gap Ledger update planned at close per `feedback_rigby_writes_workspace_deliverables` (#2 promoted from wish-list → `shipped_in_pr_S2875`, 2 new zoom-out observations logged).
+**Workspace canonical:** Rigby Tool Gap Ledger updated via Rigby PA per `feedback_rigby_writes_workspace_deliverables` (#22.2 promoted from S2875 close 1st-trigger observation → `shipped_in_pr_S2876`, +1 new 1st-trigger observation #22.3 orthogonal-contract-axes logged).
 
 **Runtime impact:**
-- Rigby (and every future PA-tool caller) can now program against `error_code` for failure classification across `repo_tool` / `spider_status_tool` / `kb_tool` — 17 sibling sites, not just S2874's `repo_tool.read_file`.
-- Live post-code verification (Rigby on live PA tool surface after `make recycle-all` in `development/`): 3/4 F-VERIFIED (`repo_tool.tree`, `spider_status_tool.detail`, `repo_tool.search`); 1 F-BLOCKED at PA-schema layer (`kb_tool unknown_action` — enum-constrained schema rejects invalid strings before handler dispatch — new finding, see #1 in gaps section).
-- Combined regression suite (S2869 + S2870 + S2871 + S2872 + S2873 + S2874 + S2875): **104/104 pass**.
+- Every PA tool response with a top-level `error` now carries an `error_code` field — either the handler's own migrated code (S2874/S2875 style) or the dispatcher-backfilled `'legacy_error'` (S2876 wrapper). Rigby (and every future PA-tool caller including A4 outreach substrate) can rely on `error_code` presence as a stable contract without conditional substring-matching on `error` text.
+- Rate-limited (60s per-tool) `logger.warning('legacy_handler_error_envelope_missing_error_code ...')` breadcrumb provides greppable visibility into which handlers are still pre-migration + how often they're invoked in real traffic — data-driven migration prioritization.
+- Live post-code verification (Rigby on live PA tool surface after `make recycle-all` to `sha 1f0882d0a`): **F-VERIFIED** via `bpaas_tool.generate_close_pack {packet:{}}` → returned `{success:false, error:'packet is required', error_code:'legacy_error'}`.
+- Combined regression suite (S2869 + S2870 + S2871 + S2872 + S2873 + S2874 + S2875 + S2876): **117/117 pass**.
 
-**Not shipped at S2875 close (deferred to S2876 or later):**
-- Dispatcher-layer `error_code` backfill wrapper (Rigby zoom-out 1st trigger from S2875 — top S2876 candidate)
-- PA-surface-level smoke test (still 1st trigger from S2874)
+**Not shipped at S2876 close (deferred to S2877 or later):**
+- PA-surface-level smoke test (still 1st trigger from S2874, now promoted to top S2877 candidate)
 - Schema-level dead-branch investigation (1st trigger from S2875 post-code SIGN)
-- Write-path handler envelope migration (candidate for after 6+ read-path adopters proven stable)
-- Extract `td_error.py` gateway helper (still gated on "shapes empirically settle")
-- `feedback_recycle_after_merge` multi-checkout extension (1st trigger from S2874)
-- All prior deferred items from S2873/S2871/S2868/S2867/S2866/S2862/S2861/etc still carried
+- Legacy-handler migration wave driven by breadcrumb telemetry (NEW candidate — enabled by S2876 breadcrumb)
+- #22.3 orthogonal-contract-axes resolution (NEW 1st trigger from S2876 post-code SIGN — needs 2nd trigger before slating)
+- Write-path handler envelope migration (candidate for after backfill traffic data available)
+- Extract `td_error.py` gateway helper (still gated on shapes empirically settling; write-path migration may be extraction trigger)
+- All prior deferred items from S2874/S2873/S2871/S2868/S2867/S2866/S2862/S2861/etc still carried
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2875)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2876)
 
 See:
-- **S2875 handoff (current):** `docs/handoffs/SESSION_2875_CROSS_TOOL_ERROR_ENVELOPE.md`
+- **S2876 handoff (current):** `docs/handoffs/SESSION_2876_DISPATCHER_ERROR_CODE_BACKFILL.md`
+- **S2875 handoff:** `docs/handoffs/SESSION_2875_CROSS_TOOL_ERROR_ENVELOPE.md`
 - **S2874 handoff:** `docs/handoffs/SESSION_2874_REPO_TOOL_READ_FILE_PAGING.md`
 - **S2873 handoff:** `docs/handoffs/SESSION_2873_ORM_INSPECT_SPIDER_DATA_OPPORTUNITY.md`
 - **S2872 handoff:** `docs/handoffs/SESSION_2872_RAW_DATA_DICT_SWEEP_LEDGER_22B_TELEMETRY.md`
@@ -226,4 +231,4 @@ See:
 - **Parent strategic discovery:** `docs/research/platform/S2841_STRATEGIC_DISCOVERY_WHAT_DBZ_ACTUALLY_IS.md`
 - **Pressure-test addendum:** `docs/research/platform/S2841_PRESSURE_TEST_ADDENDUM.md`
 
-For older session history (S1-S2846), see `docs/handoffs/` + `docs/research/OPEN_ARCS.md`.
+For older session history (S1-S2847), see `docs/handoffs/` + `docs/research/OPEN_ARCS.md`.
