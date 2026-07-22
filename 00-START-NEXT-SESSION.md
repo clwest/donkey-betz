@@ -2,36 +2,39 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2885 CLOSE → content_tool file-completing slate shipped + pgbouncer collision fully resolved + Slate B pivot to criticality-first ratified (2026-07-22; picks up as S2886) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2886 CLOSE → td_handlers_core.py criticality-first slate shipped + 4-trigger /development/ bleed pattern confirmed + Ledger #13 6/6 adopter gate MET (2026-07-22; picks up as S2887) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-22 (S2885 close).** S2885 was the eighth handler migration slate — **second file-completing slate** after S2884 opened the shape. **Two PRs shipped.** `td_handlers_content.py` (13→0) EXITS the S2876 sunset population. **Pgbouncer collision from S2884 close fully resolved** (three stacked infra faults diagnosed + fixed). **Rigby zoom-out (b) fold + Chris D-verdict ratified Slate B pivot to criticality-first grep across the 4 remaining files** — file-completing is retired as the default shape.
+**Refreshed 2026-07-22 (S2886 close).** S2886 was the ninth handler migration slate — **first criticality-first slate** after the S2885-close pivot retired file-completing as the default shape. **One PR shipped.** `td_handlers_core.py` 73 → 56 (17 sites migrated across `_handle_messaging` + `_handle_remember` + `_handle_session`). **Session infra work: 4 stacked faults, all legacy `/development/` bleed** (Redis cwd, Celery shebangs × 157, Daphne interpreter, all fixed). **Ledger #13 (`td_error.py` extraction) adopter gate MET at 6/6** — S2887 first-action opens the extraction arc.
 
-- **PR #3394** `5495736fb` — S2885 slate (2 files, +439/-13)
-  - **content_tool cluster** (`_handle_deliverable_initiative_link` L178/L182/L186/L190, `_handle_feedback` L3654, `_handle_content` L4788, `_handle_bulk_archive` L4821, `_handle_bulk_archive_published` L4966/L4971/L4976/L4980/L4984/L5046): 13 sites across 5 handlers, 3 dispatched tool surfaces (`deliverable_tool`, `feedback_tool`, `content_tool`).
-  - **Codes:** 1× `unknown_action`, 9× `invalid_params`, 2× `not_found`, 1× `permission_denied`. All 13 sites map cleanly to existing 5-code taxonomy — no broad-except, no `internal_error`, no new codes.
-  - **Micro-decisions (Chris pre-approved + Rigby SIGN AGREE):** T1c legacy `status: 403` field dropped from L4966 permission_denied envelope; T1d L5046 `**result` dry-run preview preserved via `**{k: v for k, v in result.items() if k != 'action'}` filter (avoids TypeError collision with helper's `action` positional).
-  - **Helper-choice = uniform `_handler_error`** (file-local copy, same shape as S2879/S2882/S2883/S2884). **Ledger #13 adopter count now 5/6** — 1 more adopter needed to trigger `td_error.py` extraction arc.
-  - **Two folds captured inline in test module docstring:** Fold 1 (`TransactionTestCase` required whenever setUp-created rows must be visible to `ToolDispatcher.execute_sync` — S2885 is 1st trigger; watch S2886 for corroboration), Fold 2 (L190 was false-passing before fortification when two branches return the same taxonomy code — Playbook amendment candidate if re-triggers).
-  - **Combined regression:** S2869 → **S2885** + `test_zoom_out_tool_2780` = **220/220 pass** (207 baseline + 13 new).
-- **PR `<docs cascade>`** — S2885 handoff + this file refresh + wrapper pin bump (`pa-42342895674d4878` → S2886 mint) + `docs/INDEX.md` refresh.
+- **PR #3396** `64ea19d1d` — S2886 slate (2 files, +510/-17)
+  - **core cluster** (`_handle_messaging` L3844/L3849/L3875/L3877/L3979/L3986/L4018, `_handle_remember` L2224/L2230/L2331/L2345/L2365, `_handle_session` L4031/L4206/L4311/L4347/L4389): 17 sites across 3 handlers, 3 dispatched tool surfaces (`messaging_tool`, `remember_tool`, `session_tool`).
+  - **Codes:** 3× `unknown_action`, 10× `invalid_params`, 2× `not_found`, 2× `permission_denied`. All 17 sites map cleanly to existing 5-code taxonomy — no broad-except, no `internal_error`, no new codes.
+  - **Micro-decisions (Rigby SIGN F1/F2 AGREE):** L3986 `Thread not found or access denied` dual-semantic message PRESERVED as single `not_found` branch (splitting would leak thread-existence to non-participants — enumeration oracle). Test asserts `'access denied'` substring to lock the semantics contract.
+  - **Helper-choice = uniform `_handler_error`** (file-local copy, same shape as S2879/S2882/S2883/S2884/S2885). **Ledger #13 adopter count now 6/6 — extraction gate MET.**
+  - **Two folds re-fire at 2nd trigger, both Playbook amendment candidates:** Fold 1 (`TransactionTestCase` required for dispatcher-DB tests; predicted by Rigby in Q3 zoom-out and materialized in remember + messaging test classes), Fold 2 (shared-taxonomy branches within a single handler must be fortified via action string or message body substring — L3849 vs L3986 both `not_found`, L2230/L2331/L2345 all `invalid_params`).
+  - **Combined regression:** S2879 → **S2886** + `test_zoom_out_tool_2780` = **100/100 pass**.
+- **PR `<docs cascade>`** — S2886 handoff + this file refresh + wrapper pin bump (`pa-35b93928b15f4a9c` → S2887 mint) + `docs/INDEX.md` refresh.
 
-### S2885 open — pgbouncer auth block fully resolved (three stacked faults)
+### S2886 open — 4 stacked infra faults, all legacy `/development/` bleed (all resolved)
 
-Chris's character-os collision hypothesis at S2884 close was correct. Investigation surfaced two additional stacked faults; all three fixed at S2885 first-action:
+S2885 close deferred the `/development/` deletion decision to S2886 open. Chris had already removed the directory between sessions, but four long-running processes still bound to the deleted path blocked normal work until resolved:
 
-1. **Character-os `pgvector/pg16` Docker container captured `:5433` via IPv6 wildcard** (`0.0.0.0:5433->5432/tcp`). u-d-b's native pgbouncer (PID 1513) held IPv4 `127.0.0.1:5433`. `localhost:5433` resolves to `::1` first → Django hit character-os postgres. Fix: `USE_PGBOUNCER=0` in `.env` in BOTH `/Donkey_Betz/unified-donkey-betz/` and `/development/unified-donkey-betz/` checkouts (symmetric bypass).
-2. **Orphan Daphne from `/development/unified-donkey-betz/`** (PID 60841, elapsed 4h38m, parent=launchd) held `:8000`. `make restart-daphne` silently failed to bind (`Address already in use`). Fix: `kill 60841`, then restart from `/Donkey_Betz/`. Chris designated `/development/` legacy — deletion decision deferred to S2886 open.
-3. **`.env` `PA_API_TOKEN` was 11 days stale** (rotated 2026-07-11 S2758-era). Fix: sync to current DB value (`8c0f15633e84...`).
+1. **Redis MISCONF (RDB write disabled).** `redis-server` (PID 5417, started 2026-05-04) held phantom `cwd=/development/unified-donkey-betz` (unlinked inode). Mitigated via `redis-cli config set stop-writes-on-bgsave-error no`; clean restart deferred to S2886 close.
+2. **Celery worker startup fail.** 157 `.venv/bin/*` scripts had shebangs pointing at `/development/` python. Fixed in-place via bulk `sed -i.bak` rewrite → `/Donkey_Betz/`.
+3. **Daphne interpreter mismatch.** PID 16615 ran the `/development/` Python interpreter → task enqueue KeyError `process_pa_chat_task`. Killed + restarted from `/Donkey_Betz/`.
+4. **Directory removal already done.** Pre-check confirmed `/development/unified-donkey-betz/` gone; parent `/development/` intact (51 other projects).
 
-**Rigby Tool Gap Ledger entry #24 persisted** (deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0`, 2874 chars appended, new total 50822 chars) at S2885 first-action.
+**Trigger count:** S2885 orphan Daphne = 1st; S2886 Redis + Celery + Daphne = 2nd/3rd/4th. Pattern retroactively ratified.
 
-Full context: `docs/handoffs/SESSION_2885_CONTENT_ERROR_ENVELOPE.md`.
+Full context: `docs/handoffs/SESSION_2886_CORE_CRITICALITY_FIRST_ERROR_ENVELOPE.md`.
 
-## PRIOR SESSIONS — S2884 close + S2883 close + S2882 close + S2881 close + S2880 close
+## PRIOR SESSIONS — S2885 close + S2884 close + S2883 close + S2882 close + S2881 close
 
+- **PR #3395** `706cfb2a5` — S2885 docs cascade. See `docs/handoffs/SESSION_2885_CONTENT_ERROR_ENVELOPE.md`.
+- **PR #3394** `5495736fb` — S2885 slate: `td_handlers_content.py` file-completing (2 files, +439/-13).
 - **PR #3393** `43f40edd5` — S2884 docs cascade. See `docs/handoffs/SESSION_2884_AGENTS_NEWSLETTER_CRITICAL_SLICE.md`.
 - **PR #3392** `65e4da587` — S2884 slate: agents_tool + newsletter_tool file-completing (4 files, +294/-25).
-- **PR #3391** `444b28a5e` — S2883 docs cascade + wrapper pin bump. See `docs/handoffs/SESSION_2883_AGENT_DIAG_CRITICAL_SLICE.md`.
+- **PR #3391** `444b28a5e` — S2883 docs cascade + wrapper pin bump.
 - **PR #3390** `ca61c7725` — S2883 slate: agent-diag family critical-slice (2 files, +396/-10).
 - **PR #3389** `de78ba609` — S2882 docs cascade + wrapper pin bump.
 - **PR #3388** `377f39364` — S2882 close follow-on: `permission_denied` 5th taxonomy code + not-staff branch migration.
@@ -39,123 +42,142 @@ Full context: `docs/handoffs/SESSION_2885_CONTENT_ERROR_ENVELOPE.md`.
 
 ---
 
-## S2886 open sequence
+## S2887 open sequence
 
-### Step 1 — Slate B pivot to criticality-first (Chris pre-ratified)
+### Step 1 — `td_error.py` extraction arc (Ledger #13 gate MET at S2886 close)
 
-**4 handler files remain in the S2876 sunset population:**
+**Adopter count trajectory:**
+- Post-S2879: 1 (`td_handlers_ops.py`) → Post-S2883: 2 → Post-S2884: 4 → Post-S2885: 5 → **Post-S2886: 6 (gate MET)**
 
-| File | Bare-return count |
-|---|---|
-| `td_handlers_core.py` | 73 |
-| `td_handlers_gateway.py` | 57 |
-| `td_handlers_railway.py` | 18 |
-| `td_handlers_codejobs.py` | 15 |
-| **Total** | **163** |
+**Extraction plan:**
+1. New file `core/services/td_error.py` — module containing the canonical `_handler_error` helper.
+2. Update 6 adopter files' import blocks:
+   ```python
+   from core.services.td_error import _handler_error
+   ```
+3. Remove 6 file-local `_handler_error` copies (~28 lines × 6 files = ~168 lines removed).
+4. Verify 100/100 regression suite still passes (S2879 → S2886 + zoom_out_tool_2780).
+5. Ensure no circular imports (each adopter file already imports from `core.services.*`; a new leaf module should be safe).
 
-**S2886 pre-code SIGN Q1 (per zoom-out (b) discipline):** grep `core.py` + `gateway.py` (highest-volume; 73+57=130 sites, 80% of remaining population) for `return \{('error'|"error")` returns AND enclosing `def _handle_*` scope. Categorize by handler criticality (write-path / auth / tenant / read-only). Pick highest-risk cluster for Slate B. Warm-cadence Q1 same shape as S2879/S2880/S2881/S2882/S2883.
+**Expected diff:** ~30 lines added (new file + 6 import lines), ~168 lines removed. Net **~-140 lines**. Single PR, single review.
 
-**Recommended default:** Slate B targets a `core.py` write-path or auth cluster (matches S2879→S2883 criticality-first cadence). Fold-in `gateway.py` if a naturally-linked cluster surfaces during Q1 routing map. `railway.py` (18) + `codejobs.py` (15) are the file-completing tail — hold for later slates when only they remain.
+**Rigby SIGN Q1 (routing map):** verify at HEAD that the 6 copies are byte-identical (or differ only in the docstring's session-number attribution). If they diverge on shape (e.g., an adopter later added an extra field), the extraction needs a shape-reconciliation SIGN cycle before proceeding.
 
-### Step 2 — Deferred S2885 close artifacts (housekeeping)
+**Rigby SIGN Q_zoom_out:** Any concerns about naming (`td_error.py` vs `td_handler_error.py` vs `handler_envelope.py`)? Any adopters where the file-local docstring adds meaningful context that would be lost in a shared module?
 
-1. **Fold 1 + Fold 2 promotion decision:** if Slate B testing also requires `TransactionTestCase` for setUp fixtures, Fold 1 is at 2nd trigger — ledger entry becomes Playbook amendment candidate. If Slate B has two branches returning the same taxonomy code, Fold 2 hits 2nd trigger.
-2. **`/development/` checkout status:** Chris to decide `rm -rf` vs dormant.
-3. **`.env` `USE_PGBOUNCER` restoration triggers:** stay `=0` until cross-repo port ownership resolved.
+### Step 2 — Playbook amendment candidates (both at 2nd trigger post-S2886)
 
-### Step 3 — Net-new engineering candidates for S2886 (broader list)
+1. **Fold 1 (2nd trigger): `TransactionTestCase` discipline for dispatcher-DB tests.** S2885 (1st) + S2886 (2nd). Rule shape: "Handler tests that require `setUp`-created ORM fixtures to be visible to `ToolDispatcher.execute_sync` MUST inherit from `TransactionTestCase`, not `TestCase`. Rationale: `execute_sync` spins up a fresh asyncio event loop; the handler's ORM connection doesn't see the test's wrapping transaction." Candidate slot: **PLAYBOOK-6.10.11** or **PLAYBOOK-7.4.5**.
+
+2. **Fold 2 (2nd trigger): Shared-taxonomy branch fortification.** S2885 (1st) + S2886 (2nd). Rule shape: "When multiple return branches within a single handler emit the same `error_code`, the migrated-envelope test MUST assert either the distinguishing `action` field or a message-body substring to prevent false-pass on branch-crossing." Candidate slot: EXTENDS to **PLAYBOOK-6.10.9** or fresh sibling rule.
+
+Both are ratifiable in a single MINOR amendment cycle (v0.9.0) — 2-rule slate at 2nd trigger each is well within the shape ratified for v0.7.0 (2-rule slate) and v0.8.0 (1-rule slate).
+
+### Step 3 — Deferred S2886 close artifacts (housekeeping)
+
+1. **Redis clean restart** — clears the phantom cwd fd, restores normal RDB persistence semantics, and reverts `stop-writes-on-bgsave-error` to default. Chris authorized at S2886 mid-session; deferred to end-of-session to avoid mid-slate worker disruption. Do at S2887 open OR verify done at S2886 close.
+2. **`.env` `USE_PGBOUNCER` restoration triggers:** stay `=0` until cross-repo port ownership resolved (unchanged from S2885).
+3. **`.venv/bin/activate*` (3 files)** still reference legacy `/development/` in `VIRTUAL_ENV` shell var. Only affects `source .venv/bin/activate` users; runtime processes unaffected. Fix optional.
+
+### Step 4 — Net-new engineering candidates for S2887 (broader list)
 
 Per `feedback_engineering_bias_over_audit`, list net-new first.
 
-1. **NEW at S2885 close — `TransactionTestCase` requirement as first-class testing rule.** Fold 1 substrate. If Slate B corroborates, promote to Playbook amendment. Otherwise, hold.
+1. **NEW at S2886 close — `td_error.py` extraction arc.** Ledger #13 6/6 gate MET. S2887 first-action.
 
-2. **NEW at S2885 close — false-pass discipline for shared-taxonomy branches.** Fold 2 substrate. Same corroboration gate.
+2. **NEW at S2886 close — Playbook v0.9.0 amendment cycle (2 rules).** Fold 1 + Fold 2 both at 2nd trigger. Ratify alongside or after S2887 extraction PR.
 
-3. **NEW at S2885 close — Cross-repo Docker infra collision documentation.** Fold 4 substrate. Character-os collision now confirmed as 1st trigger; watch for 2nd trigger before promoting to `feedback_post_travel_port_collision_triage` extension.
+3. **NEW at S2886 close — Redis persistence hardening.** Consider `stop-writes-on-bgsave-error=no` as the persistent default for local-dev (`redis.conf` override), OR document as part of `feedback_post_travel_port_collision_triage` extension. 2 triggers observed (S2886 open + implicit S2882 dispatch backlog).
 
-4. **NEW at S2885 close — `.env` `PA_API_TOKEN` drift alarm.** Subitem of Ledger #24. Consider CI check that `.env` token matches DB token for the wrapper-owning user. Deferred.
+4. **NEW at S2886 close — `/development/` shebang audit hygiene.** After deleting a cross-checkout venv, sweep sibling checkouts' `.venv/bin/*` shebangs. Consider `make doctor` extension.
 
-5. **Carried from S2884 — Ledger #13 unified helper extraction (`td_error.py`)** — adopter signal now 5/6. Slate B is the extraction-arc trigger candidate.
+5. **Carried from S2885 close — `TransactionTestCase` requirement as first-class testing rule.** Fold 1 substrate. **2nd trigger at S2886.** Playbook amendment candidate (Step 2 above).
 
-6. **Carried from S2883 — Fold X test-authoring convention documentation** — 2nd trigger at S2883. Standardize on `TransactionTestCase` or ORM-boundary mocking for dispatcher-path tests requiring DB-visible state. **S2885 Fold 1 corroborates this.**
+6. **Carried from S2885 close — false-pass discipline for shared-taxonomy branches.** Fold 2 substrate. **2nd trigger at S2886.** Playbook amendment candidate (Step 2 above).
 
-7. **Carried from S2882 — Fold Y `_authorize_staff` broad `except Exception:` narrowing** to `User.DoesNotExist` — behavior change, requires own SIGN.
+7. **Carried from S2885 close — Cross-repo Docker infra collision documentation.** Character-os collision on `:5433` was 1st trigger; no 2nd trigger at S2886 (character-os not the issue). Hold.
 
-8. **Carried from S2882 — PLAYBOOK-6.10.10 amendment ratification** — 4 Fold D triggers + Rigby zoom-out (b) refinement.
+8. **Carried from S2885 close — `.env` `PA_API_TOKEN` drift alarm.** Consider CI check that `.env` token matches DB token for the wrapper-owning user. Deferred.
 
-9. **Carried from S2881 — Grep-based CI audit metric** — count bare `return {'error':}` returns across `core/services/*.py`; fail CI on regression.
+9. **Carried from S2883 — Fold X test-authoring convention documentation** — 2nd trigger at S2883. **S2885 Fold 1 corroborated; S2886 Fold 1 = 2nd trigger.** Now part of Step 2 v0.9.0 amendment.
 
-10. **Carried from S2880 — Fold A/B/C from S2880 post-code.** Fold C at 3rd trigger from S2883.
+10. **Carried from S2882 — Fold Y `_authorize_staff` broad `except Exception:` narrowing** to `User.DoesNotExist` — behavior change, requires own SIGN.
 
-11. **Carried from S2878 — `_s2876_fake_tool` breadcrumb noise refinement** (1st trigger).
+11. **Carried from S2882 — PLAYBOOK-6.10.10 amendment ratification** — 4 Fold D triggers + Rigby zoom-out (b) refinement.
 
-12. **Carried from S2877 — Schema-level dead-branch investigation** (1st trigger from S2875).
+12. **Carried from S2881 — Grep-based CI audit metric** — count bare `return {'error':}` returns across `core/services/*.py`; fail CI on regression.
 
-13. **Carried from S2877 — Schema-layer PA route smoke extension**.
+13. **Carried from S2880 — Fold A/B/C from S2880 post-code.** Fold C at 3rd trigger from S2883.
 
-14. **Carried from S2876 — #22.3 orthogonal-contract-axes resolution** (1st trigger).
+14. **Carried from S2878 — `_s2876_fake_tool` breadcrumb noise refinement** (1st trigger).
 
-15. **Carried from S2877 — #22.4 Rigby dispatcher-probe extension** (1st trigger).
+15. **Carried from S2877 — Schema-level dead-branch investigation** (1st trigger from S2875).
 
-16. **Carried from S2874 — `feedback_recycle_after_merge` extension for multi-checkout setups** (1st trigger). **S2885 corroborates — orphan Daphne from `/development/` was a multi-checkout artifact. 2nd trigger candidate; Chris designated `/development/` legacy, so pattern may not re-fire.**
+16. **Carried from S2877 — Schema-layer PA route smoke extension**.
 
-17. **Carried from S2873 — `orm_inspect_tool` JSONField type predicate** (1st trigger).
+17. **Carried from S2876 — #22.3 orthogonal-contract-axes resolution** (1st trigger).
 
-18. **Carried from S2873 — kalshi-only distribution on canonical SpiderData** (1st trigger).
+18. **Carried from S2877 — #22.4 Rigby dispatcher-probe extension** (1st trigger).
 
-19. **Carried from S2873 — "post-allowlist smoke checklist" UX pattern** (1st trigger).
+19. **Carried from S2874 — `feedback_recycle_after_merge` extension for multi-checkout setups** (1st trigger). **S2885 corroborated (1st→2nd); S2886 corroborated via /development/ 4-trigger pattern. Now 3rd trigger. Chris deleted /development/ so pattern may not re-fire, but feedback rule extension candidate.**
 
-20. **Ledger #5 — schema/handler drift detection lint / CI wiring** (~2 hr).
+20. **Carried from S2873 — `orm_inspect_tool` JSONField type predicate** (1st trigger).
 
-21. **Carried from S2872 — Category B cosmetic `raw_data_dict` migration** (~30 min).
+21. **Carried from S2873 — kalshi-only distribution on canonical SpiderData** (1st trigger).
 
-22. **Ledger #16 — close-ceremony twin-mirror enforcement gap** (S2863).
+22. **Carried from S2873 — "post-allowlist smoke checklist" UX pattern** (1st trigger).
 
-23. **Carried — Exemption-list telemetry** (Rigby zoom-out from S2868 slate #1, 1st trigger).
+23. **Ledger #5 — schema/handler drift detection lint / CI wiring** (~2 hr).
 
-24. **Carried — Stale-cleared row GC** (Rigby zoom-out from S2868 slate #1).
+24. **Carried from S2872 — Category B cosmetic `raw_data_dict` migration** (~30 min).
 
-25. **Carried — `group_key_note` UX hint on `count_by`** (S2867 Q2 fold, 1st trigger).
+25. **Ledger #16 — close-ceremony twin-mirror enforcement gap** (S2863).
 
-26. **Carried — High-cardinality guardrail on `count_by`** (S2867 Q5 fold, 1st trigger).
+26. **Carried — Exemption-list telemetry** (Rigby zoom-out from S2868 slate #1, 1st trigger).
 
-27. **Carried — Per-model `allowed_fields` explicit allowlist on `orm_inspect_tool`** (S2866 fold, 1st trigger).
+27. **Carried — Stale-cleared row GC** (Rigby zoom-out from S2868 slate #1).
 
-28. **Carried — Promote S2862 Q5.a bimodal-collector fold to tracked spec_backlog entry.**
+28. **Carried — `group_key_note` UX hint on `count_by`** (S2867 Q2 fold, 1st trigger).
 
-29. **Carried — Codify "verify at persisted source of truth" as SIGN discipline** (Playbook amendment candidate, 1st trigger only).
+29. **Carried — High-cardinality guardrail on `count_by`** (S2867 Q5 fold, 1st trigger).
 
-30. **Carried — Provider-specific composite additions.** Reactive; watch for new integrations.
+30. **Carried — Per-model `allowed_fields` explicit allowlist on `orm_inspect_tool`** (S2866 fold, 1st trigger).
 
-31. **Carried — `simulate_enforcement` auto-clear-after-N-seconds** (S2857 fold).
+31. **Carried — Promote S2862 Q5.a bimodal-collector fold to tracked spec_backlog entry.**
 
-32. **Carried — `enforcement_action_types` shared constant** (S2856 Q5b, 1st trigger).
+32. **Carried — Codify "verify at persisted source of truth" as SIGN discipline** (Playbook amendment candidate, 1st trigger only).
 
-33. **Carried — `actor_user_id` as first-class column on `AutopilotAction`** (S2856 Q5a, MIGRATION required).
+33. **Carried — Provider-specific composite additions.** Reactive; watch for new integrations.
 
-34. **Carried — `EnforcementContext` dataclass consolidation** (S2857 Q5, 1st trigger).
+34. **Carried — `simulate_enforcement` auto-clear-after-N-seconds** (S2857 fold).
 
-35. **Carried — `list_caps include_defaults=true` remaining perf costs** (S2858, 1st trigger).
+35. **Carried — `enforcement_action_types` shared constant** (S2856 Q5b, 1st trigger).
 
-36. **Carried — Second-trigger candidate for expanding `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT`** (S2859+S2868 cycle observed).
+36. **Carried — `actor_user_id` as first-class column on `AutopilotAction`** (S2856 Q5a, MIGRATION required).
 
-37. **Carried — Q5.3 fold from S2859 SIGN — "diagnostic == effectively hidden in workspace UI"**.
+37. **Carried — `EnforcementContext` dataclass consolidation** (S2857 Q5, 1st trigger).
 
-38. **Carried — Fold C from S2861 close: shared JSONField projection helper**.
+38. **Carried — `list_caps include_defaults=true` remaining perf costs** (S2858, 1st trigger).
 
-39. **Carried — Fold D from S2861 close: operator-surface discoverability for advanced PA-tool params**.
+39. **Carried — Second-trigger candidate for expanding `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT`** (S2859+S2868 cycle observed).
 
-40. **Carried — openmeteo → SignalCluster drop (fold-carry from S2862)** — product decision.
+40. **Carried — Q5.3 fold from S2859 SIGN — "diagnostic == effectively hidden in workspace UI"**.
 
-41. **Carried — Middleware `log_injected_params` spec candidate** (S2870 Q6 zoom-out fold, 1st trigger).
+41. **Carried — Fold C from S2861 close: shared JSONField projection helper**.
 
-42. **Carried — Phase 2B pricing arc (only if reconciliation trigger surfaces)** — 4 deferred items from S2855.
+42. **Carried — Fold D from S2861 close: operator-surface discoverability for advanced PA-tool params**.
 
-43. **Carried — A4 warm-up under ratified constraints** — S2846 6-line block still in force. A4 capabilities extended at S2875 → S2876 → S2877 → S2878 → S2879 → S2880 → S2881 → S2882 → S2883 → S2884 → **S2885 (content_tool file-completing + pgbouncer collision resolved)**. See A4 Constraints below.
+43. **Carried — openmeteo → SignalCluster drop (fold-carry from S2862)** — product decision.
 
-44. **Carried — Character-os Rigby integration (5-gap analysis from S2872 mid-session, D6 moratorium hold)** — parked; unlock requires Chris directive. **S2885: character-os collision on `:5433` confirmed as active infra concern; Chris flagged "one of the roadmaps tied both together" + "everything will need to be universal" — universalization coming.**
+44. **Carried — Middleware `log_injected_params` spec candidate** (S2870 Q6 zoom-out fold, 1st trigger).
 
-### What's forbidden at S2886 (D6 moratorium still in force)
+45. **Carried — Phase 2B pricing arc (only if reconciliation trigger surfaces)** — 4 deferred items from S2855.
+
+46. **Carried — A4 warm-up under ratified constraints** — S2846 6-line block still in force. A4 capabilities extended at S2875 → S2876 → S2877 → S2878 → S2879 → S2880 → S2881 → S2882 → S2883 → S2884 → S2885 → **S2886 (core.py criticality-first + 4-trigger /development/ pattern resolved)**. See A4 Constraints below.
+
+47. **Carried — Character-os Rigby integration (5-gap analysis from S2872 mid-session, D6 moratorium hold)** — parked; unlock requires Chris directive.
+
+### What's forbidden at S2887 (D6 moratorium still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No new evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 
@@ -170,49 +192,51 @@ Per `feedback_engineering_bias_over_audit`, list net-new first.
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2885 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2886 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2885: content_tool now emits structured error codes across 3 dispatched tool surfaces (`deliverable_tool` link_initiative/unlink_initiative, `feedback_tool` submit, `content_tool` top-level + `bulk_archive` + `bulk_archive_published`). Second file-completing wave in the S2876 sunset arc — content.py EXITS the population. A4 outreach substrate now has structured error semantics on deliverable-initiative linking, feedback submission, and staff-gated content archival surfaces, extending prior S2884 cost_telemetry+newsletter + S2883 agent-diag + S2882 EXECUTION+AUTH + S2881 write-path + S2880 kill-switch + S2879 governance coverage.**
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2886: `core.py` user-identity handlers now emit structured error codes across 3 dispatched tool surfaces (`messaging_tool`, `remember_tool`, `session_tool`). First criticality-first slate after S2885-close pivot; targets the highest-criticality clusters (auth + write-path + user-identity boundary). A4 outreach substrate now has structured error semantics on in-app messaging, persistent user memory, and conversation lifecycle surfaces, extending prior S2885 content_tool + S2884 cost_telemetry+newsletter + S2883 agent-diag + S2882 EXECUTION+AUTH + S2881 write-path + S2880 kill-switch + S2879 governance coverage.**
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
-3. **Capability claims:** (a)…(rr) as ratified at S2884 close. **(ss) `content_tool` (across `deliverable_tool` + `feedback_tool` + `content_tool` gateways) now emits concrete `error_code` from the 5-code taxonomy including `permission_denied` on staff-gated write-paths. Second file-completing wave in the S2876 sunset arc completes 1 additional handler file. A4 messaging that references deliverable-initiative linking, user feedback, or bulk archival flows can rely on structured error semantics for downstream integrations.**
+3. **Capability claims:** (a)…(ss) as ratified at S2885 close. **(tt) `messaging_tool` + `remember_tool` + `session_tool` now emit concrete `error_code` from the 5-code taxonomy including `permission_denied` on unauthenticated write-paths. First criticality-first slate in the S2876 sunset arc — 17 sites migrated across 3 handlers. A4 messaging that references in-app DMs, user memory persistence, or conversation session lifecycle can rely on structured error semantics for downstream integrations.**
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
 5. **Hard throttle:** A4 warm-up is constrained to a fixed timebox and fixed send count (3-5 total intros).
 6. **No bespoke follow-ups:** A4 warm-up prohibits custom follow-ups / custom research / custom deliverables.
 
 ---
 
-## S2885 close — what shipped (one slate PR + this docs cascade)
+## S2886 close — what shipped (one slate PR + this docs cascade)
 
 **Repo canonical (Claude-authored):**
-- **PR #3394** `5495736fb` — S2885 slate: `td_handlers_content.py` file-completing critical-slice structured error-envelope migration (2 files, +439/-13)
-- **PR `<this docs cascade>`** — S2885 handoff + 00-START-NEXT-SESSION refresh + wrapper pin bump for S2886 open + `docs/INDEX.md` refresh
+- **PR #3396** `64ea19d1d` — S2886 slate: `td_handlers_core.py` criticality-first structured error-envelope migration (2 files, +510/-17)
+- **PR `<this docs cascade>`** — S2886 handoff + 00-START-NEXT-SESSION refresh + wrapper pin bump for S2887 open + `docs/INDEX.md` refresh
 
-**Workspace canonical (Rigby-authored at S2885 first-action):**
-- **Rigby Tool Gap Ledger entry #24** — S2884→S2885 pgbouncer auth block resolution + character-os collision root cause, appended to deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` (2874 chars, new total 50822 chars).
+**Workspace canonical (Rigby-authored at S2886 close):**
+- **Content mirror** — S2886 slate substrate → workspace `b4503364-2573-4401-9e28-61a739e0ce50`, category `initiative_phase_doc`
+- **Ratification envelope** — S2886 SIGN F1/F2 AGREE + Q3-Q5 verdicts + Chris D-verdict → workspace `b4503364-2573-4401-9e28-61a739e0ce50`, category `governance`, deliverable_type `ratification_record`
+- **Rigby Tool Gap Ledger entry #25** (queued) — 4-trigger `/development/` bleed pattern documentation, appended to deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0`.
 
 **Runtime impact:**
-- Eighth wave (second file-completing shape) of real handler migrations in the S2876 backfill sunset arc.
-- Legacy-file population S2884=5 files → **S2885=4 files** (content.py EXITS).
-- Sub-population count 176 → **163 bare-returns** across 4 remaining files.
-- Regression suite grew from 207 → **220** (+13 S2885 rows).
-- 13 sites no longer surface `error_code='legacy_error'`; consumers can key on 5-code taxonomy.
-- No new helper introduced. No taxonomy expansion. No new PLAYBOOK amendment.
-- Ledger #13 (`td_error.py` extraction) adopter count = 5/6 — 1 more adopter needed to trigger dedicated arc. Slate B is a natural candidate.
+- Ninth wave (first criticality-first shape after S2885-close pivot) of real handler migrations in the S2876 backfill sunset arc.
+- Legacy-file population unchanged at **4 files** (`core.py=56`, `gateway.py=57`, `railway.py=18`, `codejobs.py=15`).
+- Sub-population count **163 → 146 bare-returns** across 4 files.
+- Combined regression suite S2879 → **S2886** + zoom_out_tool_2780: **100/100 pass**.
+- 17 sites no longer surface as bare `{'error': ...}`; consumers can key on 5-code taxonomy.
+- No new helper introduced. No taxonomy expansion. No new PLAYBOOK amendment shipped (2 candidates queued for v0.9.0).
+- **Ledger #13 (`td_error.py` extraction) adopter count = 6/6 — extraction gate MET.** S2887 first-action opens the extraction arc.
 
 **Session infra work resolved (not shipped as PR):**
-- Character-os postgres collision on `:5433` (bypassed via `USE_PGBOUNCER=0` in both `.env` files).
-- Orphan Daphne from `/development/` checkout killed; checkout designated legacy.
-- 11-day-stale `PA_API_TOKEN` in `.env` synced to current DB value.
-- Rigby Tool Gap Ledger entry #24 persisted.
+- 4 stacked infra faults from legacy `/development/` checkout (Redis cwd, Celery shebangs × 157, Daphne interpreter, all mitigated).
+- Redis clean restart deferred to S2886 close (phantom cwd fd from long-running process).
+- 157 `.venv/bin/*` shebangs bulk-rewritten in-place.
 
-**Slate B pivot ratified:** file-completing retired as the default shape; criticality-first grep on `core.py` + `gateway.py` is the S2886 first-action.
+**S2886 pivot from S2885 confirmed:** file-completing retired as the default shape; criticality-first grep is now the standard for the remaining 4 files.
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2885)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2886)
 
 See:
-- **S2885 handoff (current):** `docs/handoffs/SESSION_2885_CONTENT_ERROR_ENVELOPE.md`
+- **S2886 handoff (current):** `docs/handoffs/SESSION_2886_CORE_CRITICALITY_FIRST_ERROR_ENVELOPE.md`
+- **S2885 handoff:** `docs/handoffs/SESSION_2885_CONTENT_ERROR_ENVELOPE.md`
 - **S2884 handoff:** `docs/handoffs/SESSION_2884_AGENTS_NEWSLETTER_CRITICAL_SLICE.md`
 - **S2883 handoff:** `docs/handoffs/SESSION_2883_AGENT_DIAG_CRITICAL_SLICE.md`
 - **S2882 handoff:** `docs/handoffs/SESSION_2882_OPS_EXECUTION_AUTH_CRITICAL_SLICE.md`
