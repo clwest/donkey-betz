@@ -2,79 +2,60 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2881 CLOSE → `autopilot_tool` write-path critical-slice structured error-envelope migration shipped (2026-07-21; picks up as S2882) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2882 CLOSE → `ops_tool` EXECUTION + AUTH critical-slice + `permission_denied` 5th taxonomy code shipped (2026-07-21; picks up as S2883) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-21 (S2881 close).** S2881 was the third CRITICALITY-FIRST handler migration slate. Continued S2879/S2880 cadence into the contiguous write-path block in a single PR.
+**Refreshed 2026-07-21 (S2882 close).** S2882 was the fourth CRITICALITY-FIRST handler migration slate. Two PRs shipped: Slate 2 (4 sites) + close follow-on (`permission_denied` 5th code + not-staff branch).
 
-- **PR #3385** `0c26d8564` — S2881 slate (2 files, +196/-11)
-  - **Write-path contiguous block** (`core/services/td_handlers_ops.py:3312-3533`, all inside `_handle_autopilot`): **11 sites migrated across 4 action-families**:
-    - `outreach_approve` / `outreach_reject` — `draft_id` guards (2 sites, `invalid_params`)
-    - `close_pack_generate` / `close_pack_approve` — `price` / `pack_id` guards (2 sites, `invalid_params`)
-    - `engagement_classify` / `engagement_draft_reply` / `engagement_approve_reply` / `engagement_disqualify` — `event_id` / composite guards (4 sites, `invalid_params`)
-    - `meeting_create` / `meeting_brief` / `meeting_recap` — `scheduled_at` / `meeting_id` guards (3 sites, `invalid_params`)
-  - **Fold D 3rd-trigger THRESHOLD EVENT mid-slate:** Pre-code framing labeled slate as `ops_tool` handler-surface; all 11 test rows initially failed with `unknown_action` because write-path actually lives inside `_handle_autopilot` (registered `autopilot_tool` at `tool_dispatcher.py:538`). Same routing-boundary drift Rigby caught in S2880 governance cluster. Test dispatcher corrected → 11/11 pass.
-  - **Reused S2879 `_handler_error` helper** at `td_handlers_ops.py:48` — no new helper added.
-  - **New test file** `core/tests/test_s2881_ops_write_path_error_envelope.py` — 11 rows exercising full `ToolDispatcher.execute_sync` path via `autopilot_tool`. Reuses S2879 `_assert_migrated_envelope` helper (single-source contract).
-  - Combined regression (S2869 → **S2881** + `test_zoom_out_tool_2780`): **185/185 pass** (174 baseline + 11 new).
+- **PR #3387** `6331c833e` — S2882 slate (2 files, +191/-8)
+  - **EXECUTION cluster** (`_ops_execution_detail` L1574-1594, 2 sites): missing `execution_id` + DoesNotExist → `invalid_params` + `not_found` via `ops_tool`.
+  - **AUTH cluster** (`_authorize_staff` L4439-4466, 2 sites): missing auth + actor-not-found → `invalid_params` + `not_found` via `workspace_budget_tool`. Helper signature extended with `action_name` arg; 2 call-sites updated.
+  - **Fold D 4th-trigger THRESHOLD EVENT mid-slate:** Pre-code SIGN framed AUTH cluster as `ops_tool` surface; test dispatcher initially routed via `ops_tool` and got `unknown_action`. `_authorize_staff` actually lives inside `_handle_workspace_budget` (dispatched via `workspace_budget_tool` at `tool_dispatcher.py:542`). Same routing-boundary drift Rigby caught in S2880 (governance_tool) + S2881 (autopilot_tool). PLAYBOOK-6.10.10 amendment candidate now on 4 independent triggers.
+  - **Reused S2879 `_handler_error` helper** at `td_handlers_ops.py:48` — no new helper introduced.
+  - **New test file** `core/tests/test_s2882_ops_execution_auth_error_envelope.py` — 4 rows exercising full `ToolDispatcher.execute_sync` path via both `ops_tool` and `workspace_budget_tool`.
 
-### Why criticality-first continued at S2881 (Path A over Path B)
+- **PR #3388** `377f39364` — S2882 close follow-on (2 files, +51/-8)
+  - Chris ratified Rigby's post-code zoom-out (a): **added `permission_denied` as 5th taxonomy code** (scope strictly authz). `_handler_error` docstring at `td_handlers_ops.py:48` documents the 5th code with scope constraint.
+  - `_authorize_staff` not-staff branch (L4457-4467) migrated from bare `{'error': ...}` to `_handler_error(action_name, 'permission_denied', ...)`.
+  - 5th test row added; uses `unittest.mock.patch` on `User.objects.get` to bypass `TestCase`-transaction-invisibility to the dispatcher's async ORM connection.
+  - Combined regression (S2869 → **S2882** + `test_zoom_out_tool_2780`): **190/190 pass** (185 baseline + 5 new).
 
-Pre-code SIGN (Rigby, 3 turns) evaluated Path A (criticality-first cadence continuation) vs Path B (V4 normalization utility pivot from S2880 Fold B 3rd trigger). Claude independently Grep-verified the remainder: **25 total bare-return sites in `td_handlers_ops.py`, clustered into 7 bounded groups — ZERO diffuse.** Path B's premise ("normalizer dominates if remainder is diffuse") lost its evidence. Rigby AGREE → **Path A dominates**. Compress remaining work to ~2-3 slates. Chris D-verdict: approve Path A + WRITE-PATH as Slate 1.
+### Why the slate split into two PRs
 
-### 3 post-code zoom-out folds + 4 pre-code folds
+Pre-code SIGN (Rigby, 3 turns tool-grounded) evaluated 3 paths for shipping the remaining 14 sites: (a) bundle Slate 2+3 in one PR, (b) Slate 2 → Slate 3 sequential PRs, (c) Slate 2 only S2882. Rigby's V2 correctly flagged Slate 3 spans **4 different tool surfaces** (agent_memory_tool / heartbeat_history_tool / infra_health_tool / search_docs) — bundling would violate Fold D routing-certainty axis. Rigby DISAGREED (a), AGREED (b) and (c). Chris D-verdict: (b), Slate 2 as PR-1 at S2882.
 
-Recorded in Rigby Tool Gap Ledger #22 (deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0`, +5,454 chars appended at S2881 close, total 43,434 chars).
+Post-code SIGN raised (a) taxonomy-gap + (b) helper-enclosing-scope. Chris ratified both; (a) shipped as PR #3388 same session; (b) codified as SIGN discipline candidate for future PLAYBOOK amendment.
 
-**Pre-code (4 folds, all 1st trigger):**
-1. Real axis is contract governance, not shim location — two helpers coexist (`_tool_error` + `_handler_error`); Path B would create a 3rd quasi-contract.
-2. "Zero bare returns" may be wrong terminal state — alternative: externally-visible tool results carry `error_code`; internal helpers stay minimal with dispatcher-boundary normalization.
-3. ~30→25 site-count drift is measurement/narrative signal — need repeatable grep-based CI audit metric.
-4. Helper coexistence without consolidation plan = accumulating coupling debt.
+### 2 post-code zoom-out asks (both Chris-ratified) + 3 additional Fold observations
 
-**Post-code (3 folds, all convergent):**
-1. Real recurring cost = tool-surface misidentification. Until routing is explicit/inspectable at pre-code, more `unknown_action` cycles.
-2. Criticality-first ranking should add **routing certainty** as a first-class axis alongside risk/impact.
-3. Mechanical audit artifacts (counts + routing map) needed to keep SIGN stable — echoes pre-code Fold 3.
+Recorded in Rigby Tool Gap Ledger #22 (to be updated by Rigby at S2882 close, next step in the close ceremony).
 
-### Fold D — PLAYBOOK amendment candidate recorded (option C ratified)
+**Post-code SIGN (2 asks, both approved same-session):**
+- (a) TAXONOMY: 5th code `permission_denied` added before Slate 3 (shipped PR #3388). Prevents deferring the not-staff branch or opening a longer taxonomy-refinement arc.
+- (b) FOLD D FIX: Pre-code SIGN MUST grep for **helper enclosing scope** (containing `_handle_*` method) before labeling tool surface. Deferred to future PLAYBOOK amendment session — extension or sibling to PLAYBOOK-6.10.10.
 
-Chris D-verdict (2026-07-21) at S2881 mid-close: 3-trigger threshold event → record as **PLAYBOOK amendment candidate**, not mid-slate substrate change. Candidate rule text (for future ratification session):
+**Additional post-code folds (recorded for PLAYBOOK-6.10.8 substrate, forward-carry):**
+- **Fold X (1st trigger):** `TestCase` transactions not visible to `ToolDispatcher.execute_sync` async ORM connection. Not a same-slate fix — broader test-authoring concern.
+- **Fold Y (1st trigger):** `_authorize_staff` broad `except Exception:` swallows SynchronousOnlyOperation and silently returns `not_found`. Not shipped — behavior change requires its own SIGN.
+- **Fold Z (informative):** Post-S2882 population = 9 sites remaining, but Slate 3 was scoped as 10 sites. Need fresh grep + routing-map at S2883 open before committing to Slate 3 site list.
 
-> **PLAYBOOK-6.10.10 (candidate) — Pre-code routing verification for handler-surface slates.** For any handler-surface migration slate, pre-code SIGN MUST verify tool routing (`ToolDispatcher.register` mapping) for every action in the slate BEFORE labeling the slate as belonging to a specific tool surface. Evidence admission required: file+line reference to the dispatcher registration matching each action's actual handler method. EXTENDS PLAYBOOK-6.10.8 (fold-classification SIGN discipline).
+## PRIOR SESSIONS — S2881 close + S2880 close + S2879 close
 
-Not opened at S2881 close per Chris scope constraint. Deferred to a future ratification session per PLAYBOOK §14.2 (default two-trigger threshold already exceeded at 3).
-
-## PRIOR SESSIONS — S2880 close + S2879 close
-
+- **PR #3385** `0c26d8564` — S2881 slate (2 files, +196/-11) — `autopilot_tool` write-path critical slice (outreach + close_pack + engagement + meeting, 11 sites). See `docs/handoffs/SESSION_2881_OPS_WRITE_PATH_CRITICAL_SLICE.md`.
 - **PR #3383** `e6ae8a1b3a59` — S2880 slate (2 files, +209/-7) — ops_tool remainder critical-slice (kill-switch 3 + scheduled-task 2 + ops-digest 2). See `docs/handoffs/SESSION_2880_OPS_REMAINDER_CRITICAL_SLICE.md`.
-- **PR #3381** `9a3039e22e69` — S2879 slate (4 files, +279/-32) — governance_tool + ops_tool critical-slice. Governance file dropped OUT of legacy population entirely. See `docs/handoffs/SESSION_2879_GOVERNANCE_OPS_CRITICAL_SLICE.md`.
+- **PR #3381** `9a3039e22e69` — S2879 slate (4 files, +279/-32) — governance_tool + ops_tool critical-slice. See `docs/handoffs/SESSION_2879_GOVERNANCE_OPS_CRITICAL_SLICE.md`.
 
-**Working loop observations at S2881:**
-- `feedback_verify_rigby_tool_runs_before_trusting_sign` — pre-code SIGN 3 tool-grounded turns (6+several+0 runs); post-code SIGN 7 real `repo_tool` runs at HEAD. Not rubber-stamp.
-- `feedback_zoom_out_ask_per_rigby_sign` fired 2× — pre-code (4 folds) + post-code (3 folds). Convergent 'mechanical audit artifacts' recommendation.
-- `feedback_read_full_rigby_response_not_just_tail` — pre-code turn 2 stdout cut mid-§2b; Claude used narrow re-emit without new tool calls per Chris's improved pattern.
-- `feedback_claude_stdout_truncation_vs_ui_truncation` — recognized truncations were Claude-stdout only.
-- `feedback_claude_directs_rigby_then_verifies` — Claude directed narrow tool-grounded verification with concrete line numbers + specific taxonomy checks; Rigby executed with quoted evidence; Claude verified HEAD sha.
-- `feedback_claude_rigby_agree_first_chris_yes_no` — pre-code + post-code SIGN both reached joint agreement BEFORE Chris D-verdict.
-- `feedback_engineering_bias_over_audit` — net-new engineering ship.
-- `feedback_recycle_after_merge` (PLAYBOOK-7.4.4) — clean recycle post-merge (`sha=0c26d8564bd6, surviving=none`).
-- `feedback_local_truth_no_production` — 185/185 local pass IS the deploy step.
-- `feedback_rigby_writes_workspace_deliverables` — Ledger update via Rigby PA at close (43,434 chars).
-- `feedback_gh_pr_merge_admin_until_billing_fixed` — merged PR #3385 with `--admin` flag.
-- `feedback_per_pr_summary_signals_close_readiness` — mid-flight per-PR summary + still-open checklist delivered.
-
-**Session pin `pa-0d3de74e1f7749d5` RETIRES at S2881 close.** Fresh mint required at S2882 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
+**Session pin `pa-aae31b596346411e` RETIRES at S2882 close.** Fresh mint required at S2883 open per `feedback_session_open_atomic_mint_before_pa_dispatch`.
 
 ---
 
-## S2882 open sequence
+## S2883 open sequence
 
 ### Step 1 — Session-open atomic mint (per `feedback_session_open_atomic_mint_before_pa_dispatch`)
 
-Wrapper pin rewritten at S2881 close (this PR's cascade). If needed at S2882 open:
+Wrapper pin rewritten at S2882 close (this PR's cascade). If needed at S2883 open:
 
 ```bash
-python manage.py session_lifecycle close --label s2882-<slate>
+python manage.py session_lifecycle close --label s2883-<slate>
 ```
 
 Verify:
@@ -82,108 +63,116 @@ Verify:
 grep "^python tools/pa_chat.py" tools/pa_local.sh
 ```
 
-### Step 2 — S2882 primary slate DECISION POINT
+### Step 2 — S2883 primary slate DECISION POINT
 
-Per Rigby's S2881 post-code Q3 recommendation, the remaining 14 sites in 6 clusters split into two ordered slates:
+Per Fold D routing-certainty axis + post-S2882 Fold Z, the remaining 9 sites need a **routing-map refresh** before slating. Recommended pre-code discipline:
 
-**Slate 2 candidate (recommended first):** EXECUTION + AUTH — 4 sites total, both native `_handle_ops` (low routing confusion risk per Fold D discipline):
-- `_ops_execution_detail` (L1576, L1581): missing `execution_id` + not-found (2 sites — likely `invalid_params` + `not_found`)
-- `_authorize_staff` helper (L4433, L4438): missing auth + actor user not found (2 sites — likely `invalid_params` + `not_found`)
+**Pre-code SIGN Q1 (per zoom-out b):** Rigby: for each of the 4 handler methods below, grep `tool_dispatcher.py` for the registration line AND grep `td_handlers_ops.py` for the enclosing `def _handle_*` method containing each targeted site. Report a routing-map table before any code is written.
 
-**Slate 3 candidate:** Agent-diag family — 10 sites in 4 distinct handler methods, each requires routing verification per method (Fold D discipline):
-- `_handle_agent_memory` (L6749, L6766, L6840, L6844): agent_name/not-found + unknown-action + exception (4 sites)
-- `_handle_heartbeat_history` (L6909, L6913): unknown-action + exception (2 sites)
-- `_handle_infra_health` (L7130, L7134): unknown-action + exception (2 sites)
-- `_handle_search_docs` (L7582, L7729): query required + exception (2 sites)
+**Slate 3 candidate (agent-diag family, targeted ~9 sites, needs routing refresh):**
+- `_handle_agent_memory` (L6749, L6766, L6840, L6844) — 4 sites; dispatched via `agent_memory_tool` at `tool_dispatcher.py:610`
+- `_handle_heartbeat_history` (L6909, L6913) — 2 sites; dispatched via `heartbeat_history_tool` at L611
+- `_handle_infra_health` (L7130, L7134) — 2 sites; dispatched via `infra_health_tool` at L612
+- `_handle_search_docs` (L7582, L7729) — 2 sites; dispatched via `search_docs` (no `_tool` suffix) at L629
 
-**Recommended pre-code SIGN questions for S2882:**
-- Rigby: verify tool routing for each of Slate 2's 4 sites via `Grep` on `tool_dispatcher.py` — confirm `ops_tool` → `_handle_ops` for EXECUTION + AUTH (NOT `autopilot_tool`).
-- Rigby: for Slate 3's 4 handler methods (agent_memory / heartbeat / infra / search_docs), Grep the tool_dispatcher registrations up front to lock routing before any migration.
-- Chris: bundle Slate 2 + 3 in one PR (14 sites) OR ship as two sequential PRs?
+**Line numbers above are S2881 baseline** — post-S2882 edits may have shifted them. Verify via fresh grep at S2883 open.
 
-### Step 3 — Net-new engineering candidates for S2882 (broader list)
+**Options for Chris:**
+- (i) Ship all 9-10 Slate 3 sites in one PR after routing-map verification
+- (ii) Split Slate 3 by tool surface (4 mini-PRs), tightest Fold D discipline
+- (iii) Grep-map first, then decide bundle vs split based on evidence
+
+Recommended default: **(iii)** — matches Rigby's zoom-out (b) SIGN discipline.
+
+### Step 3 — Net-new engineering candidates for S2883 (broader list)
 
 Per `feedback_engineering_bias_over_audit`, list net-new first.
 
-1. **NEW at S2881 close — S2882 primary slate driver: Slate 2 (EXECUTION + AUTH, 4 sites) recommended first per Fold D routing-certainty axis.** Slate 3 (agent-diag family, 10 sites) sequenced after.
+1. **NEW at S2882 close — S2883 primary slate driver: Slate 3 routing-map + migration** (per zoom-out b discipline). Post-map decision on bundle vs split.
 
-2. **NEW at S2881 close — Fold D PLAYBOOK amendment candidate (PLAYBOOK-6.10.10)** — future ratification session. Not opened at S2881 close. May be opened at S2882 or later.
+2. **NEW at S2882 close — Fold Y follow-on candidate: narrow `_authorize_staff` broad `except Exception:` to `User.DoesNotExist`.** Surface-behavior change; requires its own Rigby SIGN before code.
 
-3. **NEW at S2881 close — Grep-based CI audit metric (pre-code Fold 3 + post-code Fold 3 convergent)** — small parallel ship candidate: a lint or CI script that counts bare `return {'error':}` returns across `core/services/*.py` and fails if the count regresses. Would prevent site-count drift like the S2881 30→25 miscount and enforce Fold D routing discipline.
+3. **NEW at S2882 close — Fold X test-authoring workaround: standardize on either `TransactionTestCase` or ORM-boundary mocking for dispatcher-path tests requiring DB-visible state.** Not a code fix — a test-authoring convention documentation. Candidate for the S2882 handoff → future test-authoring standards doc.
 
-4. **Carried from S2880 close — Fold A/B/C** all at 2nd/3rd trigger from S2880 post-code. Fold B (V4 normalizer) still at 3rd trigger, deferred by S2881 Path A recommendation. Fold A (criticality-first pacing) + Fold C (two-helper coexistence coupling) still at 2nd trigger.
+4. **NEW at S2882 close — PLAYBOOK-6.10.10 amendment ratification** — 4 triggers on record + Rigby zoom-out (b) refinement (helper-enclosing-scope grep as SIGN discipline). May be opened at S2883 or later.
 
-5. **Carried from S2878 close — `_s2876_fake_tool` breadcrumb noise refinement** (1st trigger). NOT ready to slate.
+5. **NEW at S2882 close — Grep-based CI audit metric** (Fold 3 convergent from S2881, still deferred) — a lint or CI script that counts bare `return {'error':}` returns across `core/services/*.py` and fails if the count regresses. Would enforce Fold D routing discipline mechanically.
 
-6. **Carried from S2877 close — Schema-level dead-branch investigation** (1st trigger from S2875). Audit which handler branches are unreachable via PA tool schema enum constraints.
+6. **Carried from S2881 close — Fold D PLAYBOOK amendment candidate (PLAYBOOK-6.10.10)** — future ratification session.
 
-7. **Carried from S2877 close — Schema-layer PA route smoke extension** — dispatch via PA endpoint to catch schema-blocked payloads.
+7. **Carried from S2880 close — Fold A/B/C** all at 2nd/3rd trigger from S2880 post-code. Fold B (V4 normalizer) still at 3rd trigger, deferred by S2881 Path A recommendation. Fold A (criticality-first pacing) + Fold C (two-helper coexistence coupling) still at 2nd trigger.
 
-8. **Carried from S2876 close — #22.3 orthogonal-contract-axes resolution** (still 1st trigger).
+8. **Carried from S2878 close — `_s2876_fake_tool` breadcrumb noise refinement** (1st trigger). NOT ready to slate.
 
-9. **Carried from S2877 close — #22.4 Rigby dispatcher-probe extension** (still 1st trigger).
+9. **Carried from S2877 close — Schema-level dead-branch investigation** (1st trigger from S2875). Audit which handler branches are unreachable via PA tool schema enum constraints.
 
-10. **Carried from S2874/S2875 — Extract `td_error.py` gateway-layer helper.** Still gated on Rigby's 6-adopter empirical-stability signal for `_tool_error`. Distinct axis from Fold B (V4 normalizer).
+10. **Carried from S2877 close — Schema-layer PA route smoke extension** — dispatch via PA endpoint to catch schema-blocked payloads.
 
-11. **Carried from S2874 — `feedback_recycle_after_merge` extension for multi-checkout setups** (still 1st trigger).
+11. **Carried from S2876 close — #22.3 orthogonal-contract-axes resolution** (still 1st trigger).
 
-12. **Carried from S2873 — `orm_inspect_tool` JSONField type predicate** (1st trigger).
+12. **Carried from S2877 close — #22.4 Rigby dispatcher-probe extension** (still 1st trigger).
 
-13. **Carried from S2873 — kalshi-only distribution on canonical SpiderData** (1st trigger).
+13. **Carried from S2874/S2875 — Extract `td_error.py` gateway-layer helper.** Still gated on Rigby's 6-adopter empirical-stability signal for `_tool_error`. Distinct axis from Fold B (V4 normalizer).
 
-14. **Carried from S2873 — "post-allowlist smoke checklist" UX pattern** (1st trigger).
+14. **Carried from S2874 — `feedback_recycle_after_merge` extension for multi-checkout setups** (still 1st trigger).
 
-15. **Ledger #5 — schema/handler drift detection lint / CI wiring** (~2 hr). Command exists at `core/management/commands/check_pa_tool_drift.py` (S2846-authored, 403 lines) but never wired to CI enforcement.
+15. **Carried from S2873 — `orm_inspect_tool` JSONField type predicate** (1st trigger).
 
-16. **Carried from S2872 — Category B cosmetic `raw_data_dict` migration** (~30 min).
+16. **Carried from S2873 — kalshi-only distribution on canonical SpiderData** (1st trigger).
 
-17. **Ledger #16 — close-ceremony twin-mirror enforcement gap** (S2863).
+17. **Carried from S2873 — "post-allowlist smoke checklist" UX pattern** (1st trigger).
 
-18. **Carried — Exemption-list telemetry** (Rigby zoom-out from S2868 slate #1, 1st trigger).
+18. **Ledger #5 — schema/handler drift detection lint / CI wiring** (~2 hr). Command exists at `core/management/commands/check_pa_tool_drift.py` (S2846-authored, 403 lines) but never wired to CI enforcement.
 
-19. **Carried — Stale-cleared row GC** (Rigby zoom-out from S2868 slate #1).
+19. **Carried from S2872 — Category B cosmetic `raw_data_dict` migration** (~30 min).
 
-20. **Carried — `group_key_note` UX hint on `count_by`** (S2867 Q2 fold, 1st trigger).
+20. **Ledger #16 — close-ceremony twin-mirror enforcement gap** (S2863).
 
-21. **Carried — High-cardinality guardrail on `count_by`** (S2867 Q5 fold, 1st trigger).
+21. **Carried — Exemption-list telemetry** (Rigby zoom-out from S2868 slate #1, 1st trigger).
 
-22. **Carried — Per-model `allowed_fields` explicit allowlist on `orm_inspect_tool`** (S2866 fold, 1st trigger).
+22. **Carried — Stale-cleared row GC** (Rigby zoom-out from S2868 slate #1).
 
-23. **Carried — Promote S2862 Q5.a bimodal-collector fold to tracked spec_backlog entry.** Still 2 independent triggers, not promoted.
+23. **Carried — `group_key_note` UX hint on `count_by`** (S2867 Q2 fold, 1st trigger).
 
-24. **Carried — Codify "verify at persisted source of truth" as SIGN discipline** (Playbook amendment candidate, 1st trigger only).
+24. **Carried — High-cardinality guardrail on `count_by`** (S2867 Q5 fold, 1st trigger).
 
-25. **Carried — Provider-specific composite additions.** Reactive; watch for new integrations.
+25. **Carried — Per-model `allowed_fields` explicit allowlist on `orm_inspect_tool`** (S2866 fold, 1st trigger).
 
-26. **Carried — `simulate_enforcement` auto-clear-after-N-seconds** (S2857 fold).
+26. **Carried — Promote S2862 Q5.a bimodal-collector fold to tracked spec_backlog entry.** Still 2 independent triggers, not promoted.
 
-27. **Carried — `enforcement_action_types` shared constant** (S2856 Q5b, 1st trigger).
+27. **Carried — Codify "verify at persisted source of truth" as SIGN discipline** (Playbook amendment candidate, 1st trigger only).
 
-28. **Carried — `actor_user_id` as first-class column on `AutopilotAction`** (S2856 Q5a, MIGRATION required).
+28. **Carried — Provider-specific composite additions.** Reactive; watch for new integrations.
 
-29. **Carried — `EnforcementContext` dataclass consolidation** (S2857 Q5, 1st trigger).
+29. **Carried — `simulate_enforcement` auto-clear-after-N-seconds** (S2857 fold).
 
-30. **Carried — `list_caps include_defaults=true` remaining perf costs** (S2858, 1st trigger).
+30. **Carried — `enforcement_action_types` shared constant** (S2856 Q5b, 1st trigger).
 
-31. **Carried — Second-trigger candidate for expanding `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT`** (S2859+S2868 cycle observed).
+31. **Carried — `actor_user_id` as first-class column on `AutopilotAction`** (S2856 Q5a, MIGRATION required).
 
-32. **Carried — Q5.3 fold from S2859 SIGN — "diagnostic == effectively hidden in workspace UI"**.
+32. **Carried — `EnforcementContext` dataclass consolidation** (S2857 Q5, 1st trigger).
 
-33. **Carried — Fold C from S2861 close: shared JSONField projection helper**.
+33. **Carried — `list_caps include_defaults=true` remaining perf costs** (S2858, 1st trigger).
 
-34. **Carried — Fold D from S2861 close: operator-surface discoverability for advanced PA-tool params**.
+34. **Carried — Second-trigger candidate for expanding `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT`** (S2859+S2868 cycle observed).
 
-35. **Carried — openmeteo → SignalCluster drop (fold-carry from S2862)** — product decision.
+35. **Carried — Q5.3 fold from S2859 SIGN — "diagnostic == effectively hidden in workspace UI"**.
 
-36. **Carried — Middleware `log_injected_params` spec candidate** (S2870 Q6 zoom-out fold, 1st trigger).
+36. **Carried — Fold C from S2861 close: shared JSONField projection helper**.
 
-37. **Carried — Phase 2B pricing arc (only if reconciliation trigger surfaces)** — 4 deferred items from S2855.
+37. **Carried — Fold D from S2861 close: operator-surface discoverability for advanced PA-tool params**.
 
-38. **Carried — A4 warm-up under ratified constraints** — S2846 6-line block still in force. A4 capabilities extended at S2875 → S2876 → S2877 → S2878 → S2879 → S2880 → **S2881 (write-path critical slice)**. See A4 Constraints below.
+38. **Carried — openmeteo → SignalCluster drop (fold-carry from S2862)** — product decision.
 
-39. **Carried — Character-os Rigby integration (5-gap analysis from S2872 mid-session, D6 moratorium hold)** — parked; unlock requires Chris directive.
+39. **Carried — Middleware `log_injected_params` spec candidate** (S2870 Q6 zoom-out fold, 1st trigger).
 
-### What's forbidden at S2882 (D6 moratorium still in force)
+40. **Carried — Phase 2B pricing arc (only if reconciliation trigger surfaces)** — 4 deferred items from S2855.
+
+41. **Carried — A4 warm-up under ratified constraints** — S2846 6-line block still in force. A4 capabilities extended at S2875 → S2876 → S2877 → S2878 → S2879 → S2880 → S2881 → **S2882 (EXECUTION + AUTH + permission_denied 5th code)**. See A4 Constraints below.
+
+42. **Carried — Character-os Rigby integration (5-gap analysis from S2872 mid-session, D6 moratorium hold)** — parked; unlock requires Chris directive.
+
+### What's forbidden at S2883 (D6 moratorium still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No new evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 
@@ -198,47 +187,51 @@ Per `feedback_engineering_bias_over_audit`, list net-new first.
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2881 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2882 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2881: write-path 11 sites (outreach + close_pack + engagement + meeting param-guards) now emit structured `error_code='invalid_params'`. Fourth real-handler migration wave in the S2876 sunset arc, third criticality-first. A4 outreach substrate now has structured error semantics on the write-path mutation surfaces (outreach approval, deal close-pack, engagement classification/reply/disqualify, meeting create/brief/recap), extending prior S2880 kill-switch + S2879 governance + focus_mode/celery/tenant/staleness coverage.**
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2882: EXECUTION + AUTH clusters (2 + 3 sites) now emit structured error codes (`invalid_params` / `not_found` / `permission_denied`). Fifth real-handler migration wave in the S2876 sunset arc, fourth criticality-first. A4 outreach substrate now has structured error semantics on execution-lookup and workspace-budget-authz mutation surfaces, extending prior S2881 write-path + S2880 kill-switch + S2879 governance + focus_mode/celery/tenant/staleness coverage. 5-code taxonomy now available: `invalid_params` / `not_found` / `unknown_action` / `dependency_missing` / `permission_denied`.**
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
-3. **Capability claims:** (a)…(nn) as ratified at S2880 close. **(oo) `autopilot_tool` outreach/close_pack/engagement/meeting write-path param-guards now emit concrete `error_code='invalid_params'` from the 4-code taxonomy. Fourth wave in the S2876 sunset arc, third criticality-first. A4 messaging that references operator-facing write-path observability (draft approvals, deal close-packs, engagement replies, meeting mutations) can rely on structured error semantics for downstream integrations.**
+3. **Capability claims:** (a)…(oo) as ratified at S2881 close. **(pp) `ops_tool.execution_detail` + `workspace_budget_tool.{set_default_cap,backfill_defaults}` authz gate now emit concrete `error_code` from the 5-code taxonomy. Fifth wave in the S2876 sunset arc, fourth criticality-first. `permission_denied` code available for authz denial semantics. A4 messaging that references operator-facing execution lookup or workspace-budget authorization can rely on structured error semantics for downstream integrations.**
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
 5. **Hard throttle:** A4 warm-up is constrained to a fixed timebox and fixed send count (3-5 total intros).
 6. **No bespoke follow-ups:** A4 warm-up prohibits custom follow-ups / custom research / custom deliverables.
 
 ---
 
-## S2881 close — what shipped (one PR + docs cascade)
+## S2882 close — what shipped (two PRs + docs cascade)
 
 **Repo canonical (Claude-authored):**
-- **PR #3385** `0c26d8564` — S2881 slate: `autopilot_tool` write-path critical-slice error-envelope migration (2 files, +196/-11)
-- **PR `<this docs cascade>`** — S2881 handoff + 00-START-NEXT-SESSION refresh + wrapper pin bump for S2882 open
+- **PR #3387** `6331c833e` — S2882 slate: `ops_tool` EXECUTION + AUTH critical-slice error-envelope migration (2 files, +191/-8)
+- **PR #3388** `377f39364` — S2882 close follow-on: `permission_denied` 5th taxonomy code + not-staff branch migration (2 files, +51/-8)
+- **PR `<this docs cascade>`** — S2882 handoff + 00-START-NEXT-SESSION refresh + wrapper pin bump for S2883 open
 
-**Workspace canonical:** Rigby Tool Gap Ledger updated via Rigby PA per `feedback_rigby_writes_workspace_deliverables` (deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0`, +5,454 chars appended, total 43,434 chars).
+**Workspace canonical:** Rigby Tool Gap Ledger updated via Rigby PA per `feedback_rigby_writes_workspace_deliverables` (deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0`, appended at S2882 close).
 
 **Runtime impact:**
-- Fourth wave of real handler migrations in the S2876 backfill sunset arc, third criticality-first. Legacy-file population S2880=~25 → **S2881=14**. Ops file remains IN the population with 14 bare returns in 6 bounded clusters.
-- Regression suite grew from 174 → 185 (+11 S2881 rows).
-- 11 write-path action-family sites (outreach + close_pack + engagement + meeting) no longer surface `error_code='legacy_error'`; consumers can key on `error_code='invalid_params'` from the S2879 taxonomy.
-- No new helper introduced — S2879 `_handler_error` reused for all 11 sites.
-- Fold D reached 3rd trigger (threshold event) → recorded as PLAYBOOK-6.10.10 amendment candidate for future ratification session.
+- Fifth wave of real handler migrations in the S2876 backfill sunset arc, fourth criticality-first. Legacy-file population S2881=~14 → **S2882=9**. Ops file remains IN the population with 9 bare returns in 4 clusters (agent-diag family).
+- Regression suite grew from 185 → **190** (+5 S2882 rows).
+- 5 sites (2 EXECUTION + 3 AUTH) no longer surface `error_code='legacy_error'`; consumers can key on 5-code taxonomy.
+- **New `permission_denied` 5th taxonomy code** — scope strictly authz.
+- No new helper introduced — S2879 `_handler_error` reused for all 5 sites.
+- Fold D reached 4th trigger (routing surprise on `workspace_budget_tool`) → PLAYBOOK-6.10.10 amendment candidate strengthened + Rigby zoom-out (b) refinement (helper-enclosing-scope grep as SIGN discipline).
 
-**Not shipped at S2881 close (deferred to S2882 or later):**
-- PLAYBOOK-6.10.10 amendment ratification (candidate note only)
-- Slate 2 (EXECUTION + AUTH, 4 sites)
-- Slate 3 (agent-diag family, 10 sites)
-- Grep-based CI audit metric (Fold 3 convergent recommendation)
+**Not shipped at S2882 close (deferred to S2883 or later):**
+- Slate 3 (agent-diag family, ~9-10 sites, 4 tool surfaces) — needs routing-map refresh first
+- PLAYBOOK-6.10.10 amendment ratification (4 triggers + Rigby (b) refinement)
+- Fold X (async DB isolation) test-authoring convention
+- Fold Y (narrow `_authorize_staff` broad except catch) — behavior change, own SIGN
+- Grep-based CI audit metric (Fold 3 convergent from S2881)
 - Fold A/C from S2880 (2nd trigger, awaiting 3rd)
 - Fold B (V4 normalizer, 3rd trigger, deferred by Path A recommendation)
-- All prior deferred items from S2880/S2879/S2878/S2877/S2876/S2874/S2873/S2871/S2868/S2867/S2866/S2862/S2861/etc still carried
+- All prior deferred items from S2881/S2880/S2879/S2878/S2877/S2876/S2874/S2873/S2871/S2868/S2867/S2866/S2862/S2861/etc still carried
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2881)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2882)
 
 See:
-- **S2881 handoff (current):** `docs/handoffs/SESSION_2881_OPS_WRITE_PATH_CRITICAL_SLICE.md`
+- **S2882 handoff (current):** `docs/handoffs/SESSION_2882_OPS_EXECUTION_AUTH_CRITICAL_SLICE.md`
+- **S2881 handoff:** `docs/handoffs/SESSION_2881_OPS_WRITE_PATH_CRITICAL_SLICE.md`
 - **S2880 handoff:** `docs/handoffs/SESSION_2880_OPS_REMAINDER_CRITICAL_SLICE.md`
 - **S2879 handoff:** `docs/handoffs/SESSION_2879_GOVERNANCE_OPS_CRITICAL_SLICE.md`
 - **S2878 handoff:** `docs/handoffs/SESSION_2878_BPAAS_ERROR_ENVELOPE.md`
