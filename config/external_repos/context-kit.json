@@ -3,7 +3,7 @@
   "repo_id": "context-kit",
   "name": "context-kit",
   "description": "context-kit — Python CLI that bootstraps the AI-session documentation pattern (two-doc anchor + drift verifier + handoffs + start-here doc) into any project. Distributed on PyPI as 'contextkit-ai'. This is the master pattern repo; every other repo in the fleet (u-d-b, character-os, future apps) consumes context-kit's pattern files via `cp -r` or `context-kit init`. Repo itself is also the teaching material — the 8-file docs-pattern guide lives at cli/_pattern/ here, not in docs/docs-pattern/ as it does in adopting projects.",
-  "root_path": "/Users/donkeyking/development/context-kit",
+  "root_path": "/Users/donkeyking/Donkey_Betz/context-kit",
   "workspace_type": "local",
   "tech_stack": {
     "primary_language": "python",

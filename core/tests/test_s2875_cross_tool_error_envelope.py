@@ -72,10 +72,15 @@ class RepoToolErrorEnvelopeTests(TestCase):
 
     def test_value_error_catcher_returns_structured_envelope(self):
         # `..` outside project root triggers _safe_path → ValueError.
+        # S2887 taxonomy fix: `_safe_path`-raised ValueErrors are authz-shaped
+        # (blocked file / outside root); they now map to `permission_denied`
+        # (the 5-code taxonomy) instead of the out-of-taxonomy `value_error`.
+        # Rigby SIGN Q6 zoom-out fold at S2887.
         result = self._dispatch(action='read_file', path='../../../../etc/passwd')
-        self.assertEqual(result.get('error_code'), 'value_error')
+        self.assertEqual(result.get('error_code'), 'permission_denied')
         # exact ValueError message preserved (no rephrasing per Q4 fold)
         self.assertTrue(result.get('error'))
+        self.assertIn('outside project root', result.get('error', ''))
 
     def test_error_message_text_preserved_verbatim(self):
         """Q4 fold #1: no rephrasing — downstream substring matchers must not regress."""

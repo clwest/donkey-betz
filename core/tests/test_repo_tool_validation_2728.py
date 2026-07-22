@@ -288,3 +288,106 @@ class RepoToolBaselineActions(_RepoToolTestBase):
         self.assertIn('error', result)
         self.assertIn('Unknown repo_tool action', result['error'])
         self.assertIn('wibble_the_repo', result['error'])
+
+
+# ─── S2887: cross-repo scoping via repo_id ────────────────────────────
+#
+# Rigby SIGN Q1-Q6 grounded these tests. Every branch of the resolver has
+# a matching assertion; taxonomy-fix regressions for blocked-file / out-
+# of-root map to `permission_denied` (was `value_error`).
+
+
+class S2887CrossRepoScoping(_RepoToolTestBase):
+    """S2887 — repo_id resolves to a registered external_repos profile.
+
+    u-d-b default path preserved when repo_id is absent."""
+
+    def test_list_repos_enumerates_profiles(self):
+        result = self._dispatch({'action': 'list_repos'})
+        self.assertNotIn('error', result)
+        self.assertEqual(result['action'], 'list_repos')
+        # At authoring time the corpus is 12 profiles; the assertion is
+        # >= to avoid brittle churn as new siblings register.
+        self.assertGreaterEqual(result['count'], 12)
+        # Every row carries the three-field shape SIGNed at Q4.
+        for row in result['repos']:
+            self.assertIn('repo_id', row)
+            self.assertIn('root_path', row)
+            self.assertIn('exists', row)
+        # character-os + context-kit MUST be reachable at their new
+        # /Donkey_Betz/ paths (profile fix landed in the same PR).
+        _by_id = {r['repo_id']: r for r in result['repos']}
+        self.assertIn('character-os', _by_id)
+        self.assertIn('context-kit', _by_id)
+
+    def test_repo_id_invalid_slug_rejected(self):
+        """Slug containing '..' or '/' must be rejected as invalid_params.
+
+        Precondition for the resolver — never touches the filesystem."""
+        for bad_slug in ('..', '../etc', 'char/os', 'char\\os'):
+            result = self._dispatch({
+                'action': 'tree',
+                'repo_id': bad_slug,
+            })
+            self.assertIn('error', result, msg=f'bad_slug={bad_slug!r}')
+            self.assertEqual(result['error_code'], 'invalid_params',
+                             msg=f'bad_slug={bad_slug!r}')
+
+    def test_repo_id_unknown_profile_returns_not_found(self):
+        result = self._dispatch({
+            'action': 'tree',
+            'repo_id': 'no-such-repo-slug-exists',
+        })
+        self.assertIn('error', result)
+        self.assertEqual(result['error_code'], 'not_found')
+        self.assertIn('list_repos', result.get('hint', ''))
+
+    def test_repo_id_absent_reads_udb_default(self):
+        """Absent repo_id keeps the pre-S2887 behavior — reads u-d-b."""
+        result = self._dispatch({'action': 'git_info'})
+        self.assertNotIn('error', result)
+        # branch is populated from *this* repo's git state
+        self.assertIn('branch', result)
+
+
+class S2887TaxonomyMigration(_RepoToolTestBase):
+    """S2887 — path-guard rejections now emit `permission_denied` instead
+    of the out-of-taxonomy `value_error` code. Message strings preserved
+    for backwards compat with existing security-invariant tests."""
+
+    def test_env_file_now_returns_permission_denied(self):
+        result = self._dispatch({'action': 'read_file', 'path': '.env'})
+        self.assertEqual(result['error_code'], 'permission_denied')
+        self.assertIn('Access denied', result['error'])
+
+    def test_credentials_json_now_returns_permission_denied(self):
+        result = self._dispatch({'action': 'read_file', 'path': 'credentials.json'})
+        self.assertEqual(result['error_code'], 'permission_denied')
+
+    def test_pem_suffix_blocked_permission_denied(self):
+        """S2887 widened guards: any *.pem file basename is blocked."""
+        result = self._dispatch({'action': 'read_file', 'path': 'somewhere/server.pem'})
+        self.assertEqual(result['error_code'], 'permission_denied')
+
+    def test_key_suffix_blocked_permission_denied(self):
+        result = self._dispatch({'action': 'read_file', 'path': 'somewhere/secret.key'})
+        self.assertEqual(result['error_code'], 'permission_denied')
+
+    def test_ssh_dir_blocked_permission_denied(self):
+        result = self._dispatch({'action': 'read_file', 'path': '.ssh/id_rsa'})
+        self.assertEqual(result['error_code'], 'permission_denied')
+
+    def test_env_prefix_pattern_blocked(self):
+        """`.env.foo` was not caught by the old exact-match BLOCKED_FILES
+        set; the prefix pattern added at S2887 catches it now."""
+        result = self._dispatch({'action': 'read_file', 'path': '.env.somecustom'})
+        self.assertEqual(result['error_code'], 'permission_denied')
+
+    def test_out_of_project_root_now_returns_permission_denied(self):
+        result = self._dispatch({
+            'action': 'read_file',
+            'path': '../../../../etc/passwd',
+        })
+        self.assertEqual(result['error_code'], 'permission_denied')
+        # Message still says "outside project root" for prior-consumer parity.
+        self.assertIn('outside project root', result['error'])

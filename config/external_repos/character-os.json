@@ -3,7 +3,7 @@
   "repo_id": "character-os",
   "name": "character-os",
   "description": "Character OS — Django shell + FastAPI media-engine + React SPA. The customer-facing spokesperson product. Engine-bridge pattern v1 (consult_engine, query_spider_data, agent_consult) lives here and reaches u-d-b via UDB_PA_API_URL HTTP. Rigby-over-u-d-b is the proof case for the engine-bridge pattern.",
-  "root_path": "/Users/donkeyking/development/character-os",
+  "root_path": "/Users/donkeyking/Donkey_Betz/character-os",
   "workspace_type": "local",
   "tech_stack": {
     "primary_language": "python",
@@ -44,7 +44,7 @@
     "inventory_cwd": "shell",
     "inventory_venv": "shell/.venv/bin/activate",
     "inventory_env_file": ".env",
-    "health_command": "python3 /Users/donkeyking/development/context-kit/context_kit.py doctor",
+    "health_command": "python3 /Users/donkeyking/Donkey_Betz/context-kit/context_kit.py doctor",
     "test_commands": {
       "django": "cd shell && source .venv/bin/activate && python manage.py test",
       "media-engine": "cd media-engine && source .venv/bin/activate && pytest",
@@ -115,7 +115,7 @@
     ],
     "session_log_pointer": "docs/handoffs/CURRENT.md",
     "session_start_pointer": "00-START-NEXT-SESSION.md",
-    "doctor_command": "python3 /Users/donkeyking/development/context-kit/context_kit.py doctor",
+    "doctor_command": "python3 /Users/donkeyking/Donkey_Betz/context-kit/context_kit.py doctor",
     "bridge_relationship": {
       "reaches_engine": "unified-donkey-betz",
       "via": "UDB_PA_API_URL HTTP",
