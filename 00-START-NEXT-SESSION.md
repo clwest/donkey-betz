@@ -2,74 +2,69 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2901 CLOSE → T1c low-signal audit SHIPPED (Row 161 substrate arc thread 1/3) + S2902 opens with T1a (auto-harness scaffold) as FIRST action (2026-07-22; picks up as S2902) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2902 CLOSE → T1a auto-harness SHIPPED (Row 161 substrate arc thread 2/3) + S2903 opens with T1a Phase 2 harden (recommended) OR T1b template extraction (2026-07-22; picks up as S2903) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-22 (S2901 close).** T1c executed as first thread of the Row 161 substrate arc. PR #3427 merged at `e92bd807c` — populated triage table (54 unique rows: 10 Group A + 44 Group B), Action Metadata Map location decision (Candidate A confirmed), T1a MVP surface input, four zoom-out folds captured. Rigby wrote twin workspace mirror (content mirror `c9c0d8e2-41c3-4be5-8a44-8d55e78f6ca1` + ratification envelope `40373e35-d063-4033-920e-e7d02b82aa7b`, both in Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50`).
+**Refreshed 2026-07-22 (S2902 close).** T1a MVP scaffold shipped in a single session (parent §5 hard cap = ≤2 sessions; scaffold + design SIGN + Phase 0 investigation all landed same-session). PR #3429 merged at `bfc3dc61c` — Django mgmt command `pa_tool_validate_harness` + `TOOL_ACTION_METADATA` registry + Fold A regression tests (8/8 passing) + 116 auto-generated per-tool JSON artifacts + `summary.json` rollup. Rigby wrote twin workspace mirror (content mirror `7535e657-71b3-46ac-9233-087cba947b2c` + ratification envelope `203dca41-38c7-4e9c-b520-d1c5b2b3e485`, both in Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50`).
 
-**T1c bucket totals:**
-- `close_with_short_note`: 8 (7 doc-unknown tools + `autopilot_tool` — Slice 1.5b already queued)
-- `promote_to_sweep`: 2 (`ops_tool` 18/20 unverified; `workspace_tool` false-positive validated_partial)
-- `defer_indefinitely`: 0
-- `out_of_class_agent`: 44 (all agent-via-run_agent tools)
+**T1a Phase 1 ratified design (Claude+Rigby joint SIGN + Chris green-light):**
+- Q1 safety enum: 4 values (`READ_ONLY / WRITE_GATED / MUTATION / IRREVERSIBLE`)
+- Q2 metadata field set: 3 fields (`safety_class / applicability / notes`); env/deps encoded via notes convention
+- Q3 Fold B parity: `--check-doc-schema-parity` gate exits non-zero; artifact records exact `missing_actions` list; no gap-map mutation
+- Q4 unclassified default: skip entirely, no dispatch, `reason='metadata_missing'`
 
-**T1a MVP surface post-T1c:** 96 in-class tools for harness (94 untested + 2 T1c-promoted); 45 out-of-harness (44 agent_via_run_agent + 1 run_agent meta).
+**T1a Phase 1 live results:**
+- 116 tools enumerated (broader than T1c §9's "96 in-class" per Fold D anti-goal)
+- 2 READ_ONLY dispatched (ops_tool.version + recent_recycles, both success)
+- 567 actions skipped for missing metadata (expected — MVP seed intentionally minimal)
+- 8 parity mismatches surfaced (exactly the T1c §7.1 close_with_short_note tools that need `## Covered actions` heading fixes)
 
 **PRs shipped this session:**
-- u-d-b PR [#3427](https://github.com/clwest/donkey-betz-platform/pull/3427) — S2901 T1c low-signal audit, merged at `e92bd807c`
-- u-d-b PR `<TBD>` — S2901 close cascade (handoff + 00-START refresh + wrapper pin bump)
+- u-d-b PR [#3429](https://github.com/clwest/donkey-betz-platform/pull/3429) — S2902 T1a auto-harness scaffold, merged at `bfc3dc61c`
+- u-d-b PR `<TBD>` — S2902 close cascade (handoff + 00-START refresh + wrapper pin bump)
 
-**Ledger status:** Row 161 → OPENED as substrate arc (S2900); thread 1/3 (T1c) shipped this session. Row A `mitigated` (PR #3419 S2897). Row B `mitigated` (PR #3421 S2898). Row C `mitigated` (PR #3417 S2896). Row #29 `mitigated` (PR #3423 S2899). Deferred rows 27/28/30 unchanged.
+**Ledger status:** Row 161 → OPENED as substrate arc (S2900); T1c ✓ shipped S2901; **T1a ✓ shipped S2902 (this session)**; T1b queued for S2903+. Row A `mitigated` (PR #3419 S2897). Row B `mitigated` (PR #3421 S2898). Row C `mitigated` (PR #3417 S2896). Row #29 `mitigated` (PR #3423 S2899). Deferred rows 27/28/30 unchanged.
 
 **Zoom-out folds captured (per PLAYBOOK-6.10.7):**
-- Fold A — `run_agent` rewrite exclusion at harness boundary → `future_trigger`, T1a Phase 1
-- Fold B — schema↔doc parity check required for close_with_short_note tools → `future_trigger`, T1a Phase 0
-- Fold C — gap-map snapshot pinning → `same_pr_mitigatable`, closed inline at T1c §7.0 (HEAD `7891ee9c` pinned)
-- Fold D — `validated (full)` doc-status ≠ runtime confidence → `future_trigger`, T1a §2 anti-goals
+- Fold — artifact schema v1 versioning discipline → `same_pr_mitigatable`, MITIGATED inline (v1 stable-fields contract now frozen in `pa_tool_validate_harness.py` module docstring; renaming/removing/type-changing requires MINOR version bump + substrate-arc-scoped SIGN)
 
-Full session context: `docs/handoffs/SESSION_2901_T1C_LOW_SIGNAL_AUDIT.md`.
+Full session context: `docs/handoffs/SESSION_2902_T1A_AUTO_HARNESS_SCAFFOLD.md`.
 
 ---
 
-## S2902 open sequence
+## S2903 open sequence
 
-### Step 1 (MANDATORY FIRST ACTION — no menu, no defer) — T1a auto-harness scaffold phase
+### Step 1 (RECOMMENDED FIRST ACTION) — T1a Phase 2 harden
 
-**S2902 opens with T1a as thread 2/3 of the Row 161 substrate arc.** This is not a decision point — sequencing is locked by S2900 Chris D-verdict Option A ratification. T1c completed at S2901 unblocks T1a per the arc shape. Do NOT present alternative engineering candidates until T1a scaffold ships.
+**S2903 recommended open: T1a Phase 2 (second session in T1a's ≤2 hard cap).** The scaffold is minimal seed-only — 2 READ_ONLY entries against ops_tool, everything else defaults to skip. Without metadata authoring, the sweep-pace multiplier claim doesn't materialize in practice. Phase 2 adds enough metadata to make Phase 1's value visible before T1b rigidifies the template around T1a's output.
 
-**T1a scope** (see `docs/audits/pa_tools/substrate/T1a_auto_harness.md` for full detail + T1c-inherited scope inputs):
+**Phase 2 concrete work:**
+- Author `TOOL_ACTION_METADATA` entries for a starter slice (~5-10 tools) — pick from the `close_with_short_note` set that already has validation reports, so metadata authorship is a doc-reading task not a design task.
+- Consider seeding `TOOL_DEFAULTS` for obviously-safe read paths (e.g., `session_tool.list_recent`, `ops_tool` read family).
+- Surface a real dispatch signal beyond the 2 ops_tool seeds — target: ~30-60 READ_ONLY actions dispatched cleanly in the next `--all-in-class` run.
+- Fold real-run learnings back into the v1 contract ONLY if actual drift surfaces (substrate-arc-scoped SIGN required for v1 → v2 bump).
 
-**MVP boundaries (locked at parent §5 + T1a §2 anti-goals):**
-- Django mgmt command `pa_tool_validate_harness`
-- In-process dispatch (not HTTP)
-- READ_ONLY auto-executes only; per-action safety classifier
-- Action Metadata Map micro-thread: create `core/services/tool_action_metadata.py` with `TOOL_ACTION_METADATA` dict keyed by `(tool_name, action)`, fields `safety_class` / `applicability` / `notes`
-- Session cap: **≤2** (scaffold + harden)
+**Session cap remaining:** 1 session (per parent §5). If Phase 2 slips or reveals new substrate needs, defer to a follow-on ledger row rather than expand T1a scope.
 
-**T1c-inherited scope inputs (fold carry-forward):**
-- **96 in-class tools** for harness (94 untested + 2 T1c-promoted: `ops_tool` + `workspace_tool`)
-- **Fold A** — exclude `run_agent`-rewritten calls from harness surface; add Phase 1 regression test verifying rewrite doesn't enter validation queue
-- **Fold B** — Phase 0 doc-heading-fix pass must include `--check-doc-schema-parity` gate; auto-escalate mismatches to sweep
-- **Fold D** — harness verifies all in-class tools regardless of doc-status; add to T1a §2 anti-goals at scaffold time
-- **Fold C already closed** at T1c §7.0 (gap-map HEAD `7891ee9c` pinned as coverage-math baseline)
+### Step 2 — T1b (family-doc template), unblocked but sequenced after Phase 2
 
-**Anti-scope-creep watchlist (parent §5):** async / pagination / golden-files / multi-auth / rate-limit / orchestration. If any surface, defer as substrate-follow-on ledger rows; **substrate-arc-scoped SIGN required** for output-schema changes.
+T1a v1 output schema is now **frozen** (per S2902 zoom-out mitigation, contract in `pa_tool_validate_harness.py` module docstring). T1b can open once Phase 2 confirms whether the auto-harness produces per-tool docs cleanly enough to canonicalize into a template. Concrete T1b work per parent §3:
+- Canonicalize per-tool validation-doc section structure
+- Add ratchet-and-warn gap-map lint
+- Ratchet fires on new-doc-authoring OR when a tool's covered-actions set changes
 
-**T1a close criteria:**
-1. `pa_tool_validate_harness` mgmt command runnable end-to-end against the 96 in-class tools' READ_ONLY actions.
-2. `core/services/tool_action_metadata.py` exists with `TOOL_ACTION_METADATA` dict populated for at least the READ_ONLY action surface.
-3. Phase 0 doc-heading-fix for the 8 close_with_short_note tools shipped OR explicitly deferred to a separate PR (Rigby's preference at T1a open).
-4. Fold A regression test + Fold B parity check gate landed.
+### Alternative Step 1 candidate — T1b immediately, deferring T1a Phase 2
 
-### Step 2 — T1b (family-doc template), ONLY after T1a completes
+Defensible if Chris judges that (a) 8 parity mismatches surfaced at Phase 1 are the more valuable close-with-short-note batch to attack first (Phase 0 doc-heading fixes for the 8 close_with_short_note tools), or (b) T1b template is needed to shape the metadata authoring itself.
 
-Do NOT open T1b until T1a scaffold ships AND at least one harden pass has surfaced whether the auto-harness produces per-tool docs cleanly. T1b scope depends on T1a's actual output shape.
+**Recommend Phase 2 harden first** — the harness has zero real coverage right now; T1b without metadata to observe would rigidify around an empty output. Metadata authorship is the shorter path to demonstrable value.
 
-### What's forbidden at S2902 (D6 MORATORIUM still in force)
+### What's forbidden at S2903 (D6 MORATORIUM still in force)
 
 - No new strategic discovery arcs. No opportunity portfolio expansions. No evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 - No R1a-shaped proposals (upgrading character-os to fleet HMAC).
 - No re-negotiating substrate arc scope during T1a/T1b execution. Scope changes require substrate-arc-scoped SIGN.
-- No opening T1b before T1a completes. Sequencing locked at S2900 ratification.
+- No expansion of T1a scope beyond MVP (async / pagination / golden-files / multi-auth / rate-limit / orchestration). If any surface, defer as substrate-follow-on ledger rows.
+- No v1 → v2 output schema bump without substrate-arc-scoped SIGN.
 - No agent-substrate validation arc (peer to PA tools sweep). Requires explicit Chris directive.
 
 ### What's queued but deferred (do NOT open unless Chris directs)
@@ -82,7 +77,7 @@ Do NOT open T1b until T1a scaffold ships AND at least one harden pass has surfac
 - **Sweep batch cadence outcome gate** — ledger row 158. Unchanged.
 - **Mutation-heavy single-tool batch pattern** — ledger row 159. Unchanged.
 - **2-tier evidence template promotion** — ledger row 160. Triggers after 1-2 more large-surface sweeps adopt cleanly.
-- **Sweep-arc pace sustainability substrate arc** — ledger row 161. **OPENED at S2900 as substrate arc (Chris D-verdict Option A ratified 2026-07-22).** Scoping: `docs/audits/pa_tools/substrate/S2900_substrate_arc_scoping.md`. Three threads: T1a auto-harness / T1b family-doc template / T1c low-signal audit. Execution order: **T1c ✅ shipped S2901 PR #3427** (54-row triage + Candidate A metadata location + 4 folds captured) → T1a (S2902 next; ≤2 sessions; MVP-strict; 96 in-class tools) → T1b (after T1a; 1-2 sessions). Total substrate-arc estimate: ~4–5 sessions; remaining ~3-4 sessions. Expected sweep acceleration ~50 sessions → ~10–15 sessions for remaining ~76 tools.
+- **Sweep-arc pace sustainability substrate arc** — ledger row 161. **OPENED at S2900 as substrate arc (Chris D-verdict Option A ratified 2026-07-22).** Scoping: `docs/audits/pa_tools/substrate/S2900_substrate_arc_scoping.md`. Three threads: T1a auto-harness / T1b family-doc template / T1c low-signal audit. Execution progress: **T1c ✅ shipped S2901 PR #3427** (54-row triage + Candidate A metadata location + 4 folds captured) → **T1a ✅ shipped S2902 PR #3429** (mgmt command + 4-value SafetyClass + 3-field metadata registry + 8 Fold A regression tests + 116 tool artifacts + v1 schema contract frozen) → T1b (queued for S2903+ after Phase 2 harden; 1-2 sessions). Total substrate-arc actual: **~3 sessions** (T1c 1 + T1a 1 + T1b ~1) vs ~4-5 initial estimate. Expected sweep acceleration ~50 sessions → ~10–15 sessions for remaining ~76 tools.
 - **Response-level introspection field creep** — ledger row 162 (S2896). Same-PR mitigated; watch for pattern in other tools' response contracts.
 - **Batched-items structural (Rigby Tool Gap Ledger entry #27)** — deferred; trigger = operator/customer signals batched-lead triage ambiguity.
 - **Applicability metadata pattern (entry #28)** — deferred; trigger = next integrity detector added.
@@ -107,15 +102,16 @@ Do NOT open T1b until T1a scaffold ships AND at least one harden pass has surfac
 - **S2898:** engineering ship (Row B mitigated).
 - **S2899:** engineering ship (Row #29 Phase 2 lookback cap mitigated).
 - **S2900:** Row 161 substrate arc OPENED (Chris D-verdict Option A). Engineering-first streak ends.
-- **S2901 (this session):** T1c triage complete. `ops_tool` promoted to sweep queue; `agent_introspection_tool` + `kb_tool` + `search_docs` bucketed close_with_short_note (heading fix at T1a Phase 0); `autopilot_tool` remains queued for Slice 1.5b post-T1a.
-- **Remainder:** Slice 1.5b (autopilot_tool mutations, ~1 session; timing depends on T1a WRITE_GATED classifier stability) + `ops_tool` sweep slot (promoted from partial to full sweep at T1c) + Phase 0 heading fixes for 3 ops tools (`agent_introspection_tool` / `kb_tool` / `search_docs`).
+- **S2901:** T1c triage complete. `ops_tool` promoted to sweep queue; `agent_introspection_tool` + `kb_tool` + `search_docs` bucketed close_with_short_note (heading fix queued); `autopilot_tool` remains queued for Slice 1.5b post-T1a.
+- **S2902 (this session):** T1a auto-harness scaffold shipped PR #3429. Harness enumerates 116 in-class tools (broader than T1c §9's "96" per Fold D). 2 READ_ONLY dispatched via seeded metadata (ops_tool.version + recent_recycles). 567 skipped for missing metadata. 8 parity mismatches surfaced — exactly the T1c §7.1 close_with_short_note set that needs `## Covered actions` heading fixes.
+- **Remainder:** Slice 1.5b (autopilot_tool mutations, ~1 session; timing depends on T1a WRITE_GATED classifier stability) + `ops_tool` sweep slot (promoted from partial to full sweep at T1c) + Phase 0 heading fixes for 8 close_with_short_note tools (agent_introspection_tool / autopilot_tool / deliverable_tool / kb_tool / ops_tool / repo_tool / search_docs / session_tool).
 
 **Slice 2 — `td_handlers_agents` (25 tools):** queued behind substrate arc. Plus `workspace_tool` (T1c-promoted from false-positive validated_partial).
 **Slice 3 — `td_handlers_core` (22 tools):** queued behind substrate arc.
 **Slice 4 — `td_handlers_gateway` (17 tools):** queued behind substrate arc.
 **Slice 5 — `tool_dispatcher` (14 tools):** queued behind substrate arc.
 
-**Substrate arc in flight (S2900-):** T1c ✅ shipped S2901 → T1a (S2902 next; ~≤2 sessions) → T1b (~1-2 sessions). Total: ~4-5 substrate sessions; ~3-4 remaining. Post-substrate sweep pace target: **~10-15 sessions** for remaining ~76 tools (vs ~50 at current-shape pace).
+**Substrate arc in flight (S2900-):** T1c ✅ shipped S2901 → T1a ✅ shipped S2902 → T1b (queued for S2903+ after Phase 2 harden; ~1-2 sessions). Total actual: ~3 substrate sessions (T1c 1 + T1a 1 + T1b ~1) vs ~4-5 initial estimate. Post-substrate sweep pace target: **~10-15 sessions** for remaining ~76 tools (vs ~50 at current-shape pace).
 
 **Total remaining tools to close:** 76 (or ~104 counting partials + doc-unknowns).
 
@@ -157,10 +153,11 @@ Rulebook: `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`.
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2901)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2902)
 
 See:
-- **S2901 handoff (current):** `docs/handoffs/SESSION_2901_T1C_LOW_SIGNAL_AUDIT.md`
+- **S2902 handoff (current):** `docs/handoffs/SESSION_2902_T1A_AUTO_HARNESS_SCAFFOLD.md`
+- **S2901 handoff:** `docs/handoffs/SESSION_2901_T1C_LOW_SIGNAL_AUDIT.md`
 - **S2900 handoff:** `docs/handoffs/SESSION_2900_ROW_161_SUBSTRATE_ARC_OPENED.md`
 - **S2900 substrate arc scoping:** `docs/audits/pa_tools/substrate/S2900_substrate_arc_scoping.md` (parent) + `T1a_auto_harness.md` + `T1b_family_doc_templates.md` + `T1c_low_signal_audit.md` (populated at S2901)
 - **S2899 handoff:** `docs/handoffs/SESSION_2899_EMBEDDING_BASELINE_LOOKBACK_CAP.md`
