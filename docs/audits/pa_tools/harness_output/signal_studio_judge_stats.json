@@ -2,8 +2,8 @@
   "actions": [],
   "harness_version": "v2",
   "run_metadata": {
-    "generated_at": "2026-07-23T16:58:55.058060+00:00",
-    "git_sha": "e642c7aa8"
+    "generated_at": "2026-07-23T22:56:18.861641+00:00",
+    "git_sha": "8dc6f0648"
   },
   "schema_action_count": 0,
   "tool_name": "signal_studio_judge_stats"
