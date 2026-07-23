@@ -335,6 +335,27 @@ TOOL_DEFAULTS: Dict[str, ToolDefaults] = {
               'agent_name (surfaces substitution envelope); no dry_run '
               'fast-path; actionless schema',
     ),
+    # Slice 3 batch 1 seed (S2913). Opens the td_handlers_core sweep.
+    # paid_interest_status is the only truly-actionless tool in the batch —
+    # TOOL_DEFAULTS is the correct pattern (does NOT increment the S2905
+    # per-action metadata-pattern-selection lint counter). The other 3 batch
+    # 1 tools (platform_awareness_tool / persona_tool / platform_config_tool)
+    # have action enums with unsafe siblings and land per-action records
+    # below.
+    #
+    # Authoring evidence:
+    # - paid_interest_status: `td_handlers_core.py:188` — no action switch;
+    #   delegates to `core.services.fleet_paid_interest.evaluate_trigger_state`
+    #   with optional payload (app_slug default 'signal-studio',
+    #   manual_override default False). Pure config + ORM read; no writes,
+    #   no Celery, no HTTP. Session 1138 (Decision 13 demand-gate readback).
+    'paid_interest_status': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: fleet_paid_interest.evaluate_trigger_state(app_slug, '
+              'manual_override); reads APP_TRIGGER_CONFIG + PaidInterest '
+              'ORM rows; no writes / no Celery / no HTTP; actionless schema',
+    ),
 }
 
 
@@ -848,6 +869,148 @@ TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
         notes='deps: registry.execute_agent(ThinkingAgent, {task: "Reflect '
               'on recent system activity..."}) — invokes real LLM-backed '
               'ThinkingAgent reflection cycle (LLM cost)',
+    ),
+    # Slice 3 batch 1 per-action records (S2913). First batch of the
+    # td_handlers_core.py sweep. 3 mixed-safety tools scoped to READ_ONLY
+    # subset via per-action records; unsafe siblings (HTTP + LLM-agent
+    # execution) declared MUTATION so harness resolve_safety() skips at
+    # dispatch. Actionless peer (paid_interest_status) lands as
+    # TOOL_DEFAULTS above.
+    #
+    # Batch composition rationale (per Rigby S2913 T0 SIGN Q1 AGREE-with-
+    # edits + T1 V2 AGREE-with-edits):
+    #   - Slice 3 has meaningfully denser side-effect surfaces than Slice 2
+    #     (network calls, Celery dispatch, row creates). Batch 1 opens
+    #     conservatively — 4 pure-read invocations with unsafe siblings
+    #     explicitly pinned + excluded via safety class.
+    #   - Explicit action pinning (not "default action is safe" invariant)
+    #     defends against future default drift per Rigby T1 V4 zoom-out.
+    #
+    # Rigby T0/T1 SIGN Q4 zoom-out findings tracked (forward-carry, not
+    # acted this ship):
+    #   - Concern C (schema↔doc drift on core tools): platform_awareness_tool
+    #     + platform_config_tool are GAP_MAP-flagged "actions_not_mentioned
+    #     _in_description". 1st instance in Slice 3 batch 1 → forward-carry
+    #     note only; promote to slice-level fold candidate at 2nd instance.
+    #   - Concern E (FT-5 minimal_safe_args_v2 forcing function): none of
+    #     the 4 batch 1 picks required handcrafting beyond TOOL_DEFAULTS +
+    #     default-action-select. No trigger this batch.
+    #
+    # Authoring evidence:
+    # - platform_awareness_tool: `td_handlers_core.py:823` — 7 actions.
+    #   get_manifest (default) + list_routes + check_route + system_overview
+    #   + list_api_dependencies + tool_registry all read from
+    #   core.views_app_manifest (get_manifest_data / _load_manifest /
+    #   _summarize_tool_schemas). verify_deploy is admin-only + fires HTTP
+    #   via core.views_deploy_verify.run_verification against DEPLOY_BASE_URL.
+    #   Session 1069 base + Session 1228 PR-A auth_required coerce.
+    # - persona_tool: `td_handlers_core.py:1189` — 2 actions.
+    #   list is a pure ORM read against AgentModel (filter is_active=True,
+    #   exclude AGENT_MAP names, category filter, top-50 slice + Counter
+    #   summary). invoke routes through AgentRouter (LLM-backed persona
+    #   execution). Session 1088 (139 DB-only personas).
+    # - platform_config_tool: `td_handlers_core.py:1274` — 5 actions.
+    #   overview (default) + llm_providers + env_vars + feature_flags all
+    #   read from django.conf.settings + os.environ (secrets masked via
+    #   local `_mask()` helper). web_config fires HTTP via urllib.request
+    #   against WEB_SERVICE_URL (cross-service config compare). Session 1069.
+    ('platform_awareness_tool', 'get_manifest'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: core.views_app_manifest.get_manifest_data(user) | '
+              '_load_manifest(); reads routes + studios + capabilities + '
+              'api_dependencies; RBAC-filtered when user_id present',
+    ),
+    ('platform_awareness_tool', 'list_routes'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: filtered slice of manifest.routes; optional category + '
+              'auth_required filters (Session 1228 PR-A coerce_optional_bool '
+              'defends against LLM autofill=False)',
+    ),
+    ('platform_awareness_tool', 'check_route'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: manifest.routes lookup by path; requires: path '
+              '(empty-string path always misses)',
+    ),
+    ('platform_awareness_tool', 'system_overview'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: manifest aggregate (routes_by_category + studio_count '
+              '+ capabilities + build_sha + api_dependency counts)',
+    ),
+    ('platform_awareness_tool', 'verify_deploy'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='deps: core.views_deploy_verify.run_verification against '
+              'DEPLOY_BASE_URL (HTTP); admin-only gate '
+              '(user.is_superuser or user.is_staff); requires: caller user_id',
+    ),
+    ('platform_awareness_tool', 'list_api_dependencies'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: manifest.api_dependencies; optional path filter + '
+              'writes_only filter (mutation endpoints only)',
+    ),
+    ('platform_awareness_tool', 'tool_registry'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: core.views_app_manifest._summarize_tool_schemas(); '
+              'returns registered PA tool names + descriptions + action enums',
+    ),
+    ('persona_tool', 'list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: AgentModel ORM query (is_active=True, exclude AGENT_MAP '
+              'names via AgentRouter.AGENT_MAP.keys()); optional category '
+              'filter; top-50 by (agent_type, name); Counter over agent_type '
+              'for categories summary; descriptions truncated to 150 chars',
+    ),
+    ('persona_tool', 'invoke'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='deps: AgentRouter.route(persona_name, task, context) — '
+              'invokes real LLM-backed persona execution via '
+              'DynamicPersonaAgent fallback; LLM cost; may side-effect '
+              'downstream; requires: persona_name + task',
+    ),
+    ('platform_config_tool', 'overview'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: django.conf.settings + os.environ; masks secret keys '
+              'via local _mask() helper (KEY/SECRET/TOKEN/PASSWORD/'
+              'CREDENTIAL/DSN/DATABASE_URL/REDIS_URL/BROKER_URL)',
+    ),
+    ('platform_config_tool', 'llm_providers'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: os.environ read for 6 LLM provider keys (OpenAI + '
+              'Anthropic + Together AI + DeepSeek + Gemini + Ollama); '
+              'reports configured flag + masked key prefix',
+    ),
+    ('platform_config_tool', 'env_vars'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: full os.environ enumeration; skips noisy system vars '
+              '(__/npm_/LESS_/LS_ prefixes); masks secret values via '
+              '_mask() helper',
+    ),
+    ('platform_config_tool', 'feature_flags'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: django.conf.settings read for 7 explicit flag attrs '
+              '(LUNGS_ENFORCE_HARD_LIMIT / CELERY_TASK_EVENT_RETENTION_DAYS '
+              '/ LLM_CALL_LOG_RETENTION_DAYS / BODY_THROTTLE_MAX_DELAY_'
+              'SECONDS / CONTENT_AUTO_PUBLISH / SPIDER_ENABLED / DREAM_ENABLED)',
+    ),
+    ('platform_config_tool', 'web_config'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='deps: urllib.request GETs to WEB_SERVICE_URL /api/v1/health/ '
+              '+ /api/internal/config-snapshot/ (HTTP; 5s timeout); cross-'
+              'service config compare; may fail-loud when web service is '
+              'unreachable or config-snapshot endpoint undeployed',
     ),
 }
 
