@@ -64,6 +64,26 @@ class ToolDefaults:
     notes: str = ''
 
 
+# ── Pattern-selection rule (S2905 Rigby SIGN zoom-out AGREE-with-edits) ─────
+#
+# The metadata map exposes two coexisting patterns for a reason:
+#
+# - Uniform-safety tool (every action shares one safety class) → ``TOOL_DEFAULTS``.
+#   Cheaper to author, harder to drift: adding a new action to the schema
+#   inherits the default automatically.
+# - Mixed-safety tool (actions split across READ_ONLY + MUTATION, or with
+#   auth-required overrides) → per-action ``TOOL_ACTION_METADATA`` records.
+#   Every action is enumerated explicitly; per-action records win over
+#   tool defaults per ``resolve_safety`` precedence.
+#
+# **Risk of coexistence:** without the selection rule stated, future authors
+# might mix patterns arbitrarily — e.g., add a per-action override to a
+# uniform tool "just to be explicit", or ship a mixed-safety tool with only
+# a TOOL_DEFAULTS entry that silently misclassifies the deviant action.
+# Enforcement is convention today (S2905); if drift emerges across ≥3 sweep
+# sessions, promote to a lint that flags per-action records shadowing a
+# tool default with the SAME safety class (redundant override).
+#
 # ── Tool-level defaults ─────────────────────────────────────────────────────
 #
 # Seeded conservatively for T1a MVP. Adding a default here is a signed-off
@@ -106,6 +126,34 @@ TOOL_DEFAULTS: Dict[str, ToolDefaults] = {
         default_safety_class='READ_ONLY',
         default_applicability='always',
         notes='deps: local repo filesystem + git',
+    ),
+    # Slice 2 batch 1 seed (S2905). Four tools from td_handlers_agents.py
+    # authored from handler-trace evidence. Three uniformly READ_ONLY via
+    # TOOL_DEFAULTS; revenue_tracker_tool is mixed (stats/list READ_ONLY +
+    # create MUTATION) and uses per-action overrides in TOOL_ACTION_METADATA.
+    #
+    # Authoring evidence:
+    # - gates_tool: `td_handlers_agents.py:5059` — 3 actions
+    #   (list/stats/detail) all ORM reads against PilotReadinessGate
+    # - pilots_tool: `td_handlers_agents.py:5131` — 3 actions
+    #   (list/stats/detail) all ORM reads against PilotExecution
+    # - cost_telemetry_tool: `td_handlers_agents.py:4854` — 3 actions
+    #   (summary/top_agents/recent_calls) all aggregate reads against
+    #   LLMCallLog
+    'gates_tool': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: PilotReadinessGate ORM',
+    ),
+    'pilots_tool': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: PilotExecution ORM',
+    ),
+    'cost_telemetry_tool': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: LLMCallLog ORM aggregates',
     ),
 }
 
@@ -179,6 +227,25 @@ TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
         safety_class='MUTATION',
         applicability='conditional',
         notes='writes ChatMessage with [SYSTEM SEED] marker',
+    ),
+    # revenue_tracker_tool — mixed. stats + list are ORM aggregates/reads
+    # against Revenue; create writes a new Revenue row (MUTATION).
+    # No TOOL_DEFAULTS entry — per-action records are the safety source.
+    # Verified via `td_handlers_agents.py:1605` (_handle_revenue_tracker).
+    ('revenue_tracker_tool', 'stats'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: Revenue ORM aggregate',
+    ),
+    ('revenue_tracker_tool', 'list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: Revenue ORM query',
+    ),
+    ('revenue_tracker_tool', 'create'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='creates a new Revenue row',
     ),
 }
 
