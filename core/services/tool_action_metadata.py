@@ -356,6 +356,32 @@ TOOL_DEFAULTS: Dict[str, ToolDefaults] = {
               'manual_override); reads APP_TRIGGER_CONFIG + PaidInterest '
               'ORM rows; no writes / no Celery / no HTTP; actionless schema',
     ),
+    # Slice 3 batch 5 seed (S2915). research_and_create_tool is actionless
+    # (schema exposes query + research_topic + output_type but no `action`
+    # enum). Single execution path is a three-hop chain: web search →
+    # LLM completion → Deliverable create. Classified MUTATION at the tool
+    # level per S2910 legal_doc_drafter_agent precedent (second actionless-
+    # MUTATION default in the registry). See §5b of the validation doc for
+    # first-hop dependency proof — the new shape introduced this batch per
+    # Rigby S2915 T0 SIGN Q4 verdict.
+    #
+    # Authoring evidence:
+    # - research_and_create_tool: `td_handlers_core.py:444` — no action
+    #   switch; hardcoded chain of WebSearchTool.execute() →
+    #   LLMProviderRegistry.complete(provider='openai',
+    #   model_id='gpt-4.1-mini', max_tokens=4000) → create_deliverable().
+    #   All three hops fire on every dispatch. DeliverableGatedError
+    #   opt-in at Session 1169 for gate-rejection visibility.
+    'research_and_create_tool': ToolDefaults(
+        default_safety_class='MUTATION',
+        default_applicability='always',
+        notes='deps: WebSearchTool.execute (network) → '
+              'LLMProviderRegistry.complete (openai gpt-4.1-mini, '
+              'max_tokens=4000) → create_deliverable (Deliverable row '
+              'via factory; DeliverableGatedError opt-in per Session '
+              '1169); actionless schema; all three hops fire per '
+              'dispatch',
+    ),
 }
 
 
@@ -1779,6 +1805,123 @@ TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
               'to legislation_tool.summary. Excluded from batch 4 in-'
               'scope subset. Documented-not-tested; requires: '
               'bill_number',
+    ),
+    # ── S2915 batch 5: row-create trio (Slice 3 close batch) ──
+    # First batch to introduce the §5b "first-hop dependency proof"
+    # shape per Rigby S2915 T0 SIGN Q4 verdict. See per-tool validation
+    # docs at `docs/research/tools/validation/` for the full callee
+    # enumeration + no-hidden-cost verdicts.
+    #
+    # Composition rationale:
+    # - task_breakdown_tool: low-risk anchor (2 actions, both pure ORM
+    #   read — Celery telemetry aggregation).
+    # - competitor_comparison_tool: widest-surface mixed-safety tool
+    #   in batch 5 (8 actions, 3 READ_ONLY + 4 MUTATION + 1
+    #   IRREVERSIBLE) — stresses §5b shape on cascade-concerns tool.
+    # - research_and_create_tool: highest-risk chain tool (network +
+    #   LLM + write in single dispatch) — classified via TOOL_DEFAULTS
+    #   above.
+    #
+    # task_breakdown_tool — uniform READ_ONLY. Could use TOOL_DEFAULTS
+    # but landed as per-action records to make the 2 actions explicit
+    # in the registry (both are named in the schema enum). No S2905
+    # metadata-pattern-selection lint concern because there's no
+    # TOOL_DEFAULTS entry to shadow.
+    ('task_breakdown_tool', 'summary'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: CeleryTaskEvent ORM aggregate (totals + per-task + '
+              'queue breakdown + duration percentiles) + AgentExecution '
+              'ORM aggregate (by_agent, PA meta-agent excluded per Arc '
+              'I-0100 P4 §4.2 F1 fold); window default 60m',
+    ),
+    ('task_breakdown_tool', 'drilldown'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: CeleryTaskEvent ORM filter+order_by direct read '
+              'ordered by -started_at; requires: task_name; limit '
+              'capped at 200 (default 50)',
+    ),
+    # competitor_comparison_tool — mixed 8-action tool. READ_ONLY subset
+    # in-scope this ship (list/status/detail). MUTATION subset gated
+    # (generate/regenerate/create_initiative_from_gap/export_markdown).
+    # IRREVERSIBLE tag on `delete` — first IRREVERSIBLE-classified
+    # action in Slice 3 (second overall after S2908 media_tool.delete
+    # Ledger candidate).
+    ('competitor_comparison_tool', 'list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: CompetitorComparison ORM query direct read ordered '
+              'by -created_at; limit clamped at 50 (default 10); '
+              'returns id/competitor_name/status/quality_score/'
+              'evidence_count/summary/created_at',
+    ),
+    ('competitor_comparison_tool', 'status'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: CompetitorComparison.objects.get(id) direct read; '
+              'returns branch-specific fields per c.status (summary+'
+              'executive_summary for complete; error_message+'
+              'recommended_queries for needs_sources; error_message '
+              'for failed); requires: comparison_id',
+    ),
+    ('competitor_comparison_tool', 'detail'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: CompetitorComparison.objects.get(id) direct read; '
+              'returns full row including all JSON fields '
+              '(executive_summary_json + quality_rubric_json + '
+              'sources_json + review_json + comparison_table_json + '
+              'gap_backlog_json + tools_stack_json); requires: '
+              'comparison_id',
+    ),
+    ('competitor_comparison_tool', 'generate'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes: CompetitorComparison.objects.create() + '
+              'generate_competitor_comparison_task.delay (Celery '
+              'dispatch, transitively calls RAG + LLM + web search '
+              'per schema description "RAG-powered comparison"); '
+              'Celery task at core/tasks.py opaque this batch; '
+              'requires: competitor_name',
+    ),
+    ('competitor_comparison_tool', 'regenerate'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes: c.save(update_fields=[status, error_message, '
+              'updated_at]) reset to pending + '
+              'generate_competitor_comparison_task.delay re-dispatch '
+              '(same transitive risk as generate); requires: '
+              'comparison_id',
+    ),
+    ('competitor_comparison_tool', 'create_initiative_from_gap'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes: Initiative.objects.create() from gap in '
+              'comparison backlog; duplicate-name guard prevents '
+              're-creation of existing initiative; post_save signal '
+              'cascade not verified this batch (revisit trigger); '
+              'requires: comparison_id + gap_index',
+    ),
+    ('competitor_comparison_tool', 'export_markdown'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='conditional write: create_deliverable() when save=True '
+              '(schema default); pure read + string synthesis when '
+              'save=False; deliverable_factory opaque this batch '
+              '(partial-validated at S2848+); requires: comparison_id',
+    ),
+    ('competitor_comparison_tool', 'delete'): ToolActionMetadata(
+        safety_class='IRREVERSIBLE',
+        applicability='conditional',
+        notes='destructive: c.delete() hard-removes CompetitorComparison '
+              'row (not soft-delete); no dry_run guard at handler '
+              'layer; no confirm guard; FK cascade behavior on '
+              'referenced Initiative rows (created via '
+              'create_initiative_from_gap) not verified this batch '
+              '(revisit trigger — cascade audit companion doc); '
+              'second IRREVERSIBLE action after S2908 media_tool.'
+              'delete Ledger candidate; requires: comparison_id',
     ),
 }
 

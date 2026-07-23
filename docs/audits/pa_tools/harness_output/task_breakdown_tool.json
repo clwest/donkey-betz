@@ -2,31 +2,41 @@
   "actions": [
     {
       "action": "summary",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 37,
+      "notes": null,
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "by_agent",
+        "by_task",
+        "generated_at",
+        "totals",
+        "window"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "drilldown",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "soft_error",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 3,
+      "notes": "inline_error_code=legacy_error; inline_msg=task_name is required for drilldown",
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "error",
+        "error_code"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     }
   ],
   "harness_version": "v2",
   "run_metadata": {
-    "generated_at": "2026-07-23T16:58:55.164862+00:00",
-    "git_sha": "e642c7aa8"
+    "generated_at": "2026-07-23T21:53:16.916868+00:00",
+    "git_sha": "7259caf79"
   },
   "schema_action_count": 2,
   "tool_name": "task_breakdown_tool"
