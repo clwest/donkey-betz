@@ -296,17 +296,22 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "reasoning_engine_tool",
         "description": (
-            "Invoke the reasoning engine for complex analysis: multi-step reasoning, "
-            "strategic thinking, trade-off analysis. Use when the user asks for "
-            "deep analysis, strategic advice, or complex reasoning."
+            "Query or trigger the ThinkingAgent reasoning engine. "
+            "Actions: status (engine health), thoughts (recent AgentExecution rows "
+            "for ThinkingAgent), trigger (invoke a new thinking cycle — MUTATION, "
+            "runs a real LLM-backed reflection over recent system activity)."
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "query": {"type": "string", "description": "The question or topic to reason about"},
-                "reasoning_type": {"type": "string", "description": "Type of reasoning (strategic, analytical, creative)"},
+                "action": {
+                    "type": "string",
+                    "enum": ["status", "thoughts", "trigger"],
+                    "description": "Reasoning engine action: status = engine health, thoughts = recent thinking cycle history, trigger = kick off a new thinking cycle (LLM cost)",
+                },
+                "limit": {"type": "integer", "description": "Max items for thoughts action (default 10)"},
             },
-            "required": ["query"],
+            "required": ["action"],
         },
     },
 
