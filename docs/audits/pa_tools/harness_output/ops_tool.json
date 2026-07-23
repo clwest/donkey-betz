@@ -4,7 +4,7 @@
       "action": "overview",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 10448,
+      "latency_ms": 10450,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -25,7 +25,7 @@
       "action": "version",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 85,
+      "latency_ms": 56,
       "notes": null,
       "resolution_source": "action",
       "response_shape_keys": [
@@ -42,6 +42,7 @@
         "railway",
         "runtime",
         "service",
+        "staleness_fix",
         "staleness_verdict"
       ],
       "safety_class": "READ_ONLY",
@@ -51,7 +52,7 @@
       "action": "slo_status",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 7,
+      "latency_ms": 5,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -70,7 +71,7 @@
       "action": "failure_signatures",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 5,
+      "latency_ms": 6,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -110,7 +111,7 @@
       "action": "timeout_config_read",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 4,
+      "latency_ms": 7,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -126,7 +127,7 @@
       "action": "proof_bundle",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 5,
+      "latency_ms": 6,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -145,7 +146,7 @@
       "action": "noise_metrics",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 22,
+      "latency_ms": 31,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -184,7 +185,7 @@
       "action": "focus_mode_status",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 6,
+      "latency_ms": 9,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -216,7 +217,7 @@
       "action": "celery_task_history",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 6,
+      "latency_ms": 7,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -233,7 +234,7 @@
       "action": "execution_detail",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 2,
+      "latency_ms": 3,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -249,7 +250,7 @@
       "action": "execution_search",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 8,
+      "latency_ms": 9,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -267,7 +268,7 @@
       "action": "memory_pressure",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 2,
+      "latency_ms": 3,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -294,7 +295,7 @@
       "action": "top_consumers",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 25,
+      "latency_ms": 20,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -316,7 +317,7 @@
       "action": "zombie_thread_rate",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 5,
+      "latency_ms": 4,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -334,7 +335,7 @@
       "action": "tenant_boundary_violations",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 6,
+      "latency_ms": 8,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -376,7 +377,7 @@
       "action": "recent_recycles",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 3,
+      "latency_ms": 4,
       "notes": null,
       "resolution_source": "action",
       "response_shape_keys": [
@@ -394,7 +395,7 @@
       "action": "recent_bridge_calls",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 6,
+      "latency_ms": 5,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -432,8 +433,8 @@
   ],
   "harness_version": "v1",
   "run_metadata": {
-    "generated_at": "2026-07-23T03:21:21.984396+00:00",
-    "git_sha": "fc5bca145"
+    "generated_at": "2026-07-23T15:04:41.180952+00:00",
+    "git_sha": "03ee92d5f"
   },
   "schema_action_count": 22,
   "tool_name": "ops_tool"

@@ -332,6 +332,152 @@ TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
         applicability='always',
         notes='creates a new Revenue row',
     ),
+    # Slice 2 batch 4 seed (S2908). Four mixed-safety tools from
+    # td_handlers_agents.py, scoped to READ_ONLY subset for validation-doc
+    # coverage this ship; mutation actions seeded here as per-action records
+    # so the harness never dispatches them (resolve_safety() returns MUTATION
+    # / IRREVERSIBLE → harness skips).
+    #
+    # Batch composition rationale (per Rigby S2908 T0 SIGN AGREE-with-edits
+    # + Chris-ratified Fold A commitment from S2907): mixed-tool scoped to
+    # READ_ONLY subset breaks the S2906+S2907 uniform-READ_ONLY-multi-action
+    # precedent. Per-action records for ALL 20 actions (13 READ_ONLY + 7
+    # mutation) — Pattern C precedent from revenue_tracker_tool. Chosen over
+    # Pattern A (TOOL_DEFAULTS + mutation overrides) to keep this session
+    # UNIFORM per-action (does NOT increment the S2905 metadata-pattern-
+    # selection lint counter — mixed-pattern coexistence stays 1/3 sweep
+    # sessions post-S2908).
+    #
+    # Authoring evidence:
+    # - bpaas_tool: `td_handlers_agents.py:6268` — 4 actions. get_schema +
+    #   get_example return in-memory constants (BUILD_PACKET_SCHEMA /
+    #   NORMAN_HANDYMAN_EXAMPLE). create_project + generate_close_pack
+    #   invoke packet_service side-effects (project creation + SOW/proposal
+    #   artifact generation).
+    # - davinci_tool: `td_handlers_agents.py:4435` — 6 actions. health /
+    #   status / result / jobs / grades all query-only via ResolveNodeClient
+    #   or COLOR_GRADE_PRESETS constant. render starts an external DaVinci
+    #   Resolve render job (async side-effect on external system).
+    # - obs_tool: `td_handlers_agents.py:4494` — 6 actions. health / status /
+    #   last are bridge GETs against the local OBS bridge. start / stop
+    #   toggle recording state (bridge POST). upload_last uploads the newest
+    #   recording file and creates a VideoHistory row.
+    # - media_tool: `td_handlers_agents.py:4161` — 4 actions. list / detail /
+    #   stats are user-scoped ORM reads across ImageHistory / VideoHistory /
+    #   AudioHistory. delete destroys the row via `obj.delete()` — no
+    #   confirm flag, no soft-delete: classified IRREVERSIBLE.
+    #
+    # dependency_surface (doc-note discipline per Rigby T0 SIGN edit — kept
+    # as validation-doc annotation, NOT a metadata field this ship):
+    # - bpaas_tool: internal (packet_service + BUILD_PACKET_SCHEMA constants)
+    # - davinci_tool: external_bridge (ResolveNodeClient → resolve_node HTTP)
+    # - obs_tool: external_bridge (`_obs_bridge_request` → local OBS bridge)
+    # - media_tool: internal (Django ORM)
+    ('bpaas_tool', 'get_schema'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: BUILD_PACKET_SCHEMA constant',
+    ),
+    ('bpaas_tool', 'get_example'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: NORMAN_HANDYMAN_EXAMPLE constant',
+    ),
+    ('bpaas_tool', 'create_project'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='creates ProjectWorkspace + repos + preview env + magic link '
+              'via packet_service.create_project_from_packet',
+    ),
+    ('bpaas_tool', 'generate_close_pack'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='generates SOW + delivery checklist + proposal via '
+              'packet_service.generate_close_pack',
+    ),
+    ('davinci_tool', 'health'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: ResolveNodeClient.health_check (external_bridge)',
+    ),
+    ('davinci_tool', 'status'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: ResolveNodeClient.get_status (external_bridge)',
+    ),
+    ('davinci_tool', 'result'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: ResolveNodeClient.get_result_url (external_bridge)',
+    ),
+    ('davinci_tool', 'jobs'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: ResolveNodeClient.list_jobs (external_bridge)',
+    ),
+    ('davinci_tool', 'grades'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: COLOR_GRADE_PRESETS constant (internal)',
+    ),
+    ('davinci_tool', 'render'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='starts external DaVinci Resolve render job via '
+              'ResolveNodeClient.start_render',
+    ),
+    ('obs_tool', 'health'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: OBS bridge GET /health (external_bridge)',
+    ),
+    ('obs_tool', 'status'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: OBS bridge GET /v1/recording/status (external_bridge)',
+    ),
+    ('obs_tool', 'last'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: OBS bridge GET /v1/recording/last (external_bridge)',
+    ),
+    ('obs_tool', 'start'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='POST /v1/recording/start — toggles OBS recording state',
+    ),
+    ('obs_tool', 'stop'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='POST /v1/recording/stop — toggles OBS recording state',
+    ),
+    ('obs_tool', 'upload_last'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='POST /v1/recording/upload_last — uploads file + creates '
+              'VideoHistory row',
+    ),
+    ('media_tool', 'list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: ImageHistory / VideoHistory / AudioHistory ORM read',
+    ),
+    ('media_tool', 'detail'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: user-scoped media row lookup by UUID',
+    ),
+    ('media_tool', 'stats'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: media row counts by type',
+    ),
+    ('media_tool', 'delete'): ToolActionMetadata(
+        safety_class='IRREVERSIBLE',
+        applicability='always',
+        notes='destroys media row via obj.delete() — no confirm flag, '
+              'no soft-delete',
+    ),
 }
 
 
