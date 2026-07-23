@@ -4,7 +4,7 @@
       "action": "overview",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 10447,
+      "latency_ms": 10563,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -25,7 +25,7 @@
       "action": "version",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 72,
+      "latency_ms": 82,
       "notes": null,
       "resolution_source": "action",
       "response_shape_keys": [
@@ -51,7 +51,7 @@
       "action": "slo_status",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 10,
+      "latency_ms": 5,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -70,7 +70,7 @@
       "action": "failure_signatures",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 10,
+      "latency_ms": 7,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -88,7 +88,7 @@
       "action": "tool_migration_report",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 22,
+      "latency_ms": 10,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -110,7 +110,7 @@
       "action": "timeout_config_read",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 6,
+      "latency_ms": 5,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -126,7 +126,7 @@
       "action": "proof_bundle",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 6,
+      "latency_ms": 7,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -145,7 +145,7 @@
       "action": "noise_metrics",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 22,
+      "latency_ms": 31,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -166,7 +166,7 @@
       "action": "conversation_metrics",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 19,
+      "latency_ms": 7,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -184,7 +184,7 @@
       "action": "focus_mode_status",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 11,
+      "latency_ms": 13,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -216,7 +216,7 @@
       "action": "celery_task_history",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 6,
+      "latency_ms": 10,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -233,7 +233,7 @@
       "action": "execution_detail",
       "expected_outcome": "soft_error",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 4,
+      "latency_ms": 3,
       "notes": "inline_error_code=invalid_params; inline_msg=execution_id required",
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -249,7 +249,7 @@
       "action": "execution_search",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 8,
+      "latency_ms": 11,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -267,7 +267,7 @@
       "action": "memory_pressure",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 7,
+      "latency_ms": 3,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -294,7 +294,7 @@
       "action": "top_consumers",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 9,
+      "latency_ms": 18,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -316,7 +316,7 @@
       "action": "zombie_thread_rate",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 6,
+      "latency_ms": 4,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -334,7 +334,7 @@
       "action": "tenant_boundary_violations",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 6,
+      "latency_ms": 11,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -356,7 +356,7 @@
       "action": "staleness_warnings",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 5,
+      "latency_ms": 6,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -376,7 +376,7 @@
       "action": "recent_recycles",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 4,
+      "latency_ms": 5,
       "notes": null,
       "resolution_source": "action",
       "response_shape_keys": [
@@ -394,7 +394,7 @@
       "action": "recent_bridge_calls",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 6,
+      "latency_ms": 9,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -416,7 +416,7 @@
       "action": "bridge_activity_digest",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 3,
+      "latency_ms": 6,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -432,8 +432,8 @@
   ],
   "harness_version": "v2",
   "run_metadata": {
-    "generated_at": "2026-07-23T16:10:24.916295+00:00",
-    "git_sha": "dbea31254"
+    "generated_at": "2026-07-23T16:58:54.387239+00:00",
+    "git_sha": "e642c7aa8"
   },
   "schema_action_count": 22,
   "tool_name": "ops_tool"

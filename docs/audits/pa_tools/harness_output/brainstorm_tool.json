@@ -2,86 +2,108 @@
   "actions": [
     {
       "action": "list",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 8,
+      "notes": null,
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "conversations",
+        "has_more",
+        "limit",
+        "offset",
+        "total_count"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "search",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "expected_outcome": "error_captured",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 7,
+      "notes": "error_code=TOOL_EXCEPTION; msg=query is required for search action",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "safety_class": "READ_ONLY",
+      "status_code": 500
     },
     {
       "action": "recent",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 3,
+      "notes": null,
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "discussions",
+        "panels",
+        "period_days",
+        "total_discussions",
+        "total_panels"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "details",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "expected_outcome": "error_captured",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 2,
+      "notes": "error_code=TOOL_EXCEPTION; msg=conversation_id (or id) is required for details action",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "safety_class": "READ_ONLY",
+      "status_code": 500
     },
     {
       "action": "by_category",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "expected_outcome": "error_captured",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 2,
+      "notes": "error_code=TOOL_EXCEPTION; msg=category is required for by_category action",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "safety_class": "READ_ONLY",
+      "status_code": 500
     },
     {
       "action": "stats",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 4,
+      "notes": null,
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "daily_breakdown",
+        "period_days",
+        "top_keywords",
+        "total_brainstorming",
+        "total_discussions",
+        "total_panels"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "create",
-      "expected_outcome": "skipped_metadata_missing",
+      "expected_outcome": "skipped_mutation",
       "input_profile": "skipped_no_dispatch",
       "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "notes": "MUTATION \u2014 not exercised at T1a MVP",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
+      "safety_class": "MUTATION",
       "status_code": null
     }
   ],
   "harness_version": "v2",
   "run_metadata": {
-    "generated_at": "2026-07-23T16:09:54.062427+00:00",
-    "git_sha": "dbea31254"
+    "generated_at": "2026-07-23T16:58:22.346013+00:00",
+    "git_sha": "e642c7aa8"
   },
   "schema_action_count": 7,
   "tool_name": "brainstorm_tool"
