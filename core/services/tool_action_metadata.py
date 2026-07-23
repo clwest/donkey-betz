@@ -303,6 +303,38 @@ TOOL_DEFAULTS: Dict[str, ToolDefaults] = {
               'LegalDocumentDispatchLog audit; gate: '
               'disclaimer_acknowledged=True; actionless schema',
     ),
+    # Slice 2 batch 6b seed (S2912) — Slice 2 close. Dedicated scrutiny for
+    # the agent-invocation-class dispatcher (peer of reasoning_engine_tool
+    # shipped as batch 6b pre-req at S2911). Actionless schema, so
+    # TOOL_DEFAULTS is the correct pattern (does NOT increment the S2905
+    # per-action metadata-pattern-selection lint counter).
+    #
+    # Authoring evidence:
+    # - universal_agent_tool: `td_handlers_agents.py:1771` — single-verb
+    #   async dispatch surface (Session 1088; async since). Dispatches
+    #   `execute_agent_task.apply_async(agent_name, task_text, context,
+    #   queue='long_running')` UNCONDITIONALLY when `task` is non-empty
+    #   (only guard is `raise ValueError` on empty task at `:1821-1823`).
+    #   Fan-out surface: routes to any of 74 enabled AGENT_MAP entries;
+    #   auto-substitutes unknown names → task-text extraction → fallback
+    #   `ResearchAgent`. Surfaces substitution envelope
+    #   (`agent_name_requested/effective/substituted`, `auto_routed`,
+    #   `substitution_reason`) + async envelope (`task_id, mode='async'`).
+    #   No dry_run/noop fast-path — post-merge verification is contract-
+    #   level (schema/handler/metadata alignment) + worker recycle
+    #   freshness per PLAYBOOK-7.4.4, NOT live dispatch. Batch 6b Rigby
+    #   T0 SIGN Q3 explicitly rejected live-fire verification for this
+    #   tool; Chris ratified Option A (contract-only, no dry_run add).
+    'universal_agent_tool': ToolDefaults(
+        default_safety_class='MUTATION',
+        default_applicability='conditional',
+        notes='deps: execute_agent_task.apply_async → Celery long_running '
+              'queue; can invoke any of 74 AGENT_MAP agents; may cause '
+              'DB writes / spider dispatches / external API calls / LLM '
+              'cost depending on selected agent; auto-substitutes unknown '
+              'agent_name (surfaces substitution envelope); no dry_run '
+              'fast-path; actionless schema',
+    ),
 }
 
 
