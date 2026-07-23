@@ -2003,6 +2003,147 @@ TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
               'second IRREVERSIBLE action after S2908 media_tool.'
               'delete Ledger candidate; requires: comparison_id',
     ),
+    # ── Slice 3 batch 7 seed (S2917) — async duo ────────────────────────────
+    #
+    # studio_tool + workflow_run_tool: both MIXED-safety (READ_ONLY reads +
+    # MUTATION async fan-out). Per-action records — no TOOL_DEFAULTS entries
+    # (MIXED composition per revenue_tracker_tool / session_tool / batch-4
+    # precedent). Batch 7 introduces §5b **Appendix A (Async-Fanout)** as the
+    # sibling to S2916 batch 6's Appendix N (Network-Preflight). Row #38
+    # standardized-appendices Fold promoted at Slice 3 CLOSE per Rigby T0
+    # SIGN Q4 + Chris ratification (2nd adoption trigger reached).
+    #
+    # Composition rationale (per Rigby S2917 T0 SIGN Q1 AGREE + Q2 AGREE-with-
+    # edits):
+    # - studio_tool: 6 actions. 4 MUTATION generate-* actions dispatch into
+    #   Celery `long_running` queue via `execute_agent_task` (image/video/
+    #   audio) or `create_talking_video_task` (talking-video 2-stage
+    #   pipeline). 2 READ_ONLY actions read CeleryTaskEvent + AsyncResult
+    #   (`job_status`) or ImageHistory/VideoHistory/AudioHistory (`list_jobs`).
+    #   Envelope: single `task_id` — asymmetric with workflow_run's dual
+    #   `run_id`+`task_id`; motivated Rigby's Q2 A3 dual-identifier edit.
+    # - workflow_run_tool: 5 actions. `start` creates a WorkflowRun row +
+    #   dispatches `run_source_pack_workflow.apply_async(queue='content')` +
+    #   backfills celery_task_id. `cancel` best-effort revokes + marks
+    #   cancelled. `status`/`list`/`detail` read the WorkflowRun row.
+    #   Downstream `_impl_run_source_pack_workflow` (tasks_content.py:3819+)
+    #   is the load-bearing surface: 6 stages (collect / ingest / embed /
+    #   generate / export / complete) with WebSearch + LLM embedding + LLM
+    #   generation + dispatcher re-entry into competitor_comparison_tool.
+    #   export_markdown at tasks_content.py:4050-4057 (1st observed
+    #   dispatcher-re-entry instance per Rigby Q4 — audit hotspot).
+    #
+    # Rigby Q4 broadening adopted: "opaque side-effecting chain via internal
+    # dispatch" pattern extends the S2916 actionless-side-effecting-chain
+    # pattern to actioned-but-opaque tools (workflow_run.start = actioned
+    # with same shape). Not adding a "4th instance" — the pattern name is
+    # broadened, not incremented.
+    #
+    # Authoring evidence:
+    # - studio_tool: td_handlers_core.py:951-1187 (_handle_studio); 6-enum
+    #   at pa_tool_schemas.py:1561-1565; register at tool_dispatcher.py:493.
+    #   4× apply_async at :978-980 (image), :1002-1004 (video), :1039-1041
+    #   (talking-video), :1063-1065 (audio); all queue='long_running'.
+    # - workflow_run_tool: td_handlers_core.py:3141-3300 (_handle_workflow_
+    #   run); 5-enum at pa_tool_schemas.py:2303; register at tool_dispatcher.
+    #   py:510. apply_async at :3167-3170 queue='content'; cancel revoke
+    #   at :3288-3289.
+    ('studio_tool', 'job_status'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: CeleryTaskEvent.objects.filter (telemetry-first) then '
+              'AsyncResult(job_id) fallback then self._get_agent_execution_'
+              'output enrichment; degrades to {status: unknown} on both-'
+              'path failure; requires: job_id',
+    ),
+    ('studio_tool', 'list_jobs'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: ImageHistory + VideoHistory + AudioHistory ORM reads '
+              '(each independently try/except-wrapped; per-media-type '
+              'degrade-and-continue); merged + sorted by created_at desc; '
+              'capped at min(limit, 50)',
+    ),
+    ('studio_tool', 'generate_image'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='dispatch: execute_agent_task.apply_async([ImageAgent, '
+              'task_text, ctx], queue=long_running); downstream: ImageAgent '
+              '→ generation API + ImageHistory row + AgentExecution row; '
+              'envelope: {task_id, mode=async, agent, message}',
+    ),
+    ('studio_tool', 'generate_video'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='dispatch: execute_agent_task.apply_async([VideoAgent, '
+              'task_text, ctx], queue=long_running); downstream: VideoAgent '
+              '→ generation API + VideoHistory row + AgentExecution row; '
+              'envelope: {task_id, mode=async, agent, message}',
+    ),
+    ('studio_tool', 'generate_audio'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='dispatch: execute_agent_task.apply_async([AudioAgent, '
+              'task_text, ctx], queue=long_running); downstream: AudioAgent '
+              '→ TTS API + AudioHistory row + AgentExecution row; envelope: '
+              '{task_id, mode=async, agent, message}',
+    ),
+    ('studio_tool', 'create_talking_video'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='dispatch: create_talking_video_task.apply_async([image_prompt, '
+              'script, ctx], queue=long_running); 2-stage pipeline: '
+              'ImageAgent generates character image → TalkingCharacterAgent '
+              'runs lipsync → optional DaVinci color-grade; envelope: '
+              '{task_id, mode=async, agent="ImageAgent → '
+              'TalkingCharacterAgent", message}; requires: prompt + script',
+    ),
+    ('workflow_run_tool', 'status'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: WorkflowRun.objects.get(id=run_id); returns compact '
+              'envelope + recent_events[-5:]; DoesNotExist caught with '
+              'graceful error; requires: run_id',
+    ),
+    ('workflow_run_tool', 'list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: WorkflowRun.objects.all().filter(user_id=user_id).'
+              'order_by(-created_at)[:limit]; user_id filter only applied '
+              'when truthy (anonymous callers see all runs); limit capped '
+              'at min(limit, 50)',
+    ),
+    ('workflow_run_tool', 'detail'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: WorkflowRun.objects.get(id=run_id); returns full '
+              'envelope including input/output/events/error_message/'
+              'celery_task_id/metadata; requires: run_id',
+    ),
+    ('workflow_run_tool', 'start'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes: WorkflowRun.objects.create() then run.save(update_'
+              'fields=[celery_task_id, updated_at]) after apply_async; '
+              'dispatch: run_source_pack_workflow.apply_async(kwargs='
+              '{run_id}, queue=content); downstream: 6-stage pipeline '
+              '(collect/ingest/embed/generate/export/complete) at '
+              'tasks_content.py:3819+ including dispatcher re-entry into '
+              'competitor_comparison_tool.export_markdown at '
+              'tasks_content.py:4050-4057 (1st observed dispatcher-re-'
+              'entry instance per Rigby Q4 audit hotspot); envelope: dual '
+              'identifier {run_id, task_id}; requires: competitor_name',
+    ),
+    ('workflow_run_tool', 'cancel'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes: run.mark_cancelled() + run.save(); dispatch: celery_'
+              'app.control.revoke(task_id, terminate=True) — best-effort '
+              'SIGKILL to worker, may miss if task not yet started or '
+              'past cancel-check point; guarded against terminal states '
+              '(complete/failed/cancelled); revoke skipped if celery_task_'
+              'id is None (non-fatal); requires: run_id',
+    ),
 }
 
 
