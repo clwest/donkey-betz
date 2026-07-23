@@ -93,19 +93,94 @@ META_NO_HANDLER: Set[str] = {'run_agent'}
 
 
 # Regexes for validation-doc parsing.
+#
+# T1b (S2904) loosened the "Covered actions" heading match to accept
+# optional numbering ("## 2. Covered actions") without changing the
+# recommended bare form ("## Covered actions"). Rejects word-order
+# mismatches like "## Actions covered". Change: Rigby SIGN D-2, ledger
+# row 163 forward-carry ZO-Q3.
 COVERED_ACTIONS_HEADING_RE = re.compile(
-    r'^#+\s+covered\s+actions\b', re.IGNORECASE | re.MULTILINE
+    r'^#+\s+(?:\d+\s*[\.\)\-–—:]?\s*)?covered\s+actions\b',
+    re.IGNORECASE | re.MULTILINE,
 )
 BACKTICK_IDENT_RE = re.compile(r'`([a-z_][a-z0-9_]*)`')
 NEXT_HEADING_RE = re.compile(r'\n#+\s+', re.MULTILINE)
 
+# T1b (S2904) template-compliance regexes — frontmatter field
+# extraction. Presence-not-exact per Rigby ZO-Q9 (extra keys allowed).
+FRONTMATTER_FIELD_RE = re.compile(
+    r'^\*\*([A-Za-z][A-Za-z0-9 /_-]*):\*\*\s*(.*?)\s*$',
+    re.MULTILINE,
+)
+FRONTMATTER_DIVIDER_RE = re.compile(r'^---\s*$', re.MULTILINE)
+HEADING_RE = re.compile(r'^(#+)\s+(.*?)\s*$', re.MULTILINE)
+TEMPLATE_VERSION_VALID_RE = re.compile(r'^v\d+$')
 
 SHORT_DESC_THRESHOLD_CHARS: int = 40
 ACTIONS_MENTIONED_RATIO: float = 0.25
 
+# T1b (S2904) template-compliance canon.
+TEMPLATE_VARIANTS: Set[str] = {'sweep', 'protocol'}
+
+# Alias-tolerant required-field spec per variant. Each required field
+# is a tuple of alias patterns; presence of ANY alias satisfies the
+# check. Per Rigby SIGN B edit (presence-not-exact).
+_SWEEP_REQUIRED_FIELDS: List[Tuple[str, Tuple[str, ...]]] = [
+    ('tool', ('Tool',)),
+    ('schema', ('Schema',)),
+    ('handler', ('Handler', 'Main handler')),
+    ('register_site', ('Register site',)),
+    ('session', ('Session', 'Session validated')),
+    ('head', ('HEAD at validation',)),
+    ('ship_shape', ('Ship shape', 'Report status')),
+    ('category_upgrade', ('Category upgrade target',)),
+    ('rigby_sign', ('Rigby SIGN', 'Rigby cross-check')),
+    ('template_variant', ('Template variant',)),
+    ('template_version', ('Template version',)),
+]
+_PROTOCOL_REQUIRED_FIELDS: List[Tuple[str, Tuple[str, ...]]] = [
+    ('tool', ('Tool',)),
+    ('schema', ('Schema',)),
+    ('handler', ('Handler', 'Main handler')),
+    ('register_site', ('Register site',)),
+    ('session', ('Session', 'Session validated')),
+    ('head', ('HEAD at validation',)),
+    ('ship_shape', ('Ship shape', 'Report status')),
+    ('rigby_sign', ('Rigby SIGN', 'Rigby cross-check')),
+    ('template_variant', ('Template variant',)),
+    ('template_version', ('Template version',)),
+]
+
+# Mandatory ## sections per variant. Matched by prefix on the heading
+# title text (case-sensitive) so variant titles like
+# "## 5. Failure / empty-state / staleness / attribution notes" match
+# the "## 5. Failure" prefix.
+_SWEEP_MANDATORY_SECTIONS: List[Tuple[str, str]] = [
+    ('purpose', '1. Purpose'),
+    ('covered_actions', 'Covered actions'),  # matched via loosened regex separately
+    ('schema_notes', '3. Schema notes'),
+    ('golden_path', '4. Golden-path'),
+    ('failure', '5. Failure'),
+    ('evidence', '6. Evidence'),
+    ('related', 'Related'),
+]
+_PROTOCOL_MANDATORY_SECTIONS: List[Tuple[str, str]] = [
+    ('intended_purpose', '1. Intended purpose'),
+    ('rigby_belief', "2. Rigby's belief"),
+    ('schema_claim', '3. Schema claim'),
+    ('handler_behavior', '4. Handler behavior'),
+    ('findings', 'Findings'),
+    ('verdict', 'Verdict'),
+]
+
 
 def index_validation_docs(docs_dir: Path) -> Dict[str, Any]:
     """Scan ``docs/research/tools/validation/*.md`` and index by role.
+
+    Files whose name starts with ``_`` are excluded (T1b S2904 Rigby
+    SIGN D-1 mitigation — the canonical template file
+    ``_TEMPLATE_per_tool_validation.md`` lives elsewhere but the
+    convention is enforced here as well).
 
     Returns::
 
@@ -116,6 +191,10 @@ def index_validation_docs(docs_dir: Path) -> Dict[str, Any]:
                 # per-tool docs → set of action names mentioned under
                 # a "Covered actions" heading (empty set if heading
                 # present but empty; None if heading absent).
+            'template_version_by_stem': dict[str, str | None],  # T1b
+            'template_variant_by_stem': dict[str, str | None],  # T1b
+            'frontmatter_fields_by_stem': dict[str, set[str]],  # T1b
+            'heading_titles_by_stem': dict[str, list[str]],  # T1b
             'total_docs': int,
         }
 
@@ -124,16 +203,29 @@ def index_validation_docs(docs_dir: Path) -> Dict[str, Any]:
     substrate: Set[str] = set()
     per_tool: Dict[str, Path] = {}
     covered_by_stem: Dict[str, Optional[Set[str]]] = {}
+    template_version: Dict[str, Optional[str]] = {}
+    template_variant: Dict[str, Optional[str]] = {}
+    frontmatter_fields: Dict[str, Set[str]] = {}
+    heading_titles: Dict[str, List[str]] = {}
 
     if not docs_dir.exists():
         return {
             'substrate_stems': substrate,
             'per_tool_stems': per_tool,
             'covered_actions_by_stem': covered_by_stem,
+            'template_version_by_stem': template_version,
+            'template_variant_by_stem': template_variant,
+            'frontmatter_fields_by_stem': frontmatter_fields,
+            'heading_titles_by_stem': heading_titles,
             'total_docs': 0,
         }
 
-    docs = sorted(docs_dir.glob('*_validation.md'))
+    # T1b S2904 Rigby SIGN D-1: exclude leading-underscore files
+    # (canonical template file convention).
+    docs = sorted(
+        p for p in docs_dir.glob('*_validation.md')
+        if not p.name.startswith('_')
+    )
     for md in docs:
         stem = md.stem
         if stem.endswith('_validation'):
@@ -146,24 +238,143 @@ def index_validation_docs(docs_dir: Path) -> Dict[str, Any]:
             body = md.read_text(encoding='utf-8', errors='replace')
         except OSError:
             covered_by_stem[stem] = None
+            template_version[stem] = None
+            template_variant[stem] = None
+            frontmatter_fields[stem] = set()
+            heading_titles[stem] = []
             continue
+
+        # Covered-actions extraction (S2795 F1 + T1b loosened regex).
         heading_match = COVERED_ACTIONS_HEADING_RE.search(body)
-        if not heading_match:
+        if heading_match:
+            after = body[heading_match.end():]
+            next_heading = NEXT_HEADING_RE.search(after)
+            section = after[: next_heading.start()] if next_heading else after
+            covered_by_stem[stem] = set(BACKTICK_IDENT_RE.findall(section))
+        else:
             covered_by_stem[stem] = None
-            continue
-        # Slice from end-of-heading to next heading (or EOF).
-        after = body[heading_match.end():]
-        next_heading = NEXT_HEADING_RE.search(after)
-        section = after[: next_heading.start()] if next_heading else after
-        actions_found = set(BACKTICK_IDENT_RE.findall(section))
-        covered_by_stem[stem] = actions_found
+
+        # T1b frontmatter capture — from top of file to first ``---``
+        # divider on its own line. Presence-not-exact (ZO-Q9).
+        divider = FRONTMATTER_DIVIDER_RE.search(body)
+        frontmatter_block = body[:divider.start()] if divider else body
+        fm_fields: Dict[str, str] = {}
+        for match in FRONTMATTER_FIELD_RE.finditer(frontmatter_block):
+            key = match.group(1).strip()
+            value = match.group(2).strip()
+            fm_fields[key] = value
+        frontmatter_fields[stem] = set(fm_fields.keys())
+        template_version[stem] = fm_fields.get('Template version') or None
+        template_variant[stem] = fm_fields.get('Template variant') or None
+
+        # T1b heading titles — all ##-level and deeper for section-
+        # presence checks. Case-sensitive so protocol/sweep title
+        # variants remain distinguishable.
+        heading_titles[stem] = [
+            m.group(2).strip() for m in HEADING_RE.finditer(body)
+        ]
 
     return {
         'substrate_stems': substrate,
         'per_tool_stems': per_tool,
         'covered_actions_by_stem': covered_by_stem,
+        'template_version_by_stem': template_version,
+        'template_variant_by_stem': template_variant,
+        'frontmatter_fields_by_stem': frontmatter_fields,
+        'heading_titles_by_stem': heading_titles,
         'total_docs': len(docs),
     }
+
+
+def evaluate_template_compliance(
+    stem: str,
+    docs_index: Dict[str, Any],
+) -> Dict[str, Any]:
+    """T1b S2904 — evaluate a per-tool doc against v1 template spec.
+
+    Ratchet semantics per T1b ship-shape §3:
+
+    - No ``Template version:`` field → ``warn`` (legacy advisory).
+    - ``Template version:`` present but value doesn't match ``^v\\d+$``
+      → ``fail`` with ``template_version_invalid`` (Rigby SIGN C edit).
+    - ``Template variant:`` present but not in ``{sweep, protocol}``
+      → ``fail`` with ``template_variant_invalid``.
+    - ``Template version: v1`` + valid variant + all mandatory sections
+      present + all required frontmatter fields present (alias-tolerant,
+      presence-not-exact) → ``pass``.
+    - Any section/field missing under a valid v1 declaration → ``fail``
+      with per-missing-item lint tags.
+
+    Returns::
+
+        {
+            'verdict': 'pass' | 'warn' | 'fail',
+            'variant': str | None,
+            'missing': list[str],  # lint tags, empty for pass/warn
+        }
+    """
+    per_tool = docs_index.get('per_tool_stems') or {}
+    if stem not in per_tool:
+        # Not a per-tool doc; no verdict.
+        return {'verdict': 'warn', 'variant': None, 'missing': []}
+
+    version = (docs_index.get('template_version_by_stem') or {}).get(stem)
+    variant = (docs_index.get('template_variant_by_stem') or {}).get(stem)
+
+    if version is None:
+        # Legacy: advisory warn only, no missing-item enumeration.
+        return {'verdict': 'warn', 'variant': variant, 'missing': []}
+
+    missing: List[str] = []
+
+    if not TEMPLATE_VERSION_VALID_RE.match(version):
+        missing.append('template_version_invalid')
+        return {'verdict': 'fail', 'variant': variant, 'missing': missing}
+
+    if variant not in TEMPLATE_VARIANTS:
+        missing.append('template_variant_invalid')
+        return {'verdict': 'fail', 'variant': variant, 'missing': missing}
+
+    # v1 semantics implemented below. Add new version branches here.
+    if version == 'v1':
+        required_fields = (
+            _SWEEP_REQUIRED_FIELDS if variant == 'sweep'
+            else _PROTOCOL_REQUIRED_FIELDS
+        )
+        mandatory_sections = (
+            _SWEEP_MANDATORY_SECTIONS if variant == 'sweep'
+            else _PROTOCOL_MANDATORY_SECTIONS
+        )
+
+        present_fields = (
+            docs_index.get('frontmatter_fields_by_stem') or {}
+        ).get(stem, set())
+        for slot, aliases in required_fields:
+            if not any(a in present_fields for a in aliases):
+                missing.append(f'template_v1_missing_frontmatter_{slot}')
+
+        heading_titles = (
+            docs_index.get('heading_titles_by_stem') or {}
+        ).get(stem, [])
+
+        # Covered-actions section uses the loosened regex; other
+        # sections match by title-prefix (case-sensitive on the
+        # normalized heading title).
+        covered = (docs_index.get('covered_actions_by_stem') or {}).get(stem)
+        for slot, title_prefix in mandatory_sections:
+            if slot == 'covered_actions':
+                if covered is None:
+                    missing.append('template_v1_missing_covered_actions')
+                continue
+            found = any(
+                title.startswith(title_prefix) for title in heading_titles
+            )
+            if not found:
+                missing.append(f'template_v1_missing_{slot}')
+
+    if missing:
+        return {'verdict': 'fail', 'variant': variant, 'missing': missing}
+    return {'verdict': 'pass', 'variant': variant, 'missing': []}
 
 
 def find_matching_doc_stem(
@@ -382,11 +593,31 @@ def build_gap_map(
         row['category'] = category
         row['lints'] = lint_schema(schema)
 
+        # T1b S2904 — template-compliance evaluation. Only per-tool
+        # docs get a meaningful verdict; tools without a doc land as
+        # warn-with-no-missing.
+        matched_stem = find_matching_doc_stem(
+            name, docs_index.get('per_tool_stems') or {}
+        )
+        if matched_stem is not None:
+            compliance = evaluate_template_compliance(matched_stem, docs_index)
+        else:
+            compliance = {'verdict': 'warn', 'variant': None, 'missing': []}
+        row['template_compliance'] = compliance['verdict']
+        row['template_variant'] = compliance['variant']
+        row['template_missing'] = compliance['missing']
+
     per_category = Counter(r['category'] for r in rows)
     per_lint: Counter = Counter()
     for r in rows:
         for lint_tag in r.get('lints', []):
             per_lint[lint_tag] += 1
+        for missing_tag in r.get('template_missing', []):
+            per_lint[missing_tag] += 1
+
+    per_template_compliance = Counter(
+        r.get('template_compliance', 'warn') for r in rows
+    )
 
     triage = build_triage_slices(rows)
 
@@ -395,6 +626,7 @@ def build_gap_map(
             'total_rows': len(rows),
             'per_category': dict(per_category),
             'per_lint': dict(per_lint),
+            'per_template_compliance': dict(per_template_compliance),
         },
         'triage_slices': triage,
         'validation_doc_totals': {
@@ -403,6 +635,12 @@ def build_gap_map(
             'per_tool_docs': len(docs_index.get('per_tool_stems', {})),
             'per_tool_docs_with_covered_actions': sum(
                 1 for v in docs_index.get('covered_actions_by_stem', {}).values()
+                if v is not None
+            ),
+            'per_tool_docs_with_template_version': sum(
+                1 for v in (
+                    docs_index.get('template_version_by_stem') or {}
+                ).values()
                 if v is not None
             ),
         },
@@ -481,7 +719,36 @@ def render_gap_map_markdown(
         f"{v['per_tool_docs_with_covered_actions']} have an explicit "
         "'Covered actions' section (F1 checklist)."
     )
+    template_version_count = v.get('per_tool_docs_with_template_version', 0)
+    lines.append(
+        f"- **Per-tool docs with `Template version` marker:** "
+        f"{template_version_count} (T1b S2904 opt-in ratchet — legacy "
+        "docs without the marker stay `warn` advisory)."
+    )
     lines.append('')
+
+    # T1b (S2904) template-compliance summary.
+    per_tc = headline.get('per_template_compliance') or {}
+    if per_tc:
+        lines.append('## Template compliance (T1b)')
+        lines.append('')
+        lines.append(
+            'Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory '
+            '(legacy docs without `Template version:` marker); `pass` = '
+            'v1-conformant; `fail` = v1 marker present but mandatory '
+            'section/frontmatter missing.'
+        )
+        lines.append('')
+        for verdict, n in sorted(per_tc.items(), key=lambda kv: -kv[1]):
+            lines.append(f'- `{verdict}`: **{n}**')
+        fail_rows = [r for r in rows if r.get('template_compliance') == 'fail']
+        if fail_rows:
+            lines.append('')
+            lines.append('**Failing docs (T1b blocking):**')
+            for r in fail_rows:
+                missing_str = ', '.join(r.get('template_missing', [])) or '?'
+                lines.append(f'- `{r["name"]}` — {missing_str}')
+        lines.append('')
 
     if headline.get('per_lint'):
         lines.append('## Schema quality lints (F5 advisory column)')
@@ -511,8 +778,10 @@ def render_gap_map_markdown(
     # Per-tool detail table
     lines.append('## Per-tool coverage table')
     lines.append('')
-    lines.append('| Tool | Wiring | Category | Lint | Handler file |')
-    lines.append('|---|:-:|---|---|---|')
+    lines.append(
+        '| Tool | Wiring | Category | Template | Lint | Handler file |'
+    )
+    lines.append('|---|:-:|---|:-:|---|---|')
     for row in rows:
         wiring = (
             '✓✓' if (row['has_schema'] and row['has_handler']) else
@@ -522,9 +791,11 @@ def render_gap_map_markdown(
         cat_label = CATEGORY_LABEL.get(cat, cat)
         lints_str = ', '.join(row.get('lints', [])) or '—'
         handler_file = row.get('handler_file', '') or '—'
+        tc = row.get('template_compliance', 'warn')
+        tc_glyph = {'pass': '✓', 'warn': 'warn', 'fail': '✗'}.get(tc, tc)
         lines.append(
-            f"| `{row['name']}` | {wiring} | {cat_label} | {lints_str} | "
-            f"`{handler_file}` |"
+            f"| `{row['name']}` | {wiring} | {cat_label} | {tc_glyph} | "
+            f"{lints_str} | `{handler_file}` |"
         )
     lines.append('')
 
