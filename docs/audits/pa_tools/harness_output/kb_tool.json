@@ -4,7 +4,7 @@
       "action": "stats",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 17751,
+      "latency_ms": 17917,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -22,7 +22,7 @@
       "action": "documents",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 53,
+      "latency_ms": 71,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -52,7 +52,7 @@
       "action": "search_embeddings",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 2,
+      "latency_ms": 3,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -66,7 +66,7 @@
       "action": "semantic_search",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 2,
+      "latency_ms": 3,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -79,8 +79,8 @@
   ],
   "harness_version": "v1",
   "run_metadata": {
-    "generated_at": "2026-07-23T03:21:11.111412+00:00",
-    "git_sha": "fc5bca145"
+    "generated_at": "2026-07-23T15:04:29.011607+00:00",
+    "git_sha": "03ee92d5f"
   },
   "schema_action_count": 5,
   "tool_name": "kb_tool"

@@ -4,7 +4,7 @@
       "action": "list",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 79,
+      "latency_ms": 87,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -30,7 +30,7 @@
       "action": "stats",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 67,
+      "latency_ms": 57,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -54,7 +54,7 @@
       "action": "details",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 9,
+      "latency_ms": 10,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -70,7 +70,7 @@
       "action": "capabilities",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 8,
+      "latency_ms": 7,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -86,7 +86,7 @@
       "action": "tools",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 10,
+      "latency_ms": 8,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -100,8 +100,8 @@
   ],
   "harness_version": "v1",
   "run_metadata": {
-    "generated_at": "2026-07-23T03:20:52.680104+00:00",
-    "git_sha": "fc5bca145"
+    "generated_at": "2026-07-23T15:04:10.296443+00:00",
+    "git_sha": "03ee92d5f"
   },
   "schema_action_count": 5,
   "tool_name": "agent_introspection_tool"
