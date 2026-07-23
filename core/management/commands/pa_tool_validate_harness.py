@@ -93,6 +93,12 @@ Stable ``expected_outcome`` values (v2):
     - ``'skipped_write_gated'``          — WRITE_GATED, no dispatch at MVP
     - ``'skipped_mutation'``             — MUTATION, no dispatch
     - ``'skipped_irreversible'``         — IRREVERSIBLE, no dispatch
+    - ``'skipped_bridge_unreachable'``   — READ_ONLY dispatch-eligible, but the external bridge
+                                            preflight probe failed. Distinguishes "env-config
+                                            issue" (bridge disabled / offline) from "real tool
+                                            bug". Introduced at v2 (S2909 substrate cleanup
+                                            arc T2). Bridge-per-action mapping lives in
+                                            ``ToolActionMetadata.bridge`` via ``resolve_bridge``.
 
 Migration notes — v1 → v2 (S2909 T1)
 ------------------------------------
@@ -126,6 +132,33 @@ narrow evidentiary scope of 15 sweep-covered tools; contract-version bump
 requires uniform v2 artifact set — mixed v1/v2 would be worse). Analysis
 focus stays on the 15 sweep-covered tools per Fold B measurement scope.
 Post-implementation SIGN Q2 AGREE.
+
+Migration notes — T2 (bridge availability precheck)
+---------------------------------------------------
+
+**What T2 adds:** external-bridge preflight probes that short-circuit
+dispatch for READ_ONLY actions whose bridge is unreachable. New stable
+``expected_outcome='skipped_bridge_unreachable'``. Bridge dependency is
+declared on the per-action ``ToolActionMetadata.bridge`` field (via
+``core.services.tool_action_metadata.resolve_bridge``).
+
+**Probe discipline (per Rigby T2 SIGN Q4 fold #1 — critical):** probes
+call the SAME client the tool uses, never a re-derived URL. Env-var
+sprawl (``RESOLVE_NODE_URL`` vs ``DAVINCI_BRIDGE_URL``) means a re-derived
+probe would hit the wrong port and false-positive-skip healthy tools.
+
+**Probe timeouts (per Rigby T2 SIGN Q2 REVISE):** 5s for resolve_node
+(matches ``ResolveNodeClient`` internal timeout); 3s for obs (short
+because the ``_obs_enabled()`` env gate short-circuits before HTTP).
+
+**Cache:** results cached on the ``Command`` instance for the duration
+of a single harness invocation (one probe per bridge per run).
+
+**Reachability semantics (per Rigby T2 SIGN Q4 fold #3):** "reachable"
+means network/HTTP responded — the probe does NOT inspect application
+health. A bridge returning HTTP 500 counts as reachable; the tool
+dispatch will then surface application-layer errors as ``soft_error``,
+which is the correct distinction.
 
 Summary rollup::
 
@@ -327,6 +360,10 @@ class Command(BaseCommand):
                     1 for a in artifact['actions']
                     if a['expected_outcome'] == 'soft_error'
                 ),
+                'skipped_bridge_unreachable_count': sum(
+                    1 for a in artifact['actions']
+                    if a['expected_outcome'] == 'skipped_bridge_unreachable'
+                ),
                 'skipped_metadata_missing': sum(
                     1 for a in artifact['actions']
                     if a['expected_outcome'] == 'skipped_metadata_missing'
@@ -376,6 +413,13 @@ class Command(BaseCommand):
                 summary_rows
                 and sum(r.get('soft_error_count', 0) for r in summary_rows)
             ) or 0
+            total_bridge_skips = (
+                summary_rows
+                and sum(
+                    r.get('skipped_bridge_unreachable_count', 0)
+                    for r in summary_rows
+                )
+            ) or 0
             total_missing_meta = (
                 summary_rows
                 and sum(r['skipped_metadata_missing'] for r in summary_rows)
@@ -384,7 +428,8 @@ class Command(BaseCommand):
                 f'Wrote {output_dir.relative_to(REPO_ROOT)}/summary.json '
                 f'({len(targets)} tool(s), '
                 f'{total_dispatched} READ_ONLY dispatched '
-                f'[{total_soft_errors} soft_error], '
+                f'[{total_soft_errors} soft_error / '
+                f'{total_bridge_skips} bridge_unreachable], '
                 f'{total_missing_meta} skipped for missing metadata)'
             ))
 
@@ -449,7 +494,10 @@ class Command(BaseCommand):
         targets: List[str],
         schema_by_name: Dict[str, Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
-        from core.services.tool_action_metadata import resolve_safety
+        from core.services.tool_action_metadata import (
+            resolve_bridge,
+            resolve_safety,
+        )
 
         artifacts: List[Dict[str, Any]] = []
         for name in targets:
@@ -458,12 +506,14 @@ class Command(BaseCommand):
             action_rows: List[Dict[str, Any]] = []
             for action in actions:
                 safety_class, source = resolve_safety(name, action)
+                bridge = resolve_bridge(name, action)
                 row = await self._run_single_action(
                     dispatcher=dispatcher,
                     tool_name=name,
                     action=action,
                     safety_class=safety_class,
                     resolution_source=source,
+                    bridge=bridge,
                 )
                 action_rows.append(row)
             artifacts.append({
@@ -486,6 +536,7 @@ class Command(BaseCommand):
         action: str,
         safety_class: Optional[str],
         resolution_source: str,
+        bridge: Optional[str] = None,
     ) -> Dict[str, Any]:
         # Q4a: unclassified → skip entirely.
         if safety_class is None:
@@ -520,6 +571,25 @@ class Command(BaseCommand):
                 'response_shape_keys': [],
                 'notes': f'{safety_class} — not exercised at T1a MVP',
             }
+
+        # T2 bridge preflight (S2909 arc): if action depends on an external
+        # bridge, probe the bridge once (cached per-harness-run) and short-
+        # circuit dispatch if unreachable. Distinguishes env-config outages
+        # from real tool bugs. See module docstring "Migration notes — T2".
+        if bridge:
+            reachable, probe_reason = self._probe_bridge(bridge)
+            if not reachable:
+                return {
+                    'action': action,
+                    'safety_class': safety_class,
+                    'resolution_source': resolution_source,
+                    'input_profile': 'skipped_no_dispatch',
+                    'expected_outcome': 'skipped_bridge_unreachable',
+                    'status_code': None,
+                    'latency_ms': 0,
+                    'response_shape_keys': [],
+                    'notes': f'bridge={bridge}; {probe_reason}',
+                }
 
         # READ_ONLY: dispatch with minimal safe payload.
         payload = {'action': action}
@@ -596,6 +666,81 @@ class Command(BaseCommand):
             'response_shape_keys': response_keys,
             'notes': '; '.join(note_bits) if note_bits else None,
         }
+
+    # -------------------------------------------------------------- bridges
+
+    def _probe_bridge(self, bridge_name: str) -> tuple[bool, str]:
+        """Preflight-probe an external bridge (T2, S2909 arc).
+
+        Cached on the ``Command`` instance for one harness invocation. Each
+        probe reuses the SAME client the corresponding tool uses (per Rigby
+        T2 SIGN Q4 fold #1 — never re-derive URLs, or env-var sprawl like
+        ``RESOLVE_NODE_URL`` vs ``DAVINCI_BRIDGE_URL`` would false-positive
+        skip healthy tools).
+
+        Returns:
+            ``(reachable: bool, reason: str)``. ``reachable=True`` on any
+            HTTP response (even 4xx/5xx — application state is out of scope
+            per Q4 fold #3); ``reachable=False`` only on env-config gates
+            or network-level failures (``RequestException`` / status=0).
+        """
+        cache = getattr(self, '_bridge_probe_cache', None)
+        if cache is None:
+            cache = {}
+            self._bridge_probe_cache = cache
+        if bridge_name in cache:
+            return cache[bridge_name]
+
+        if bridge_name == 'obs':
+            from core.views_obs import _obs_bridge_request, _obs_enabled
+            if not _obs_enabled():
+                result = (False, 'OBS_ENABLED env not set')
+            else:
+                try:
+                    status, _data, _latency = _obs_bridge_request(
+                        'GET', '/health', timeout=3,
+                    )
+                    if status > 0:
+                        result = (True, '')
+                    else:
+                        result = (False, 'obs bridge network unreachable')
+                except Exception as exc:  # noqa: BLE001
+                    result = (
+                        False,
+                        f'obs bridge probe raised: '
+                        f'{type(exc).__name__}: {str(exc)[:120]}',
+                    )
+        elif bridge_name == 'resolve_node':
+            try:
+                from core.agents.resolve_agent import ResolveNodeClient
+                # ResolveNodeClient.health_check() uses its own 5s timeout
+                # and catches RequestException internally — it returns
+                # ``{'status': 'offline', ...}`` only when the network call
+                # failed. Any other value means HTTP responded.
+                probe_result = ResolveNodeClient().health_check()
+                probe_status = (probe_result or {}).get('status')
+                if probe_status == 'offline':
+                    err = (probe_result or {}).get('error') or 'no detail'
+                    result = (
+                        False,
+                        f'resolve_node bridge offline: {str(err)[:120]}',
+                    )
+                else:
+                    result = (True, '')
+            except Exception as exc:  # noqa: BLE001
+                result = (
+                    False,
+                    f'resolve_node bridge probe raised: '
+                    f'{type(exc).__name__}: {str(exc)[:120]}',
+                )
+        else:
+            # Unknown bridge name — do NOT block dispatch; treat as
+            # reachable so a metadata typo can't accidentally short-circuit
+            # legitimate tools. Surface via notes so it shows up in review.
+            result = (True, f'unknown bridge name {bridge_name!r} — probe skipped')
+
+        cache[bridge_name] = result
+        return result
 
     # --------------------------------------------------------------- parity
 
