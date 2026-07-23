@@ -2237,6 +2237,18 @@ class DataIntegrityEngine:
     DUPLICATE_THRESHOLD = 0.2     # >20% duplicates = explosion
     STALE_HOURS = 48              # No new data in 48h = stale
 
+    # Per-field applicability policy for null-spike detection (S2898).
+    # ALWAYS = field is a primary payload; null spikes are real ingest regressions.
+    # NEVER = field is not populated by design (dead field or replaced surface);
+    #         skip to avoid guaranteed 100%-null false criticals.
+    # HISTORICAL_BASELINE = field is populated conditionally (e.g. async pipeline);
+    #                       only flag (spider, data_type) pairs that ever populated it.
+    FIELD_APPLICABILITY = {
+        'raw_data': 'always',
+        'processed_data': 'never',
+        'embedding_text': 'historical_baseline',
+    }
+
     def get_quality_report(self, hours: int = 24) -> dict:
         """Overall data quality report across spider feeds."""
         from django.utils import timezone as tz
@@ -2319,16 +2331,91 @@ class DataIntegrityEngine:
             'has_issues': len(issues) > 0,
         }
 
+    def _historical_populated_pairs(self, field: str) -> set:
+        """Return set of (spider_name, data_type) that have ever populated `field`.
+
+        Used by HISTORICAL_BASELINE applicability — a pair is applicable for a
+        conditionally-populated field only if it has populated it at least once
+        in DB history. Single all-time query per scan call (S2898 Phase 1).
+        Phase 2 candidate: lookback cap (see zoom-out ledger).
+        """
+        from django.db.models import Q
+        from core.models_unified_system import LegacySpiderData
+
+        if field == 'embedding_text':
+            qs = LegacySpiderData.objects.exclude(
+                Q(embedding_text__isnull=True) | Q(embedding_text='')
+            )
+        elif field == 'processed_data':
+            qs = LegacySpiderData.objects.exclude(
+                Q(processed_data__isnull=True) | Q(processed_data={})
+            )
+        elif field == 'raw_data':
+            qs = LegacySpiderData.objects.exclude(
+                Q(raw_data__isnull=True) | Q(raw_data={})
+            )
+        else:
+            return set()
+
+        return {(r['spider_name'], r['data_type'])
+                for r in qs.values('spider_name', 'data_type').distinct()}
+
+    def _field_is_applicable(
+        self,
+        spider_name: str,
+        data_type: str,
+        field: str,
+        historical_populated_pairs: dict,
+    ) -> tuple[bool, str]:
+        """Return (applicable, reason) for a (spider, data_type, field) triple.
+
+        Reason strings are stable identifiers usable in tests and operator UI:
+          - 'always'                       — field is always applicable
+          - 'never'                        — field is dead by design
+          - 'historical_populated'         — pair has populated field historically
+          - 'historical_never_populated'   — pair has never populated field
+          - 'unknown_field'                — field not in FIELD_APPLICABILITY
+        """
+        policy = self.FIELD_APPLICABILITY.get(field)
+        if policy == 'always':
+            return True, 'always'
+        if policy == 'never':
+            return False, 'never'
+        if policy == 'historical_baseline':
+            populated = historical_populated_pairs.get(field, set())
+            if (spider_name, data_type) in populated:
+                return True, 'historical_populated'
+            return False, 'historical_never_populated'
+        return False, 'unknown_field'
+
     def get_null_spike_scan(self, hours: int = 24) -> dict:
-        """Scan for null/empty data spikes in spider feeds."""
+        """Scan for null/empty data spikes in spider feeds.
+
+        Applicability filter (S2898): fields flagged NEVER (e.g. processed_data,
+        a verified dead field) are skipped; fields flagged HISTORICAL_BASELINE
+        (e.g. embedding_text, async-pipeline-populated) only emit spikes for
+        (spider, data_type) pairs that have populated the field at least once
+        historically. Suppression counts surface in the return dict so
+        operators can see what was skipped and why.
+        """
         from django.utils import timezone as tz
         from django.db.models import Count, Q
 
         cutoff = tz.now() - timedelta(hours=hours)
         spikes = []
+        applicability_skipped_by_field: dict[str, int] = {}
+        baseline_pairs_count: dict[str, int] = {}
+        historical_populated_pairs: dict[str, set] = {}
 
         try:
             from core.models_unified_system import LegacySpiderData
+
+            # Pre-compute historical baselines for HISTORICAL_BASELINE fields only.
+            for field, policy in self.FIELD_APPLICABILITY.items():
+                if policy == 'historical_baseline':
+                    pairs = self._historical_populated_pairs(field)
+                    historical_populated_pairs[field] = pairs
+                    baseline_pairs_count[field] = len(pairs)
 
             spider_stats = list(
                 LegacySpiderData.objects.filter(created_at__gte=cutoff)
@@ -2352,6 +2439,16 @@ class DataIntegrityEngine:
                     ('processed_data', 'null_processed'),
                     ('embedding_text', 'null_embedding'),
                 ]:
+                    applicable, reason = self._field_is_applicable(
+                        s['spider_name'], s['data_type'], field,
+                        historical_populated_pairs,
+                    )
+                    if not applicable:
+                        applicability_skipped_by_field[field] = (
+                            applicability_skipped_by_field.get(field, 0) + 1
+                        )
+                        continue
+
                     null_count = s[count_key]
                     null_rate = null_count / total if total > 0 else 0
                     if null_rate > self.NULL_SPIKE_THRESHOLD:
@@ -2363,6 +2460,7 @@ class DataIntegrityEngine:
                             'total': total,
                             'null_rate': round(null_rate, 3),
                             'severity': 'critical' if null_rate > 0.5 else 'warning',
+                            'applicability_reason': reason,
                         })
         except Exception as e:
             logger.warning(
@@ -2377,6 +2475,9 @@ class DataIntegrityEngine:
             'spikes': spikes,
             'spike_count': len(spikes),
             'has_spikes': len(spikes) > 0,
+            'applicability_skipped': sum(applicability_skipped_by_field.values()),
+            'applicability_skipped_by_field': applicability_skipped_by_field,
+            'baseline_pairs_count': baseline_pairs_count,
         }
 
     def get_duplicate_report(self, hours: int = 24) -> dict:
