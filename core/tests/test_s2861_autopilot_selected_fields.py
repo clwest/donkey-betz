@@ -203,6 +203,99 @@ class AutopilotHistorySelectedFieldsTests(TestCase):
             ['evidence.trigger', 'evidence.actor_user_id', 'result.reason'],
         )
 
+    # ── S2896 (Rigby Tool Gap Ledger Row C) — wipe-location diagnostics ──
+    # When `selected_fields` echoes `[]` after a non-empty send, the
+    # operator can't tell whether per-item validation dropped every path
+    # or something upstream of the handler wiped the list. The response
+    # now also echoes `selected_fields_dropped` (paths rejected by per-
+    # item validation) and `selected_fields_received_count` (list length
+    # as the handler saw it pre-truncation) so the wipe location is
+    # unambiguous.
+
+    def test_dropped_paths_surfaced_in_echo(self):
+        response = self._call({
+            'include_evidence': True,
+            'selected_fields': [
+                'evidence.trigger',      # valid — kept
+                'garbage.key',           # invalid prefix — dropped
+                'no_dot',                # no dot — dropped
+                'result.reason',         # valid — kept
+            ],
+        })
+        self.assertEqual(
+            response['selected_fields'],
+            ['evidence.trigger', 'result.reason'],
+        )
+        self.assertEqual(
+            response['selected_fields_dropped'],
+            ['garbage.key', 'no_dot'],
+        )
+        self.assertEqual(response['selected_fields_received_count'], 4)
+
+    def test_upstream_wipe_signature(self):
+        # When the handler receives `selected_fields=[]` but the caller
+        # believed they sent a non-empty list, the response looks like
+        # this: kept=[], dropped=[], received_count=0. The `_count=0`
+        # marker is the diagnostic — operator retries with a shorter
+        # list to isolate whether the wipe is upstream (schema/JSON
+        # parse/OpenAI arg validation) or handler-side.
+        response = self._call({
+            'include_evidence': True,
+            'selected_fields': [],
+        })
+        self.assertEqual(response['selected_fields'], [])
+        self.assertEqual(response['selected_fields_dropped'], [])
+        self.assertEqual(response['selected_fields_received_count'], 0)
+
+    def test_all_paths_dropped_distinguishable_from_wipe(self):
+        # Contrast case: caller sent 4 paths, all invalid → dropped=[4],
+        # received_count=4. This IS distinguishable from an upstream
+        # wipe (received_count=0) because both counts are surfaced.
+        response = self._call({
+            'include_evidence': True,
+            'selected_fields': [
+                'foo.bar', 'baz.qux', 'no_dot_here', 'evidence',
+            ],
+        })
+        self.assertEqual(response['selected_fields'], [])
+        self.assertEqual(len(response['selected_fields_dropped']), 4)
+        self.assertEqual(response['selected_fields_received_count'], 4)
+
+    def test_received_count_reflects_pre_truncation_length(self):
+        # 25 paths sent; 20 applied (cap); received_count echoes the
+        # pre-truncation length so operators can spot silent truncation.
+        many = [f'evidence.key_{i}' for i in range(25)]
+        response = self._call({
+            'include_evidence': True,
+            'selected_fields': many,
+        })
+        self.assertEqual(len(response['selected_fields']), 20)
+        self.assertEqual(response['selected_fields_dropped'], [])
+        self.assertEqual(response['selected_fields_received_count'], 25)
+
+    def test_non_list_received_count_is_zero(self):
+        # Non-list selected_fields (e.g., string autofill) → treated as
+        # no-op; received_count=0 signals "no valid list seen".
+        response = self._call({
+            'include_evidence': True,
+            'selected_fields': 'evidence.trigger',
+        })
+        self.assertEqual(response['selected_fields'], [])
+        self.assertEqual(response['selected_fields_dropped'], [])
+        self.assertEqual(response['selected_fields_received_count'], 0)
+
+    def test_include_evidence_false_still_surfaces_received_count(self):
+        # With include_evidence=false, no projection happens, but the
+        # received_count still reflects what was sent — useful for
+        # detecting a caller who forgot to set include_evidence=true.
+        response = self._call({
+            'include_evidence': False,
+            'selected_fields': ['evidence.trigger', 'result.reason'],
+        })
+        self.assertEqual(response['selected_fields'], [])
+        self.assertEqual(response['selected_fields_dropped'], [])
+        self.assertEqual(response['selected_fields_received_count'], 2)
+
     def test_nested_value_returned_whole(self):
         # Simulates cycle-log rows (core.py:353) where evidence contains
         # nested per-policy result dicts. Option C: v1 returns nested value

@@ -2518,13 +2518,29 @@ class OpsHandlersMixin:
             # Top-level only in v1 — nested dicts/lists returned whole.
             # Allowlist set makes future extension (e.g., verification_result)
             # a single-line change per Rigby Q5b fold-mitigation.
+            # S2896 (Rigby Tool Gap Ledger Row C): when the response echoes
+            # `selected_fields: []` after the caller sent a non-empty list,
+            # the operator can't tell whether (a) per-item validation
+            # dropped every path or (b) something upstream of the handler
+            # wiped the list before it arrived. The response now also
+            # echoes `selected_fields_dropped` (paths validation rejected)
+            # and `selected_fields_received_count` (list length as the
+            # handler saw it pre-truncation) so the wipe location is
+            # unambiguous. Additive; existing `selected_fields` echo
+            # unchanged.
             _ALLOWED_PROJECTION_PREFIXES = ('evidence', 'result')
             _MAX_SELECTED_FIELDS = 20
-            raw_selected = payload.get('selected_fields') or []
+            raw_payload_selected = payload.get('selected_fields')
+            selected_fields_received_count = (
+                len(raw_payload_selected)
+                if isinstance(raw_payload_selected, list) else 0
+            )
+            raw_selected = raw_payload_selected or []
             if not isinstance(raw_selected, list):
                 raw_selected = []
             raw_selected = [str(f) for f in raw_selected[:_MAX_SELECTED_FIELDS]]
             selected_fields: list = []
+            selected_fields_dropped: list = []
             projection: dict = {p: [] for p in _ALLOWED_PROJECTION_PREFIXES}
             if include_evidence:
                 for path in raw_selected:
@@ -2532,6 +2548,8 @@ class OpsHandlersMixin:
                     if prefix in _ALLOWED_PROJECTION_PREFIXES and key:
                         projection[prefix].append(key)
                         selected_fields.append(path)
+                    else:
+                        selected_fields_dropped.append(path)
             fields = [
                 'id', 'created_at', 'action_type', 'agent_name',
                 'policy', 'dry_run', 'deploy_sha',
@@ -2560,6 +2578,8 @@ class OpsHandlersMixin:
                 'count': len(actions),
                 'include_evidence': include_evidence,
                 'selected_fields': selected_fields,
+                'selected_fields_dropped': selected_fields_dropped,
+                'selected_fields_received_count': selected_fields_received_count,
                 'actions': actions,
             }
 
