@@ -3,20 +3,20 @@
   "in_class_total": 116,
   "parity_mismatches": [],
   "run_metadata": {
-    "generated_at": "2026-07-23T20:24:44.112959+00:00",
-    "git_sha": "b2a2ae0e5"
+    "generated_at": "2026-07-23T21:02:40.891123+00:00",
+    "git_sha": "396abccc8"
   },
   "targets_run": 1,
   "tools": [
     {
-      "action_count": 17,
-      "artifact_sha256": "7b1d6b9a50fd893d",
-      "read_only_dispatched": 11,
+      "action_count": 19,
+      "artifact_sha256": "9352a5f7c1a444e4",
+      "read_only_dispatched": 16,
       "skipped_bridge_unreachable_count": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
       "soft_error_count": 2,
-      "tool_name": "governance_tool"
+      "tool_name": "intelligence_tool"
     }
   ],
   "top_missing_metadata": []

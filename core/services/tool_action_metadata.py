@@ -1507,6 +1507,279 @@ TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
               'select_related finding — top-N ordered by id desc; '
               'Session 1100 read-only surface; limit capped at 30',
     ),
+    # ── S2914 batch 4: work_tool (gateway over initiative_tool + direct data actions) ──
+    ('work_tool', 'initiative_list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: gateway dispatch → initiative_tool.list (ORM read '
+              'of Initiative queryset with status/owner/stage filters); '
+              'Session 1078 thin dispatcher',
+    ),
+    ('work_tool', 'initiative_detail'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: gateway dispatch → initiative_tool.details (ORM '
+              'read by id/human_id/seq_id/name); requires: id or name',
+    ),
+    ('work_tool', 'initiative_deliverables'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: gateway dispatch → initiative_tool.'
+              'initiative_deliverables (paginated reverse-projection read '
+              'of Deliverable rows linked to a given initiative_id, '
+              'Session 1194 Plan B §3.B.3); requires: initiative_id',
+    ),
+    ('work_tool', 'action_item_list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: gateway dispatch → initiative_tool.action_items '
+              '(ORM read of InitiativeActionItem with status/priority/'
+              'initiative_id filters); param translation status→'
+              'item_status in wrapper',
+    ),
+    ('work_tool', 'agent_conversations'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: AgentConversation ORM query direct read with '
+              'select_related initiator + prefetch_related participants; '
+              'Session 1100 read-only surface (not delegated); limit '
+              'capped at 30',
+    ),
+    ('work_tool', 'workflows'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: AgentExecution ORM query direct read filtered by '
+              'agent name in {WorkflowAgent, WorkflowOrchestrationAgent, '
+              'CampaignOrchestratorAgent, AISeriesWorkflowAgent}; '
+              'Session 1100 read-only surface; limit capped at 30',
+    ),
+    ('work_tool', 'stats'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: Initiative + InitiativeActionItem + AgentExecution + '
+              'AgentConversation ORM aggregate reads (Count by status); '
+              'Session 1103c bundled overview to avoid multi-step chains',
+    ),
+    ('work_tool', 'initiative_create'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → initiative_tool.create '
+              '(new Initiative row); requires: name',
+    ),
+    ('work_tool', 'initiative_promote'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → initiative_tool.promote '
+              '(status transition TRIAGE/ON_HOLD → ACTIVE); '
+              'requires: id',
+    ),
+    ('work_tool', 'initiative_update_status'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → initiative_tool.'
+              'update_status (status change; auto-cancels pending '
+              'action items on COMPLETED/ARCHIVED); requires: id + status',
+    ),
+    ('work_tool', 'initiative_update'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → initiative_tool.update '
+              '(field patch — target_workspace_id/description/kind; '
+              'idempotent no-op returns updated_fields=[]); Session '
+              '1202 §A.1; requires: id',
+    ),
+    ('work_tool', 'initiative_link'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → initiative_tool.link '
+              '(bidirectional related_initiatives entry between '
+              'parent_id and child_id; mirror direction auto-computed; '
+              'idempotent); Session 1202 §A.1; requires: parent_id + '
+              'child_id + relation',
+    ),
+    ('work_tool', 'action_item_start'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → initiative_tool.'
+              'start_action_item (status transition → in_progress); '
+              'param translation id→item_id in wrapper; requires: id',
+    ),
+    ('work_tool', 'action_item_complete'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → initiative_tool.'
+              'complete_action_item (status transition → completed with '
+              'optional notes); param translation id→item_id in wrapper; '
+              'requires: id',
+    ),
+    ('work_tool', 'action_item_cleanup'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → initiative_tool.'
+              'cleanup_action_items (finds/cancels junk items); dry_run '
+              'default True per Session 1228 PR-A dual-gate (dry_run + '
+              'confirm)',
+    ),
+    ('work_tool', 'bulk_cleanup'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='writes via gateway dispatch → initiative_tool.'
+              'bulk_cleanup (archives stalled/noise/duplicate '
+              'initiatives); dry_run default True per Session 1228 PR-A '
+              'dual-gate (dry_run + confirm)',
+    ),
+    # ── S2914 batch 4: intelligence_tool (unified desk gateway) ──
+    # In-scope READ_ONLY subset (direct pure-ORM, no transitive network/LLM):
+    ('intelligence_tool', 'stock_briefs'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: MarketIntelligenceBrief ORM query direct read '
+              'ordered by -brief_date; Session 1100 read-only surface; '
+              'limit capped at 50',
+    ),
+    ('intelligence_tool', 'ml_predictions'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: sports.MLPrediction ORM query direct read with '
+              'select_related game + predicted_winner; Session 1100 '
+              'read-only surface; limit capped at 30',
+    ),
+    ('intelligence_tool', 'signal_clusters'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: SignalCluster ORM query direct read with optional '
+              'query/pattern_type/min_confidence/source_spider/'
+              'window_hours filters; source_breakdown JSONField '
+              'has_key/has_any_keys filter (S2869 Ledger #4); Session '
+              '1100 read-only surface; limit capped at 30',
+    ),
+    ('intelligence_tool', 'sports_sharp_signals'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: Deliverable ORM query direct read filtered by '
+              "category='Sharp Action Detection' + created_at cutoff "
+              '(hours default 48, Session 1228 PR-B autofill safety); '
+              'Gap 4 read-only surface; limit capped at 30',
+    ),
+    ('intelligence_tool', 'congress_members'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: CongressMember ORM query direct read filtered by '
+              'in_office=True + optional state/chamber/party/query; '
+              'STATE_ABBREV resolution for full state names; Gap 6 '
+              'read-only surface; limit capped at 50',
+    ),
+    ('intelligence_tool', 'legislation_tracked'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: Bill ORM query direct read with optional status/'
+              'chamber/query filters ordered by -updated_at; Gap 7 '
+              'read-only surface; limit capped at 50',
+    ),
+    # Documented-out-of-scope: mutations + transitive-dependency composites/delegates.
+    ('intelligence_tool', 'search'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='TRANSITIVE COST: source=web routes to _handle_web_search '
+              '(network I/O, defined in td_handlers_agents.py:384); '
+              'source=kb routes to _handle_rag_query.search (embedding '
+              'lookup); source=spider routes to _handle_spider_data.'
+              'search (may hit ingest paths). Rigby T0 SIGN classified '
+              'as hidden-network like conversation_tool.search LLM-cost '
+              'catch. Excluded from batch 4 READ_ONLY subset; requires: '
+              'query',
+    ),
+    ('intelligence_tool', 'kb_ingest'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → rag_query_tool.ingest '
+              '(KB write path); requires: url',
+    ),
+    ('intelligence_tool', 'sports_record_wager'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → sports_betting_tool.'
+              'record_wager (new SportsWager row); requires: stake + '
+              'odds + description + wager_type',
+    ),
+    ('intelligence_tool', 'overview'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='COMPOSITE with unverified transitive deps — calls '
+              '_handle_stock_intelligence + _handle_sports_betting + '
+              '_handle_legislation (each action=overview). Excluded '
+              'from batch 4 in-scope subset per Rigby T0 SIGN "ban '
+              'composite/overview actions that may transitively call '
+              'network/LLM paths unless verified otherwise". Documented-'
+              'not-tested; deferred to future targeted batch',
+    ),
+    ('intelligence_tool', 'briefs'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='COMPOSITE with unverified transitive deps — dispatches '
+              'to stock_intelligence_tool.briefs / sports_betting_tool.'
+              'brief / legislation_tool.trending by desk param. '
+              'Excluded from batch 4 in-scope subset (same rationale '
+              'as overview). Documented-not-tested',
+    ),
+    ('intelligence_tool', 'stocks_alerts'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='DELEGATE with unverified transitive deps — dispatches '
+              'to stock_intelligence_tool.alerts. Excluded from batch '
+              '4 in-scope subset until stock_intelligence_tool is '
+              'validated. Documented-not-tested',
+    ),
+    ('intelligence_tool', 'stocks_predictions'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='DELEGATE with unverified transitive deps — dispatches '
+              'to stock_intelligence_tool.predictions. Excluded from '
+              'batch 4 in-scope subset. Documented-not-tested',
+    ),
+    ('intelligence_tool', 'stocks_sec_filings'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='DELEGATE with unverified transitive deps — dispatches '
+              'to stock_intelligence_tool.sec_filings. Excluded from '
+              'batch 4 in-scope subset. Documented-not-tested',
+    ),
+    ('intelligence_tool', 'sports_predictions'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='DELEGATE with unverified transitive deps — dispatches '
+              'to sports_betting_tool.predictions. Excluded from batch '
+              '4 in-scope subset. Documented-not-tested',
+    ),
+    ('intelligence_tool', 'sports_arbs'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='DELEGATE with unverified transitive deps — dispatches '
+              'to sports_betting_tool.arbs. Excluded from batch 4 '
+              'in-scope subset. Documented-not-tested',
+    ),
+    ('intelligence_tool', 'sports_wagers'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='DELEGATE with unverified transitive deps — dispatches '
+              'to sports_betting_tool.wagers. Excluded from batch 4 '
+              'in-scope subset. Documented-not-tested',
+    ),
+    ('intelligence_tool', 'legislation_search'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='DELEGATE with unverified transitive deps — dispatches '
+              'to legislation_tool.search. Excluded from batch 4 in-'
+              'scope subset. Documented-not-tested; requires: query',
+    ),
+    ('intelligence_tool', 'legislation_summary'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='DELEGATE with unverified transitive deps — dispatches '
+              'to legislation_tool.summary. Excluded from batch 4 in-'
+              'scope subset. Documented-not-tested; requires: '
+              'bill_number',
+    ),
 }
 
 
