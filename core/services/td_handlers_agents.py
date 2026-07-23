@@ -5383,12 +5383,16 @@ class AgentHandlersMixin:
         elif action == 'thoughts':
             limit = payload.get('limit', 10)
             # Get recent thought cycles from AgentExecution
+            # S2911: fixed FK traversal. AgentExecution has `agent` FK to Agent;
+            # Agent has `name` field (not `agent_name`). Prior code used the
+            # non-existent field `agent_name` and raised FieldError at first
+            # dispatch. Caught during batch 6a schema-drift-fix harness run.
             from core.models import AgentExecution
             thoughts = list(
                 AgentExecution.objects.filter(
-                    agent_name='ThinkingAgent'
+                    agent__name='ThinkingAgent'
                 ).order_by('-created_at')[:limit].values(
-                    'id', 'task', 'success', 'created_at'
+                    'id', 'task', 'status', 'created_at'
                 )
             )
             # Session 987: Serialize UUIDs and datetimes for clean display

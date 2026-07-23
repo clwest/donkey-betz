@@ -785,6 +785,38 @@ TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
               '(async LLM-heavy content-pack gen); requires: id | '
               'sequential_number + a completed VideoTranscript',
     ),
+    # reasoning_engine_tool drift-fix per-action records (S2911 batch 6b
+    # pre-req PR). Schema at pa_tool_schemas.py:294-315 was aligned to
+    # handler behavior this ship — dead params (query + reasoning_type)
+    # removed, action enum added matching handler dispatch branches at
+    # td_handlers_agents.py:5374-5418 (status | thoughts | trigger).
+    # Direction: schema→handler (handler was authoritative with real
+    # dispatch logic; schema params were never referenced anywhere in
+    # handler code).
+    #
+    # Rigby T0 SIGN Q4b (S2911): reasoning_engine schema↔handler drift
+    # was 1st confirmed instance of schema↔handler drift class. This PR
+    # closes the drift + establishes reasoning_engine as substrate for
+    # batch 6b (agent-invocation scrutiny lane).
+    ('reasoning_engine_tool', 'status'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: hardcoded {engine, status} envelope; ThinkingAgent '
+              'registry lookup not required for status',
+    ),
+    ('reasoning_engine_tool', 'thoughts'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: AgentExecution ORM query filtered by '
+              'agent_name="ThinkingAgent"; defaults limit=10',
+    ),
+    ('reasoning_engine_tool', 'trigger'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='deps: registry.execute_agent(ThinkingAgent, {task: "Reflect '
+              'on recent system activity..."}) — invokes real LLM-backed '
+              'ThinkingAgent reflection cycle (LLM cost)',
+    ),
 }
 
 

@@ -10,26 +10,26 @@
 
 - **Total tool names:** 161
 - **Per-category breakdown:**
-  - `untested` (untested): **71**
+  - `untested` (untested): **70**
   - `agent_via_run_agent` (agent (via run_agent)): **44**
-  - `validated_full` (validated (full)): **30**
+  - `validated_full` (validated (full)): **31**
   - `validated_partial` (validated (partial)): **8**
   - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
   - `meta_no_handler` (meta (no handler by design)): **1**
 
 ## Validation-doc corpus
 
-- **Total `*_validation.md` files:** 55
+- **Total `*_validation.md` files:** 56
 - **Substrate (cross-cutting) docs:** 10 — reduce risk platform-wide but do NOT validate per-tool invariants (S2795 F2 rename).
-- **Per-tool docs:** 45 — of which 37 have an explicit 'Covered actions' section (F1 checklist).
-- **Per-tool docs with `Template version` marker:** 23 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
+- **Per-tool docs:** 46 — of which 38 have an explicit 'Covered actions' section (F1 checklist).
+- **Per-tool docs with `Template version` marker:** 24 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
 
 ## Template compliance (T1b)
 
 Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without `Template version:` marker); `pass` = v1-conformant; `fail` = v1 marker present but mandatory section/frontmatter missing.
 
-- `warn`: **138**
-- `pass`: **23**
+- `warn`: **137**
+- `pass`: **24**
 
 ## Schema quality lints (F5 advisory column)
 
@@ -230,7 +230,7 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `proactive_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_gateway.py` |
 | `profile_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_gateway.py` |
 | `railway_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_railway.py` |
-| `reasoning_engine_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_agents.py` |
+| `reasoning_engine_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `recent_activity_tool` | ✓✓ | untested | warn | no_required | `core/services/td_handlers_content.py` |
 | `remember_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_core.py` |
 | `repo_tool` | ✓✓ | validated (doc, unknown coverage) | warn | — | `core/services/td_handlers_gateway.py` |
