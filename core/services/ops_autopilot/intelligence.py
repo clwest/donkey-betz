@@ -2249,6 +2249,18 @@ class DataIntegrityEngine:
         'embedding_text': 'historical_baseline',
     }
 
+    # Per-field lookback cap for HISTORICAL_BASELINE fields (S2899 Ledger Row #29).
+    # None = query all-time DB history — the S2898 Phase 1 default. May produce
+    #        "sticky" positives: a pair that populated the field long ago but has
+    #        legitimately stopped (e.g. retired data_type, replaced pipeline) will
+    #        keep emitting spikes on every scan of the current window.
+    # int N = restrict the baseline query to rows created in the last N days. Lets
+    #         the baseline decay with real usage; recommended once a pipeline lag
+    #         becomes chronic and stale historical populates start dominating.
+    FIELD_BASELINE_LOOKBACK_DAYS: dict = {
+        'embedding_text': None,
+    }
+
     def get_quality_report(self, hours: int = 24) -> dict:
         """Overall data quality report across spider feeds."""
         from django.utils import timezone as tz
@@ -2331,15 +2343,26 @@ class DataIntegrityEngine:
             'has_issues': len(issues) > 0,
         }
 
-    def _historical_populated_pairs(self, field: str) -> set:
-        """Return set of (spider_name, data_type) that have ever populated `field`.
+    def _historical_populated_pairs(
+        self,
+        field: str,
+        lookback_days: int | None = None,
+    ) -> set:
+        """Return set of (spider_name, data_type) that have populated `field`.
 
         Used by HISTORICAL_BASELINE applicability — a pair is applicable for a
         conditionally-populated field only if it has populated it at least once
-        in DB history. Single all-time query per scan call (S2898 Phase 1).
-        Phase 2 candidate: lookback cap (see zoom-out ledger).
+        in the baseline window. Single query per scan call.
+
+        Args:
+            field: the field to check baseline for.
+            lookback_days: if None, query all-time (S2898 Phase 1 default). If
+                set, restrict baseline to rows created in the last N days
+                (S2899 Phase 2 — mitigates "sticky" all-time semantics for
+                retired pipelines).
         """
         from django.db.models import Q
+        from django.utils import timezone as tz
         from core.models_unified_system import LegacySpiderData
 
         if field == 'embedding_text':
@@ -2356,6 +2379,10 @@ class DataIntegrityEngine:
             )
         else:
             return set()
+
+        if lookback_days is not None:
+            cutoff = tz.now() - timedelta(days=lookback_days)
+            qs = qs.filter(created_at__gte=cutoff)
 
         return {(r['spider_name'], r['data_type'])
                 for r in qs.values('spider_name', 'data_type').distinct()}
@@ -2413,7 +2440,10 @@ class DataIntegrityEngine:
             # Pre-compute historical baselines for HISTORICAL_BASELINE fields only.
             for field, policy in self.FIELD_APPLICABILITY.items():
                 if policy == 'historical_baseline':
-                    pairs = self._historical_populated_pairs(field)
+                    lookback = self.FIELD_BASELINE_LOOKBACK_DAYS.get(field)
+                    pairs = self._historical_populated_pairs(
+                        field, lookback_days=lookback,
+                    )
                     historical_populated_pairs[field] = pairs
                     baseline_pairs_count[field] = len(pairs)
 
@@ -2478,6 +2508,11 @@ class DataIntegrityEngine:
             'applicability_skipped': sum(applicability_skipped_by_field.values()),
             'applicability_skipped_by_field': applicability_skipped_by_field,
             'baseline_pairs_count': baseline_pairs_count,
+            'baseline_lookback_days': {
+                field: self.FIELD_BASELINE_LOOKBACK_DAYS.get(field)
+                for field, policy in self.FIELD_APPLICABILITY.items()
+                if policy == 'historical_baseline'
+            },
         }
 
     def get_duplicate_report(self, hours: int = 24) -> dict:
