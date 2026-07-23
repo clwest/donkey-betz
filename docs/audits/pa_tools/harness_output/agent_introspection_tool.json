@@ -2,64 +2,106 @@
   "actions": [
     {
       "action": "list",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 79,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "active_last_7d",
+        "agents",
+        "blocked_agents",
+        "blocked_count",
+        "by_agent_type",
+        "effective_action",
+        "fully_enabled_count",
+        "limit",
+        "reconciliation",
+        "requested_action",
+        "rerouted_agents",
+        "rerouted_count",
+        "router_routable_total",
+        "total_agents_db"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "stats",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 67,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "active_last_7d",
+        "blocked_agents",
+        "blocked_count",
+        "by_agent_type",
+        "effective_action",
+        "fully_enabled_count",
+        "reconciliation",
+        "requested_action",
+        "rerouted_agents",
+        "rerouted_count",
+        "router_routable_total",
+        "total_agents_db"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "details",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 9,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "agent",
+        "class_info",
+        "found",
+        "recent_7d"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "capabilities",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 8,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "agent",
+        "class_info",
+        "found",
+        "recent_7d"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "tools",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 10,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "action",
+        "tools",
+        "total_tool_schemas"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     }
   ],
   "harness_version": "v1",
   "run_metadata": {
-    "generated_at": "2026-07-23T02:50:01.398911+00:00",
-    "git_sha": "85cceea41"
+    "generated_at": "2026-07-23T03:20:52.680104+00:00",
+    "git_sha": "fc5bca145"
   },
   "schema_action_count": 5,
   "tool_name": "agent_introspection_tool"
