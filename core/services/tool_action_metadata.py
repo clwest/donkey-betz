@@ -155,6 +155,49 @@ TOOL_DEFAULTS: Dict[str, ToolDefaults] = {
         default_applicability='always',
         notes='deps: LLMCallLog ORM aggregates',
     ),
+    # Slice 2 batch 2 seed (S2906). Four actionless tools from
+    # td_handlers_agents.py — schema_action_count=0 for all four; TOOL_DEFAULTS
+    # covers "everything the tool exposes" trivially because there is no
+    # action enum to iterate. Uniform READ_ONLY per handler-trace evidence in
+    # each tool's S2906 validation doc.
+    #
+    # Batch composition rationale (per Rigby S2906 T0 SIGN AGREE-with-edits +
+    # zoom-out fold): actionless-only batch validates the doc-shape variant
+    # that the T1a harness cannot pre-populate. S2907 commits to a small-
+    # actionful all-read-only tool to stress the handler-trace-evidence
+    # claim under non-trivial action enumeration.
+    #
+    # Authoring evidence:
+    # - get_body_vitals: `td_handlers_agents.py:4766` — reads BodyCoordinator
+    #   `get_all_vitals` / `get_system_vitals` (LUNGS substrate). Read-only.
+    # - check_resource_budget: `td_handlers_agents.py:4796` — delegates to
+    #   `body_vitals.check_budget` (LUNGS substrate). Pre-flight gate; no
+    #   persisted decision.
+    # - get_system_alerts: `td_handlers_agents.py:4822` — same
+    #   `get_all_vitals` source, filters `alerts` slice by severity. S2906
+    #   same-PR fix expands handler param acceptance; safety class unchanged.
+    # - web_search: `td_handlers_agents.py:384` — Serper HTTP search;
+    #   handler-side max_results clamp; no local writes.
+    'get_body_vitals': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: BodyCoordinator vitals; actionless schema',
+    ),
+    'check_resource_budget': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: LUNGS body_vitals.check_budget; actionless schema',
+    ),
+    'get_system_alerts': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: BodyCoordinator alerts slice; actionless schema',
+    ),
+    'web_search': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='env: external:serper; actionless schema',
+    ),
 }
 
 
