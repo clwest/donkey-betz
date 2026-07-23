@@ -1219,6 +1219,294 @@ TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
               'memory_context_service cache; requires: memory_id + '
               'caller user_id',
     ),
+    # Slice 3 batch 3 per-action records (S2913, third batch this session —
+    # session close batch). 4 mixed-safety tools; batch 3 mirrors batch 1+2
+    # shape unchanged. Rigby T1 SIGN AGREE-with-edits (short cycle — batch
+    # 3 close-out; Rigby had full context from batches 1+2).
+    #
+    # Rigby T1 SIGN V1 verify-before-commit flags — Claude verified all 3:
+    # (a) messaging_tool read-receipt: VERIFIED no read-receipt update on
+    #     get_thread/list_threads/unread_count paths. Participation.
+    #     unread_count is READ, not written. See doc §5a for confirmation.
+    # (b) messaging_tool send_message: NOT in schema action enum but handler
+    #     path exists at :3850 (Session 1253 PR 4 defense-in-depth gate via
+    #     MESSAGING_TOOL_ALLOW_SEND=False). Added as MUTATION metadata to
+    #     document the code path even though it's schema-inaccessible.
+    # (c) governance_tool decision_create naming: VERIFIED clean — schema
+    #     uses `decision_create` (singular); handler DECISIONS_MAP at :3770
+    #     maps to underlying `'create'` action. Not drift.
+    # (d) LLM calls on read actions: VERIFIED no LLM/agent dispatch or
+    #     summarization on any covered read action (learning is pure
+    #     PAToolInsight ORM; dream is pure AgentDream ORM; governance
+    #     read paths are direct FailureSignature/AuditRemediationTask
+    #     ORM + gateway forwarding to boardroom/human_decisions read
+    #     handlers).
+    #
+    # Batch 3 composition (per Rigby T1 SIGN):
+    #   - messaging_tool: 3 schema-enum actions all READ_ONLY + 1 handler-
+    #     only schema-hidden send_message MUTATION (defense-in-depth).
+    #   - learning_tool: 4R + 2M (list_candidates/list_approved/list_expired
+    #     /stats read PAToolInsight; approve/reject .update() safety_class).
+    #   - dream_tool: 3R + 3M (list_top/details/stats read AgentDream;
+    #     approve fires post_save signal → promote_to_initiative +
+    #     execute_single_dream.delay async; dismiss updates outcome only;
+    #     create writes AgentDream row).
+    #   - governance_tool: 11R + 6M (gateway pattern via BOARDROOM_MAP +
+    #     DECISIONS_MAP; also 3 direct-dispatch actions — stats/
+    #     failure_signatures/remediation_tasks).
+    #
+    # Authoring evidence:
+    # - messaging_tool: `td_handlers_core.py:3834` — 3 schema actions +
+    #   send_message hidden path. Session 1253 PR 4 defense-in-depth gate.
+    # - learning_tool: `td_handlers_core.py:1904` — 6 actions against
+    #   PAToolInsight. approve/reject use .update() (bulk field write).
+    # - dream_tool: `td_handlers_core.py:282` — 6 actions against
+    #   AgentDream. approve at :348 → post_save → promote_to_initiative
+    #   + execute_single_dream.delay (Celery dispatch cascade). dismiss
+    #   at :365 only updates outcome fields. create at :380 writes new row.
+    # - governance_tool: `td_handlers_core.py:3702` — 17 actions gateway
+    #   pattern. BOARDROOM_MAP (10 actions → boardroom_tool). DECISIONS_MAP
+    #   (4 actions → human_decisions_tool). Direct: stats/
+    #   failure_signatures/remediation_tasks. Session 1079 base + Session
+    #   1100 read-only extensions.
+    ('messaging_tool', 'list_threads'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: ThreadParticipant ORM query filtered by user + '
+              'archived=False; joins last DirectMessage per thread; '
+              'reads participant.unread_count (no write); top-20 '
+              'ordered by thread.updated_at desc',
+    ),
+    ('messaging_tool', 'get_thread'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: ThreadParticipant lookup by (thread_id, user) then '
+              'DirectMessage top-50 ordered by created_at; NO read-receipt '
+              'mutation on fetch (verified S2913 Rigby T1 V1); dual-'
+              'semantic error envelope preserves participant enumeration '
+              'oracle (Rigby SIGN F2); requires: thread_id',
+    ),
+    ('messaging_tool', 'unread_count'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: ThreadParticipant aggregate sum(unread_count) over '
+              'user, archived=False, is_muted=False; no writes',
+    ),
+    ('messaging_tool', 'send_message'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='NOT in schema action enum but handler path exists at '
+              ':3850 (Session 1253 PR 4 defense-in-depth). Gated by '
+              'settings.MESSAGING_TOOL_ALLOW_SEND=False (default). If '
+              'enabled: creates MessageThread + ThreadParticipant + '
+              'DirectMessage rows + broadcasts WebSocket. Requires: '
+              'recipient_username + message',
+    ),
+    ('learning_tool', 'list_candidates'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: PAToolInsight ORM query filter '
+              'safety_class="candidate"; optional tool_name filter; '
+              'top-N ordered by evidence_count desc, confidence desc; '
+              'no LLM cost',
+    ),
+    ('learning_tool', 'list_approved'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: PAToolInsight ORM query filter '
+              'safety_class="approved"; optional tool_name filter; '
+              'top-N ordered by confidence desc, evidence_count desc',
+    ),
+    ('learning_tool', 'list_expired'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: PAToolInsight ORM query filter '
+              'expires_at__lte=now(); optional tool_name filter; '
+              'top-N ordered by expires_at desc',
+    ),
+    ('learning_tool', 'approve'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes PAToolInsight.safety_class="approved" via .update() '
+              '(bulk field write, not .save); requires: id (UUID); guard '
+              'filter includes safety_class="candidate" so already-'
+              'approved rows are no-op',
+    ),
+    ('learning_tool', 'reject'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes PAToolInsight.safety_class="rejected" via .update() '
+              '(bulk field write); requires: id (UUID); guard filter '
+              'includes safety_class="candidate" so already-decided '
+              'rows are no-op',
+    ),
+    ('learning_tool', 'stats'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: PAToolInsight aggregate group by (safety_class, '
+              'insight_type) with Count; totals dict for candidate/'
+              'approved/rejected',
+    ),
+    ('dream_tool', 'list_top'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: AgentDream ORM query filter composite_score>=0.5; '
+              'select_related agent; top-N ordered by composite_score '
+              'desc, dreamed_at desc',
+    ),
+    ('dream_tool', 'details'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: AgentDream.objects.get(id=dream_id) with '
+              'select_related agent; requires: id (raises ValueError '
+              'if missing or dream not found)',
+    ),
+    ('dream_tool', 'approve'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes AgentDream.decision_outcome="approved" + '
+              'user_reaction="loved" + user_feedback via .save('
+              'update_fields=[...]); FIRES post_save signal → '
+              'promote_to_initiative() + execute_single_dream.delay() '
+              '(async Celery dispatch); requires: id',
+    ),
+    ('dream_tool', 'dismiss'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes AgentDream.decision_outcome="rejected" + '
+              'user_reaction="dismissed" + user_feedback via .save('
+              'update_fields=[...]); no signal-driven Celery cascade '
+              '(unlike approve); requires: id',
+    ),
+    ('dream_tool', 'create'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='creates AgentDream row via .objects.create; resolves PA '
+              'as attributed agent via Agent.filter(name__icontains='
+              '"personal assistant").first() with active-agent fallback; '
+              'requires: title (non-empty after strip)',
+    ),
+    ('dream_tool', 'stats'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: AgentDream aggregate total + by_outcome + shown_count '
+              '+ with_initiative + avg composite/creativity/actionability/'
+              'relevance scores',
+    ),
+    ('governance_tool', 'inbox'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: gateway dispatch via BOARDROOM_MAP[inbox] → '
+              'boardroom_tool.stats (attention + decision counts + top '
+              'items); no writes',
+    ),
+    ('governance_tool', 'stats'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: bundled aggregate — boardroom_tool.stats + '
+              'human_decisions_tool.stats + FailureSignature count + '
+              'AuditRemediationTask count; Session 1103c bundle to '
+              'replace multi-step chains',
+    ),
+    ('governance_tool', 'attention_list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: gateway dispatch via BOARDROOM_MAP → '
+              'boardroom_tool.list_attention (pending attention items)',
+    ),
+    ('governance_tool', 'attention_detail'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: gateway dispatch via BOARDROOM_MAP → '
+              'boardroom_tool.lookup (ID-based detail per Session 1097); '
+              'requires: id',
+    ),
+    ('governance_tool', 'attention_lookup'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: gateway dispatch via BOARDROOM_MAP → '
+              'boardroom_tool.lookup (title-query based find); requires: '
+              'title_query',
+    ),
+    ('governance_tool', 'attention_approve'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → boardroom_tool.'
+              'approve_attention; downstream may trigger further '
+              'state transitions; requires: id',
+    ),
+    ('governance_tool', 'attention_ignore'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → boardroom_tool.'
+              'ignore_attention; requires: id',
+    ),
+    ('governance_tool', 'decision_list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: gateway dispatch via BOARDROOM_MAP → '
+              'boardroom_tool.list_decisions (draft decision summaries)',
+    ),
+    ('governance_tool', 'decision_promote'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → boardroom_tool.'
+              'promote_decision (draft → canonical); requires: id',
+    ),
+    ('governance_tool', 'decision_reject'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → boardroom_tool.'
+              'reject_decision; requires: id + optional reason',
+    ),
+    ('governance_tool', 'decisions_list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: gateway dispatch via DECISIONS_MAP → '
+              'human_decisions_tool.list (pending human decisions; '
+              'distinct from decision_list which surfaces boardroom '
+              'draft decisions)',
+    ),
+    ('governance_tool', 'decisions_stats'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: gateway dispatch via DECISIONS_MAP → '
+              'human_decisions_tool.stats (decision statistics)',
+    ),
+    ('governance_tool', 'decision_create'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → human_decisions_tool.create '
+              '(new decision request row); requires: title + summary',
+    ),
+    ('governance_tool', 'decision_decide'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes via gateway dispatch → human_decisions_tool.decide '
+              '(approve/reject/defer/watch on a decision); param '
+              'translation id→item_id in wrapper; requires: id + decision',
+    ),
+    ('governance_tool', 'triage_batch'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: gateway dispatch via BOARDROOM_MAP → '
+              'boardroom_tool.get_triage_batch (batch of items for '
+              'triage — read-only surface; batch_size default 5)',
+    ),
+    ('governance_tool', 'failure_signatures'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: FailureSignature ORM query direct read — top-N '
+              'ordered by last_seen_at desc; Session 1100 read-only '
+              'surface (no gateway dispatch); limit capped at 30',
+    ),
+    ('governance_tool', 'remediation_tasks'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: AuditRemediationTask ORM query direct read with '
+              'select_related finding — top-N ordered by id desc; '
+              'Session 1100 read-only surface; limit capped at 30',
+    ),
 }
 
 

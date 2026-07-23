@@ -2,42 +2,57 @@
   "actions": [
     {
       "action": "list_threads",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "soft_error",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 5,
+      "notes": "inline_error_code=permission_denied; inline_msg=Authentication required for messaging",
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "error",
+        "error_code",
+        "success"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "get_thread",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "soft_error",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 3,
+      "notes": "inline_error_code=permission_denied; inline_msg=Authentication required for messaging",
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "error",
+        "error_code",
+        "success"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "unread_count",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "soft_error",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 2,
+      "notes": "inline_error_code=permission_denied; inline_msg=Authentication required for messaging",
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "error",
+        "error_code",
+        "success"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     }
   ],
   "harness_version": "v2",
   "run_metadata": {
-    "generated_at": "2026-07-23T16:58:42.000383+00:00",
-    "git_sha": "e642c7aa8"
+    "generated_at": "2026-07-23T20:24:22.465369+00:00",
+    "git_sha": "b2a2ae0e5"
   },
   "schema_action_count": 3,
   "tool_name": "messaging_tool"

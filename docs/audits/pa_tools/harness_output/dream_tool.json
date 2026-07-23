@@ -2,75 +2,86 @@
   "actions": [
     {
       "action": "list_top",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 23,
+      "notes": null,
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "count",
+        "dreams"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "details",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "expected_outcome": "error_captured",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 7,
+      "notes": "error_code=TOOL_EXCEPTION; msg=id is required for dream details",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "safety_class": "READ_ONLY",
+      "status_code": 500
     },
     {
       "action": "approve",
-      "expected_outcome": "skipped_metadata_missing",
+      "expected_outcome": "skipped_mutation",
       "input_profile": "skipped_no_dispatch",
       "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "notes": "MUTATION \u2014 not exercised at T1a MVP",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
+      "safety_class": "MUTATION",
       "status_code": null
     },
     {
       "action": "dismiss",
-      "expected_outcome": "skipped_metadata_missing",
+      "expected_outcome": "skipped_mutation",
       "input_profile": "skipped_no_dispatch",
       "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "notes": "MUTATION \u2014 not exercised at T1a MVP",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
+      "safety_class": "MUTATION",
       "status_code": null
     },
     {
       "action": "stats",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 18,
+      "notes": null,
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "avg_scores",
+        "by_outcome",
+        "shown_to_user",
+        "total_dreams",
+        "with_initiative"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "create",
-      "expected_outcome": "skipped_metadata_missing",
+      "expected_outcome": "skipped_mutation",
       "input_profile": "skipped_no_dispatch",
       "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "notes": "MUTATION \u2014 not exercised at T1a MVP",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
+      "safety_class": "MUTATION",
       "status_code": null
     }
   ],
   "harness_version": "v2",
   "run_metadata": {
-    "generated_at": "2026-07-23T16:58:22.743658+00:00",
-    "git_sha": "e642c7aa8"
+    "generated_at": "2026-07-23T20:24:36.958825+00:00",
+    "git_sha": "b2a2ae0e5"
   },
   "schema_action_count": 6,
   "tool_name": "dream_tool"
