@@ -605,6 +605,186 @@ TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
               'Celery long_running queue; requires: topic OR query '
               '(non-empty after strip)',
     ),
+    # Slice 2 batch 6a per-action records (S2911). Four mixed-safety tools
+    # from td_handlers_agents.py, scoped to READ_ONLY subset for validation-
+    # doc coverage this ship. Batch 6a excludes the two agent-invocation
+    # tools (reasoning_engine_tool + universal_agent_tool) — those ship in
+    # batch 6b with dedicated scrutiny for LLM cost + agent-execution side
+    # effects (per Claude+Rigby T0 SIGN AGREE-with-edits + Chris ratify).
+    #
+    # Batch composition rationale (per Rigby S2911 T0 SIGN Q1 AGREE):
+    #   - opportunity_manager_tool / task_manager_tool / video_history_tool
+    #     have mixed READ_ONLY + mutation actions; scoped-to-READ_ONLY-subset
+    #     via per-action records prevents accidental writes at the schema
+    #     contract layer, not just intent (S2908 shape-break precedent).
+    #   - pipeline_orchestrator_tool has a single READ_ONLY action; per-action
+    #     record chosen over TOOL_DEFAULTS to keep this session's pattern
+    #     UNIFORM per-action (does NOT increment the S2905 metadata-pattern-
+    #     selection lint counter).
+    #
+    # Rigby T0 SIGN Q4 zoom-out findings tracked (not acted this ship):
+    #   - task_manager_tool.create HIDDEN MUTATION: implicitly creates an
+    #     Opportunity row when payload lacks opportunity_id (handler
+    #     `td_handlers_agents.py:1452-1464`). Documented in
+    #     `task_manager_tool_validation.md` §5a — MUTATION containment.
+    #   - opportunity_manager_tool.delete CASCADES to linked OpportunityTask
+    #     rows (handler `:1369-1377`) — classified IRREVERSIBLE, aligning
+    #     with `media_tool.delete` precedent (S2908).
+    #   - Schema↔handler drift on `reasoning_engine_tool` (schema advertises
+    #     {query, reasoning_type}; handler dispatches on action in
+    #     {status, thoughts, trigger}) — 1st confirmed instance of Rigby
+    #     Q4 concern #3. Blocks batch 6b until pre-fix.
+    #
+    # Authoring evidence:
+    # - opportunity_manager_tool: `td_handlers_agents.py:1178` — 6 actions
+    #   (list/get/stats READ_ONLY; update_status/create MUTATION; delete
+    #   IRREVERSIBLE via cascade). Scope param defaults to 'mine' (user
+    #   filter); 'all' opts into platform-wide pool (Session 1222 P4).
+    # - task_manager_tool: `td_handlers_agents.py:1384` — 6 actions
+    #   (list/stats READ_ONLY; create/update/complete MUTATION; delete
+    #   IRREVERSIBLE). Base queryset always user-filtered when user_id
+    #   present. `complete` sets status='won' (domain semantics).
+    # - pipeline_orchestrator_tool: `td_handlers_agents.py:1558` — 1
+    #   action (status). Aggregate reads against Initiative model
+    #   (by_stage 1-5 + by_status + active count).
+    # - video_history_tool: `td_handlers_agents.py:4551` — 7 actions
+    #   (list/search/detail/resolve/transcript_status READ_ONLY;
+    #   transcribe/content_pack MUTATION dispatching Celery async jobs).
+    #   transcribe idempotent-guards on existing queued/running transcript;
+    #   content_pack requires prior completed transcript.
+    ('opportunity_manager_tool', 'list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: Opportunity ORM query; scope="mine" (default) filters '
+              'by user_id, scope="all" surfaces platform-wide lead pool '
+              '(spider-ingested rows owned by system user)',
+    ),
+    ('opportunity_manager_tool', 'get'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: Opportunity.objects.filter(id=opp_id).first(); '
+              'requires: opportunity_id | id (raises ValueError if missing)',
+    ),
+    ('opportunity_manager_tool', 'stats'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: Opportunity aggregate (by_status + by_type + '
+              'total_potential_revenue); scope="all" adds owner_breakdown',
+    ),
+    ('opportunity_manager_tool', 'update_status'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes Opportunity.status field via save(update_fields); '
+              'requires: id + status (validated against '
+              'active|pending|applied|accepted|rejected|expired)',
+    ),
+    ('opportunity_manager_tool', 'create'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='creates a new Opportunity row; requires: user_id + title '
+              '(non-empty after strip)',
+    ),
+    ('opportunity_manager_tool', 'delete'): ToolActionMetadata(
+        safety_class='IRREVERSIBLE',
+        applicability='conditional',
+        notes='destroys Opportunity row via opp.delete() — CASCADE deletes '
+              'linked OpportunityTask rows; no confirm flag, no soft-delete; '
+              'requires: id | opportunity_id',
+    ),
+    ('task_manager_tool', 'list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: OpportunityTask ORM query; user-scoped when user_id '
+              'present; status + priority optional filters',
+    ),
+    ('task_manager_tool', 'stats'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: OpportunityTask aggregate (by_status + by_priority + '
+              'total)',
+    ),
+    ('task_manager_tool', 'create'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='creates OpportunityTask row; HIDDEN MUTATION: implicitly '
+              'creates a standalone Opportunity row when opportunity_id '
+              'is absent (to satisfy FK); requires: user_id + title',
+    ),
+    ('task_manager_tool', 'update'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes OpportunityTask fields (status | priority | title | '
+              'description) via save(update_fields); requires: id; '
+              'Session 1228 PR-A key-in-payload guard prevents accidental '
+              'field clear from LLM autofill=""',
+    ),
+    ('task_manager_tool', 'complete'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='sets OpportunityTask.status="won" (domain-specific '
+              'complete semantics); requires: id',
+    ),
+    ('task_manager_tool', 'delete'): ToolActionMetadata(
+        safety_class='IRREVERSIBLE',
+        applicability='conditional',
+        notes='destroys OpportunityTask row via task.delete() — no confirm '
+              'flag, no soft-delete; requires: id',
+    ),
+    ('pipeline_orchestrator_tool', 'status'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: Initiative aggregate (by_stage 1-5 + by_status + '
+              'initiatives_active where current_stage<5 AND status=ACTIVE)',
+    ),
+    ('video_history_tool', 'list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: VideoHistory ORM query; user-scoped when user_id '
+              'present; video_type + status filters; defaults status='
+              '"completed"; limit capped at 50',
+    ),
+    ('video_history_tool', 'search'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: VideoHistory ORM Q-filter on prompt|original_filename '
+              'icontains; user-scoped + status="completed"; '
+              'requires: query (raises ValueError if missing)',
+    ),
+    ('video_history_tool', 'detail'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: VideoHistory single-row lookup by id OR sequential_number '
+              '(sequential is computed via order_by created_at index); '
+              'requires: id | sequential_number',
+    ),
+    ('video_history_tool', 'resolve'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: core.video_resolver.resolve_video (VideoHistory lookup); '
+              'accepts: id | sequential_number | query (as URL)',
+    ),
+    ('video_history_tool', 'transcript_status'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: VideoTranscript ORM read by transcript_id, or latest '
+              'by video ref (id|sequential_number); text truncated at 3000 '
+              'chars when status=completed',
+    ),
+    ('video_history_tool', 'transcribe'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='creates VideoTranscript row + dispatches transcribe_video_task '
+              'to Celery (Whisper async); idempotent-guarded against '
+              'existing queued|running transcript; requires: id | '
+              'sequential_number',
+    ),
+    ('video_history_tool', 'content_pack'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='dispatches generate_video_content_pack_task to Celery '
+              '(async LLM-heavy content-pack gen); requires: id | '
+              'sequential_number + a completed VideoTranscript',
+    ),
 }
 
 
