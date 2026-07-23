@@ -382,6 +382,86 @@ TOOL_DEFAULTS: Dict[str, ToolDefaults] = {
               '1169); actionless schema; all three hops fire per '
               'dispatch',
     ),
+    # Slice 3 batch 6 seed (S2916). Network trio — 3 actionless tools whose
+    # first-hop is the network. Introduces §5b **Appendix N (Network-
+    # Preflight)** per Rigby S2916 T0 SIGN Q2 verdict: network callees deserve
+    # declared endpoint / auth / timeout / SSRF / redirect fields to prevent
+    # grep-hunt review cost. See per-tool validation docs at
+    # `docs/research/tools/validation/` for the full appendix.
+    #
+    # Composition rationale (per Rigby S2916 T0 SIGN Q1 AGREE-with-edits):
+    # - fleet_health: fleet-wide `/api/health` rollup, authless probe of
+    #   Dockerized fleet apps. READ_ONLY (no ORM writes).
+    # - signal_studio_judge_stats: single-endpoint httpx GET, authless by
+    #   design. READ_ONLY (no ORM writes). The "cleanest network-read" case.
+    # - http_smoke_test: multi-step HTTP smoke with `OpsRunTracker`. MUTATION
+    #   because every dispatch persists OpsRun + OpsRunEvent rows regardless
+    #   of network outcome — Rigby's Q3 tightening rule adopted: safety class
+    #   tracks DB side effects, not semantic intent.
+    #
+    # Rigby S2916 T0 SIGN Q1 tool-probe catch: initial framing described
+    # fleet_health as "HMAC signing path via mgmt command" — Rigby's grep for
+    # `HMAC` returned zero matches. `probe_fleet` at
+    # `fleet_health_rollup.py:88` is plain `urllib.request.urlopen(url,
+    # timeout=timeout_s)` with NO signing. Validation doc corrected to
+    # authless_by_design.
+    #
+    # Rigby S2916 T0 SIGN Q4 Fold candidate (future-trigger): standardized
+    # appendices (Network-Preflight now + Async-Fanout at batch 7) prevent
+    # §5b "notes-field creep" into unreviewable policy surface. Rigby-Tool-
+    # Gap Ledger row #38. 2nd adoption trigger at batch 7 (async duo)
+    # promotes to Fold-candidate evaluation at next Slice close.
+    #
+    # Authoring evidence:
+    # - fleet_health: `td_handlers_core.py:159-186` delegates to `probe_fleet`
+    #   from `core/management/commands/fleet_health_rollup.py:111-142`; no
+    #   ORM writes, no LLM, no dispatch.
+    # - signal_studio_judge_stats: `td_handlers_core.py:209-280` direct
+    #   `httpx.Client.get()` to `{SIGNAL_STUDIO_API_URL}/api/judge-stats`;
+    #   no ORM writes, no LLM, no dispatch.
+    # - http_smoke_test: `td_handlers_core.py:1884-1902` wraps
+    #   `run_smoke_test` in `OpsRunTracker` context manager
+    #   (`core/tools/ops_run_tracker.py:32-42`) which writes `OpsRun.
+    #   objects.create()` on `__enter__` + `OpsRunEvent.objects.create()`
+    #   per step via `_emit`. Third actionless-MUTATION TOOL_DEFAULTS entry
+    #   after legal_doc_drafter_agent (S2910) + research_and_create_tool
+    #   (S2915) — 3rd instance triggers "actionless side-effecting chain"
+    #   pattern-naming evaluation per S2915 forward-carry.
+    'fleet_health': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: probe_fleet (fleet_health_rollup.py:111) → '
+              '_load_fleet_configs (reads config/external_repos/*.json) '
+              '→ _probe_one (urllib.urlopen per app, default timeout '
+              '3s, authless); no ORM writes; actionless schema; '
+              'Appendix N (multi-endpoint, authless, no SSRF allowlist '
+              'because URL source is repo-controlled config)',
+    ),
+    'signal_studio_judge_stats': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: httpx.Client.get({SIGNAL_STUDIO_API_URL}/api/'
+              'judge-stats?days=N) — authless by design; httpx.Timeout('
+              'connect=5, read=10, write=5, pool=5); days clamped '
+              '1..90; no ORM writes; actionless schema; Appendix N '
+              '(single-endpoint, authless_by_design, no SSRF allowlist '
+              'because URL source is env var)',
+    ),
+    'http_smoke_test': ToolDefaults(
+        default_safety_class='MUTATION',
+        default_applicability='always',
+        notes='writes: OpsRunTracker context manager → OpsRun.objects.'
+              'create on __enter__ + OpsRunEvent.objects.create per step '
+              'via _emit + OpsRun.save on __exit__; every dispatch '
+              'persists at least 1 OpsRun + 2 OpsRunEvent rows even on '
+              'payload validation failure; wraps run_smoke_test '
+              '(urllib.urlopen per step, MAX_STEPS=50, 20s timeout, '
+              '1MB response cap, SSRF allowlist ^(localhost|127.0.0.1|'
+              '*.railway.app)$ + private-IP block); auth via '
+              '_resolve_auth_token (local DRF Token ORM read OR '
+              'PA_API_TOKEN env); actionless schema; third actionless-'
+              'MUTATION TOOL_DEFAULTS entry (S2910/S2915/S2916)',
+    ),
 }
 
 
