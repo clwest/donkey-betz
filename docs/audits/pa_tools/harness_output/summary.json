@@ -1,5 +1,5 @@
 {
-  "harness_version": "v1",
+  "harness_version": "v2",
   "in_class_total": 116,
   "parity_mismatches": [
     {
@@ -185,937 +185,1053 @@
     }
   ],
   "run_metadata": {
-    "generated_at": "2026-07-23T15:04:42.111507+00:00",
-    "git_sha": "03ee92d5f"
+    "generated_at": "2026-07-23T15:47:09.932629+00:00",
+    "git_sha": "35aea0a61"
   },
   "targets_run": 116,
   "tools": [
     {
       "action_count": 6,
-      "artifact_sha256": "4a8fb9cf2fcdb10c",
+      "artifact_sha256": "b8406447a41c9dcf",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 6,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "active_priority_tool"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "df4d03630a74b150",
+      "artifact_sha256": "dc2350b3dda2dbc2",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 3,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "active_repo_tool"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "5817f150bdfae536",
+      "artifact_sha256": "18e92181238add67",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 4,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "agent_control_tool"
     },
     {
       "action_count": 5,
-      "artifact_sha256": "24ffc4cb28d68808",
+      "artifact_sha256": "5f2b90e6b1831724",
       "read_only_dispatched": 5,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "agent_introspection_tool"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "838d08a2441b2247",
+      "artifact_sha256": "cf67aad7404a633d",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 3,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "agent_memory_tool"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "64ebed26f89996fe",
+      "artifact_sha256": "25d4ba1511bdf670",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 3,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "analytics_tool"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "8f066ccd8d4bddef",
+      "artifact_sha256": "bfde38ae68865097",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 4,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "ats_tool"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "23dd54fbcab0759f",
+      "artifact_sha256": "00b90992b01fb8b8",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 4,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "audit_tool"
     },
     {
       "action_count": 95,
-      "artifact_sha256": "cfe5310a9980bdee",
+      "artifact_sha256": "6d9c4c68b6caeed2",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 95,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "autopilot_tool"
     },
     {
       "action_count": 8,
-      "artifact_sha256": "15d2c43a74bd0b2f",
+      "artifact_sha256": "841336853243c7c7",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 8,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "blog_tool"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "def3cec6b2267989",
+      "artifact_sha256": "194ba4d4550a3e3f",
       "read_only_dispatched": 2,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "bpaas_tool"
     },
     {
       "action_count": 7,
-      "artifact_sha256": "b4a97041739f762b",
+      "artifact_sha256": "315561a9808d50ce",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 7,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "brainstorm_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "ca135975f799e6d6",
+      "artifact_sha256": "ff7e162c800e5766",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "brand_strategy_agent"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "741cfeb74e7d1745",
+      "artifact_sha256": "19e301a4851a9ced",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 4,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "calendar_tool"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "93e2a67477396cec",
+      "artifact_sha256": "b0e6c8a3465b4a09",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 3,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "campaign_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "2bedc446b522b931",
+      "artifact_sha256": "867f04c0ba47805a",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "character_training_agent"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "9daee983f2d907e8",
+      "artifact_sha256": "4ff643abc0fbd1a8",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "check_resource_budget"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "a9328f9f2cc721cd",
+      "artifact_sha256": "2f8f3e33c4344aaf",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "claude_code_tool"
     },
     {
       "action_count": 8,
-      "artifact_sha256": "9d930d70263b1a5f",
+      "artifact_sha256": "1734695319f59492",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 8,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "cockpit_tool"
     },
     {
       "action_count": 7,
-      "artifact_sha256": "c9a876267cdee594",
+      "artifact_sha256": "fa106c1ba521f74f",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 7,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "code_job_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "1f9323c558367a5d",
+      "artifact_sha256": "e9e26eadd2a3d249",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "competitor_analysis_agent"
     },
     {
       "action_count": 8,
-      "artifact_sha256": "2598803629e392da",
+      "artifact_sha256": "877712a0fb107cd6",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 8,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "competitor_comparison_tool"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "52ddee09ccfad4a5",
+      "artifact_sha256": "b51885b845f3e79f",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 3,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "conceptforge_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "a976b03cb4e38952",
+      "artifact_sha256": "6fad3ebf2ee5f214",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "content_strategy_agent"
     },
     {
       "action_count": 26,
-      "artifact_sha256": "f750250523972fba",
+      "artifact_sha256": "237552090f197a22",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 26,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "content_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "4807d1bae8292c8e",
+      "artifact_sha256": "f88b8a4861630aaf",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "content_writer_agent"
     },
     {
       "action_count": 5,
-      "artifact_sha256": "b517fc194242ee11",
+      "artifact_sha256": "476501acc6ecdc83",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 5,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "conversation_tool"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "c2dc0a3aa9995b53",
+      "artifact_sha256": "11e080fceb05f2bc",
       "read_only_dispatched": 3,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "cost_telemetry_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "26f61057fb8a88ac",
+      "artifact_sha256": "74a0dacd7bad8186",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "create_brand_video"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "d1972ef1c5272dce",
+      "artifact_sha256": "7cd4a4d2e785f9bb",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "create_project_from_research"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "ba85234e13990f3b",
+      "artifact_sha256": "7dc854dc1270c664",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "customer_research_agent"
     },
     {
       "action_count": 6,
-      "artifact_sha256": "706673775810b196",
+      "artifact_sha256": "6c84e8d04ad5c5c6",
       "read_only_dispatched": 5,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 2,
       "tool_name": "davinci_tool"
     },
     {
       "action_count": 7,
-      "artifact_sha256": "5c9503e9f0cd7ec7",
+      "artifact_sha256": "2e0a038d3d481326",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 7,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "db_health_tool"
     },
     {
       "action_count": 18,
-      "artifact_sha256": "fe8534a9b686e074",
+      "artifact_sha256": "8fb8b0499e494e19",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 18,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "deliverable_tool"
     },
     {
       "action_count": 7,
-      "artifact_sha256": "00cf29fa8f105f3c",
+      "artifact_sha256": "7e203ec80a94f6f6",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 7,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "diagnostics_tool"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "e6c5aa8c79aa5b5c",
+      "artifact_sha256": "9f135df6c733339e",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 3,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "discord_tool"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "0699fe15557a2352",
+      "artifact_sha256": "4d2a161d37ae986c",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 4,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "distribution_tool"
     },
     {
       "action_count": 6,
-      "artifact_sha256": "55b0ef6e552d5a71",
+      "artifact_sha256": "4798b9734bca9680",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 6,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "dream_tool"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "3bebd077740c36bf",
+      "artifact_sha256": "c84bd528a57c6b8a",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 4,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "employee_tool"
     },
     {
       "action_count": 5,
-      "artifact_sha256": "46cc131dca500216",
+      "artifact_sha256": "c3492490c39521e4",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 5,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "execution_history_tool"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "b8f069e996f3889c",
+      "artifact_sha256": "b04e5083e780c522",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 3,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "experiment_tool"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "d0b541960b4f8a56",
+      "artifact_sha256": "2cad45477597fd03",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 4,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "feedback_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "46b411b6ff5ae774",
+      "artifact_sha256": "0b267a2eaee367fd",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "fleet_health"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "0f4b1d2c69e90ba4",
+      "artifact_sha256": "396622146a778559",
       "read_only_dispatched": 3,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "gates_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "59be423e07ec4f0a",
+      "artifact_sha256": "1ad7731213d60e8d",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "get_body_vitals"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "df49d282c7e4d41f",
+      "artifact_sha256": "edcbeb95c63d3484",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "get_system_alerts"
     },
     {
       "action_count": 17,
-      "artifact_sha256": "dc6bf4fbfb05f612",
+      "artifact_sha256": "9c092a6dcde72082",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 17,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "governance_tool"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "64a21cee348c42d8",
+      "artifact_sha256": "5cc752fd17163bb9",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 4,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "governor_tool"
     },
     {
       "action_count": 2,
-      "artifact_sha256": "7daace5e438379cd",
+      "artifact_sha256": "4fc364ef73bcf117",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 2,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "heartbeat_history_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "1c0889ccac129237",
+      "artifact_sha256": "6199b34263b62853",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "http_smoke_test"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "0adfac966b8aa409",
+      "artifact_sha256": "dc7da87ccd373a72",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "image_editing_agent"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "e9d03fb99e790ab4",
+      "artifact_sha256": "cec690d3d16dd8cf",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 4,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "infra_health_tool"
     },
     {
       "action_count": 19,
-      "artifact_sha256": "a4a51d8e1ea5249d",
+      "artifact_sha256": "0c15e8c656d6e4e9",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 19,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "intelligence_tool"
     },
     {
       "action_count": 5,
-      "artifact_sha256": "6dbb5994f09afa52",
+      "artifact_sha256": "aa7e474ca5faa7f2",
       "read_only_dispatched": 5,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 3,
       "tool_name": "kb_tool"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "7881911b6c38a898",
+      "artifact_sha256": "381c30c51cab4ad4",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 3,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "learning_patterns_tool"
     },
     {
       "action_count": 6,
-      "artifact_sha256": "7d66cc4de5ab783b",
+      "artifact_sha256": "a228df3cc9dfdbbc",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 6,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "learning_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "8d570f8b6cfb0a27",
+      "artifact_sha256": "0c508c25713b6d74",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "legal_doc_drafter_agent"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "647d8f93c128d357",
+      "artifact_sha256": "307d7db4116e894b",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "marketing_strategy_agent"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "3d06f729ece03f95",
+      "artifact_sha256": "77cad0d0abc836d6",
       "read_only_dispatched": 3,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "media_tool"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "8c8a13100a1d94d8",
+      "artifact_sha256": "2141a6c3bda0bfe2",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 3,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "messaging_tool"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "d04d3152d33c80ad",
+      "artifact_sha256": "ddcde1a0efc5989a",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 3,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "mission_verdict"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "770238c7bf030125",
+      "artifact_sha256": "5efc6540b4c6e910",
       "read_only_dispatched": 3,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "ml_analysis"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "35af7eaef8792aa4",
+      "artifact_sha256": "1dc1a21d9a5ae177",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 4,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "mobile_tool"
     },
     {
       "action_count": 5,
-      "artifact_sha256": "9ee7ad284098eef8",
+      "artifact_sha256": "ecc6a2e420c4819f",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 5,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "narrative_tool"
     },
     {
       "action_count": 7,
-      "artifact_sha256": "62b60ab96c1047e9",
+      "artifact_sha256": "5f2271f7ff811a41",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 7,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "newsletter_tool"
     },
     {
       "action_count": 6,
-      "artifact_sha256": "64e53e063763a0d3",
+      "artifact_sha256": "d58f5799607b8228",
       "read_only_dispatched": 3,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 3,
       "tool_name": "obs_tool"
     },
     {
       "action_count": 6,
-      "artifact_sha256": "db2b219ef9027e01",
+      "artifact_sha256": "91f90d757df8ec14",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 6,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "opportunity_manager_tool"
     },
     {
       "action_count": 2,
-      "artifact_sha256": "054443fd4cea7865",
+      "artifact_sha256": "177a281c0e48c50b",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 2,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "ops_digest_tool"
     },
     {
       "action_count": 22,
-      "artifact_sha256": "b49a6b30035b4cc1",
+      "artifact_sha256": "07385f44ce7f842c",
       "read_only_dispatched": 21,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 1,
+      "soft_error_count": 1,
       "tool_name": "ops_tool"
     },
     {
       "action_count": 5,
-      "artifact_sha256": "871f4a82591a9af7",
+      "artifact_sha256": "7085847dda9b9e1d",
       "read_only_dispatched": 5,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 4,
       "tool_name": "orm_inspect_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "37ccce49b0853040",
+      "artifact_sha256": "57574d68a91c6a02",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "paid_interest_status"
     },
     {
       "action_count": 2,
-      "artifact_sha256": "c6acb32050e8da63",
+      "artifact_sha256": "6a44f18df7917d4a",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 2,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "persona_tool"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "f478b50b4e3c120f",
+      "artifact_sha256": "e1273732f6dccfc6",
       "read_only_dispatched": 3,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "pilots_tool"
     },
     {
       "action_count": 1,
-      "artifact_sha256": "1b91533dd4618d9a",
+      "artifact_sha256": "96f445e028b966b4",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 1,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "pipeline_orchestrator_tool"
     },
     {
       "action_count": 7,
-      "artifact_sha256": "843748dbf550f04c",
+      "artifact_sha256": "61b3d659f9f4ee04",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 7,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "platform_awareness_tool"
     },
     {
       "action_count": 5,
-      "artifact_sha256": "08853a71c5377e17",
+      "artifact_sha256": "1263cee574d08110",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 5,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "platform_config_tool"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "3eed3eb259fa09d3",
+      "artifact_sha256": "d7016589c79ad4fa",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 4,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "podcast_tool"
     },
     {
       "action_count": 8,
-      "artifact_sha256": "89abd530672547d8",
+      "artifact_sha256": "0d266068b93ac994",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 8,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "proactive_tool"
     },
     {
       "action_count": 6,
-      "artifact_sha256": "8c3312dc6b96a3f9",
+      "artifact_sha256": "663720d9501ce97d",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 6,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "profile_tool"
     },
     {
       "action_count": 7,
-      "artifact_sha256": "99ce9d5c071e1b0e",
+      "artifact_sha256": "ed5daa930eb37d8a",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 7,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "railway_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "640a2faf81f4b2de",
+      "artifact_sha256": "3a8110e8e77252bc",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "reasoning_engine_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "5c0e22ce564be88a",
+      "artifact_sha256": "ce6b37b7b0265abf",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "recent_activity_tool"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "ca438120c4b2297f",
+      "artifact_sha256": "27240ce7a73204ef",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 4,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "remember_tool"
     },
     {
       "action_count": 5,
-      "artifact_sha256": "b00d4c70a5ea91b0",
+      "artifact_sha256": "1abf1eefbdc40a7b",
       "read_only_dispatched": 5,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 2,
       "tool_name": "repo_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "9e9b32e7b081a786",
+      "artifact_sha256": "2c6a537feece5687",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "research_and_create_tool"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "f1becd31edb6556c",
+      "artifact_sha256": "ea79cefaefdfbd49",
       "read_only_dispatched": 2,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "revenue_tracker_tool"
     },
     {
       "action_count": 1,
-      "artifact_sha256": "1456aae37d7454dc",
+      "artifact_sha256": "fe0b007d07194a11",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 1,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "rigby_shift_brief_tool"
     },
     {
       "action_count": 5,
-      "artifact_sha256": "98ddafb826df4555",
+      "artifact_sha256": "997f1c77639d2cde",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 5,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "rigby_work_item"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "c38d453ba91b879a",
+      "artifact_sha256": "91ac52db55343501",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "schedule_followup"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "b77fafa4aee2de10",
+      "artifact_sha256": "4bb050a0bd63c5ec",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 3,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "scheduled_tasks_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "d58f768314a60165",
+      "artifact_sha256": "db01d9254aa96484",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "search_docs"
     },
     {
       "action_count": 5,
-      "artifact_sha256": "b2ddcbda191a0cfb",
+      "artifact_sha256": "673af7dc3b68ada8",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 5,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "self_awareness_tool"
     },
     {
       "action_count": 7,
-      "artifact_sha256": "ea4002bd45395a05",
+      "artifact_sha256": "9a6055e0e2b23147",
       "read_only_dispatched": 3,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 2,
       "tool_name": "session_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "15f5e427b3e5bfbe",
+      "artifact_sha256": "1cddfe51a1a1365b",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "signal_studio_judge_stats"
     },
     {
       "action_count": 1,
-      "artifact_sha256": "07a883ccbdc10292",
+      "artifact_sha256": "05fcce771d794ad3",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 1,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "spider_data_aggregation_tool"
     },
     {
       "action_count": 4,
-      "artifact_sha256": "6f6c00dbd2981697",
+      "artifact_sha256": "8b91bf3f658a818c",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 4,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "spider_status_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "f06c8b3136cc2eb3",
+      "artifact_sha256": "a7f2c71e4848adcb",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "status_snapshot_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "8e0f8bb1b781d9a1",
+      "artifact_sha256": "0e851d365c632e66",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "strategic_review"
     },
     {
       "action_count": 6,
-      "artifact_sha256": "09a74c35dbee72cf",
+      "artifact_sha256": "cc1a42369a9de1ff",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 6,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "studio_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "844e12147f66d22b",
+      "artifact_sha256": "7bf81adc52a851a6",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "surgical_moves_status_tool"
     },
     {
       "action_count": 2,
-      "artifact_sha256": "abb86dfd1c0b696c",
+      "artifact_sha256": "e1e682d2ca3031ec",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 2,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "task_breakdown_tool"
     },
     {
       "action_count": 6,
-      "artifact_sha256": "564d6b7d4365346a",
+      "artifact_sha256": "dc8a374e6800ac08",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 6,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "task_manager_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "a47f6dad1499f7f1",
+      "artifact_sha256": "390fc8ba60518308",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "three_d_generation_agent"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "170b3613428315f9",
+      "artifact_sha256": "da433eb6c1fc78a6",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "universal_agent_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "96afe30eb2478d55",
+      "artifact_sha256": "95afb66200a351b3",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "video_editing_agent"
     },
     {
       "action_count": 7,
-      "artifact_sha256": "6c9fbab94e5e0b4b",
+      "artifact_sha256": "98c44d355f9d9cfa",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 7,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "video_history_tool"
     },
     {
       "action_count": 3,
-      "artifact_sha256": "783563cbebf425f7",
+      "artifact_sha256": "f8282c1df88d4576",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 3,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "vip_invite_tool"
     },
     {
       "action_count": 5,
-      "artifact_sha256": "57f5c55a9dd82a6b",
+      "artifact_sha256": "767a60b1de710f43",
       "read_only_dispatched": 5,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "voice_clone_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "e14e29f83a7d0a06",
+      "artifact_sha256": "76facd5fb0bbda79",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "web_fetch_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "a20233f03d5b6cc0",
+      "artifact_sha256": "6846c9734e38bb8d",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "web_search"
     },
     {
       "action_count": 16,
-      "artifact_sha256": "46da850bb385b2de",
+      "artifact_sha256": "523a9b1bc9c89346",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 16,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "work_tool"
     },
     {
       "action_count": 0,
-      "artifact_sha256": "db21d652fb98b825",
+      "artifact_sha256": "0ffe9793fd34b637",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 0,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "workflow_orchestration_agent"
     },
     {
       "action_count": 5,
-      "artifact_sha256": "ccd4716e1383c63f",
+      "artifact_sha256": "d6e185c71d55f35e",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 5,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "workflow_run_tool"
     },
     {
       "action_count": 11,
-      "artifact_sha256": "ef42a502e23cec71",
+      "artifact_sha256": "71474b98f9345aab",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 11,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "workspace_budget_tool"
     },
     {
       "action_count": 13,
-      "artifact_sha256": "3ca54a19986db53b",
+      "artifact_sha256": "fd2d2e9a1c9a56f2",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 13,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "workspace_tool"
     },
     {
       "action_count": 1,
-      "artifact_sha256": "a774efe641a9b018",
+      "artifact_sha256": "23e291056100a41f",
       "read_only_dispatched": 0,
       "skipped_metadata_missing": 1,
       "skipped_write_gated": 0,
+      "soft_error_count": 0,
       "tool_name": "zoom_out_tool"
     }
   ],

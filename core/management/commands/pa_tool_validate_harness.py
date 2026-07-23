@@ -81,14 +81,51 @@ Per-tool artifact::
       ]
     }
 
-Stable ``expected_outcome`` values (v1):
-    - ``'success'``                      — READ_ONLY dispatched, ToolResult.ok
-    - ``'error_captured'``               — READ_ONLY dispatched, ToolResult.ok=False
+Stable ``expected_outcome`` values (v2):
+    - ``'success'``                      — READ_ONLY dispatched, ToolResult.ok, response is clean
+    - ``'soft_error'``                   — READ_ONLY dispatched, ToolResult.ok=True, but response dict
+                                            carries an inline error envelope (``ok=False`` or
+                                            ``error_code`` present). Application-layer failure at
+                                            HTTP 200. Introduced at v2 (S2909 substrate cleanup arc T1).
+    - ``'error_captured'``               — READ_ONLY dispatched, ToolResult.ok=False (dispatcher-layer error)
     - ``'exception'``                    — READ_ONLY dispatched, handler raised
     - ``'skipped_metadata_missing'``     — unclassified, no dispatch (Q4a)
     - ``'skipped_write_gated'``          — WRITE_GATED, no dispatch at MVP
     - ``'skipped_mutation'``             — MUTATION, no dispatch
     - ``'skipped_irreversible'``         — IRREVERSIBLE, no dispatch
+
+Migration notes — v1 → v2 (S2909 T1)
+------------------------------------
+
+Background: S2905–S2908 sweep batches surfaced a systemic pattern where
+``ToolResult.ok=True`` responses carried inline ``{ok: false, error, error_code}``
+envelopes (transport succeeded, tool signalled application-layer failure).
+The v1 classifier read only ``ToolResult.ok`` and mis-labelled these as
+``'success'``. The Fold B drift-rate trend across 3 data points (87.5% × 2 + 75%)
+crossed the "3-data-point 50% floor" trigger and Chris ratified the substrate
+cleanup arc at S2909 open.
+
+**What changed:** ``_run_single_action`` now inspects the response dict when
+``ToolResult.ok=True``. If the dict contains ``ok=False`` or an ``error_code``
+key, the outcome is reclassified from ``'success'`` to ``'soft_error'``.
+
+**What did NOT change (Fold Q4 mitigation, per Rigby T0 SIGN):**
+Per-tool validation docs under ``docs/research/tools/validation/*.md`` are
+hand-authored evidence narratives — the harness does NOT auto-regenerate them.
+Post-backfill, harness artifact JSON may show many actions flipped from
+``'success'`` → ``'soft_error'`` while the corresponding validation docs still
+narrate "SUCCESS" in their post-merge live-dispatch sections. This is a KNOWN
+new parity-gap type (harness ↔ validation-doc drift, distinct from the
+existing schema ↔ doc parity gate at Fold B). Follow-up substrate row is
+queued in the Rigby Tool Gap Ledger; a lightweight lint may be added in a
+future arc. Do NOT bulk-update validation docs as part of T1 — that would
+break MVP discipline and the arc's anti-scope-creep constraint.
+
+**Backfill scope:** all in-class tools (broadened from Rigby T0 SIGN Q3
+narrow evidentiary scope of 15 sweep-covered tools; contract-version bump
+requires uniform v2 artifact set — mixed v1/v2 would be worse). Analysis
+focus stays on the 15 sweep-covered tools per Fold B measurement scope.
+Post-implementation SIGN Q2 AGREE.
 
 Summary rollup::
 
@@ -120,7 +157,7 @@ from django.core.management.base import BaseCommand, CommandError
 REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_OUTPUT_DIR = REPO_ROOT / 'docs' / 'audits' / 'pa_tools' / 'harness_output'
 
-HARNESS_VERSION = 'v1'
+HARNESS_VERSION = 'v2'
 
 
 # ── Git SHA helper (matches the ``platform_inventory._git_sha`` pattern) ────
@@ -283,7 +320,12 @@ class Command(BaseCommand):
                 'action_count': len(artifact['actions']),
                 'read_only_dispatched': sum(
                     1 for a in artifact['actions']
-                    if a['expected_outcome'] in ('success', 'error_captured')
+                    if a['expected_outcome']
+                    in ('success', 'soft_error', 'error_captured')
+                ),
+                'soft_error_count': sum(
+                    1 for a in artifact['actions']
+                    if a['expected_outcome'] == 'soft_error'
                 ),
                 'skipped_metadata_missing': sum(
                     1 for a in artifact['actions']
@@ -326,13 +368,24 @@ class Command(BaseCommand):
             self.stdout.write(json.dumps(summary, indent=2))
         else:
             _write_json(output_dir / 'summary.json', summary)
+            total_dispatched = (
+                summary_rows
+                and sum(r['read_only_dispatched'] for r in summary_rows)
+            ) or 0
+            total_soft_errors = (
+                summary_rows
+                and sum(r.get('soft_error_count', 0) for r in summary_rows)
+            ) or 0
+            total_missing_meta = (
+                summary_rows
+                and sum(r['skipped_metadata_missing'] for r in summary_rows)
+            ) or 0
             self.stdout.write(self.style.SUCCESS(
                 f'Wrote {output_dir.relative_to(REPO_ROOT)}/summary.json '
                 f'({len(targets)} tool(s), '
-                f'{summary_rows and sum(r["read_only_dispatched"] for r in summary_rows) or 0} '
-                f'READ_ONLY dispatched, '
-                f'{summary_rows and sum(r["skipped_metadata_missing"] for r in summary_rows) or 0} '
-                f'skipped for missing metadata)'
+                f'{total_dispatched} READ_ONLY dispatched '
+                f'[{total_soft_errors} soft_error], '
+                f'{total_missing_meta} skipped for missing metadata)'
             ))
 
         # Fold B: non-zero exit gated on the explicit --check-doc-schema-parity
@@ -496,8 +549,19 @@ class Command(BaseCommand):
 
         outcome = 'success' if result.ok else 'error_captured'
         response_keys: List[str] = []
+        response_dict: Optional[Dict[str, Any]] = None
         if isinstance(result.result, dict):
-            response_keys = sorted(result.result.keys())
+            response_dict = result.result
+            response_keys = sorted(response_dict.keys())
+
+        # v2 classifier (S2909 T1): reclassify transport-success + inline
+        # error-envelope as 'soft_error'. Distinguishes application-layer
+        # failure at HTTP 200 from clean success. See module docstring
+        # "Migration notes — v1 → v2" for background.
+        if outcome == 'success' and response_dict is not None:
+            if response_dict.get('ok') is False or 'error_code' in response_dict:
+                outcome = 'soft_error'
+
         note_bits: List[str] = []
         if not result.ok:
             err_code = getattr(result, 'error_code', None) or ''
@@ -506,6 +570,20 @@ class Command(BaseCommand):
                 note_bits.append(f'error_code={err_code}')
             if err_msg:
                 note_bits.append(f'msg={err_msg[:120]}')
+        elif outcome == 'soft_error' and response_dict is not None:
+            inline_code = response_dict.get('error_code') or ''
+            inline_err = response_dict.get('error') or ''
+            if inline_code:
+                note_bits.append(f'inline_error_code={inline_code}')
+            if isinstance(inline_err, str) and inline_err:
+                note_bits.append(f'inline_msg={inline_err[:120]}')
+            elif isinstance(inline_err, dict):
+                nested_code = inline_err.get('code') or ''
+                nested_msg = inline_err.get('msg') or inline_err.get('message') or ''
+                if nested_code:
+                    note_bits.append(f'inline_error_nested_code={nested_code}')
+                if isinstance(nested_msg, str) and nested_msg:
+                    note_bits.append(f'inline_msg={nested_msg[:120]}')
 
         return {
             'action': action,

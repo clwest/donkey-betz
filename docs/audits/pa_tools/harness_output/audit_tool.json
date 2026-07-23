@@ -45,10 +45,10 @@
       "status_code": null
     }
   ],
-  "harness_version": "v1",
+  "harness_version": "v2",
   "run_metadata": {
-    "generated_at": "2026-07-23T15:04:10.350010+00:00",
-    "git_sha": "03ee92d5f"
+    "generated_at": "2026-07-23T15:46:39.401943+00:00",
+    "git_sha": "35aea0a61"
   },
   "schema_action_count": 4,
   "tool_name": "audit_tool"
