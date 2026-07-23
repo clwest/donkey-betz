@@ -10,26 +10,26 @@
 
 - **Total tool names:** 161
 - **Per-category breakdown:**
-  - `untested` (untested): **70**
+  - `untested` (untested): **69**
   - `agent_via_run_agent` (agent (via run_agent)): **44**
-  - `validated_full` (validated (full)): **31**
+  - `validated_full` (validated (full)): **32**
   - `validated_partial` (validated (partial)): **8**
   - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
   - `meta_no_handler` (meta (no handler by design)): **1**
 
 ## Validation-doc corpus
 
-- **Total `*_validation.md` files:** 56
+- **Total `*_validation.md` files:** 57
 - **Substrate (cross-cutting) docs:** 10 — reduce risk platform-wide but do NOT validate per-tool invariants (S2795 F2 rename).
-- **Per-tool docs:** 46 — of which 38 have an explicit 'Covered actions' section (F1 checklist).
-- **Per-tool docs with `Template version` marker:** 24 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
+- **Per-tool docs:** 47 — of which 39 have an explicit 'Covered actions' section (F1 checklist).
+- **Per-tool docs with `Template version` marker:** 25 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
 
 ## Template compliance (T1b)
 
 Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without `Template version:` marker); `pass` = v1-conformant; `fail` = v1 marker present but mandatory section/frontmatter missing.
 
-- `warn`: **137**
-- `pass`: **24**
+- `warn`: **136**
+- `pass`: **25**
 
 ## Schema quality lints (F5 advisory column)
 
@@ -268,7 +268,7 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `topic_miner_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `trained_creation_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `trend_analysis_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
-| `universal_agent_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_agents.py` |
+| `universal_agent_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `video_editing_agent` | ✓✓ | untested | warn | — | `core/services/tool_dispatcher.py` |
 | `video_generation_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `video_history_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
