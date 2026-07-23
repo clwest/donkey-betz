@@ -2,45 +2,61 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2897 CLOSE → prospecting_queue Row A shipped (Ledger Row A → `mitigated`) + new deferred Ledger row #27 (2026-07-22; picks up as S2898) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2898 CLOSE → integrity_null_spike_scan applicability rule shipped (Ledger Row B → `mitigated`) + all three S2895 Ledger rows now closed + 3 new deferred zoom-out fold candidates (2026-07-22; picks up as S2899) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-22 (S2897 close).** S2897 was another engineering-first ship (Chris ratified Option C at S2897 open — second consecutive session). PR #3419 merged at `dff09b962` — `autopilot_tool.prospecting_queue` no longer returns empty titles / flat score 45 for financial-spider rows. Two stacked bugs bundled in `core/services/ops_autopilot/revenue.py`: (1) Python operator-precedence bug that silently blanked titles when `embedding_text` was empty; (2) wrong-path `raw.get('title')` that missed the batched-item shape (`raw['items'][*].title`) used by all 6 financial spiders (sec_edgar, finnhub, polygon_finance, etherscan, yahoo_finance, financial). Fix: `_extract_first_item_text` helper with `top_level → items_first → embedding → synth` fall-through + `title_source` provenance field + `(+N more)` batch suffix. Ledger Row A flips from `open` → `mitigated`.
+**Refreshed 2026-07-22 (S2898 close).** S2898 was the THIRD consecutive engineering-first ship (Chris ratified Row B at S2898 open after clarifying "B" between Option B and Row B). PR #3421 merged at `3bed824c4` — `autopilot_tool.integrity_null_spike_scan` no longer floods operators with dead-field noise. Pre-fix: 96 critical spikes at `null_rate=1.0` (48 on `processed_data` = verified dead field, 48 on `embedding_text` = async-pipeline-lag). Post-fix: 43 spikes, all legitimately `historical_populated` (real embedding-pipeline-lag signal); 43 dead-field spikes suppressed via `applicability_skipped` counter. Ledger Row B flips from `open` → `mitigated`. **All three S2895 Ledger rows (A/B/C) now closed.**
+
+**Design shape (per Rigby SIGN D-verdict: AGREE):**
+
+```python
+FIELD_APPLICABILITY = {
+    'raw_data':       'always',              # primary payload
+    'processed_data': 'never',               # dead field, verified 0/72 spiders
+    'embedding_text': 'historical_baseline', # async pipeline, keep lag signal
+}
+```
 
 **PRs shipped this session:**
-- u-d-b PR [#3419](https://github.com/clwest/donkey-betz-platform/pull/3419) — S2897 prospecting_queue title + scoring fix, merged at `dff09b962`
-- u-d-b PR `<TBD>` — S2897 close cascade (handoff + 00-START refresh + wrapper pin bump)
+- u-d-b PR [#3421](https://github.com/clwest/donkey-betz-platform/pull/3421) — S2898 integrity_null_spike_scan applicability rule, merged at `3bed824c4`
+- u-d-b PR `<TBD>` — S2898 close cascade (handoff + 00-START refresh + wrapper pin bump)
 
 **Gap-map ratchet:** unchanged (no sweep batch this session).
 
-**Ledger status:** Row A **MITIGATED** at PR #3419 (S2897). Row B (`integrity_null_spike_scan` false-positive noise) **still open**. Row C `mitigated` at PR #3417 (S2896). **NEW deferred Row (entry #27):** "Batched spider rows collapse N leads into one autopilot Opportunity row" — structural fix requires either query-time item expansion or spider-intake changes. Trigger for arc: operator/customer signal ambiguity in triaging batched leads.
+**Ledger status:** Row A `mitigated` at PR #3419 (S2897). Row B **MITIGATED** at PR #3421 (S2898). Row C `mitigated` at PR #3417 (S2896). **All S2895 rows closed.** Deferred Row 27 (batched spider rows) from S2897 still queued. **NEW deferred Rows (entries #28/29/30):** three zoom-out fold candidates from S2898 Rigby SIGN Q4:
+- **#28** — Applicability metadata is mandatory for heterogeneous integrity scans (pattern extends beyond null_spike to duplicate/freshness/reliability detectors).
+- **#29** — All-time baselines create "sticky semantics" across regime changes (Phase 2 lookback cap 30/90d or dual baseline).
+- **#30** — Separate ingest integrity from downstream pipeline freshness (different confidence channels or aggregate as one issue).
 
-**Zoom-out folds:** none new this session. Rigby's Q4 zoom-out surfaced mild schema-drift coupling risk but helper's `isinstance` defensive checks handle it; no fold row required.
+**Zoom-out folds:** 3 fold candidates surfaced in Rigby Q4 zoom-out; all deferred to Phase 2 substrate work. Not blocking.
 
-Full session context: `docs/handoffs/SESSION_2897_PROSPECTING_QUEUE_TITLE_FIX.md`.
+Full session context: `docs/handoffs/SESSION_2898_INTEGRITY_NULL_SPIKE_APPLICABILITY.md`.
 
 ---
 
-## S2898 open sequence
+## S2899 open sequence
 
 ### Step 1 (FIRST DECISION POINT) — Row 161 substrate-arc gate STILL OPEN
 
-Two consecutive Option-C picks (S2896 + S2897). Chris may want to re-frame or stick with the pattern. Same three options unchanged from S2895 close + Row-B-continue variant:
+**Three consecutive Option-C picks now (S2896 + S2897 + S2898).** All three S2895-surfaced Ledger rows closed. Chris may want to re-frame options given the fresh source of engineering candidates (Rows 28/29/30 from S2898 zoom-out, Row 27 batched-items structural) or continue the pattern.
+
+Same three options carried forward:
 
 - **Option A (Rigby lean) — Open a dedicated substrate arc.** Auto-harness build + family-doc template extraction + low-signal tool audit. Slows sweep pace short-term; expected to close remaining Slice 1-5 scope in ~10-15 sessions instead of ~50.
 - **Option B — Push through Slice 1 close-out (~4-5 more current-shape sessions), THEN re-evaluate.** Closes Slice 1.5b (`autopilot_tool` mutations) + 4 doc/unknown/partial ops tools.
-- **Option C — Another Ledger-row-fix engineering session.** Row B is the last remaining open S2895 Ledger row (Row A closed at S2897, Row C closed at S2896). OR pick from new engineering candidates below.
+- **Option C — Another engineering session.** Priority candidates below.
 
 ### Step 2 — Net-new engineering candidates (per feedback_engineering_bias_over_audit)
 
-Priority order for S2898:
+Priority order for S2899:
 
-1. **`integrity_null_spike_scan` applicability rule (S2895 Ledger Row B)** — allowlist or per-field applicability rule to filter out expected-null (spider, field) pairs (96 critical spikes at `null_rate=1.0` for `processed_data` + `embedding_text` fields across ~20 spider families). Last remaining open Ledger row.
+1. **S2898 Phase 2 — embedding_text baseline lookback cap.** Small addition (~15 lines + tests) — closes the sticky-semantics risk Rigby surfaced. Add `EMBEDDING_BASELINE_LOOKBACK_DAYS` constant (default `None` = all-time; can be flipped to `30`/`90`); include `embedding_baseline_days` in return dict for operator clarity. Ledger Row #29 mitigation.
 2. **DBZ enforcement doc-clarity annotation** — `enforcement_report` output should include hysteresis-oscillation shape so operators reading multiple downgrade_set/cleared pairs don't misread as "enforcer flapping". (S2895 T2 revised discussion.)
 3. **Continue S2894 Ledger rows** — `messaging_tool.send` action (or in-thread-pattern schema note), `zoom_out_tool.record_fold` action (or JSONL→workspace-deliverable mirror).
 4. **PLAYBOOK-3.2.3/3.2.4 compliance sweep** — carried from S2891.
 5. **New Ledger Row #27 arc trigger watch** — batched-items structural fix (per-item lead expansion). Deferred until operator/customer signals batched-lead triage ambiguity.
+6. **Rows #28/#30 arc trigger watch** — applicability metadata pattern (fold to broader integrity substrate) + ingest-vs-pipeline separation (embedding-pipeline health dashboard). Triggered when next integrity detector added or embedding lag becomes chronic.
 
-### What's forbidden at S2898 (D6 MORATORIUM still in force)
+### What's forbidden at S2899 (D6 MORATORIUM still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 - No R1a-shaped proposals (upgrading character-os to fleet HMAC).
@@ -55,9 +71,12 @@ Priority order for S2898:
 - **Sweep batch cadence outcome gate** — ledger row 158. Unchanged.
 - **Mutation-heavy single-tool batch pattern** — ledger row 159. Unchanged.
 - **2-tier evidence template promotion** — ledger row 160. Triggers after 1-2 more large-surface sweeps adopt cleanly.
-- **Sweep-arc pace sustainability substrate arc** — ledger row 161. Decision point at S2898 open (see Step 1); two consecutive Option-C picks may signal Chris preference.
+- **Sweep-arc pace sustainability substrate arc** — ledger row 161. Decision point at S2899 open (see Step 1); three consecutive Option-C picks may signal Chris preference.
 - **Response-level introspection field creep** — ledger row 162 (S2896). Same-PR mitigated; watch for pattern in other tools' response contracts.
-- **Batched-items structural (new Rigby Tool Gap Ledger entry #27)** — deferred; trigger = operator/customer signals batched-lead triage ambiguity.
+- **Batched-items structural (Rigby Tool Gap Ledger entry #27)** — deferred; trigger = operator/customer signals batched-lead triage ambiguity.
+- **Applicability metadata pattern (entry #28)** — deferred; trigger = next integrity detector added.
+- **Baseline lookback cap for HISTORICAL_BASELINE fields (entry #29)** — deferred to S2899 Phase 2 candidate above.
+- **Ingest integrity vs downstream pipeline freshness separation (entry #30)** — deferred; trigger = embedding-pipeline lag becomes chronic (>3 sessions of persistent 100%-null embedding spikes).
 - **R1 fleet reject-mode flip** — deferred.
 - Docs restructuring arc (`project_docs_restructuring_arc_queued`) — behind sweep.
 - W2 #1 / #2b / #2c — pending Chris re-slate.
@@ -73,7 +92,9 @@ Priority order for S2898:
 **Slice 1 — `td_handlers_ops` (17 registered tools):**
 - Batches 1-4 (S2892-S2895): 9 tools ✓
 - **S2896:** engineering ship (Row C mitigated).
-- **S2897 (this session):** engineering ship (Row A mitigated).
+- **S2897:** engineering ship (Row A mitigated).
+- **S2898 (this session):** engineering ship (Row B mitigated).
+- **All 3 S2895-surfaced Ledger rows now closed.**
 - **Remainder:** Slice 1.5b (autopilot_tool mutations, ~1 session) + 4 doc/unknown/partial ops tools (`agent_introspection_tool`, `kb_tool`, `search_docs`, `ops_tool`, ~1-2 sessions)
 
 **Slice 2 — `td_handlers_agents` (25 tools, ~7 sessions):** queued
@@ -111,9 +132,9 @@ Rulebook: `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`.
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2897 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2898 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2897: zero A4 spend — pure engineering.** A1 shipping spend was the Row A fix PR + close cascade.
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2898: zero A4 spend — pure engineering.** A1 shipping spend was the Row B fix PR + close cascade.
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
 3. **Capability claims:** (a)…(uu) as ratified at S2887 close. No additions this session.
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
@@ -122,10 +143,11 @@ Rulebook: `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`.
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2897)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2898)
 
 See:
-- **S2897 handoff (current):** `docs/handoffs/SESSION_2897_PROSPECTING_QUEUE_TITLE_FIX.md`
+- **S2898 handoff (current):** `docs/handoffs/SESSION_2898_INTEGRITY_NULL_SPIKE_APPLICABILITY.md`
+- **S2897 handoff:** `docs/handoffs/SESSION_2897_PROSPECTING_QUEUE_TITLE_FIX.md`
 - **S2896 handoff:** `docs/handoffs/SESSION_2896_AUTOPILOT_HISTORY_WIPE_DIAGNOSTIC.md`
 - **S2895 handoff:** `docs/handoffs/SESSION_2895_PA_TOOLS_SWEEP_SLICE_1_5A_AUTOPILOT_READ_ONLY.md`
 - **S2894 handoff:** `docs/handoffs/SESSION_2894_PA_TOOLS_SWEEP_SLICE_1_BATCH_3.md`
@@ -143,7 +165,7 @@ See:
 - **Parent-workspace multi-Claude rulebook:** `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`
 - **Character-os UI → u-d-b reference sheet:** `/Users/donkeyking/Donkey_Betz/docs/2026-07-22_CHARACTER_OS_UI_TO_UDB_REFERENCE_SHEET.md`
 - **PA tools sweep methodology:** `docs/audits/PA_TOOLS_GAP_MAP.md` + `docs/PA_TOOL_AUDIT.md` (both auto-generated) + `docs/research/tools/validation/*.md` (per-tool validation docs; 22 total after S2895)
-- **Autopilot tool validation doc:** `docs/research/tools/validation/autopilot_tool_validation.md` (S2895; §3 + §5 + §7.1 reference the Row A/C shapes; S2896 + S2897 mitigations live in the handler + revenue.py, not this doc)
+- **Autopilot tool validation doc:** `docs/research/tools/validation/autopilot_tool_validation.md` (S2895; §3 + §5 + §7.1 reference the Row A/C shapes; S2896 + S2897 + S2898 mitigations live in the handler + revenue.py + intelligence.py, not this doc)
 - **Rigby Tool Gap Ledger deliverable:** `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` (Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50`)
 
 For older session history (S1-S2847), see `docs/handoffs/` + `docs/research/OPEN_ARCS.md`.
