@@ -2,58 +2,69 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2894 CLOSE → PA tools sweep Slice 1 Batch 3 shipped (workspace_budget_tool single-tool batch per Chris D-verdict, `untested`→`validated_full`) + 3 Rigby Tool Gap Ledger candidates + zoom-out fold row 159 (2026-07-22; picks up as S2895) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2895 CLOSE → PA tools sweep Slice 1.5a shipped (autopilot_tool read-only, `untested`→`validated_partial`) + 2-tier evidence template landed + 3 Ledger candidates + 2 zoom-out folds (rows 160/161) (2026-07-22; picks up as S2896) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-22 (S2894 close).** S2894 shipped Batch 3 of Slice 1 (`td_handlers_ops`) as a single-tool batch per Chris D-verdict at Turn 1. Only `workspace_budget_tool` (11 actions, 7 mutations, 2 staff-only) — Rigby zoom-out §4 pushback flagged that mutation-heavy tools warrant single-tool batches, and Chris ratified after joint Claude+Rigby recommendation. 13 canary-safe actions dispatched by Rigby against Agent-Testing workspace (all PASS) + 2 read-only sharpening probes on Donkey Betz (Ledger #1). 3 substantive Rigby Tool Gap Ledger candidates surfaced.
+**Refreshed 2026-07-22 (S2895 close).** S2895 shipped Slice 1.5a of `td_handlers_ops` — the `autopilot_tool` read-only sweep. 76 read-only actions exercised live across 5 Rigby-executed batches (A–E); all successful; median latency ~15ms; p95 ~300ms; max 1252ms (`dry_run_report`). All ~29 mutation actions documented in §5a + explicitly deferred to Slice 1.5b (staged-enforcement session). The ship adopted a **new 2-tier evidence template** per Rigby S2895 T1 SIGN Q5 zoom-out — becomes the reference shape for future large-surface tool sweeps.
 
 **PRs shipped this session:**
-- u-d-b PR `<TBD>` — S2894 Slice 1 batch 3 (1 validation doc + PA_TOOL_AUDIT.md regen + PA_TOOLS_GAP_MAP.md regen + zoom-out fold row 159 + handoff)
-- u-d-b PR `<TBD>` — S2894 close cascade (wrapper pin bump)
+- u-d-b PR [#3415](https://github.com/clwest/donkey-betz-platform/pull/3415) — S2895 Slice 1.5a (`autopilot_tool_validation.md` 399 lines/47KB + gap-map regen), merged at `7891ee9c3`
+- u-d-b PR `<TBD>` — S2895 close cascade (handoff + 00-START refresh + wrapper pin bump)
 
-**Gap-map ratchet (before → after this session):**
+**Gap-map ratchet:**
 ```
-validated_full:   11 → 12 (+1: workspace_budget_tool)
-untested:         96 → 95 (-1)
-per_tool_docs:    20 → 21
-per_tool_docs_with_covered_actions:  12 → 13
+validated_partial: 2 → 3 (+1: autopilot_tool)
+untested:         95 → 94 (-1)
+validated_full:   12 → 12 (unchanged — mutations deferred to Slice 1.5b)
+per_tool_docs:    21 → 22
+per_tool_docs_with_covered_actions:  13 → 14
 ```
 
-**Ledger candidates routed to Rigby at close (Rigby Tool Gap Ledger deliverable `5c84e75a-…`, 13 → 16 rows):**
+**Ledger candidates routed to Rigby at close (Rigby Tool Gap Ledger deliverable `5c84e75a-…`, 16 → 19 rows):**
 
-1. **Row A — DBZ enforcement/attribution divergence (`workspace_budget_tool`).** Donkey Betz shows `daily_total=$12.52` vs explicit `cap=$5.00` (2.5× over) yet `is_frozen=false, is_downgraded=false`. 17 enforcement events in 7d (last 2026-07-20T20:35Z), current flags don't reflect. Discriminator needed: `AutopilotAction.evidence.daily_total` at decision time via `autopilot_tool.history` (Slice 1.5) OR direct ORM.
-2. **Row B — `messaging_tool` lacks send surface.** Read-only (`list_threads`/`get`). Blocks Claude→Rigby→Chris async DM pattern; in-thread reply is the working path.
-3. **Row C — Zoom-out fold canonical location not discoverable via PA tool surface.** Folds live at `logs/zoom_out_classifications.jsonl` (repo file); Rigby can't discover/read/append. Blocks Rigby closing SIGN loops autonomously.
+1. **Row A — `prospecting_queue` empty titles.** All 6 leads returned had empty `title` fields (financial-spider sources: sec_edgar, finnhub, polygon_finance, etherscan, yahoo_finance, financial). Score 45 flat. Blocks operator triage because queue is unreadable without titles.
+2. **Row B — `integrity_null_spike_scan` false-positive noise.** 96 critical spikes at `null_rate=1.0` for `processed_data` + `embedding_text` fields across ~20 spider families — likely "not-populated-by-design" fields. Needs applicability-rule or allowlist.
+3. **Row C — `autopilot_tool.history selected_fields` silent longer-list wipe.** Rigby T2 live observation — 8-path list echoed as `[]`, 4-path retry worked. Wipe location upstream of the handler's per-item silent-ignore. Concrete operator footgun.
 
-**Zoom-out fold row 159** — `pa_tools_sweep_mutation_heavy_single_tool_batch`, `same_pr_mitigatable`. Rigby's SIGN §4 pushback: "action-count budgeting" trending toward batch-shape driver risks shallow mutation-gate validation. Mitigation shipped this PR: workspace_budget_tool §5a codifies canary+revert protocol with blast-radius classification table. Future promotion trigger: 1-2 more mutation-heavy tool corroborations → promote canary-revert to first-class sweep-methodology section.
+**Twin workspace deliverables created (per feedback_rigby_writes_workspace_deliverables + feedback_twin_deliverable_at_every_ratification):**
+- Content mirror `bb032d62-0373-42a9-80dd-8416a99b3c4a` (initiative_phase_doc / research / Donkey Betz workspace)
+- Ratification record `40f62eda-d245-40fe-894e-5086776f3e41` (ratification_record / governance / Donkey Betz workspace)
+- ORM verified — no diagnostic misfire (S2753 issue absent)
+- UI list verified — both at top of Donkey Betz deliverables
 
-Full session context: `docs/handoffs/SESSION_2894_PA_TOOLS_SWEEP_SLICE_1_BATCH_3.md`.
+**Zoom-out folds appended to `logs/zoom_out_classifications.jsonl` (local-only, gitignored):**
+- **Row 160 (`same_pr_mitigatable`) — 2-tier evidence template for large-surface tool sweeps.** Mitigation shipped in-doc (§6.1 Evidence Ledger + §6.2 family narrative + §7 raw appendix). Rigby T2 AGREE'd on classification. Future promotion trigger: 1-2 more large-surface (>30 action) sweeps adopt cleanly → promote to first-class sweep-methodology section OR Playbook §7 (Testing Discipline chapter candidacy) amendment.
+- **Row 161 (`future_trigger`) — sweep-arc pace not sustainable at current shape.** Math: ~400-line docs × 76 remaining tools × 1-2 per session = ~50 sessions of validation before Slice 5 closes. Substrate is likely changing faster than validation completes. Rigby proposed 3 methodology shifts: (a) family-level substrate audits + shared templates + auto-generated action inventories, (b) delete/merge low-signal tools first, (c) lightweight auto-harness running all read-only actions nightly with machine-checkable ledger. Classified `future_trigger` — decision point at S2896 open (see below).
+
+**Ledger Row A (S2894 DBZ enforcement/attribution divergence) revised at Rigby T2 SIGN:** history rows carry `result.reason: operator_cap_change_hysteresis` explicitly on the downgrade_set/cleared pairs. This cleanly explains the $3.07/$2.98 oscillations as normal hysteresis during operator cap changes, NOT enforcer-side PA-bypass. Bucket (a) is now the primary hypothesis. Bucket (e) [enforcer excludes PA critical-agents] deprioritized unless reproduced under stable-cap conditions. Full revised discussion in `docs/research/tools/validation/autopilot_tool_validation.md` §7.1.
+
+Full session context: `docs/handoffs/SESSION_2895_PA_TOOLS_SWEEP_SLICE_1_5A_AUTOPILOT_READ_ONLY.md`.
 
 ---
 
-## S2895 open sequence
+## S2896 open sequence
 
-### Step 1 (FIRST THING) — decision point: Slice 1.5 vs Slice 1 cleanup vs Slice 2
+### Step 1 (FIRST DECISION POINT) — Row 161 substrate-arc gate
 
-Slice 1 (`td_handlers_ops`) is now 9/10 non-autopilot tools at `validated_full`. Three viable paths for S2895 (present these to Chris at open if not obvious):
+Before running another sweep batch, decide among:
 
-- **Option A (recommended default) — open Slice 1.5 for `autopilot_tool` read-only sweep.** Per S2893 pre-commit note: ~110 read-only actions in one session, ship `validated_partial`; mutation sweep in a follow-on session. Closes the biggest remaining piece.
-- **Option B — dedicated non-sweep session to upgrade 4 doc/unknown/partial ops tools first** (`agent_introspection_tool`, `kb_tool`, `search_docs`, `ops_tool` partial → full). Small doc-only work; fully closes `td_handlers_ops` proper before Slice 1.5.
-- **Option C — skip ahead to Slice 2 (`td_handlers_agents`, 25 tools).** Leaves ops-slice cleanup for later.
+- **Option A (Rigby lean) — Open a dedicated substrate arc.** Auto-harness build + family-doc template extraction + low-signal tool audit. Slows sweep pace short-term; expected to close remaining Slice 1-5 scope in ~10-15 sessions instead of ~50. Requires methodology + tool-deletion authority scoping first.
+- **Option B — Push through Slice 1 close-out (~4-5 more current-shape sessions), THEN re-evaluate.** Closes `autopilot_tool` mutations (Slice 1.5b) + 4 doc/unknown/partial ops tools. Gives hard data on low-signal-vs-high-signal tools before committing to substrate work.
+- **Option C — Skip ahead to a Ledger-row-fix engineering session first** (autopilot_tool selected_fields batch-wipe fix OR prospecting_queue empty-titles). Small, concrete engineering shipments; sweep continues after.
 
-**If Chris directs a Ledger-row-fix instead of continuing the sweep:** the DBZ enforcement gap (Row A) is the highest-priority ship candidate — customer-facing trust surface, small engineering scope. Discriminator: read the most recent `AutopilotAction` row for DBZ + verify which of buckets (b)/(c)/(e) fires.
+**If Chris directs the substrate arc (Option A):** open as `s2896-pa-tools-sweep-substrate-arc` with 3 parallel workstreams — auto-harness spec, family-doc template extraction, low-signal-tool audit scoping. Deferred workshop candidate.
 
 ### Step 2 — Net-new engineering candidates (per feedback_engineering_bias_over_audit)
 
-**Path B does NOT preempt engineering-bias.** Still surface 1-3 net-new candidates at any natural pause. Priority order for S2895:
+**Path B does NOT preempt engineering-bias.** Still surface 1-3 net-new candidates at any natural pause. Priority order for S2896:
 
-1. **DBZ enforcement gap fix (S2894 Ledger Row A)** — small, customer-facing trust surface. Discriminator work first.
-2. **`messaging_tool.send` action or in-thread-pattern schema note (S2894 Ledger Row B)** — small; unblocks Rigby async DM routing.
-3. **`zoom_out_tool.record_fold` action OR JSONL→workspace-deliverable mirror (S2894 Ledger Row C)** — closes Rigby's SIGN loop.
-4. **`diagnostics_tool.schema_handler_diff` placeholder → implementation** — carried from S2893. Rigby self-introspection tool.
-5. **Ship one S2893 Ledger row** — `governor_tool.status` cache/consistency fix, `governor_tool.reason` fail-open surfacing, or `ops_digest_tool` autopilot staleness heuristic.
+1. **`autopilot_tool.history selected_fields` batch-wipe fix (S2895 Ledger Row C)** — small, concrete operator footgun; ~15-line fix likely in the schema-validation layer upstream of `td_handlers_ops.py:2521-2534`.
+2. **`prospecting_queue` empty-titles investigation (S2895 Ledger Row A)** — either upstream lead-scoring path or response projection dropping titles for financial-spider sources.
+3. **`integrity_null_spike_scan` applicability rule (S2895 Ledger Row B)** — allowlist or per-field applicability rule to filter out expected-null (spider, field) pairs.
+4. **DBZ enforcement doc-clarity annotation** — `enforcement_report` output should include hysteresis-oscillation shape so operators reading multiple downgrade_set/cleared pairs don't misread as "enforcer flapping".
+5. **Continue S2894 Ledger rows** — `messaging_tool.send` action (or in-thread-pattern schema note), `zoom_out_tool.record_fold` action (or JSONL→workspace-deliverable mirror).
 6. **PLAYBOOK-3.2.3/3.2.4 compliance sweep** — carried from S2891.
 
-### What's forbidden at S2895 (D6 MORATORIUM still in force)
+### What's forbidden at S2896 (D6 MORATORIUM still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 - No R1a-shaped proposals (upgrading character-os to fleet HMAC).
@@ -61,12 +72,14 @@ Slice 1 (`td_handlers_ops`) is now 9/10 non-autopilot tools at `validated_full`.
 ### What's queued but deferred (do NOT open unless Chris directs)
 
 - **Original character-os stand-by** — Chris pivoted to the sweep. If character-os side pings, stand by per pre-S2892 protocol.
-- **Testing Discipline chapter candidacy** — ledger row 154 `future_trigger`. Unchanged.
+- **Testing Discipline chapter candidacy** — ledger row 154 `future_trigger`. Unchanged; may fuse with Row 160/161 promotion if trigger fires together.
 - **Bridge call observability rename-risk** — ledger row 155. Unchanged.
 - **Close-ceremony ledger-staleness gate** — ledger row 156. Unchanged.
 - **Sweep shape doc-only defers semantic assertions** — ledger row 157. Unchanged.
 - **Sweep batch cadence outcome gate** — ledger row 158. Unchanged.
-- **Mutation-heavy single-tool batch pattern** — ledger row 159 (new this session). Mitigation shipped in workspace_budget_tool §5a.
+- **Mutation-heavy single-tool batch pattern** — ledger row 159 (S2894). Unchanged.
+- **2-tier evidence template promotion** — ledger row 160 (S2895, this session). Triggers after 1-2 more large-surface sweeps adopt cleanly.
+- **Sweep-arc pace sustainability substrate arc** — ledger row 161 (S2895, this session). Decision point at S2896 open (see Step 1).
 - **R1 fleet reject-mode flip** — deferred.
 - Docs restructuring arc (`project_docs_restructuring_arc_queued`) — behind sweep.
 - W2 #1 / #2b / #2c — pending Chris re-slate.
@@ -79,31 +92,34 @@ Slice 1 (`td_handlers_ops`) is now 9/10 non-autopilot tools at `validated_full`.
 
 ## Sweep progress tracker (Path B ratified S2892)
 
-**Slice 1 — `td_handlers_ops` (17 registered tools, 11 previously untested):**
+**Slice 1 — `td_handlers_ops` (17 registered tools):**
 - Batch 1 (S2892): agent_control_tool, agent_memory_tool, heartbeat_history_tool, infra_health_tool ✓
 - Batch 2 (S2893): governor_tool, ops_digest_tool, scheduled_tasks_tool, spider_status_tool ✓
-- Batch 3 (S2894, this session): **workspace_budget_tool ✓** (single-tool batch per Chris D-verdict)
-- **Slice 1 non-full remainder:** agent_introspection_tool, kb_tool, search_docs (doc/unknown); ops_tool (partial) — Option B session material
-- Slice 1.5 (post-Slice-1 close): autopilot_tool read-only sweep + autopilot_tool mutations sweep (2 sessions estimated)
+- Batch 3 (S2894): workspace_budget_tool ✓ (single-tool batch)
+- Batch 4 = Slice 1.5a (S2895, this session): **autopilot_tool read-only ✓** (single-tool batch, `validated_partial`)
+- **Remainder:** Slice 1.5b (autopilot_tool mutations, ~1 session) + 4 doc/unknown/partial ops tools (`agent_introspection_tool`, `kb_tool`, `search_docs`, `ops_tool`, ~1-2 sessions)
 
 **Slice 2 — `td_handlers_agents` (25 tools, ~7 sessions):** queued
 **Slice 3 — `td_handlers_core` (22 tools, ~6 sessions):** queued
 **Slice 4 — `td_handlers_gateway` (17 tools, ~5 sessions):** queued
 **Slice 5 — `tool_dispatcher` (14 tools, ~4 sessions):** queued
 
-**Total remaining tools to close:** 91 after this batch.
-**Estimated total sessions remaining in arc:** ~25.
+**Total remaining tools to close (before Row 161 substrate arc):** 76 (or ~104 counting partials + doc-unknowns).
+**Estimated total sessions remaining at current-shape pace:** ~50 (Row 161 triggers this concern).
 
-**Informative per-batch outcome check (S2893 fold-158 hybrid — Rigby SIGN Path C):** S2894 met the check naturally — 3 substantive Ledger candidates surfaced. Row 158 remains `future_trigger`; row 159 corroborates the mutation-heavy-single-tool pattern that fold-158 hedges against.
+**Informative per-batch outcome check (S2893 fold-158 hybrid):** S2895 met the check naturally — 3 substantive Ledger candidates surfaced. Rows 158 + 159 unchanged. Rows 160 + 161 new this session.
 
 ---
 
-## Autopilot Slice 1.5 pre-commit note (per S2893 Rigby SIGN zoom-out #4)
+## Autopilot Slice 1.5b pre-commit note
 
-When `autopilot_tool` is eventually swept, the template MUST differ from the batch shape used through Slice 1:
+When `autopilot_tool` mutations are eventually swept (Slice 1.5b), the shape MUST be:
 
-1. **Read-only first sweep** — exercise ~110 read-only actions (all `_report`, `_queue`, `_forecast`, `_scan`, `status`, `history`, `dry_run_report`). Ship `validated_partial`.
-2. **Sandboxed / explicitly gated mutations second sweep** — exercise ~20 mutating actions with extra scrutiny on `dry_run` + `confirm` two-factor gating (already present on `security_containment_plan` per S1228 PR-A), audit trails, `ttl_hours` expiries.
+1. **Staged-enforcement session** — many mutations require paired lifecycle scaffolding: `experiment_create` + `_start` (paired), `outreach_generate` + `_approve` + `_reject` (needs synthetic draft rows or A4 throttle waiver), `close_pack_generate` + `_approve` (needs synthetic opportunity_id), `meeting_create` + `_brief` + `_recap` (creates real calendar substrate), `governance_kill_switch` + `_deactivate_switch` (paired), `release_freeze` + `_unfreeze` (paired), `run` (evaluates all policies against real state — may create real blocks/downgrades).
+2. **Canary containment per-action:** some are inherently global (`run`, `governance_set_mode global`, `release_freeze`) — need paired revert protocol. Others operate on single rows — canary to synthetic test data.
+3. **A4 warm-up hard-throttle** (S2846) governs outreach mutations — max 3-5 total intros even in the mutation session.
+4. **`backfill_impacts` + `backfill_failure_reasons`** — data-substrate writes; need idempotency verification post-write.
+5. **`security_containment_plan dry_run=false, confirm=true`** — S1228 PR-A gate; explicit both-flag dispatch required.
 
 Do NOT try to sweep both categories in one session.
 
@@ -120,9 +136,9 @@ Rulebook: `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`.
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2894 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2895 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2894: zero A4 spend — pure engineering + governance.** A1 shipping spend was the sweep PR + close cascade.
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2895: zero A4 spend — pure engineering + governance.** A1 shipping spend was the sweep PR + close cascade.
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
 3. **Capability claims:** (a)…(uu) as ratified at S2887 close. No additions this session.
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
@@ -131,10 +147,11 @@ Rulebook: `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`.
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2894)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2895)
 
 See:
-- **S2894 handoff (current):** `docs/handoffs/SESSION_2894_PA_TOOLS_SWEEP_SLICE_1_BATCH_3.md`
+- **S2895 handoff (current):** `docs/handoffs/SESSION_2895_PA_TOOLS_SWEEP_SLICE_1_5A_AUTOPILOT_READ_ONLY.md`
+- **S2894 handoff:** `docs/handoffs/SESSION_2894_PA_TOOLS_SWEEP_SLICE_1_BATCH_3.md`
 - **S2893 handoff:** `docs/handoffs/SESSION_2893_PA_TOOLS_SWEEP_SLICE_1_BATCH_2.md`
 - **S2892 handoff:** `docs/handoffs/SESSION_2892_PA_TOOLS_SWEEP_SLICE_1_BATCH_1.md`
 - **S2891 handoff:** `docs/handoffs/SESSION_2891_BRIDGE_ACTIVITY_DIGEST.md`
@@ -148,6 +165,6 @@ See:
 - **Playbook v0.9.0 ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-22_PLAYBOOK_V0_9_0.md`
 - **Parent-workspace multi-Claude rulebook:** `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`
 - **Character-os UI → u-d-b reference sheet:** `/Users/donkeyking/Donkey_Betz/docs/2026-07-22_CHARACTER_OS_UI_TO_UDB_REFERENCE_SHEET.md`
-- **PA tools sweep methodology:** `docs/audits/PA_TOOLS_GAP_MAP.md` + `docs/PA_TOOL_AUDIT.md` (both auto-generated)
+- **PA tools sweep methodology:** `docs/audits/PA_TOOLS_GAP_MAP.md` + `docs/PA_TOOL_AUDIT.md` (both auto-generated) + `docs/research/tools/validation/*.md` (per-tool validation docs; 22 total after this session)
 
 For older session history (S1-S2847), see `docs/handoffs/` + `docs/research/OPEN_ARCS.md`.
