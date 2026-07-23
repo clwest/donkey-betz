@@ -475,11 +475,29 @@ class OutboundLeadEngine:
                 continue
 
             raw = item.raw_data_dict
-            title = raw.get('title', '') or item.embedding_text[:80] if item.embedding_text else ''
+            title, _, title_source = self._extract_first_item_text(raw, item)
+            n_items = 0
+            if isinstance(raw, dict):
+                items = raw.get('items')
+                if isinstance(items, list):
+                    n_items = len(items)
+
+            if title_source == 'items_first' and n_items > 1:
+                suffix = f' (+{n_items - 1} more)'
+                title = title[: 100 - len(suffix)] + suffix
+            elif not title:
+                title = f'{item.spider_name}: {item.data_type} batch'
+                if n_items:
+                    title += f' ({n_items} items)'
+                title = title[:100]
+                title_source = 'synth'
+            else:
+                title = title[:100]
 
             scored_leads.append({
                 'spider_data_id': str(item.id),
-                'title': title[:100],
+                'title': title,
+                'title_source': title_source,
                 'source': item.spider_name,
                 'data_type': item.data_type,
                 'source_url': url[:200],
@@ -498,15 +516,55 @@ class OutboundLeadEngine:
 
         return result
 
+    def _extract_first_item_text(self, raw, item):
+        """Return (title, combined_text, title_source) for a spider row.
+
+        Batched-item spiders (financial family: sec_edgar, finnhub,
+        polygon_finance, etherscan, yahoo_finance, financial) wrap N leads
+        under raw_data['items'][*]; top-level raw_data['title'] is absent.
+        Fall back to items[0] then embedding_text so title extraction and
+        keyword scoring both see real signal.
+
+        title_source: 'top_level' | 'items_first' | 'embedding' | 'synth'
+        Callers may promote to 'synth' if title still empty after this returns.
+        """
+        title = ''
+        desc = ''
+        source = ''
+
+        if isinstance(raw, dict):
+            top_title = raw.get('title') or ''
+            top_desc = raw.get('description') or ''
+            if top_title:
+                title = top_title
+                source = 'top_level'
+            if top_desc:
+                desc = top_desc
+            if not title or not desc:
+                items = raw.get('items')
+                if isinstance(items, list) and items:
+                    first = items[0] if isinstance(items[0], dict) else {}
+                    if not title:
+                        first_title = first.get('title') or ''
+                        if first_title:
+                            title = first_title
+                            source = 'items_first'
+                    if not desc:
+                        desc = first.get('description') or first.get('summary') or ''
+
+        if not title and item.embedding_text:
+            title = item.embedding_text[:80]
+            source = 'embedding'
+
+        combined = ' '.join(t for t in [title, desc, item.embedding_text or ''] if t).strip()
+        return title, combined, source
+
     def _score_lead(self, spider_item, now) -> int:
         """Score a spider data item as a prospecting lead (0-100)."""
         score = 0
         raw = spider_item.raw_data_dict
-        text = (
-            (raw.get('title', '') or '') + ' ' +
-            (raw.get('description', '') or '') + ' ' +
-            (spider_item.embedding_text or '')
-        ).lower()
+        _, combined, _ = self._extract_first_item_text(raw, spider_item)
+        text = combined.lower()
 
         # Recency score (0-30): newer = better
         age_hours = (now - spider_item.created_at).total_seconds() / 3600
