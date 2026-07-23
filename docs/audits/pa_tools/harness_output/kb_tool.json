@@ -2,64 +2,85 @@
   "actions": [
     {
       "action": "stats",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 17751,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "action",
+        "document_embeddings",
+        "documents",
+        "spider_data_with_embedding",
+        "unified_by_type",
+        "unified_embeddings"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "documents",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 53,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "action",
+        "applied_filters",
+        "count",
+        "documents"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "chunks",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 3,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "error",
+        "error_code"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "search_embeddings",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 2,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "error",
+        "error_code"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "semantic_search",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 2,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "error",
+        "error_code"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     }
   ],
   "harness_version": "v1",
   "run_metadata": {
-    "generated_at": "2026-07-23T02:50:01.992166+00:00",
-    "git_sha": "85cceea41"
+    "generated_at": "2026-07-23T03:21:11.111412+00:00",
+    "git_sha": "fc5bca145"
   },
   "schema_action_count": 5,
   "tool_name": "kb_tool"

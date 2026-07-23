@@ -73,18 +73,52 @@ class ToolDefaults:
 # ``TOOL_ACTION_METADATA`` (per-action records win over tool defaults).
 
 TOOL_DEFAULTS: Dict[str, ToolDefaults] = {
-    # Seeded tools intentionally empty for T1a Phase 1 ship. Population lands
-    # incrementally as sweep sessions author metadata alongside per-tool
-    # validation docs (T1b template will include an authoring hook).
+    # T1a Phase 2 seed (S2903). Four tools authored from validation-doc
+    # evidence — every action in each is read-only per its respective
+    # validation report. Per-action overrides live in ``TOOL_ACTION_METADATA``
+    # below for the ONE deviation (``ops_tool.focus_mode_update``).
+    #
+    # Authoring evidence:
+    # - ops_tool: `docs/research/tools/validation/ops_tool_validation.md` §5
+    #   ("All actions are read-only except `focus_mode_update`")
+    # - kb_tool: handler at `td_handlers_ops.py:7548` — all 5 actions are
+    #   ORM/pgvector queries, no writes
+    # - agent_introspection_tool: read-only introspection surface (list,
+    #   stats, details, capabilities, tools)
+    # - repo_tool: `docs/research/tools/validation/repo_tool_validation.md`
+    #   line 3 ("read-only codebase introspection")
+    'ops_tool': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: git-head, worker-recycle-log, OpsRun/CeleryTaskEvent',
+    ),
+    'kb_tool': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: UnifiedEmbedding + DocumentEmbedding (pgvector)',
+    ),
+    'agent_introspection_tool': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: AGENT_MAP, Agent table, ToolCallRecord',
+    ),
+    'repo_tool': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: local repo filesystem + git',
+    ),
 }
 
 
 # ── Per-(tool, action) records ──────────────────────────────────────────────
 #
 # T1a Phase 1 seed: two records against ``ops_tool`` verified live at S2796
-# (per T1c §7.1). Everything else defaults to SKIP so the first live run
-# proves the pipeline end-to-end without exercising handlers that have
-# unknown safety.
+# (per T1c §7.1). Phase 2 (S2903) extends with:
+#   - ``ops_tool.focus_mode_update`` override (WRITE_GATED — the one
+#     mutating action in ops_tool per validation doc §5)
+#   - ``session_tool`` mixed-safety fan-out (3 READ_ONLY + 4 MUTATION) —
+#     tool-level default not usable because the safety class splits per
+#     action (verified in ``session_tool_validation.md`` §4 handler trace).
 
 TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
     ('ops_tool', 'version'): ToolActionMetadata(
@@ -96,6 +130,55 @@ TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
         safety_class='READ_ONLY',
         applicability='always',
         notes='deps: worker-recycle-log; verified live S2796',
+    ),
+    # ops_tool override: everything else is READ_ONLY (via TOOL_DEFAULTS)
+    # EXCEPT focus_mode_update, which writes Focus Mode config
+    # (`td_handlers_ops.py:317` calls ``set_config`` — a persisted write).
+    # Classified WRITE_GATED because the write path exists; harness does not
+    # dispatch WRITE_GATED at MVP so no auth-boundary assertion needed. Auth
+    # enforcement location not verified at seed time; revisit if/when we add
+    # WRITE_GATED harness dispatch.
+    ('ops_tool', 'focus_mode_update'): ToolActionMetadata(
+        safety_class='WRITE_GATED',
+        applicability='conditional',
+        notes='writes Focus Mode config; revisit: auth-boundary at harness-dispatch',
+    ),
+    # session_tool — mixed. Read side classified for harness dispatch;
+    # write side flagged for future MUTATION coverage (not exercised at MVP).
+    ('session_tool', 'health_check'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: ChatConversation; default action per handler',
+    ),
+    ('session_tool', 'list_recent'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: ChatConversation queryset (F-S-3 mitigation shipped S2728)',
+    ),
+    ('session_tool', 'whoami'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: current conversation binding; provenance surface',
+    ),
+    ('session_tool', 'create_fresh'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='creates a new ChatConversation row',
+    ),
+    ('session_tool', 'retire'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='sets session_active=False; F-S-6 mitigation shipped S2728',
+    ),
+    ('session_tool', 'set_active'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='sets session_active=True on target conversation',
+    ),
+    ('session_tool', 'seed'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes ChatMessage with [SYSTEM SEED] marker',
     ),
 }
 
