@@ -466,7 +466,7 @@ Manage the blog/content pipeline — stats, list, approve, reject, generate. Use
 
 ### `bpaas_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_bpaas` in `core/services/td_handlers_agents.py:6261`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_bpaas` in `core/services/td_handlers_agents.py:6268`
 
 Build Packet as a Service — create client projects from structured build packets. Actions: create_project (creates workspace project + repos + preview env + magic link from a build packet), generate_close_pack (generates SOW + delivery checklist + proposal from a build packet), get_schema (returns the build packet JSON schema), get_example (returns the Norman Handyman MVP example packet).
 
@@ -481,7 +481,7 @@ Build Packet as a Service — create client projects from structured build packe
 
 ### `brainstorm_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_brainstorm` in `core/services/td_handlers_agents.py:6129`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_brainstorm` in `core/services/td_handlers_agents.py:6136`
 
 Search and list brainstorm sessions: discussion panels, multi-agent debates, and collaborative insights. Use 'list' for bulk paginated export, 'search' for keyword search, 'details' for a single session, 'stats' for activity stats.
 
@@ -747,7 +747,7 @@ _(no schema description)_
 
 ### `cost_telemetry_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_cost_telemetry` in `core/services/td_handlers_agents.py:4885`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_cost_telemetry` in `core/services/td_handlers_agents.py:4892`
 
 Get real API cost and spend data from LLM call logs. Use when the user asks about actual costs, spending, most expensive agents, cost trends, cost breakdown, or wants a ranked list of agents by spend. This returns real dollar amounts, not budget gates.
 
@@ -1001,7 +1001,7 @@ _(no schema description)_
 
 ### `gates_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_gates` in `core/services/td_handlers_agents.py:5090`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_gates` in `core/services/td_handlers_agents.py:5097`
 
 Access quality gates: list gates, check gate status, view pass/fail history. Use when the user asks about gates, quality checks, or publish gates.
 
@@ -1474,7 +1474,7 @@ Access 139 specialized AI persona agents across 14 categories: income generation
 
 ### `pilots_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_pilots` in `core/services/td_handlers_agents.py:5162`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_pilots` in `core/services/td_handlers_agents.py:5169`
 
 Access experiments and pilots: A/B tests, feature experiments, pilot results. Use when the user asks about experiments, pilots, A/B tests, or experimental features.
 
@@ -1619,7 +1619,7 @@ Railway platform infrastructure management. List services and their deployment s
 
 ### `reasoning_engine_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_reasoning_engine` in `core/services/td_handlers_agents.py:5357`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_reasoning_engine` in `core/services/td_handlers_agents.py:5364`
 
 Invoke the reasoning engine for complex analysis: multi-step reasoning, strategic thinking, trade-off analysis. Use when the user asks for deep analysis, strategic advice, or complex reasoning.
 
@@ -1734,7 +1734,7 @@ Delegate a task to a specialized agent. Use when the user asks to Run any of 58 
 
 ### `schedule_followup`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_schedule_followup` in `core/services/td_handlers_agents.py:6382`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_schedule_followup` in `core/services/td_handlers_agents.py:6389`
 
 Subscribe THIS conversation to a completion notification for a previously dispatched async agent task. Call this RIGHT AFTER you dispatch a long-running agent (run_agent / workflow_orchestration_agent / etc.) so the user gets an automatic 'agent finished' message in this same conversation when the task completes — instead of you going silent until the user manually asks. Pass `execution_id` (UUID returned by execution_history_tool) when you have it, or `task_id` (Celery task_id returned by the dispatch tool) as a convenience lookup. after_seconds is a TTL — if the agent hasn't finished in that window, the subscription quietly expires. Cap 600s. If the agent is already done at subscribe time, the notification fires immediately. Safe to call multiple times with the same IDs — a unique constraint dedupes per (execution, conversation).
 
