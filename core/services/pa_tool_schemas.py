@@ -3429,7 +3429,14 @@ PA_TOOL_SCHEMAS = [
                         "When set, BOTH `evidence` and `result` are projected to their "
                         "respective selections (an empty selection for one prefix returns "
                         "`{}` for that field). Response echoes the server-applied list "
-                        "(post-validation, post-cap)."
+                        "(post-validation, post-cap). S2896 (Ledger Row C): response also "
+                        "echoes `selected_fields_dropped` (paths per-item validation rejected) "
+                        "and `selected_fields_received_count` (list length as the handler saw "
+                        "it pre-truncation — NOT end-to-end proof of what the caller sent). "
+                        "Narrow use: if `selected_fields=[]` with "
+                        "`selected_fields_received_count>0` and `selected_fields_dropped=[]`, "
+                        "the list was wiped between the caller and the handler — retry with a "
+                        "shorter list to isolate."
                     ),
                 },
                 "days": {
