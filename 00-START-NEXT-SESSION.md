@@ -2,78 +2,76 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2907 CLOSE → Small-actionful all-READ_ONLY batch ✓ shipped. Third post-substrate batch. **S2908 OPENS WITH REQUIRED SHAPE-BREAK — uniform READ_ONLY pattern must NOT repeat** (Rigby T0+T1 zoom-out E → Chris ratified) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2908 CLOSE → SHAPE-BREAK batch (mixed-scoped-to-READ_ONLY-subset) ✓ shipped. Fold B drift-rate data point #3 lands at 75% (down from 87.5% but still >50%). **S2909 OPENS WITH CHRIS D-VERDICT ON SYSTEMIC-DRIFT CLEANUP ARC (joint Claude+Rigby recommendation)** — D6 MORATORIUM STILL IN FORCE
 
-**Refreshed 2026-07-23 (S2907 close).** Third accelerated PA-tools sweep batch after Row 161 substrate arc close. PR [#3439](https://github.com/clwest/donkey-betz-platform/pull/3439) merged at `706e7d60a`. Three small-actionful all-READ_ONLY tools validated: `ml_analysis` (3 actions), `voice_clone_tool` (5 actions), `orm_inspect_tool` (5 actions). Zero same-PR handler fix required this batch (contrast S2906 which needed the `_handle_system_alerts` fix). Doc-only per S2796.
+**Refreshed 2026-07-23 (S2908 close).** First shape-break sweep batch after S2907 Fold A commitment. PR [#3441](https://github.com/clwest/donkey-betz-platform/pull/3441) merged at `a17aa0ba6`. Four mixed-safety tools validated (READ_ONLY subset only; mutations excluded via §5a Mutation containment):
 
-**Small-actionful stress-test claim validated (S2906 T0 SIGN Fold A commitment closed):**
-- T1a auto-harness produced real evidence for all 3 tools with real action enumeration (13 total actions covered).
-- 3 new pass verdicts in gap map (8 → 11 template compliance).
-- `validated_full: 20 → 23 (+3)`, `untested: 86 → 83 (-3)`, `td_handlers_agents` untested slice `17 → 14 (-3)`.
-- Rigby joint SIGN (T0 + T1): 15+ verification `tool_runs` between them; sharp T0 zoom-out E caught uniform-pattern-precedent-setting risk, folded to S2908 shape-break commitment. T1 zoom-out E identified drift-rate coupling risk (batch selection + minimal-safe-args harness profile could inflate the 87.5% drift narrative).
-- Uniform-`TOOL_DEFAULTS`-only batch — zero per-action `TOOL_ACTION_METADATA` records added; mixed-pattern coexistence count stays 1/3 sweep sessions (distance to lint trigger: 2 more mixed sessions).
+- `bpaas_tool` (2 R covered / 2 M excluded)
+- `davinci_tool` (5 R covered / 1 M excluded)
+- `obs_tool` (3 R covered / 3 M excluded)
+- `media_tool` (3 R covered / 1 IRREVERSIBLE excluded — **first IRREVERSIBLE in sweep corpus**)
+
+Doc-only per S2796; metadata seed at `core/services/tool_action_metadata.py` uses Pattern C (per-action records for all 20 actions; no `TOOL_DEFAULTS` additions — keeps S2905 mixed-pattern lint counter at 1/3 sweep sessions).
+
+**Shape-break commitment validated (S2907 T0 SIGN Fold A closed):**
+- 13 READ_ONLY actions covered, 7 mutation actions correctly excluded from doc scope + harness dispatch.
+- 4 new pass verdicts in gap map (23 full stays; +4 partial: 3 → 7 total). Untested 83 → 79.
+- `td_handlers_agents` untested slice `14 → 10 (-4)`.
+- Rigby joint SIGN (T0 + T1): 17 verification `tool_runs` between them; T0 caught count-ambiguity in initial dispatch and blocked AGREE until clarified. T1 verified 4 tools' `validated_partial` classification post-backtick-fix.
+- Pattern C uniform this session — mixed-pattern coexistence count stays 1/3 sweep sessions (distance to lint trigger: 2 more mixed sessions).
 
 **Post-merge live-dispatch verified (per PLAYBOOK-7.4.4):**
-- `orm_inspect_tool action=list_models` → clean allowlist. ✓
-- `voice_clone_tool action=stats` → clean aggregate. ✓
-- `ml_analysis action=status` → clean MLEngine health (8.5s latency on first post-recycle dispatch — DistilBERT load; caches thereafter). ✓
+- `bpaas_tool action=get_schema` → clean `{success, action, schema}` (BUILD_PACKET_SCHEMA). ✓
+- `davinci_tool action=grades` → clean `{action, count: 11, grades}` (COLOR_GRADE_PRESETS). ✓
+- `obs_tool action=health` → error envelope `{ok: false, action, error: {code: OBS_DISABLED}}` — no crash. ✓ (`_obs_enabled()` false in local env; expected short-circuit.)
+- `media_tool action=stats` → clean `{action, images: 10, videos: 0, audio: 4, total: 14}`. ✓
 
-All 3 tools TOOL_DEFAULTS seed is live in worker.
+All 4 tools `TOOL_ACTION_METADATA` seed is live in worker.
 
-**Rigby joint SIGN (S2907):** T0 SIGN AGREE-with-edits (batch composition + orm_inspect benchmark framing softened + Fold A zoom-out E precedent-setting risk folded to S2908 shape-break commitment). T1 SIGN AGREE-with-2-edits (voice_clone anonymous-user language + orm_inspect harness classification wording; both folded same-batch). Zero rubber-stamp SIGN across both rounds.
+**Rigby joint SIGN (S2908):** T0 SIGN AGREE-with-edits (validated_partial adoption + §5a conditional-mandatory rule + dependency_surface doc note + keep 4-tool batch). T1 SIGN AGREE (5 tool_runs verified 2 docs end-to-end + metadata seed + gap map rows for all 4 tools). Zero rubber-stamp SIGN across both rounds.
 
 **PRs shipped this session:**
-- u-d-b PR [#3439](https://github.com/clwest/donkey-betz-platform/pull/3439) — S2907 Slice 2 batch 3, merged at `706e7d60a`
-- u-d-b PR `<TBD>` — S2907 close cascade (handoff + 00-START refresh + wrapper pin bump)
+- u-d-b PR [#3441](https://github.com/clwest/donkey-betz-platform/pull/3441) — S2908 Slice 2 batch 4, merged at `a17aa0ba6`
+- u-d-b PR `<TBD>` — S2908 close cascade (handoff + 00-START refresh + wrapper pin bump)
 
 **Zoom-out folds captured (per PLAYBOOK-6.10.7):**
-- **Fold A (T0 zoom-out E, `future_trigger` + Chris-ratified same-day):** Uniform READ_ONLY pattern accreting; three coupling risks named (Template v1 overfitting, drift-rate selection bias, hard governance muscle unexercised). **S2908 batch 4 MUST break uniform pattern.** Preferred shape (Rigby T1 ranking): mixed-tool scoped to READ_ONLY subset, documented in `## Covered actions`. Alternate: gated-write dry_run-only. Memory: `project_s2908_batch_4_shape_break_commitment.md`.
-- **Fold B (T1 zoom-out E, `future_trigger`):** Drift-rate narrative (87.5% across S2906+S2907) could couple to batch selection + minimal-safe-args harness profile. Do NOT let S2908 batch pick optimize the story; keep shape-break as-ratified and let drift-rate land honestly.
+- **Fold Q6 (T0 zoom-out, mostly `same_pr_mitigatable`):** three coupling risks named — category ambiguity debt (solved by adopting `validated_partial`), doc-section ratchet creep (solved by conditional-mandatory §5a rule), harness semantics drift (long-term direction: move safety classification to `tool_action_metadata.py` code-truth, keep docs as evidence narrative).
+- **Fold Q4 (T1 zoom-out, `future_trigger` + joint recommendation for Chris):** Fold B drift-rate data point #3 lands at **75%** — DOWN from 87.5% (S2906+S2907) but still >50% sustained. Rigby's batch-selection-bias hypothesis PARTIALLY confirmed (uniform-safe-args inflated the rate; drift IS systemic across shape variants). **Joint recommendation for S2909:** open systemic-drift cleanup arc scoped to (1) harness outcome classifier fix + (2) bridge availability precheck. Chris D-verdict required.
 
-Full session context: `docs/handoffs/SESSION_2907_SLICE_2_BATCH_3_SMALL_ACTIONFUL_SWEEP.md`.
+Full session context: `docs/handoffs/SESSION_2908_SLICE_2_BATCH_4_SHAPE_BREAK_SWEEP.md`.
 
 ---
 
-## S2908 open sequence
+## S2909 open sequence
 
-### Step 1 (REQUIRED FIRST ACTION) — Slice 2 batch 4 (SHAPE-BREAK REQUIRED)
+### Step 1 (REQUIRED FIRST ACTION) — Chris D-verdict on systemic-drift cleanup arc
 
-**S2908 REQUIRED open: Slice 2 batch 4 SHAPE-BREAK.** Do NOT open with another uniform-READ_ONLY multi-action batch. Chris directive (2026-07-23) folded per Fold A: *"if this is our Batch 3 let's go with 1 and knock it out but in our next session we need to change the shape."*
+**Chris directive required** — joint Claude+Rigby recommendation from S2908 T1 zoom-out Fold Q4: given 3 data points at >50% drift (87.5% × 2 + 75%), the Fold B systemic-drift hypothesis has crossed the "3-data-point 50% floor" trigger. Options:
 
-**Two acceptable shapes (per Rigby T0+T1 zoom-out E, ratified by Chris):**
+**Option A (RECOMMENDED — joint Claude+Rigby):** Open systemic-drift cleanup arc as S2909 primary work. Scope:
+1. **Harness outcome classifier fix** — `pa_tool_validate_harness` should treat inline `{error, error_code}` envelopes at HTTP 200 as `soft_error` outcome (not `success`). This alone would collapse most of the "classification drift" findings (9 instances across 4 tools cumulative).
+2. **Bridge availability precheck** — preflight for `external_bridge` dependency surfaces (OBS bridge, resolve_node) so harness distinguishes "bridge down" (env config) vs "tool bug" (real drift).
+3. **Optional post-fix experiment:** one reverse-control uniform-READ_ONLY sweep batch AFTER the harness fix to quantify whether drift-rate drops below 50% post-remediation. If it does, confirms Rigby's batch-selection-bias hypothesis fully. If it doesn't, drift is more systemic than the harness's classifier can explain — Playbook-amendment territory.
 
-**Shape A (Rigby-preferred, T1 zoom-out ranking):** Mixed-tool scoped to READ_ONLY subset only. Pick one tool with both READ_ONLY and WRITE actions from the S2907 rejected-mixed list; cover ONLY the READ_ONLY actions in the validation doc; document the scoping explicitly in `## Covered actions` (e.g., "Actions covered: X, Y, Z. Mutation actions W, V explicitly out of scope this ship — see §5a Mutation containment for deferral rationale + planned coverage slice"). Tests Template v1's mixed-pattern representation without taking write risk.
+Advance to remediation before continuing sweep-batch work.
 
-Concrete candidates from S2907 rejected-mixed inventory:
-- `bpaas_tool` — cover `get_schema` + `get_example` only (skip `create_project` + `generate_close_pack` mutations).
-- `davinci_tool` — cover `health` + `status` + `result` + `jobs` + `grades` only (skip `render` mutation).
-- `obs_tool` — cover `health` + `status` + `last` only (skip `start` + `stop` + `upload_last` mutations).
-- `media_tool` — cover `list` + `detail` + `stats` only (skip `delete` mutation).
+**Option B (Rigby-secondary):** Continue sweep — one more sweep batch (Shape A or Shape B per S2907 zoom-out E), THEN evaluate cleanup arc. Delays the substrate fix but gives one more clean data point. Rigby T1 flagged as "mostly re-proves the same systemic issue."
 
-**Shape B (Rigby-second-choice, Chris-ratified alternate):** Gated-write tool covering only the dry_run branch. Pick one tool with dry_run/confirm pattern; cover only the dry_run action. Tests schema/handler gating + metadata correctness without mutations. Candidates: `autopilot_tool` (Slice 1.5b if paired with mutation staged-enforcement), `security_containment_plan` (S1228 PR-A gate — dry_run branch alone).
+**Option C (defer):** Neither — pick a different S2909 track entirely (Testing Discipline chapter candidacy from ledger row 154; Bridge call observability rename-risk from row 155; or unrelated engineering work).
 
-**Concrete work:**
-- Inspect 3-5 candidate tools from Shape A list (or 1-2 gated-write for Shape B). Confirm safety-class split via handler-trace evidence + downstream service inspection.
-- Author T1b template v1 docs. `## Covered actions` MUST include explicit scoping note naming excluded mutation actions and deferral rationale.
-- Watch drift-find rate on the MIXED-scoped batch specifically — this is data point #3 for S2906 Fold B trend candidate. Fold B says: "keep shape-break as-ratified so we test the real hypothesis (uniform-shape overfitting hides mixed-surface realities), not the meta-narrative." Do NOT let candidate pick optimize the drift-rate story.
-- If drift-rate stays ≥50% across the mixed-scoped batch, that's data point #3 → hits 3-batch escalation floor → evaluate Playbook-amendment / cleanup-arc promotion.
-- If drift-rate drops below 50%, that CONFIRMS Rigby's Fold B "batch-selection bias" hypothesis (mixed-surface batches surface less drift than uniform-safe-args batches).
+### Alternative Step 1 candidates (unchanged)
 
-**Session cap:** target 1 session for batch of 3-5.
-
-### Alternative Step 1 candidates (unchanged from S2906/S2907 close)
-
-- **Phase 0 heading fixes (8 tools)** — doc-only PR that clears remaining parity mismatches. Still valid if Chris wants clean parity gate before more sweep sessions.
+- **Phase 0 heading fixes (8 tools)** — doc-only PR that clears remaining parity mismatches. Still valid but Fold Q4 recommendation supersedes at S2909 open.
 - **Slice 1.5b autopilot mutations** — staged-enforcement session per pre-commit note (§ below, unchanged).
 
-**Recommend Shape A mixed-tool-scoped-to-READ_ONLY-subset** — closes both Chris-ratified S2908 shape-break commitment AND advances Rigby's preferred zoom-out ranking. Phase 0 + Slice 1.5b can bundle into S2909+.
+**Recommend Option A** — closes the 3-data-point Fold B trigger with concrete substrate work rather than another sweep-batch data point.
 
-### What's forbidden at S2908 (D6 MORATORIUM still in force)
+### What's forbidden at S2909 (D6 MORATORIUM still in force)
 
-- **NO another uniform-READ_ONLY multi-action batch** (Fold A commitment — this is the load-bearing S2908 constraint).
+- **NO another mixed-scoped sweep batch** unless Chris explicitly picks Option B — Fold Q4 says continuing without the harness fix mostly re-proves the same finding.
 - No new strategic discovery arcs. No opportunity portfolio expansions. No evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 - No R1a-shaped proposals (upgrading character-os to fleet HMAC).
-- No v1 → v2 harness schema bump without substrate-arc-scoped SIGN. FT-2 (`soft_error` outcome) would need this; do NOT act on it without the SIGN cycle.
+- No v1 → v2 harness schema bump WITHOUT substrate-arc-scoped SIGN. **FT-2 (`soft_error` outcome) is the exact remediation Fold Q4 recommends** — if Chris picks Option A, this bump happens under a substrate-arc SIGN cycle, not ad-hoc.
 - No v1 → v2 template variant bump without substrate-arc-scoped SIGN. If a third template variant is proposed at any point, that's ZO-Q8's trigger — evaluate structured-parse migration, not just add another variant.
 - No agent-substrate validation arc (peer to PA tools sweep). Requires explicit Chris directive.
 
@@ -87,21 +85,25 @@ Concrete candidates from S2907 rejected-mixed inventory:
 - **Sweep batch cadence outcome gate** — ledger row 158. Unchanged.
 - **Mutation-heavy single-tool batch pattern** — ledger row 159. Unchanged.
 - **2-tier evidence template promotion** — ledger row 160. Triggers after 1-2 more large-surface sweeps adopt cleanly.
-- **Sweep-arc pace sustainability substrate arc** — ledger row 161. **CLOSED (mitigated) 2026-07-22 S2904 arc close.** S2905 (4 tools) + S2906 (4 tools) + S2907 (3 tools) sustain the accelerated pace claim.
+- **Sweep-arc pace sustainability substrate arc** — ledger row 161. **CLOSED (mitigated) 2026-07-22 S2904 arc close.** S2905 (4) + S2906 (4) + S2907 (3) + S2908 (4) sustain the accelerated pace claim.
 - **Response-level introspection field creep** — ledger row 162 (S2896). Same-PR mitigated; watch for pattern in other tools' response contracts.
 - **Harness timestamp churn** — S2903 fold, `future_trigger`. Unchanged.
 - **T1a FT-1 defaulted-tool action-set change lint** — S2903 substrate-arc-scope. Unchanged.
-- **T1a FT-2 harness `soft_error` outcome value** — S2903 substrate-arc-scope. Unchanged.
+- **T1a FT-2 harness `soft_error` outcome value** — S2903 substrate-arc-scope. **NOW LOAD-BEARING for S2909 Option A cleanup arc.**
 - **T1b ZO-Q2 warn-noise escalation ladder** — S2904 substrate-arc-scope. Unchanged.
 - **T1b ZO-Q7 automated corpus-counter helper** — S2904 substrate-arc-scope. Unchanged.
 - **T1b ZO-Q8 structured-parse migration** — S2904 substrate-arc-scope. Unchanged.
-- **S2905 metadata-pattern-selection lint** — substrate-arc-scope. Trigger: ≥3 sweep sessions mix `TOOL_DEFAULTS` + per-action `TOOL_ACTION_METADATA` without stated rule-based justification. **S2907 contribution: zero** (uniform-only batch). Distance to trigger: 2 more mixed sessions.
+- **S2905 metadata-pattern-selection lint** — substrate-arc-scope. Trigger: ≥3 sweep sessions mix `TOOL_DEFAULTS` + per-action `TOOL_ACTION_METADATA` without stated rule-based justification. **S2908 contribution: zero** (Pattern C uniform-only). Distance to trigger: 2 more mixed sessions.
 - **S2906 Ledger candidates (`get_body_vitals`, `web_search`, `get_system_alerts`)** — unchanged.
-- **NEW — S2907 Ledger candidate: `ml_analysis` schema-declared `model_type` unused + handler-required `data` schema-missing** — silent-parameter-invisibility class (3rd tool with this pattern). Deferred (batch-scope discipline).
-- **NEW — S2907 Ledger candidate: `voice_clone_tool` marketplace `limit` silent-clamp at 30 + `list`/`clone_requests` schema-declared-but-hard-capped at 20/10** — silent-truncation + schema-declared-but-handler-ignored classes. Deferred.
-- **NEW — S2907 substrate finding: T1a harness `status_code`-only classification misclassifies inline `{ok:false}` envelopes as success** — 4/5 orm_inspect_tool dispatches this ship. Harness improvement candidate. Deferred to substrate-arc scope.
-- **NEW — S2907 harness-substrate: MLEngine per-invocation NLP-model load stalls harness ~5min without `SKIP_NLP_MODELS=1`** — deferred to substrate-arc scope.
-- **S2906/S2907 systemic drift trend candidate (Fold B)** — 7/8 tools across S2906+S2907 (87.5%). `future_trigger`: if drift rate sustains ≥50% across S2908 (3rd batch data point), promote to Playbook amendment (drift taxonomy + response rule) OR dedicated cleanup arc. Do NOT act off two data points. Also per Rigby T1 zoom-out E: watch for batch-selection + minimal-safe-args harness profile coupling — S2908 mixed-scoped batch either confirms drift is systemic OR reveals uniform-safe-args was inflating the rate.
+- **S2907 Ledger candidate: `ml_analysis` schema-declared `model_type` unused + handler-required `data` schema-missing** — unchanged.
+- **S2907 Ledger candidate: `voice_clone_tool` marketplace `limit` silent-clamp at 30 + `list`/`clone_requests` schema-declared-but-hard-capped at 20/10** — unchanged.
+- **S2907 substrate finding: T1a harness `status_code`-only classification misclassifies inline `{ok:false}` envelopes as success** — **NOW LOAD-BEARING for S2909 Option A cleanup arc.**
+- **S2907 harness-substrate: MLEngine per-invocation NLP-model load stalls harness ~5min without `SKIP_NLP_MODELS=1`** — unchanged.
+- **NEW — S2908 substrate finding: T1a harness classification-drift pattern extended, 5 more instances (davinci health+jobs, obs health+status+last) → 9 total across 4 tools** — merged into the S2907 substrate finding above.
+- **NEW — S2908 substrate finding: Bridge-unreachable-during-harness detection gap** — external_bridge tools (davinci_tool + obs_tool) surface bridge-unreachable envelopes at harness time without any preflight distinguishing "bridge down" vs "tool bug". **LOAD-BEARING for S2909 Option A cleanup arc scope (2).**
+- **NEW — S2908 Ledger candidate: `media_tool.delete` first IRREVERSIBLE action in sweep corpus — no confirm flag, no soft-delete** — confirmation-flow ADR candidate. Design-arc-scope; deferred.
+- **NEW — S2908 doc-fix candidate: `obs_tool_validation.md` §6.1 conflates OBS_DISABLED vs BRIDGE_UNREACHABLE error envelopes** — post-merge dispatch surfaced OBS_DISABLED envelope specifically (`_obs_enabled()` false short-circuit); doc annotation is directionally correct but should distinguish. Small-doc-touch scope; deferred.
+- **S2906/S2907/S2908 systemic drift trend (Fold B, 3 data points, 75% latest)** — **AT CROSS-OVER — joint recommendation for Chris to open cleanup arc at S2909 (see Option A above).**
 - **S2905 Ledger candidates (`pilots_tool`, `cost_telemetry_tool`, `revenue_tracker_tool`)** — unchanged.
 - **Batched-items structural (Rigby Tool Gap Ledger entry #27)** — Unchanged.
 - **Applicability metadata pattern (entry #28)** — Unchanged.
@@ -122,14 +124,15 @@ Concrete candidates from S2907 rejected-mixed inventory:
 **Slice 1 — `td_handlers_ops` (17 registered tools):**
 - Batches 1-4 (S2892-S2895): 9 tools ✓
 - **S2896-S2899:** 4 engineering ships (Rows A/B/C/#29 mitigated).
-- **S2900-S2904:** Row 161 substrate arc — CLOSED. T1c ✓ S2901 + T1a ✓ S2902-S2903 + T1b ✓ S2904.
-- **Remainder:** Slice 1.5b (autopilot_tool mutations, ~1 session; staged enforcement per pre-commit note) + `ops_tool` sweep slot (promoted from partial at T1c) + Phase 0 heading fixes for 8 close_with_short_note tools.
+- **S2900-S2904:** Row 161 substrate arc — CLOSED.
+- **Remainder:** Slice 1.5b (autopilot_tool mutations, ~1 session) + `ops_tool` sweep slot (promoted from partial at T1c) + Phase 0 heading fixes for 8 close_with_short_note tools.
 
 **Slice 2 — `td_handlers_agents` (25 tools):**
 - **S2905 batch 1: 4 tools ✓** (gates_tool, pilots_tool, cost_telemetry_tool, revenue_tracker_tool). Mixed-pattern proof.
 - **S2906 batch 2: 4 tools ✓** (get_body_vitals, check_resource_budget, get_system_alerts, web_search). Actionless-only proof.
 - **S2907 batch 3: 3 tools ✓** (ml_analysis, voice_clone_tool, orm_inspect_tool). Small-actionful all-READ_ONLY proof.
-- **S2908+ batches 4-5:** 14 tools remaining. S2908 REQUIRED shape-break (mixed-scoped-to-READ_ONLY-subset OR gated-write-dry_run-only). Target ~3-5 tools/batch → ~3 more batches.
+- **S2908 batch 4: 4 tools ✓** (bpaas_tool, davinci_tool, obs_tool, media_tool). **SHAPE-BREAK — mixed-scoped-to-READ_ONLY-subset proof.**
+- **S2909+ batches 5+:** 10 tools remaining. Recommend HOLDING sweep until cleanup arc lands (Option A). If Chris picks Option B, target ~3-5 tools/batch → ~2-3 more batches to close Slice 2.
 
 **Slice 3 — `td_handlers_core` (22 tools):** queued behind Slice 2.
 **Slice 4 — `td_handlers_gateway` (17 tools):** queued.
@@ -137,38 +140,25 @@ Concrete candidates from S2907 rejected-mixed inventory:
 
 **Substrate arc CLOSED (S2900-S2904):** T1c ✅ S2901 → T1a ✅ S2902+S2903 → T1b ✅ S2904.
 
-**Total remaining tools to close:** 65 (or ~93 counting partials + doc-unknowns). Post-substrate sweep pace observed: S2905=4, S2906=4, S2907=3. Extrapolated remaining ~10-14 sessions at 4-5 tools/batch accelerated pace once mixed-shape coverage is exercised.
+**Total remaining tools to close:** ~61 (or ~89 counting partials + doc-unknowns). Post-substrate sweep pace observed: S2905=4, S2906=4, S2907=3, S2908=4. Extrapolated remaining ~10-13 sessions at 4-5 tools/batch accelerated pace once mixed-shape coverage is exercised — but Fold Q4 recommendation is to pause sweep and open cleanup arc first.
 
 ---
 
 ## Autopilot Slice 1.5b pre-commit note
 
-When `autopilot_tool` mutations are eventually swept (Slice 1.5b), the shape MUST be:
-
-1. **Staged-enforcement session** — many mutations require paired lifecycle scaffolding: `experiment_create` + `_start` (paired), `outreach_generate` + `_approve` + `_reject` (needs synthetic draft rows or A4 throttle waiver), `close_pack_generate` + `_approve` (needs synthetic opportunity_id), `meeting_create` + `_brief` + `_recap` (creates real calendar substrate), `governance_kill_switch` + `_deactivate_switch` (paired), `release_freeze` + `_unfreeze` (paired), `run` (evaluates all policies against real state — may create real blocks/downgrades).
-2. **Canary containment per-action:** some are inherently global (`run`, `governance_set_mode global`, `release_freeze`) — need paired revert protocol. Others operate on single rows — canary to synthetic test data.
-3. **A4 warm-up hard-throttle** (S2846) governs outreach mutations — max 3-5 total intros even in the mutation session.
-4. **`backfill_impacts` + `backfill_failure_reasons`** — data-substrate writes; need idempotency verification post-write.
-5. **`security_containment_plan dry_run=false, confirm=true`** — S1228 PR-A gate; explicit both-flag dispatch required.
-
-Do NOT try to sweep both categories in one session.
+_(unchanged from S2907 close — see prior 00-START-NEXT-SESSION.md snapshots in handoff)_
 
 ---
 
 ## Two-Claude concurrency safety envelope (still active from S2889)
 
-Rulebook: `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`.
-
-- Each terminal uses its own Rigby conversation pin — no state collision.
-- Different repos, different branches — no git collision.
-- **Watch:** character-os Docker postgres previously captured u-d-b's `:5433` via IPv6 wildcard (S2885). `USE_PGBOUNCER=0` still in force in both `.env` files. If character-os side runs `docker compose up`, verify port ownership before restarting u-d-b.
-- Shared u-d-b PA endpoint (`http://localhost:8000`) — both Claudes may drive it; surface handles concurrent conversations.
+_(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2907 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2908 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2907: zero A4 spend — pure sweep-batch execution.** A1 shipping spend was the S2907 batch 3 PR + close cascade.
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2908: zero A4 spend — pure sweep-batch execution.** A1 shipping spend was the S2908 batch 4 PR + close cascade.
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
 3. **Capability claims:** (a)…(uu) as ratified at S2887 close. No additions this session.
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
@@ -177,10 +167,11 @@ Rulebook: `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`.
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2907)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2908)
 
 See:
-- **S2907 handoff (current):** `docs/handoffs/SESSION_2907_SLICE_2_BATCH_3_SMALL_ACTIONFUL_SWEEP.md`
+- **S2908 handoff (current):** `docs/handoffs/SESSION_2908_SLICE_2_BATCH_4_SHAPE_BREAK_SWEEP.md`
+- **S2907 handoff:** `docs/handoffs/SESSION_2907_SLICE_2_BATCH_3_SMALL_ACTIONFUL_SWEEP.md`
 - **S2906 handoff:** `docs/handoffs/SESSION_2906_SLICE_2_BATCH_2_ACTIONLESS_SWEEP.md`
 - **S2905 handoff:** `docs/handoffs/SESSION_2905_SLICE_2_BATCH_1_ACCELERATED_SWEEP.md`
 - **S2904 handoff:** `docs/handoffs/SESSION_2904_T1B_TEMPLATE_EXTRACTION.md`
@@ -188,43 +179,26 @@ See:
 - **S2902 handoff:** `docs/handoffs/SESSION_2902_T1A_AUTO_HARNESS_SCAFFOLD.md`
 - **S2901 handoff:** `docs/handoffs/SESSION_2901_T1C_LOW_SIGNAL_AUDIT.md`
 - **S2900 handoff:** `docs/handoffs/SESSION_2900_ROW_161_SUBSTRATE_ARC_OPENED.md`
-- **S2900 substrate arc scoping (closed at S2904):** `docs/audits/pa_tools/substrate/S2900_substrate_arc_scoping.md` (parent) + `T1a_auto_harness.md` + `T1b_family_doc_templates.md` + `T1c_low_signal_audit.md` + `T1b_ship_shape_s2904.md`
+- **S2900 substrate arc scoping (closed at S2904):** `docs/audits/pa_tools/substrate/S2900_substrate_arc_scoping.md` (parent) + T1a/T1b/T1c child docs
 - **T1b canonical template file:** `docs/audits/pa_tools/substrate/_TEMPLATE_per_tool_validation.md`
-- **S2907 per-tool validation docs (new this session):**
+- **S2908 per-tool validation docs (new this session):**
+  - `docs/research/tools/validation/bpaas_tool_validation.md`
+  - `docs/research/tools/validation/davinci_tool_validation.md`
+  - `docs/research/tools/validation/obs_tool_validation.md`
+  - `docs/research/tools/validation/media_tool_validation.md`
+- **S2907 per-tool validation docs:**
   - `docs/research/tools/validation/ml_analysis_validation.md`
   - `docs/research/tools/validation/voice_clone_tool_validation.md`
   - `docs/research/tools/validation/orm_inspect_tool_validation.md`
-- **S2906 per-tool validation docs:**
-  - `docs/research/tools/validation/get_body_vitals_validation.md`
-  - `docs/research/tools/validation/check_resource_budget_validation.md`
-  - `docs/research/tools/validation/get_system_alerts_validation.md`
-  - `docs/research/tools/validation/web_search_validation.md`
-- **S2905 per-tool validation docs:**
-  - `docs/research/tools/validation/gates_tool_validation.md`
-  - `docs/research/tools/validation/pilots_tool_validation.md`
-  - `docs/research/tools/validation/cost_telemetry_tool_validation.md`
-  - `docs/research/tools/validation/revenue_tracker_tool_validation.md`
-- **S2899 handoff:** `docs/handoffs/SESSION_2899_EMBEDDING_BASELINE_LOOKBACK_CAP.md`
-- **S2898 handoff:** `docs/handoffs/SESSION_2898_INTEGRITY_NULL_SPIKE_APPLICABILITY.md`
-- **S2897 handoff:** `docs/handoffs/SESSION_2897_PROSPECTING_QUEUE_TITLE_FIX.md`
-- **S2896 handoff:** `docs/handoffs/SESSION_2896_AUTOPILOT_HISTORY_WIPE_DIAGNOSTIC.md`
-- **S2895 handoff:** `docs/handoffs/SESSION_2895_PA_TOOLS_SWEEP_SLICE_1_5A_AUTOPILOT_READ_ONLY.md`
-- **S2894 handoff:** `docs/handoffs/SESSION_2894_PA_TOOLS_SWEEP_SLICE_1_BATCH_3.md`
-- **S2893 handoff:** `docs/handoffs/SESSION_2893_PA_TOOLS_SWEEP_SLICE_1_BATCH_2.md`
-- **S2892 handoff:** `docs/handoffs/SESSION_2892_PA_TOOLS_SWEEP_SLICE_1_BATCH_1.md`
-- **S2889 handoff:** `docs/handoffs/SESSION_2889_PLAYBOOK_V0_9_0_RATIFIED.md`
-- **A4↔A1 ratification:** current `00-START-NEXT-SESSION.md` §A4 Constraints (this file, above)
-- **Parent strategic discovery:** `docs/research/platform/S2841_STRATEGIC_DISCOVERY_WHAT_DBZ_ACTUALLY_IS.md`
-- **Pressure-test addendum:** `docs/research/platform/S2841_PRESSURE_TEST_ADDENDUM.md`
+- **S2906 per-tool validation docs:** `get_body_vitals_validation.md`, `check_resource_budget_validation.md`, `get_system_alerts_validation.md`, `web_search_validation.md`
+- **S2905 per-tool validation docs:** `gates_tool_validation.md`, `pilots_tool_validation.md`, `cost_telemetry_tool_validation.md`, `revenue_tracker_tool_validation.md`
 - **Playbook v0.9.0 ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-22_PLAYBOOK_V0_9_0.md`
 - **Parent-workspace multi-Claude rulebook:** `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`
-- **PA tools sweep methodology:** `docs/audits/PA_TOOLS_GAP_MAP.md` + `docs/PA_TOOL_AUDIT.md` (both auto-generated) + `docs/research/tools/validation/*.md` (per-tool validation docs; 33 non-substrate total post-S2907)
-- **S2906 workspace mirrors** (authored by Rigby at S2907 open):
-  - Content Mirror: `f9578144-0020-4cf9-b532-bbde2b892623`
-  - Ratification Envelope: `deeca50b-9fa4-47a2-8d3a-fe0a974856e4`
+- **PA tools sweep methodology:** `docs/audits/PA_TOOLS_GAP_MAP.md` + `docs/PA_TOOL_AUDIT.md` (both auto-generated) + `docs/research/tools/validation/*.md` (per-tool validation docs; 37 non-substrate total post-S2908)
+- **S2907 workspace mirrors** (Rigby to author at S2909 open — outstanding from S2908 open per `feedback_rigby_writes_workspace_deliverables`):
   - Both in Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50`.
-- **S2907 workspace mirrors:** Rigby to author at S2908 open (both into Donkey Betz workspace above) — content mirror + ratification envelope per `feedback_rigby_writes_workspace_deliverables`.
-- **S2908 commitment memory:** `project_s2908_batch_4_shape_break_commitment.md`.
+- **S2908 workspace mirrors:** Rigby to author at S2909 open (both into Donkey Betz workspace above) — content mirror + ratification envelope per `feedback_rigby_writes_workspace_deliverables`.
+- **S2908 commitment memory:** `project_s2908_batch_4_shape_break_commitment.md` — **CLOSED (mitigated).**
 - **Rigby Tool Gap Ledger deliverable:** `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` (Donkey Betz workspace above).
 
 For older session history (S1-S2847), see `docs/handoffs/` + `docs/research/OPEN_ARCS.md`.
