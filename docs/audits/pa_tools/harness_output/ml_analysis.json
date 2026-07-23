@@ -2,42 +2,46 @@
   "actions": [
     {
       "action": "status",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 965,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "action",
+        "engine",
+        "health"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "decision_pattern",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "expected_outcome": "error_captured",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 3,
+      "notes": "error_code=TOOL_EXCEPTION; msg=data is required for decision_pattern analysis",
+      "resolution_source": "tool_default",
       "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "safety_class": "READ_ONLY",
+      "status_code": 500
     },
     {
       "action": "detect_opportunity",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "expected_outcome": "error_captured",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 2,
+      "notes": "error_code=TOOL_EXCEPTION; msg=data (market_data) is required for detect_opportunity",
+      "resolution_source": "tool_default",
       "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "safety_class": "READ_ONLY",
+      "status_code": 500
     }
   ],
   "harness_version": "v1",
   "run_metadata": {
-    "generated_at": "2026-07-23T03:21:11.215589+00:00",
-    "git_sha": "fc5bca145"
+    "generated_at": "2026-07-23T14:18:11.005088+00:00",
+    "git_sha": "b02f08016"
   },
   "schema_action_count": 3,
   "tool_name": "ml_analysis"

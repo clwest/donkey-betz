@@ -2,64 +2,82 @@
   "actions": [
     {
       "action": "list",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 22,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "action",
+        "count",
+        "voices"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "detail",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "expected_outcome": "error_captured",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 6,
+      "notes": "error_code=TOOL_EXCEPTION; msg=id parameter required for detail action",
+      "resolution_source": "tool_default",
       "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "safety_class": "READ_ONLY",
+      "status_code": 500
     },
     {
       "action": "clone_requests",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 14,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "action",
+        "count",
+        "requests"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "marketplace",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 4,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "action",
+        "count",
+        "voices"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "stats",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 6,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "action",
+        "marketplace_total",
+        "my_total_revenue",
+        "my_total_uses",
+        "my_voices"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     }
   ],
   "harness_version": "v1",
   "run_metadata": {
-    "generated_at": "2026-07-23T03:21:22.662047+00:00",
-    "git_sha": "fc5bca145"
+    "generated_at": "2026-07-23T14:20:25.875654+00:00",
+    "git_sha": "b02f08016"
   },
   "schema_action_count": 5,
   "tool_name": "voice_clone_tool"

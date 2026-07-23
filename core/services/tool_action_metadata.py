@@ -198,6 +198,48 @@ TOOL_DEFAULTS: Dict[str, ToolDefaults] = {
         default_applicability='always',
         notes='env: external:serper; actionless schema',
     ),
+    # Slice 2 batch 3 seed (S2907). Three small-actionful all-READ_ONLY tools
+    # from td_handlers_agents.py. Closes S2906 T0 SIGN Fold A commitment
+    # (small-actionful stress test of `## Covered actions` handler-trace-
+    # evidence claim under non-trivial action enumeration).
+    #
+    # Batch composition rationale (per Rigby S2907 T0 SIGN AGREE + zoom-out E):
+    # uniform READ_ONLY sustains actionless-shape/small-actionful shape
+    # separation from S2906. S2908 batch 4 committed to break the uniform-
+    # only pattern (mixed-tool-scoped-to-READ_ONLY-subset OR gated-write
+    # dry_run-only) per Rigby zoom-out E precedent-setting warning.
+    #
+    # Authoring evidence:
+    # - ml_analysis: `td_handlers_agents.py:1711` — 3 actions
+    #   (status/decision_pattern/detect_opportunity) delegate to MLEngine
+    #   read methods (get_system_health / analyze_user_decision_pattern /
+    #   detect_cross_domain_opportunity). No persisted writes.
+    # - voice_clone_tool: `td_handlers_agents.py:4312` — 5 actions
+    #   (list/detail/clone_requests/marketplace/stats) all ORM reads against
+    #   VoiceProfile + VoiceCloneRequest. Cloning itself is Web UI /
+    #   Discord `/voice clone`; this tool exposes read-only inspection.
+    # - orm_inspect_tool: `td_handlers_agents.py:592` — 5 actions
+    #   (list_models/describe_model/get/filter/count_by) explicitly built
+    #   read-only at S2866 (Rigby Tool Gap Ledger #3). Docstring:
+    #   "No .save / .update / .delete surface — construction only."
+    'ml_analysis': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: MLEngine read methods (get_system_health / '
+              'analyze_user_decision_pattern / detect_cross_domain_opportunity)',
+    ),
+    'voice_clone_tool': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: VoiceProfile + VoiceCloneRequest ORM; '
+              'cloning path is UI/Discord, not this tool',
+    ),
+    'orm_inspect_tool': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='deps: allowlisted Django ORM read-only inspection '
+              '(Rigby Tool Gap Ledger #3, S2866)',
+    ),
 }
 
 
