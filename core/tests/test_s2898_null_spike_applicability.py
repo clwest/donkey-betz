@@ -174,3 +174,96 @@ class NullSpikeApplicabilityTests(TestCase):
         engine = DataIntegrityEngine()
         with self.assertNumQueries(2):
             engine.get_null_spike_scan(hours=24)
+
+
+class BaselineLookbackCapTests(TestCase):
+    """S2899 Phase 2 (Ledger Row #29) — per-field baseline lookback cap.
+
+    Locks in the shape of `FIELD_BASELINE_LOOKBACK_DAYS`:
+      - default `None` preserves S2898 Phase 1 all-time semantics unchanged.
+      - int N restricts the HISTORICAL_BASELINE baseline query to rows created
+        in the last N days, letting stale populates decay out of the baseline.
+      - `baseline_lookback_days` in the return dict surfaces the active setting
+        per HISTORICAL_BASELINE field for operator visibility.
+    """
+
+    def _mk(self, spider, data_type, raw=None, processed=None, embedding=None):
+        return LegacySpiderData.objects.create(
+            spider_name=spider,
+            source_url='http://example.test',
+            data_type=data_type,
+            raw_data=raw if raw is not None else {'ok': True},
+            processed_data=processed if processed is not None else {},
+            embedding_text=embedding if embedding is not None else '',
+        )
+
+    def _backdate(self, row, days_ago):
+        """Set created_at N days in the past (bypasses auto_now_add)."""
+        from django.utils import timezone as tz
+        from datetime import timedelta
+        LegacySpiderData.objects.filter(pk=row.pk).update(
+            created_at=tz.now() - timedelta(days=days_ago),
+        )
+
+    def test_default_none_preserves_all_time_baseline_semantics(self):
+        """Row #29: default `None` on class must behave identically to S2898 Phase 1."""
+        # Historical populate 100 days ago (would fall outside a 30d cap)
+        old = self._mk('spider_old', 'news', embedding='historical value')
+        self._backdate(old, days_ago=100)
+        # Current window: 5 rows all with empty embedding
+        for _ in range(5):
+            self._mk('spider_old', 'news', embedding='')
+
+        scan = DataIntegrityEngine().get_null_spike_scan(hours=24)
+
+        emb_pair = [s for s in scan['spikes']
+                    if s['field'] == 'embedding_text' and s['spider'] == 'spider_old']
+        self.assertEqual(len(emb_pair), 1,
+                         "default None baseline must still see the 100d-old populate")
+        self.assertEqual(emb_pair[0]['applicability_reason'], 'historical_populated')
+        # And the return dict surfaces the setting
+        self.assertIn('baseline_lookback_days', scan)
+        self.assertEqual(scan['baseline_lookback_days'].get('embedding_text'), None)
+
+    def test_lookback_cap_excludes_stale_populates(self):
+        """Row #29: 30d cap must skip a pair whose only populate is 100d old."""
+        # Same setup as above — pair's only populate is 100 days ago
+        old = self._mk('spider_stale', 'news', embedding='historical value')
+        self._backdate(old, days_ago=100)
+        for _ in range(5):
+            self._mk('spider_stale', 'news', embedding='')
+
+        engine = DataIntegrityEngine()
+        # Instance-level override — mirrors how an operator would tune the cap
+        engine.FIELD_BASELINE_LOOKBACK_DAYS = {'embedding_text': 30}
+        scan = engine.get_null_spike_scan(hours=24)
+
+        emb_pair = [s for s in scan['spikes']
+                    if s['field'] == 'embedding_text' and s['spider'] == 'spider_stale']
+        self.assertEqual(emb_pair, [],
+                         "30d cap must exclude the 100d-old populate from the baseline")
+        # And the pair now shows up in the skip counter
+        self.assertGreaterEqual(
+            scan['applicability_skipped_by_field'].get('embedding_text', 0), 1,
+        )
+        # Return dict reflects the active cap
+        self.assertEqual(scan['baseline_lookback_days'].get('embedding_text'), 30)
+
+    def test_lookback_cap_keeps_recent_populates_in_baseline(self):
+        """Row #29: 30d cap must preserve pairs with populates inside the window."""
+        # Populate 10 days ago — inside a 30d cap
+        recent = self._mk('spider_recent', 'news', embedding='recent value')
+        self._backdate(recent, days_ago=10)
+        # Current-window empties trigger the spike
+        for _ in range(5):
+            self._mk('spider_recent', 'news', embedding='')
+
+        engine = DataIntegrityEngine()
+        engine.FIELD_BASELINE_LOOKBACK_DAYS = {'embedding_text': 30}
+        scan = engine.get_null_spike_scan(hours=24)
+
+        emb_pair = [s for s in scan['spikes']
+                    if s['field'] == 'embedding_text' and s['spider'] == 'spider_recent']
+        self.assertEqual(len(emb_pair), 1,
+                         "10d-old populate must remain inside a 30d cap")
+        self.assertEqual(emb_pair[0]['applicability_reason'], 'historical_populated')
