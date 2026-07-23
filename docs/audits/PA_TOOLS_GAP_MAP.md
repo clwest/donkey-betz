@@ -10,26 +10,26 @@
 
 - **Total tool names:** 161
 - **Per-category breakdown:**
-  - `untested` (untested): **86**
+  - `untested` (untested): **83**
   - `agent_via_run_agent` (agent (via run_agent)): **44**
-  - `validated_full` (validated (full)): **20**
+  - `validated_full` (validated (full)): **23**
   - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
   - `validated_partial` (validated (partial)): **3**
   - `meta_no_handler` (meta (no handler by design)): **1**
 
 ## Validation-doc corpus
 
-- **Total `*_validation.md` files:** 40
+- **Total `*_validation.md` files:** 43
 - **Substrate (cross-cutting) docs:** 10 — reduce risk platform-wide but do NOT validate per-tool invariants (S2795 F2 rename).
-- **Per-tool docs:** 30 — of which 22 have an explicit 'Covered actions' section (F1 checklist).
-- **Per-tool docs with `Template version` marker:** 8 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
+- **Per-tool docs:** 33 — of which 25 have an explicit 'Covered actions' section (F1 checklist).
+- **Per-tool docs with `Template version` marker:** 11 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
 
 ## Template compliance (T1b)
 
 Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without `Template version:` marker); `pass` = v1-conformant; `fail` = v1 marker present but mandatory section/frontmatter missing.
 
-- `warn`: **153**
-- `pass`: **8**
+- `warn`: **150**
+- `pass`: **11**
 
 ## Schema quality lints (F5 advisory column)
 
@@ -88,26 +88,23 @@ _17 untested tools dispatch through `td_handlers_gateway`. Grouping keeps valida
 - `self_awareness_tool`
 - `vip_invite_tool`
 
-### `td_handlers_agents` — 17 untested (~5 sessions at 4/session)
+### `td_handlers_agents` — 14 untested (~4 sessions at 4/session)
 
-_17 untested tools dispatch through `td_handlers_agents`. Grouping keeps validation-cycle setup cost low — one handler file, consistent primitives._
+_14 untested tools dispatch through `td_handlers_agents`. Grouping keeps validation-cycle setup cost low — one handler file, consistent primitives._
 
 - `bpaas_tool`
 - `brainstorm_tool`
 - `davinci_tool`
 - `legal_doc_drafter_agent`
 - `media_tool`
-- `ml_analysis`
 - `obs_tool`
 - `opportunity_manager_tool`
-- `orm_inspect_tool`
 - `pipeline_orchestrator_tool`
 - `reasoning_engine_tool`
 - `schedule_followup`
 - `task_manager_tool`
 - `universal_agent_tool`
 - `video_history_tool`
-- `voice_clone_tool`
 - `web_fetch_tool`
 
 ### `tool_dispatcher` — 14 untested (~4 sessions at 4/session)
@@ -227,7 +224,7 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `memory_isolation_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `messaging_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_core.py` |
 | `mission_verdict` | ✓✓ | untested | warn | — | `core/services/td_handlers_employee.py` |
-| `ml_analysis` | ✓✓ | untested | warn | actions_not_mentioned_in_description | `core/services/td_handlers_agents.py` |
+| `ml_analysis` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_agents.py` |
 | `mobile_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_gateway.py` |
 | `narrative_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_gateway.py` |
 | `newsletter_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_newsletter.py` |
@@ -237,7 +234,7 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `opportunity_scoring_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `ops_digest_tool` | ✓✓ | validated (full) | warn | — | `core/services/td_handlers_ops.py` |
 | `ops_tool` | ✓✓ | validated (partial) | warn | actions_not_mentioned_in_description | `core/services/td_handlers_ops.py` |
-| `orm_inspect_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_agents.py` |
+| `orm_inspect_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `paid_interest_status` | ✓✓ | untested | warn | no_required | `core/services/td_handlers_core.py` |
 | `performance_analyst_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `persona_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_core.py` |
@@ -295,7 +292,7 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `video_generation_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `video_history_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_agents.py` |
 | `vip_invite_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_gateway.py` |
-| `voice_clone_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_agents.py` |
+| `voice_clone_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `voice_critic_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `web_fetch_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_agents.py` |
 | `web_search` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
