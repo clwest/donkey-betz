@@ -1,0 +1,198 @@
+{
+  "actions": [
+    {
+      "action": "inbox",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "stats",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "attention_list",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "attention_detail",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "attention_approve",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "attention_ignore",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "attention_lookup",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "decision_list",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "decision_promote",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "decision_reject",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "decisions_list",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "decisions_stats",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "decision_create",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "decision_decide",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "triage_batch",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "failure_signatures",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "remediation_tasks",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    }
+  ],
+  "harness_version": "v1",
+  "run_metadata": {
+    "generated_at": "2026-07-23T02:50:01.905459+00:00",
+    "git_sha": "85cceea41"
+  },
+  "schema_action_count": 17,
+  "tool_name": "governance_tool"
+}
