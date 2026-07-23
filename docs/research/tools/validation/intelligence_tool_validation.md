@@ -142,7 +142,7 @@ intelligence_tool  action=legislation_tracked  limit=20
 
 **Containment mechanism (in-scope subset):** all 6 in-scope actions are direct-in-handler ORM reads with `_tag` envelope helper at line 3313. No cross-file dispatch; no embedding calls; no `apply_async`; no HTTP.
 
-**Containment mechanism (excluded MUTATIONs):** harness `skipped_mutation` classification at dispatch prevents accidental exercise. `search` correctly gated despite schema listing it alongside read-shaped actions.
+**Containment mechanism (excluded MUTATIONs) — audit metadata only, NOT a runtime gate:** the T1a harness dispatch respects the classification (`skipped_mutation` for MUTATION-classed actions during a READ_ONLY sweep). **However, the live PA runtime path does NOT enforce this classification** — verified S2914 post-merge (2026-07-23): a live dispatch of `intelligence_tool.search source=web query='test'` via `pa_local.sh` succeeded and hit network (~3052ms latency, DuckDuckGo scrape results returned). The classification in `TOOL_ACTION_METADATA` is **descriptive audit metadata** used by the validation harness + gap map, not a runtime enforcement mechanism at the handler or dispatcher layer. Runtime enforcement would require an explicit handler-level guard or global tool-router policy.
 
 **Deferral rationale:** delegate handler verification requires reading `_handle_stock_intelligence`, `_handle_sports_betting`, `_handle_legislation`, `_handle_rag_query`, `_handle_spider_data`, `_handle_web_search` handlers — each with their own action surface. Deferred to a network-focused batch (network trio: `fleet_health`/`http_smoke_test`/`signal_studio_judge_stats`) or a dedicated intelligence-delegates batch.
 
