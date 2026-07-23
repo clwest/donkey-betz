@@ -2,65 +2,60 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2899 CLOSE → embedding_text baseline lookback cap shipped (Ledger Row #29 → `mitigated`) + FOURTH consecutive engineering-first ship + explicit trigger recorded: S2900 opens with Row 161 substrate-arc gate as FIRST action regardless of queued candidates (2026-07-22; picks up as S2900) — **D6 MORATORIUM STILL IN FORCE**
+## READ THIS FIRST — SESSION 2900 CLOSE → Row 161 substrate arc OPENED (Chris D-verdict Option A) + engineering-first streak ends + S2901 opens with T1c (fast-pass low-signal audit) as FIRST action (2026-07-22; picks up as S2901) — **D6 MORATORIUM STILL IN FORCE**
 
-**Refreshed 2026-07-22 (S2899 close).** S2899 was the FOURTH consecutive engineering-first ship. PR #3423 merged at `1fd68a49b` — `autopilot_tool.integrity_null_spike_scan` now has an optional per-field lookback cap for `HISTORICAL_BASELINE` fields. Default `None` preserves S2898 Phase 1 all-time semantics (zero behavior change at ship); operators can flip `HISTORICAL_BASELINE_LOOKBACK_DAYS['embedding_text']` to `30`/`90` when a pipeline lag becomes chronic and stale historical populates start dominating the baseline. Closes Ledger Row #29 (sticky-semantics risk Rigby surfaced in S2898 Q4 zoom-out).
+**Refreshed 2026-07-22 (S2900 close).** S2900 opened the PA tools sweep substrate arc after four consecutive engineering-first ships (S2896–S2899). Chris ratified Option A at S2900 turn 1. PR #3425 merged at `45f544970` — four new docs at `docs/audits/pa_tools/substrate/`: parent scoping + T1a auto-harness + T1b family-doc template + T1c low-signal audit. Rigby wrote twin workspace mirror (content mirror `cc7bd2c5-ef83-4c71-b2a3-76dee6f3ad97` + ratification envelope `3e9011cf-6780-4dbb-b413-6a96611d20f2`, both in Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50`; neither diagnostic-flagged).
 
-**Design shape (per Rigby SIGN D-verdict: AGREE):**
+**Arc shape (per Rigby SIGN + Chris "Ship it!" ratification):**
 
-```python
-HISTORICAL_BASELINE_LOOKBACK_DAYS = {
-    'embedding_text': None,   # None = all-time (S2898 Phase 1 default)
-                              # int N = last N days rolling window
-}
-```
-
-Query invariant preserved: chained `.filter(created_at__gte=cutoff)` before `.values(...).distinct()` when lookback is set. Still O(1) queries per HISTORICAL_BASELINE field (locked by `test_query_count_is_bounded` via `assertNumQueries=2`). Return dict adds `baseline_lookback_days` scoped to HISTORICAL_BASELINE fields only.
+- **Thread order:** T1c first (fast pass, ~1 session; carves in-class boundary) → T1a (≤2 sessions, MVP-strict; Django mgmt command `pa_tool_validate_harness` + Action Metadata Map micro-thread) → T1b (1–2 sessions; ratchet-and-warn template posture).
+- **Total substrate arc:** ~4–5 sessions. Expected sweep acceleration: **~50 sessions → ~10–15 sessions** for remaining ~76 tools if MVP discipline holds.
+- **Anti-scope-creep:** if T1a grows to full HTTP/auth/async/pagination/golden-files, payoff is lost. Substrate-arc-scoped SIGN required for output-schema changes.
 
 **PRs shipped this session:**
-- u-d-b PR [#3423](https://github.com/clwest/donkey-betz-platform/pull/3423) — S2899 embedding_text baseline lookback cap (Ledger Row #29), merged at `1fd68a49b`
-- u-d-b PR `<TBD>` — S2899 close cascade (handoff + 00-START refresh + wrapper pin bump)
+- u-d-b PR [#3425](https://github.com/clwest/donkey-betz-platform/pull/3425) — S2900 Row 161 substrate arc opened, merged at `45f544970`
+- u-d-b PR `<TBD>` — S2900 close cascade (handoff + 00-START refresh + wrapper pin bump)
 
-**Gap-map ratchet:** unchanged (no sweep batch this session).
+**Ledger status:** Row 161 → **OPENED as substrate arc.** Row A `mitigated` (PR #3419 S2897). Row B `mitigated` (PR #3421 S2898). Row C `mitigated` (PR #3417 S2896). Row #29 `mitigated` (PR #3423 S2899). Deferred rows 27/28/30 unchanged.
 
-**Ledger status:** Row A `mitigated` (PR #3419 S2897). Row B `mitigated` (PR #3421 S2898). Row C `mitigated` (PR #3417 S2896). **Row #29 MITIGATED at PR #3423 (S2899).** All S2895 rows + one deferred zoom-out row closed. Deferred rows 27/28/30 unchanged — trigger criteria unchanged.
+**Zoom-out folds:** None new this session. Rigby's five zoom-out concerns from the T1 SIGN (safety semantics / applicability metadata / fragmentation risk / metadata micro-thread / session-estimate blowup) were all folded into the arc shape pre-ship.
 
-**Zoom-out folds:** None new this session. Rigby's Q4 concerns (knob proliferation, decay-vs-truth semantics) already mitigated in the shipped design.
-
-Full session context: `docs/handoffs/SESSION_2899_EMBEDDING_BASELINE_LOOKBACK_CAP.md`.
+Full session context: `docs/handoffs/SESSION_2900_ROW_161_SUBSTRATE_ARC_OPENED.md`.
 
 ---
 
-## S2900 open sequence
+## S2901 open sequence
 
-### Step 1 (MANDATORY FIRST ACTION — no menu, no defer) — Row 161 substrate-arc gate DECISION
+### Step 1 (MANDATORY FIRST ACTION — no menu, no defer) — T1c low-signal audit fast pass
 
-**Chris's explicit trigger recorded at S2899 ratification:** at S2900 open, Row 161 is the FIRST decision regardless of what engineering candidates are queued. Preserves the engineering-bias benefits of the S2896–S2899 streak while preventing the pattern from silently supplanting the sweep-pace substrate-arc gate.
+**S2901 opens with T1c as the first thread of the substrate arc.** This is not a decision point — the sequencing is locked by Rigby SIGN B tweak (T1c first) + Chris "Ship it!" ratification at S2900 close. Do NOT present alternative engineering candidates until T1c ships.
 
-**Four consecutive Option-C picks now (S2896 + S2897 + S2898 + S2899).** Chris has picked engineering ships four sessions in a row. Now the substrate question is due for explicit resolution — either commit to Option A, commit to Option B, or re-ratify Option C with eyes-open acknowledgement that the pattern is the strategy.
+**T1c scope** (see `docs/audits/pa_tools/substrate/T1c_low_signal_audit.md` for full detail):
 
-Same three options carried forward:
+- Fast triage of the ~14 low-signal tools (7 doc-unknown + 3 partial + 4 doc-only ops) plus explicit decision on the 44 `agent (via run_agent)` tools.
+- Bucket each: `defer_indefinitely` / `promote_to_sweep` / `close_with_short_note` / `out_of_class_agent`.
+- Fast-pass posture: ≤5 min per tool. If a tool needs more, default to `defer_indefinitely` with a `revisit_trigger` note.
+- Action Metadata Map location decision: Candidate A (in-code, adjacent to `ToolDispatcher`, Rigby's lean) vs Candidate B (per-tool doc frontmatter). Default = Candidate A unless pivot-with-reason.
 
-- **Option A (Rigby lean) — Open a dedicated substrate arc.** Auto-harness build + family-doc template extraction + low-signal tool audit. Slows sweep pace short-term; expected to close remaining Slice 1-5 scope in ~10-15 sessions instead of ~50.
-- **Option B — Push through Slice 1 close-out (~4-5 more current-shape sessions), THEN re-evaluate.** Closes Slice 1.5b (`autopilot_tool` mutations) + 4 doc/unknown/partial ops tools.
-- **Option C — Another engineering session.** Do NOT open without explicit re-ratification given the four-consecutive-C-picks pattern. If Chris re-ratifies, priority candidates listed in Step 2 below.
+**T1c close criteria:**
+1. Triage table populated for all 58 tools (14 low-signal + 44 agent-via-run_agent).
+2. Action Metadata Map location decision recorded with rationale.
+3. Bucket counts fed to T1a as scoping input.
 
-**Do not skip Step 1. Do not present Step 2 candidates until Chris ratifies a Step 1 option.**
+**Session estimate:** ~1 session. May fit within a session that also opens T1a (auto-harness) if T1c completes cleanly in the first half.
 
-### Step 2 — Net-new engineering candidates (ONLY if Chris re-ratifies Option C after Step 1)
+### Step 2 — T1a (auto-harness build), ONLY after T1c ships
 
-Priority order for S2900 if Option C:
+Do NOT open T1a until T1c triage table is populated + Action Metadata Map location decided. T1a MVP scope depends on knowing which tools remain in-class for the harness.
 
-1. **DBZ enforcement doc-clarity annotation** — `enforcement_report` output should include hysteresis-oscillation shape so operators reading multiple downgrade_set/cleared pairs don't misread as "enforcer flapping". (S2895 T2 revised discussion.)
-2. **Continue S2894 Ledger rows** — `messaging_tool.send` action (or in-thread-pattern schema note), `zoom_out_tool.record_fold` action (or JSONL→workspace-deliverable mirror).
-3. **PLAYBOOK-3.2.3/3.2.4 compliance sweep** — carried from S2891.
-4. **New Ledger Row #27 arc trigger watch** — batched-items structural fix (per-item lead expansion). Deferred until operator/customer signals batched-lead triage ambiguity.
-5. **Rows #28/#30 arc trigger watch** — applicability metadata pattern (fold to broader integrity substrate) + ingest-vs-pipeline separation (embedding-pipeline health dashboard). Triggered when next integrity detector added or embedding lag becomes chronic.
+**T1a MVP boundaries (per parent §5 + T1a §2 anti-goals):** Django mgmt command `pa_tool_validate_harness`; in-process dispatch (not HTTP); READ_ONLY auto-executes only; per-action safety classifier; Action Metadata Map micro-thread. Session cap: ≤2 (scaffold + harden). If any of the anti-scope-creep watchlist items (async/pagination/golden-files/multi-auth/rate-limit/orchestration) come up, defer as substrate-follow-on rows.
 
-### What's forbidden at S2900 (D6 MORATORIUM still in force)
+### What's forbidden at S2901 (D6 MORATORIUM still in force)
 
 - No new strategic discovery arcs. No new opportunity portfolio expansions. No evaluation frameworks. No layer-boundary design arcs. No re-opening the D4 wedge frame or picks.
 - No R1a-shaped proposals (upgrading character-os to fleet HMAC).
+- No re-negotiating substrate arc scope during T1c/T1a/T1b execution. Scope changes require substrate-arc-scoped SIGN.
+- No opening T1a before T1c completes. Sequencing locked at S2900 ratification.
 
 ### What's queued but deferred (do NOT open unless Chris directs)
 
@@ -95,17 +90,19 @@ Priority order for S2900 if Option C:
 - **S2896:** engineering ship (Row C mitigated).
 - **S2897:** engineering ship (Row A mitigated).
 - **S2898:** engineering ship (Row B mitigated).
-- **S2899 (this session):** engineering ship (Row #29 Phase 2 lookback cap mitigated).
-- **All 3 S2895-surfaced Ledger rows + one deferred zoom-out row now closed.**
-- **Remainder:** Slice 1.5b (autopilot_tool mutations, ~1 session) + 4 doc/unknown/partial ops tools (`agent_introspection_tool`, `kb_tool`, `search_docs`, `ops_tool`, ~1-2 sessions)
+- **S2899:** engineering ship (Row #29 Phase 2 lookback cap mitigated).
+- **S2900 (this session):** **Row 161 substrate arc OPENED (Chris D-verdict Option A).** Engineering-first streak ends.
+- **All 3 S2895-surfaced Ledger rows + one deferred zoom-out row + Row 161 now closed or opened.**
+- **Remainder:** Slice 1.5b (autopilot_tool mutations, ~1 session) + 4 doc/unknown/partial ops tools (`agent_introspection_tool`, `kb_tool`, `search_docs`, `ops_tool`, ~1-2 sessions). Slice 1.5b timing depends on T1a WRITE_GATED classifier stability.
 
-**Slice 2 — `td_handlers_agents` (25 tools, ~7 sessions):** queued
-**Slice 3 — `td_handlers_core` (22 tools, ~6 sessions):** queued
-**Slice 4 — `td_handlers_gateway` (17 tools, ~5 sessions):** queued
-**Slice 5 — `tool_dispatcher` (14 tools, ~4 sessions):** queued
+**Slice 2 — `td_handlers_agents` (25 tools):** queued behind substrate arc.
+**Slice 3 — `td_handlers_core` (22 tools):** queued behind substrate arc.
+**Slice 4 — `td_handlers_gateway` (17 tools):** queued behind substrate arc.
+**Slice 5 — `tool_dispatcher` (14 tools):** queued behind substrate arc.
 
-**Total remaining tools to close (before Row 161 substrate arc):** 76 (or ~104 counting partials + doc-unknowns).
-**Estimated total sessions remaining at current-shape pace:** ~50 (Row 161 triggers this concern — decision MANDATORY at S2900 open).
+**Substrate arc in flight (S2900-):** T1c (S2901, ~1 session) → T1a (~2 sessions) → T1b (~1-2 sessions). Total: ~4-5 substrate sessions. Post-substrate sweep pace target: **~10-15 sessions** for remaining ~76 tools (vs ~50 at current-shape pace).
+
+**Total remaining tools to close:** 76 (or ~104 counting partials + doc-unknowns).
 
 ---
 
@@ -134,9 +131,9 @@ Rulebook: `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`.
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2899 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2900 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2899: zero A4 spend — pure engineering.** A1 shipping spend was the Row #29 fix PR + close cascade.
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2900: zero A4 spend — pure substrate arc opening.** A1 shipping spend was the substrate arc scoping PR + close cascade.
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
 3. **Capability claims:** (a)…(uu) as ratified at S2887 close. No additions this session.
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
@@ -145,10 +142,12 @@ Rulebook: `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`.
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2899)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2900)
 
 See:
-- **S2899 handoff (current):** `docs/handoffs/SESSION_2899_EMBEDDING_BASELINE_LOOKBACK_CAP.md`
+- **S2900 handoff (current):** `docs/handoffs/SESSION_2900_ROW_161_SUBSTRATE_ARC_OPENED.md`
+- **S2900 substrate arc scoping:** `docs/audits/pa_tools/substrate/S2900_substrate_arc_scoping.md` (parent) + `T1a_auto_harness.md` + `T1b_family_doc_templates.md` + `T1c_low_signal_audit.md`
+- **S2899 handoff:** `docs/handoffs/SESSION_2899_EMBEDDING_BASELINE_LOOKBACK_CAP.md`
 - **S2898 handoff:** `docs/handoffs/SESSION_2898_INTEGRITY_NULL_SPIKE_APPLICABILITY.md`
 - **S2897 handoff:** `docs/handoffs/SESSION_2897_PROSPECTING_QUEUE_TITLE_FIX.md`
 - **S2896 handoff:** `docs/handoffs/SESSION_2896_AUTOPILOT_HISTORY_WIPE_DIAGNOSTIC.md`
