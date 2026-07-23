@@ -139,7 +139,13 @@ PA_TOOL_SCHEMAS = [
         "description": (
             "Manage tasks linked to opportunities: list tasks, view stats. "
             "Use when the user asks about tasks, to-do items, or work items "
-            "related to opportunities."
+            "related to opportunities. "
+            "HIDDEN MUTATION: `create` without `opportunity_id` implicitly "
+            "creates a standalone Opportunity row to satisfy the required FK "
+            "(handler creates opportunity_type='task', source='pa', "
+            "potential_revenue=0). To avoid silent parent-row accretion, "
+            "pass `opportunity_id` explicitly when linking to an existing "
+            "opportunity."
         ),
         "parameters": {
             "type": "object",
@@ -155,7 +161,7 @@ PA_TOOL_SCHEMAS = [
                 "id": {"type": "string", "description": "Task UUID (required for update/complete)"},
                 "title": {"type": "string", "description": "Task title (required for create)"},
                 "description": {"type": "string", "description": "Task description"},
-                "opportunity_id": {"type": "string", "description": "Link to opportunity UUID (for create)"},
+                "opportunity_id": {"type": "string", "description": "Link to opportunity UUID (for create). WARNING: omitting this triggers implicit standalone Opportunity creation — pass explicitly when the intent is to link to an existing opportunity."},
             },
             "required": ["action"],
         },
