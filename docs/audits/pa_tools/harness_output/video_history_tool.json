@@ -2,86 +2,90 @@
   "actions": [
     {
       "action": "list",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 27,
+      "notes": null,
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "count",
+        "videos"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "search",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "expected_outcome": "error_captured",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 7,
+      "notes": "error_code=TOOL_EXCEPTION; msg=query parameter required for search action",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "safety_class": "READ_ONLY",
+      "status_code": 500
     },
     {
       "action": "detail",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "expected_outcome": "error_captured",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 1,
+      "notes": "error_code=TOOL_EXCEPTION; msg=id or sequential_number required for detail action",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "safety_class": "READ_ONLY",
+      "status_code": 500
     },
     {
       "action": "resolve",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "expected_outcome": "error_captured",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 3,
+      "notes": "error_code=TOOL_EXCEPTION; msg=Provide id, sequential_number, or query (URL) for resolve",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "safety_class": "READ_ONLY",
+      "status_code": 500
     },
     {
       "action": "transcribe",
-      "expected_outcome": "skipped_metadata_missing",
+      "expected_outcome": "skipped_mutation",
       "input_profile": "skipped_no_dispatch",
       "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "notes": "MUTATION \u2014 not exercised at T1a MVP",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
+      "safety_class": "MUTATION",
       "status_code": null
     },
     {
       "action": "transcript_status",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "expected_outcome": "error_captured",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 2,
+      "notes": "error_code=TOOL_EXCEPTION; msg=Provide transcript_id, or id/sequential_number of the video",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "safety_class": "READ_ONLY",
+      "status_code": 500
     },
     {
       "action": "content_pack",
-      "expected_outcome": "skipped_metadata_missing",
+      "expected_outcome": "skipped_mutation",
       "input_profile": "skipped_no_dispatch",
       "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "notes": "MUTATION \u2014 not exercised at T1a MVP",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
+      "safety_class": "MUTATION",
       "status_code": null
     }
   ],
   "harness_version": "v2",
   "run_metadata": {
-    "generated_at": "2026-07-23T16:58:55.245931+00:00",
-    "git_sha": "e642c7aa8"
+    "generated_at": "2026-07-23T17:52:43.334384+00:00",
+    "git_sha": "5d79d8431"
   },
   "schema_action_count": 7,
   "tool_name": "video_history_tool"

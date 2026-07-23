@@ -1927,7 +1927,7 @@ Celery task volume breakdown and load analysis. Use when the user asks about tas
 
 **Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_task_manager` in `core/services/td_handlers_agents.py:1384`
 
-Manage tasks linked to opportunities: list tasks, view stats. Use when the user asks about tasks, to-do items, or work items related to opportunities.
+Manage tasks linked to opportunities: list tasks, view stats. Use when the user asks about tasks, to-do items, or work items related to opportunities. HIDDEN MUTATION: `create` without `opportunity_id` implicitly creates a standalone Opportunity row to satisfy the required FK (handler creates opportunity_type='task', source='pa', potential_revenue=0). To avoid silent parent-row accretion, pass `opportunity_id` explicitly when linking to an existing opportunity.
 
 **Actions:**
 
