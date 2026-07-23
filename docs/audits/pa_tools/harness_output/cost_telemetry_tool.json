@@ -2,42 +2,64 @@
   "actions": [
     {
       "action": "summary",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 34,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "action",
+        "avg_latency_ms",
+        "by_provider",
+        "by_task_type",
+        "failed_calls",
+        "generated_at",
+        "period_hours",
+        "total_calls",
+        "total_cost_usd",
+        "total_tokens",
+        "trend"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "top_agents",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 13,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "action",
+        "agents",
+        "generated_at",
+        "period_hours"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "recent_calls",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 4,
+      "notes": null,
+      "resolution_source": "tool_default",
+      "response_shape_keys": [
+        "action",
+        "calls",
+        "generated_at",
+        "period_hours"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     }
   ],
   "harness_version": "v1",
   "run_metadata": {
-    "generated_at": "2026-07-23T03:20:52.987811+00:00",
-    "git_sha": "fc5bca145"
+    "generated_at": "2026-07-23T04:09:09.591154+00:00",
+    "git_sha": "6188e2d10"
   },
   "schema_action_count": 3,
   "tool_name": "cost_telemetry_tool"
