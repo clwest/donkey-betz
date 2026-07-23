@@ -72,7 +72,7 @@ Priority order for S2900 if Option C:
 - **Sweep batch cadence outcome gate** — ledger row 158. Unchanged.
 - **Mutation-heavy single-tool batch pattern** — ledger row 159. Unchanged.
 - **2-tier evidence template promotion** — ledger row 160. Triggers after 1-2 more large-surface sweeps adopt cleanly.
-- **Sweep-arc pace sustainability substrate arc** — ledger row 161. **Decision point at S2900 open (see Step 1 above); MANDATORY, not deferrable.**
+- **Sweep-arc pace sustainability substrate arc** — ledger row 161. **OPENED at S2900 as substrate arc (Chris D-verdict Option A ratified 2026-07-22).** Scoping: `docs/audits/pa_tools/substrate/S2900_substrate_arc_scoping.md`. Three threads: T1a auto-harness / T1b family-doc template / T1c low-signal audit. Execution order: T1c first (fast pass) → T1a (≤2 sessions, MVP-strict) → T1b (1–2 sessions). Total substrate-arc estimate: ~4–5 sessions; expected sweep acceleration ~50 sessions → ~10–15 sessions for remaining ~76 tools.
 - **Response-level introspection field creep** — ledger row 162 (S2896). Same-PR mitigated; watch for pattern in other tools' response contracts.
 - **Batched-items structural (Rigby Tool Gap Ledger entry #27)** — deferred; trigger = operator/customer signals batched-lead triage ambiguity.
 - **Applicability metadata pattern (entry #28)** — deferred; trigger = next integrity detector added.
