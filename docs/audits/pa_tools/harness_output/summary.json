@@ -1,0 +1,1125 @@
+{
+  "harness_version": "v1",
+  "in_class_total": 116,
+  "parity_mismatches": [
+    {
+      "doc_stem": "agent_introspection_run_agent",
+      "escalation_recommendation": "promote_to_sweep (heading absent \u2014 cannot verify parity)",
+      "missing_actions": [
+        "capabilities",
+        "details",
+        "list",
+        "stats",
+        "tools"
+      ],
+      "reason": "no_covered_actions_heading",
+      "tool_name": "agent_introspection_tool"
+    },
+    {
+      "doc_stem": "autopilot_tool",
+      "escalation_recommendation": "promote_to_sweep (doc drift \u2014 schema has new actions not covered by the validation report)",
+      "missing_actions": [
+        "backfill_failure_reasons",
+        "backfill_impacts",
+        "close_pack_approve",
+        "close_pack_generate",
+        "engagement_approve_reply",
+        "engagement_classify",
+        "engagement_disqualify",
+        "engagement_draft_reply",
+        "experiment_create",
+        "experiment_start",
+        "goal_set_weights",
+        "governance_deactivate_switch",
+        "governance_kill_switch",
+        "governance_set_mode",
+        "meeting_brief",
+        "meeting_create",
+        "meeting_recap",
+        "outreach_approve",
+        "outreach_generate",
+        "outreach_reject",
+        "release_freeze",
+        "release_unfreeze",
+        "run"
+      ],
+      "reason": "schema_actions_not_in_doc",
+      "tool_name": "autopilot_tool"
+    },
+    {
+      "doc_stem": "deliverable_tool",
+      "escalation_recommendation": "promote_to_sweep (heading absent \u2014 cannot verify parity)",
+      "missing_actions": [
+        "append",
+        "bulk_archive",
+        "clear_diagnostic",
+        "create",
+        "delete",
+        "detail",
+        "duplicates",
+        "export_pdf",
+        "link_initiative",
+        "list",
+        "normalize",
+        "save",
+        "search",
+        "set_status",
+        "stats",
+        "unlink_initiative",
+        "unsave",
+        "update"
+      ],
+      "reason": "no_covered_actions_heading",
+      "tool_name": "deliverable_tool"
+    },
+    {
+      "doc_stem": "kb_ingest",
+      "escalation_recommendation": "promote_to_sweep (heading absent \u2014 cannot verify parity)",
+      "missing_actions": [
+        "chunks",
+        "documents",
+        "search_embeddings",
+        "semantic_search",
+        "stats"
+      ],
+      "reason": "no_covered_actions_heading",
+      "tool_name": "kb_tool"
+    },
+    {
+      "doc_stem": "ops_tool",
+      "escalation_recommendation": "promote_to_sweep (doc drift \u2014 schema has new actions not covered by the validation report)",
+      "missing_actions": [
+        "bridge_activity_digest",
+        "recent_bridge_calls"
+      ],
+      "reason": "schema_actions_not_in_doc",
+      "tool_name": "ops_tool"
+    },
+    {
+      "doc_stem": "repo_tool",
+      "escalation_recommendation": "promote_to_sweep (heading absent \u2014 cannot verify parity)",
+      "missing_actions": [
+        "git_info",
+        "list_repos",
+        "read_file",
+        "search",
+        "tree"
+      ],
+      "reason": "no_covered_actions_heading",
+      "tool_name": "repo_tool"
+    },
+    {
+      "doc_stem": "session_tool",
+      "escalation_recommendation": "promote_to_sweep (heading absent \u2014 cannot verify parity)",
+      "missing_actions": [
+        "create_fresh",
+        "health_check",
+        "list_recent",
+        "retire",
+        "seed",
+        "set_active",
+        "whoami"
+      ],
+      "reason": "no_covered_actions_heading",
+      "tool_name": "session_tool"
+    },
+    {
+      "doc_stem": "workspace_budget_tool",
+      "escalation_recommendation": "promote_to_sweep (doc drift \u2014 schema has new actions not covered by the validation report)",
+      "missing_actions": [
+        "create",
+        "delete",
+        "get",
+        "git_branch",
+        "git_commit",
+        "git_status",
+        "list",
+        "operations",
+        "read",
+        "rollback",
+        "scan",
+        "status",
+        "write"
+      ],
+      "reason": "schema_actions_not_in_doc",
+      "tool_name": "workspace_tool"
+    }
+  ],
+  "run_metadata": {
+    "generated_at": "2026-07-23T02:50:02.821610+00:00",
+    "git_sha": "85cceea41"
+  },
+  "targets_run": 116,
+  "tools": [
+    {
+      "action_count": 6,
+      "artifact_sha256": "fc866ad6d3dc6c54",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 6,
+      "skipped_write_gated": 0,
+      "tool_name": "active_priority_tool"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "08fe568910c05463",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "active_repo_tool"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "18931a6c948279eb",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "agent_control_tool"
+    },
+    {
+      "action_count": 5,
+      "artifact_sha256": "92ef7c859eeb3ccf",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 5,
+      "skipped_write_gated": 0,
+      "tool_name": "agent_introspection_tool"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "e381ff05e80ef6d1",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "agent_memory_tool"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "1fcba80ed9928f33",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "analytics_tool"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "fb9a9e39aaeb72f8",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "ats_tool"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "73f94a6bb7b56cc4",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "audit_tool"
+    },
+    {
+      "action_count": 95,
+      "artifact_sha256": "2d5d927063e8e120",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 95,
+      "skipped_write_gated": 0,
+      "tool_name": "autopilot_tool"
+    },
+    {
+      "action_count": 8,
+      "artifact_sha256": "37b378b7ae7b95b8",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 8,
+      "skipped_write_gated": 0,
+      "tool_name": "blog_tool"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "c00b9fdbb745d9f3",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "bpaas_tool"
+    },
+    {
+      "action_count": 7,
+      "artifact_sha256": "19fcd37eeff671d6",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 7,
+      "skipped_write_gated": 0,
+      "tool_name": "brainstorm_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "a15112eb768a0b81",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "brand_strategy_agent"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "cecd175248246dfa",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "calendar_tool"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "29dfb566a4b5bea6",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "campaign_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "b7f9b60942e9e1fe",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "character_training_agent"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "742f47a7a7bb3f63",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "check_resource_budget"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "0ce7d82afa27b388",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "claude_code_tool"
+    },
+    {
+      "action_count": 8,
+      "artifact_sha256": "1d0fc0832a240d39",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 8,
+      "skipped_write_gated": 0,
+      "tool_name": "cockpit_tool"
+    },
+    {
+      "action_count": 7,
+      "artifact_sha256": "5cf7a108e3d0d1fc",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 7,
+      "skipped_write_gated": 0,
+      "tool_name": "code_job_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "c04f6bd87c74f1e9",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "competitor_analysis_agent"
+    },
+    {
+      "action_count": 8,
+      "artifact_sha256": "3e521d27d6bdb0b2",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 8,
+      "skipped_write_gated": 0,
+      "tool_name": "competitor_comparison_tool"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "4a3ef450d24bc33d",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "conceptforge_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "f3e9b1863fee2fe0",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "content_strategy_agent"
+    },
+    {
+      "action_count": 26,
+      "artifact_sha256": "e13b75a88a656fa1",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 26,
+      "skipped_write_gated": 0,
+      "tool_name": "content_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "1bf8c6fe918fcddf",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "content_writer_agent"
+    },
+    {
+      "action_count": 5,
+      "artifact_sha256": "f172dbf1348b23b6",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 5,
+      "skipped_write_gated": 0,
+      "tool_name": "conversation_tool"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "d5038079b4abdb4f",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "cost_telemetry_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "48c4fbd8d5632b18",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "create_brand_video"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "07a66a8b960f6cce",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "create_project_from_research"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "fce1e6a40d627887",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "customer_research_agent"
+    },
+    {
+      "action_count": 6,
+      "artifact_sha256": "82310ba82f057169",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 6,
+      "skipped_write_gated": 0,
+      "tool_name": "davinci_tool"
+    },
+    {
+      "action_count": 7,
+      "artifact_sha256": "096019266f10680c",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 7,
+      "skipped_write_gated": 0,
+      "tool_name": "db_health_tool"
+    },
+    {
+      "action_count": 18,
+      "artifact_sha256": "a3d368cf20ac79db",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 18,
+      "skipped_write_gated": 0,
+      "tool_name": "deliverable_tool"
+    },
+    {
+      "action_count": 7,
+      "artifact_sha256": "6302520b8884eaf1",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 7,
+      "skipped_write_gated": 0,
+      "tool_name": "diagnostics_tool"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "db5ff3c9e959f51b",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "discord_tool"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "355192ccc9bc9c47",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "distribution_tool"
+    },
+    {
+      "action_count": 6,
+      "artifact_sha256": "e7eefa4af6430b36",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 6,
+      "skipped_write_gated": 0,
+      "tool_name": "dream_tool"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "6dac6a1a5597c011",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "employee_tool"
+    },
+    {
+      "action_count": 5,
+      "artifact_sha256": "501361e50a3ae483",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 5,
+      "skipped_write_gated": 0,
+      "tool_name": "execution_history_tool"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "16c4121e7c2db0a5",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "experiment_tool"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "71d5128180c5aed2",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "feedback_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "8f5be9483cd2fbd4",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "fleet_health"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "3b61b6e492d7b833",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "gates_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "972f688d05ae8596",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "get_body_vitals"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "5d338ee25f091d4e",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "get_system_alerts"
+    },
+    {
+      "action_count": 17,
+      "artifact_sha256": "7b3ee8c18d0ac1e4",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 17,
+      "skipped_write_gated": 0,
+      "tool_name": "governance_tool"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "32c08c72a5671b96",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "governor_tool"
+    },
+    {
+      "action_count": 2,
+      "artifact_sha256": "93a571f6d045d0b1",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 2,
+      "skipped_write_gated": 0,
+      "tool_name": "heartbeat_history_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "218f2f74f94f90e9",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "http_smoke_test"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "592e9467aacce97b",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "image_editing_agent"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "b5e504aacd560211",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "infra_health_tool"
+    },
+    {
+      "action_count": 19,
+      "artifact_sha256": "1a006eb8ae26e457",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 19,
+      "skipped_write_gated": 0,
+      "tool_name": "intelligence_tool"
+    },
+    {
+      "action_count": 5,
+      "artifact_sha256": "ccd69332b1545119",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 5,
+      "skipped_write_gated": 0,
+      "tool_name": "kb_tool"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "2360cac95e97a36e",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "learning_patterns_tool"
+    },
+    {
+      "action_count": 6,
+      "artifact_sha256": "f2d5d6ee56443a0f",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 6,
+      "skipped_write_gated": 0,
+      "tool_name": "learning_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "3b2d6c3d862a69a1",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "legal_doc_drafter_agent"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "379df7e38011118c",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "marketing_strategy_agent"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "1ed2df4c76bec91c",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "media_tool"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "21ff981164615f1b",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "messaging_tool"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "caebfe1903c4c36a",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "mission_verdict"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "dfcd5cef6934c47c",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "ml_analysis"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "93ebfa2c65e70c77",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "mobile_tool"
+    },
+    {
+      "action_count": 5,
+      "artifact_sha256": "e6b56a1734bd99eb",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 5,
+      "skipped_write_gated": 0,
+      "tool_name": "narrative_tool"
+    },
+    {
+      "action_count": 7,
+      "artifact_sha256": "8a5a8600e2c0de02",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 7,
+      "skipped_write_gated": 0,
+      "tool_name": "newsletter_tool"
+    },
+    {
+      "action_count": 6,
+      "artifact_sha256": "e42b50ae3d410091",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 6,
+      "skipped_write_gated": 0,
+      "tool_name": "obs_tool"
+    },
+    {
+      "action_count": 6,
+      "artifact_sha256": "a8b45b200d47d394",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 6,
+      "skipped_write_gated": 0,
+      "tool_name": "opportunity_manager_tool"
+    },
+    {
+      "action_count": 2,
+      "artifact_sha256": "8213628d35300b23",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 2,
+      "skipped_write_gated": 0,
+      "tool_name": "ops_digest_tool"
+    },
+    {
+      "action_count": 22,
+      "artifact_sha256": "e6e9798a096e121d",
+      "read_only_dispatched": 2,
+      "skipped_metadata_missing": 20,
+      "skipped_write_gated": 0,
+      "tool_name": "ops_tool"
+    },
+    {
+      "action_count": 5,
+      "artifact_sha256": "ff16737fbab6a58d",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 5,
+      "skipped_write_gated": 0,
+      "tool_name": "orm_inspect_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "49f7ea4729b97740",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "paid_interest_status"
+    },
+    {
+      "action_count": 2,
+      "artifact_sha256": "16468ff934873350",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 2,
+      "skipped_write_gated": 0,
+      "tool_name": "persona_tool"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "4aa5c7a048d11560",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "pilots_tool"
+    },
+    {
+      "action_count": 1,
+      "artifact_sha256": "f1b48fa5ff566431",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 1,
+      "skipped_write_gated": 0,
+      "tool_name": "pipeline_orchestrator_tool"
+    },
+    {
+      "action_count": 7,
+      "artifact_sha256": "d14f33f41f5f8ab2",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 7,
+      "skipped_write_gated": 0,
+      "tool_name": "platform_awareness_tool"
+    },
+    {
+      "action_count": 5,
+      "artifact_sha256": "438600d4e6312728",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 5,
+      "skipped_write_gated": 0,
+      "tool_name": "platform_config_tool"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "f34ab2155b532638",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "podcast_tool"
+    },
+    {
+      "action_count": 8,
+      "artifact_sha256": "dee6574e112df37e",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 8,
+      "skipped_write_gated": 0,
+      "tool_name": "proactive_tool"
+    },
+    {
+      "action_count": 6,
+      "artifact_sha256": "9bd011ece6947a67",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 6,
+      "skipped_write_gated": 0,
+      "tool_name": "profile_tool"
+    },
+    {
+      "action_count": 7,
+      "artifact_sha256": "73746d219f775cd8",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 7,
+      "skipped_write_gated": 0,
+      "tool_name": "railway_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "3b38d27dca918b10",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "reasoning_engine_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "ad4624fbb6eb2938",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "recent_activity_tool"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "26b9b381c1174694",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "remember_tool"
+    },
+    {
+      "action_count": 5,
+      "artifact_sha256": "ddcecf34b93869f8",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 5,
+      "skipped_write_gated": 0,
+      "tool_name": "repo_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "d23a907496219934",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "research_and_create_tool"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "9516cef04a543b1f",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "revenue_tracker_tool"
+    },
+    {
+      "action_count": 1,
+      "artifact_sha256": "be35e9f74c1daee3",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 1,
+      "skipped_write_gated": 0,
+      "tool_name": "rigby_shift_brief_tool"
+    },
+    {
+      "action_count": 5,
+      "artifact_sha256": "b845eaaf7ecc0bbd",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 5,
+      "skipped_write_gated": 0,
+      "tool_name": "rigby_work_item"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "f7b9f0c36daca0e8",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "schedule_followup"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "9983862f1438ede8",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "scheduled_tasks_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "27f64df8d0b30241",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "search_docs"
+    },
+    {
+      "action_count": 5,
+      "artifact_sha256": "5dda7f8976fbd8d4",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 5,
+      "skipped_write_gated": 0,
+      "tool_name": "self_awareness_tool"
+    },
+    {
+      "action_count": 7,
+      "artifact_sha256": "a59176f3db6ecfdd",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 7,
+      "skipped_write_gated": 0,
+      "tool_name": "session_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "ebddb09cbf04e77f",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "signal_studio_judge_stats"
+    },
+    {
+      "action_count": 1,
+      "artifact_sha256": "2fdceb724c1fe294",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 1,
+      "skipped_write_gated": 0,
+      "tool_name": "spider_data_aggregation_tool"
+    },
+    {
+      "action_count": 4,
+      "artifact_sha256": "2777645b3c592ea7",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 4,
+      "skipped_write_gated": 0,
+      "tool_name": "spider_status_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "35be70c1e2963609",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "status_snapshot_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "fae90cbda6282216",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "strategic_review"
+    },
+    {
+      "action_count": 6,
+      "artifact_sha256": "57f0d8ab2335e368",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 6,
+      "skipped_write_gated": 0,
+      "tool_name": "studio_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "3152c9abdb8c8e0c",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "surgical_moves_status_tool"
+    },
+    {
+      "action_count": 2,
+      "artifact_sha256": "2aa033b368c3ae58",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 2,
+      "skipped_write_gated": 0,
+      "tool_name": "task_breakdown_tool"
+    },
+    {
+      "action_count": 6,
+      "artifact_sha256": "6d0403e150bf6f55",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 6,
+      "skipped_write_gated": 0,
+      "tool_name": "task_manager_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "320f93eea5af9f21",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "three_d_generation_agent"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "62366842d83db958",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "universal_agent_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "d43e7d90011cc0c3",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "video_editing_agent"
+    },
+    {
+      "action_count": 7,
+      "artifact_sha256": "9789ab310c5c4903",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 7,
+      "skipped_write_gated": 0,
+      "tool_name": "video_history_tool"
+    },
+    {
+      "action_count": 3,
+      "artifact_sha256": "4bced66576658ea8",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 3,
+      "skipped_write_gated": 0,
+      "tool_name": "vip_invite_tool"
+    },
+    {
+      "action_count": 5,
+      "artifact_sha256": "531ebbf12d0a4c69",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 5,
+      "skipped_write_gated": 0,
+      "tool_name": "voice_clone_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "629df9e4fa0da4dd",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "web_fetch_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "30eb0bd0543a05df",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "web_search"
+    },
+    {
+      "action_count": 16,
+      "artifact_sha256": "675627c240eecd23",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 16,
+      "skipped_write_gated": 0,
+      "tool_name": "work_tool"
+    },
+    {
+      "action_count": 0,
+      "artifact_sha256": "6565a95b069bbf1a",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 0,
+      "skipped_write_gated": 0,
+      "tool_name": "workflow_orchestration_agent"
+    },
+    {
+      "action_count": 5,
+      "artifact_sha256": "189a2683f2b5e9ca",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 5,
+      "skipped_write_gated": 0,
+      "tool_name": "workflow_run_tool"
+    },
+    {
+      "action_count": 11,
+      "artifact_sha256": "3234ce6ee9466f94",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 11,
+      "skipped_write_gated": 0,
+      "tool_name": "workspace_budget_tool"
+    },
+    {
+      "action_count": 13,
+      "artifact_sha256": "4e072bb4bc3b73a9",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 13,
+      "skipped_write_gated": 0,
+      "tool_name": "workspace_tool"
+    },
+    {
+      "action_count": 1,
+      "artifact_sha256": "35f72a0518a66172",
+      "read_only_dispatched": 0,
+      "skipped_metadata_missing": 1,
+      "skipped_write_gated": 0,
+      "tool_name": "zoom_out_tool"
+    }
+  ],
+  "top_missing_metadata": [
+    {
+      "missing_action_count": 95,
+      "tool_name": "autopilot_tool"
+    },
+    {
+      "missing_action_count": 26,
+      "tool_name": "content_tool"
+    },
+    {
+      "missing_action_count": 20,
+      "tool_name": "ops_tool"
+    },
+    {
+      "missing_action_count": 19,
+      "tool_name": "intelligence_tool"
+    },
+    {
+      "missing_action_count": 18,
+      "tool_name": "deliverable_tool"
+    },
+    {
+      "missing_action_count": 17,
+      "tool_name": "governance_tool"
+    },
+    {
+      "missing_action_count": 16,
+      "tool_name": "work_tool"
+    },
+    {
+      "missing_action_count": 13,
+      "tool_name": "workspace_tool"
+    },
+    {
+      "missing_action_count": 11,
+      "tool_name": "workspace_budget_tool"
+    },
+    {
+      "missing_action_count": 8,
+      "tool_name": "blog_tool"
+    }
+  ]
+}
