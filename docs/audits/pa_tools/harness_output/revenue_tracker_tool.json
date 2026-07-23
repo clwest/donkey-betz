@@ -2,42 +2,53 @@
   "actions": [
     {
       "action": "stats",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 24,
+      "notes": null,
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "by_source",
+        "by_status",
+        "record_count",
+        "revenue_last_30_days",
+        "total_revenue"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "list",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 11,
+      "notes": null,
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "count",
+        "revenues"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "create",
-      "expected_outcome": "skipped_metadata_missing",
+      "expected_outcome": "skipped_mutation",
       "input_profile": "skipped_no_dispatch",
       "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "notes": "MUTATION \u2014 not exercised at T1a MVP",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
+      "safety_class": "MUTATION",
       "status_code": null
     }
   ],
   "harness_version": "v1",
   "run_metadata": {
-    "generated_at": "2026-07-23T03:21:22.401329+00:00",
-    "git_sha": "fc5bca145"
+    "generated_at": "2026-07-23T04:09:15.948576+00:00",
+    "git_sha": "6188e2d10"
   },
   "schema_action_count": 3,
   "tool_name": "revenue_tracker_tool"
