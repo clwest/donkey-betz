@@ -1,0 +1,204 @@
+# `workflow_run_tool` — Validation Report (S2917)
+
+**Tool:** `workflow_run_tool`
+**Schema:** `core/services/pa_tool_schemas.py:2290`
+**Handler:** `core/services/td_handlers_core.py:3141` (`_handle_workflow_run`)
+**Register site:** `core/services/tool_dispatcher.py:510`
+**Session:** S2917 (Path B systematic sweep — Slice 3 batch 7 of `td_handlers_core`, async duo)
+**HEAD at validation:** `d884d9c8c` (2026-07-23)
+**Ship shape:** Doc-only (S2796 shape). Live-exercise deferred per §5a for the 2 MUTATION actions (`start`, `cancel`); §6 covers the 3 READ_ONLY actions.
+**Category upgrade target:** `untested` → `validated_partial` (3 READ_ONLY actions validated + documented; 2 MUTATION actions documented but not live-exercised — MIXED-safety per-action seed).
+**Rigby SIGN:** S2917 T0 SIGN AGREE (Q1 ship-both) + AGREE-WITH-EDITS on Appendix A shape (Q2). Rigby Q1 tool-probe count: ~4 distinct callees over 160 lines (`_handle_workflow_run` :3141→:3300). Rigby Q4 concrete evidence: `run_source_pack_workflow` re-enters `tool_dispatcher._handle_competitor_comparison(...)` at `core/tasks_content.py:4050-4057` — first observed instance of **dispatcher re-entry** as async-fanout audit hotspot.
+**Template variant:** sweep
+**Template version:** v1
+
+---
+
+## 1. Purpose / when-to-use
+
+Start, poll, list, detail, or cancel multi-step workflow runs. This is the general workflow dispatcher — currently supports a single workflow_key: `source_pack_comparison` (auto-collect competitor sources from web search + spiders, ingest as Documents, embed via RAG, generate a comparison via LLM, export as a Deliverable). Rigby picks this tool when the user asks for "a full source-pack comparison workflow" or wants to track an in-progress multi-stage generation.
+
+Distinct from `competitor_comparison_tool` (S2915 batch 5 — synchronous CRUD over `CompetitorComparison` rows; `workflow_run_tool.start` re-enters `competitor_comparison_tool.export_markdown` at the end of its pipeline — see §5b dispatcher-re-entry), from `research_and_create_tool` (S2915 — actionless synchronous research chain; distinct from workflow's multi-stage async pipeline), from `studio_tool` (S2917 batch 7 sibling — media-generation async fan-out via `execute_agent_task`, single-stage), and from `initiative_tool` (durable multi-stage but Chris-driven governance rather than automated workflow).
+
+## Covered actions
+
+Five actions in the schema `action` enum (`pa_tool_schemas.py:2303`), all handled inside `_handle_workflow_run` (`td_handlers_core.py:3141-3300`). Composition is **MIXED — 2 MUTATION + 3 READ_ONLY**. Per-action safety seeded in `TOOL_ACTION_METADATA` this ship (no `TOOL_DEFAULTS` entry — MIXED composition per revenue_tracker_tool / session_tool / batch-4 precedent).
+
+- `start` — **MUTATION, deferred to Slice X.Yb** — see §5a. Creates a `WorkflowRun` ORM row (`td_handlers_core.py:3154-3164`) then dispatches `run_source_pack_workflow.apply_async(kwargs={'run_id': str(run.id)}, queue='content')` at `:3167-3170`, then writes `celery_task_id` back onto the row at `:3172-3173`. Returns dual-identifier envelope `{action, run_id, task_id, workflow_key, message}`.
+- `status` — **in scope this ship** — reads `WorkflowRun.objects.get(id=run_id)` at `:3190`; returns `{action, run_id, workflow_key, status, stage, percent, stage_detail, ...output_or_error, recent_events: events[-5:]}`.
+- `list` — **in scope this ship** — reads user-scoped `WorkflowRun.objects.all().filter(user_id=user_id).order_by('-created_at')[:limit]` at `:3218-3221` (limit capped at `min(int, 50)` at `:3217`); returns `{action, count, runs: [{id, workflow_key, status, stage, percent, created_at, competitor_name}]}`.
+- `detail` — **in scope this ship** — reads `WorkflowRun.objects.get(id=run_id)` at `:3247`; returns the full run envelope including `input`, `output`, `events`, `error_message`, `celery_task_id`, `metadata`.
+- `cancel` — **MUTATION, deferred to Slice X.Yb** — see §5a. Guards against terminal states (`complete`/`failed`/`cancelled`) at `:3283-3284`; if `celery_task_id` is set, calls `celery_app.control.revoke(task_id, terminate=True)` at `:3288-3289`; then `run.mark_cancelled()` + `run.save()` at `:3291-3292`. Returns `{action, run_id, message: 'Workflow cancelled'}`.
+
+## 3. Schema notes
+
+- **Required:** `action` (must be one of the 5 enum values). Schema at `pa_tool_schemas.py:2337` declares `required: ['action']`.
+- **`workflow_key`** (str, enum `['source_pack_comparison']`) — single-workflow enum today. Default at handler is `'source_pack_comparison'` (`:3146`). Schema description hints this is expandable.
+- **`competitor_name`** (str) — required for `start` per handler-side validation at `:3147-3149` (schema description says "required for start" but schema `required` field only lists `action`). Handler returns `{error: 'competitor_name is required to start a workflow'}` if missing/blank.
+- **`queries`** (list[str]) — custom search queries for `start`; auto-generated by the workflow if omitted (empty-list default at `:3159`).
+- **`target_count`** (int) — max URLs to ingest for `start`; default 8 per schema, applied at `:3160`.
+- **`comparison_id`** (str/UUID) — optional existing `CompetitorComparison` UUID to reuse; passed via `input_json` at `:3161`.
+- **`run_id`** (str/UUID) — required for `status` / `detail` / `cancel`; handler returns `{error: 'run_id is required for X action'}` at `:3184-3186`, `:3241-3243`, `:3273-3275`.
+- **`limit`** (int) — `list` only; capped at `min(int(limit), 50)` at `:3217`. Default 10 per schema.
+- **`focus_areas`** (undocumented in schema, passed by handler):** `:3162` — `payload.get('focus_areas')` is forwarded into `input_json` even though `focus_areas` is NOT in the schema's `properties` block. Callers can send it; agentic loop won't suggest it because the schema doesn't advertise it. Rigby Tool Gap Ledger candidate raised this ship (see §Related).
+
+## 4. Golden-path examples
+
+**"Start a source-pack comparison for OpenAI."** (HYPOTHETICAL — MUTATION gated this batch)
+
+```
+# workflow_run_tool  action=start  competitor_name="OpenAI"  target_count=10
+# → {action: 'start', run_id: '<uuid>', task_id: '<celery-uuid>',
+#    workflow_key: 'source_pack_comparison', message: 'Source pack workflow started for "OpenAI"'}
+# DB: WorkflowRun row created + celery_task_id backfilled after apply_async.
+# Downstream: run_source_pack_workflow on `content` queue runs 6 stages (collect → ingest → embed → generate → export → complete).
+```
+
+**"How's that workflow going?"**
+
+```
+# workflow_run_tool  action=status  run_id="<uuid>"
+# → {action: 'status', run_id: '...', workflow_key: 'source_pack_comparison',
+#    status: 'running'|'complete'|'failed', stage: 'embedding',
+#    percent: 55, stage_detail: 'Embedding 6/10 docs', recent_events: [...last 5]}
+```
+
+**"Show me my recent workflow runs."**
+
+```
+# workflow_run_tool  action=list  limit=10
+# → {action: 'list', count: 10, runs: [{id, workflow_key, status, stage, percent, created_at, competitor_name}, ...]}
+# User-scoped by ORM filter when user_id is present.
+```
+
+**"Show me the full detail of that run."**
+
+```
+# workflow_run_tool  action=detail  run_id="<uuid>"
+# → {action: 'detail', run: {id, workflow_key, status, stage, percent, stage_detail,
+#    input, output, events, error_message, celery_task_id, created_at, started_at, completed_at, metadata}}
+```
+
+**"Cancel that workflow."** (HYPOTHETICAL — MUTATION gated this batch)
+
+```
+# workflow_run_tool  action=cancel  run_id="<uuid>"
+# → {action: 'cancel', run_id: '...', message: 'Workflow cancelled'}
+# Celery: celery_app.control.revoke(task_id, terminate=True) — SIGKILL to worker process running this task.
+# DB: run.mark_cancelled() + save.
+```
+
+## 5. Failure / empty-state / pagination notes
+
+- **Unknown action:** `return {'error': f'Unknown action: {action}'}` at `td_handlers_core.py:3300`. Fallthrough for anything outside the 5-enum.
+- **Missing competitor_name on start:** returns `{'error': 'competitor_name is required to start a workflow'}` at `:3149`. Handler bails before any ORM write.
+- **Missing run_id on status/detail/cancel:** returns `{'error': 'run_id is required for X action'}` at `:3186` / `:3243` / `:3275`.
+- **Not-found on status/detail/cancel:** `WorkflowRun.DoesNotExist` caught at `:3191-3192` / `:3248-3249` / `:3278-3281`; returns `{'error': f'Workflow run {run_id} not found'}`. Handler does NOT crash.
+- **Cancel on terminal state:** guard at `:3283-3284` blocks cancel if `run.status in ('complete', 'failed', 'cancelled')`; returns `{'error': f'Cannot cancel a workflow in {run.status} state'}`.
+- **Cancel with no celery_task_id:** the `revoke` call is guarded by `if run.celery_task_id:` at `:3287`; on `None`, the celery-side revoke is skipped and only the domain-side `mark_cancelled()` runs. Non-fatal — the domain row still transitions to `cancelled`.
+- **Status on failed run:** truncates `run.error_message` to 500 chars at `:3207` and includes `output_json` for partial-progress recovery.
+- **Recent events limit:** `status` returns only `events[-5:]` at `:3211`; full events available via `detail`.
+- **List user-scoping:** `qs.filter(user_id=user_id)` only applied if `user_id` is truthy (`:3219-3220`); anonymous callers see all runs. Consistent with other Slice 3 read tools; not a regression.
+- **Pagination:** `list` limit hard-capped at 50 (`:3217`); no cursor / offset support. First 50 by `-created_at` is the entire surface.
+
+## 5a. Mutation containment / async-fanout gate
+
+**Two MUTATION actions.**
+
+| Action | Direct DB writes | Async fan-out | Envelope | Cancel semantics |
+|---|---|---|---|---|
+| `start` | 1× `WorkflowRun.objects.create(...)` at `:3154-3164` + 1× `run.save(update_fields=['celery_task_id', 'updated_at'])` at `:3173` | `run_source_pack_workflow.apply_async(kwargs={'run_id': str(run.id)}, queue='content')` at `:3167-3170` | `{action, run_id, task_id, workflow_key, message}` — dual identifier (`run_id` = domain UUID, `task_id` = Celery UUID) | polled via `status` / `detail`; revokable via `cancel` |
+| `cancel` | 1× `run.mark_cancelled()` + `run.save()` at `:3291-3292` | Celery-side revoke: `celery_app.control.revoke(task_id, terminate=True)` at `:3288-3289` (best-effort SIGKILL — worker may not receive if task not yet started or already past cancel-check point) | `{action, run_id, message: 'Workflow cancelled'}` | terminal — no un-cancel |
+
+**Containment mechanism (audit metadata):** classified per-action via `TOOL_ACTION_METADATA` this ship (see §Related). Read actions (`status` / `list` / `detail`) are `READ_ONLY`; `start` + `cancel` are `MUTATION`. Harness respects the classification via `skipped_mutation` for MUTATION actions.
+
+**Containment mechanism (runtime):** none at the handler layer. Per S2914 batch 4 doc-fix PR #3458, `TOOL_ACTION_METADATA` is **descriptive audit metadata**, not a runtime enforcement gate. Live PA runtime WILL dispatch `start` (enqueues a real workflow) and `cancel` (revokes a real Celery task) on every invocation.
+
+**Deferral rationale for live-exercise:** `start` dispatches into the `content` Celery queue which runs a 6-stage pipeline (collect → ingest → embed → generate → export → complete) with meaningful spend (web search API + LLM embedding + LLM comparison generation) and side effects (Document rows, embedding rows, CompetitorComparison rows, Deliverable rows). Not appropriate to burn on a doc-only sweep session. First-live-exercise deferred to a dedicated source-pack-comparison session where the artifact IS the point of the invocation.
+
+**Boilerplate (Rigby S2916 T0 SIGN Q3 tightening rule):** _This tool's safety class per action tracks DB writes + Celery-dispatch side effects, not semantic intent; async-fanout behavior is documented in Appendix A._
+
+## 5b. First-hop dependency proof (S2915 shape + Appendix A — dispatcher-re-entry corroborated)
+
+**S2917 batch 7 introduces Appendix A (Async-Fanout)** as the sibling appendix to the S2916 Appendix N (Network-Preflight), per Rigby T0 SIGN Q2 AGREE-with-edits + Chris ratification. Row #38 (standardized-appendices Fold) promoted at this batch. **workflow_run_tool provides the concrete Rigby-Q4 evidence for the "opaque side-effecting chain via internal dispatch" broadening: `run_source_pack_workflow` re-enters `tool_dispatcher._handle_competitor_comparison(...)` at `core/tasks_content.py:4050-4057`** — first observed instance of dispatcher re-entry inside async fan-out.
+
+Verdict scheme (see `task_breakdown_tool_validation.md` §5b for legend): `read` / `network` / `llm` / `db_write` / `db_delete` / `dispatch` / `opaque`.
+
+### Path: `start`
+
+| Direct dependency | Classification | Evidence (file:line) | Callee-status |
+|---|---|---|---|
+| `WorkflowRun.objects.create(workflow_key, user_id, input_json)` | db_write | `td_handlers_core.py:3154-3164` | firm — creates one row with `status='pending'` (WorkflowRun model default) |
+| `run_source_pack_workflow.apply_async(kwargs={'run_id': str(run.id)}, queue='content')` | dispatch (async) | `td_handlers_core.py:3167-3170` | firm — imports from `core.tasks`; queue is `content` (not `long_running`); dispatch happens after the WorkflowRun row is persisted so the task can look up the run by id |
+| `run.save(update_fields=['celery_task_id', 'updated_at'])` | db_write | `td_handlers_core.py:3172-3173` | firm — backfills the Celery task_id onto the row so `cancel` can revoke later |
+| `run_source_pack_workflow(...)` task body (downstream — thin wrapper) | dispatch (delegated) | `core/tasks.py:13150` (`def run_source_pack_workflow(self, run_id):`) — verified via Rigby T0 grep | firm — delegates to `_impl_run_source_pack_workflow` in `core/tasks_content.py:3819` per Rigby probe |
+| `_impl_run_source_pack_workflow(...)` implementation | opaque (deeply) | `core/tasks_content.py:3819+` — Rigby confirmed via grep + read | opaque at handler layer; enumerated in Appendix A field A4 below |
+
+### Path: `status` / `list` / `detail`
+
+| Direct dependency | Classification | Evidence (file:line) | Callee-status |
+|---|---|---|---|
+| `WorkflowRun.objects.get(id=run_id)` (status/detail/cancel) | read | `td_handlers_core.py:3190, 3247, 3279` | firm — DoesNotExist caught with graceful error |
+| `WorkflowRun.objects.all().filter(user_id=user_id).order_by('-created_at')[:limit]` | read | `td_handlers_core.py:3218-3221` | firm — user-scoped when user_id set, else all-runs |
+
+### Path: `cancel`
+
+| Direct dependency | Classification | Evidence (file:line) | Callee-status |
+|---|---|---|---|
+| `WorkflowRun.objects.get(id=run_id)` | read | `td_handlers_core.py:3279` | firm |
+| Terminal-state guard | read | `td_handlers_core.py:3283-3284` | firm — blocks cancel if already terminal |
+| `celery_app.control.revoke(run.celery_task_id, terminate=True)` | dispatch (control-plane) | `td_handlers_core.py:3288-3289` | firm — guarded by `if run.celery_task_id:` at `:3287`; best-effort SIGKILL to worker |
+| `run.mark_cancelled()` + `run.save()` | db_write | `td_handlers_core.py:3291-3292` | firm — model-side status transition + persistence |
+
+**No-hidden-cost verdict:**
+- ✓ at DB layer for the 3 READ actions (`status` / `list` / `detail` are pure reads).
+- ✗ at DB layer for `start` (2 writes: WorkflowRun.create + save with task_id backfill).
+- ✗ at Celery-dispatch layer for `start` (enqueues spend-bearing workflow) and `cancel` (best-effort control-plane revoke).
+- Downstream side effects behind `run_source_pack_workflow` are opaque at handler layer + enumerated in Appendix A A4 below (this is the load-bearing part — the tool APPEARS thin at handler level but sprawls across `tasks_content.py`).
+
+### Appendix A — Async-Fanout (first-hop = Celery `apply_async` on `start`)
+
+**Introduced at S2917 batch 7 per Rigby T0 SIGN Q2 AGREE-with-edits (Fold row #38 standardized-appendices — 2nd adoption).**
+
+| Field | Declaration | Evidence (file:line) | Notes / constraints |
+|---|---|---|---|
+| **A1. Dispatch target type(s)** | `workflow_task` (single target: `run_source_pack_workflow` — a multi-stage Celery task that itself delegates to `_impl_run_source_pack_workflow` and orchestrates 6 downstream stages). Handler SEES only `run_source_pack_workflow.apply_async(...)` (`td_handlers_core.py:3167-3170`); the delegation to `_impl_...` (`core/tasks.py:13150-13152`) and the entire implementation (`core/tasks_content.py:3819+`) are opaque at handler layer. | `td_handlers_core.py:3151-3152, 3167-3170`; `core/tasks.py:13150`; `core/tasks_content.py:3819` | Single-target vs `studio_tool` (4 targets across 2 wrappers). Rigby Q4: fan-out presence is itself an opacity flag; single-target does not mean single-side-effect. |
+| **A2. Queue name(s) + priority** | `queue='content'`. Priority not set. | `td_handlers_core.py:3169` | Distinct queue from `studio_tool` (`long_running`) — `content` handles content-generation pipelines; separate worker pool from long-running media generation. |
+| **A3. Task_id envelope + polling contract** | (a) **Identifiers returned:** dual — `run_id` (domain UUID, primary handle) + `task_id` (Celery UUID, secondary handle for revoke). (b) **Polling endpoint(s):** `workflow_run_tool.status` (compact) + `workflow_run_tool.detail` (full envelope) — both read the `WorkflowRun` row directly (authoritative for status/stage/percent/stage_detail/events); the `celery_task_id` field is only used by `cancel`. (c) **Idempotency stance:** `none` — no dedupe key on `(competitor_name, workflow_key)`; calling `start` twice with the same competitor produces two independent WorkflowRun rows + two independent workflow executions. | `td_handlers_core.py:3175-3181` (envelope); `:3183-3270` (polling paths); idempotency: absent by inspection | Contract shape MATCHES Rigby's Q2 A3 dual-identifier requirement (this tool motivated the edit). |
+| **A4. Downstream side-effect boundary** | Fanned-out `_impl_run_source_pack_workflow` runs 6 stages (per Rigby T0 SIGN Q2 probe evidence — `tasks_content.py:3819+`): (i) **collecting** (5–15%): `WebSearchTool().execute(...)` at `tasks_content.py:3867-3873` + `LegacySpiderData` keyword lookup — spend-bearing external network via WebSearch. (ii) **ingesting** (20–40%): `Document.objects.create(...)` at `:3944-3957` per new URL — ORM writes. (iii) **embedding** (45–60%): `rag_system.process_document_for_rag_sync(doc)` at `:3980-3991` per document — LLM embedding spend + pgvector writes. (iv) **generating** (65–85%): `_run_comparison_generation(...)` at `:4030-4034` — LLM comparison generation, LLMCallLog rows. (v) **exporting** (~90%): **dispatcher re-entry** — `dispatcher = get_tool_dispatcher(); dispatcher._handle_competitor_comparison('competitor_comparison_tool', {'action': 'export_markdown', ...}, run.user_id, ...)` at `tasks_content.py:4050-4057` — writes a `Deliverable` row via `competitor_comparison_tool.export_markdown`. (vi) **complete**: `run.mark_complete(output)` at `:4070`. | Handler-layer opacity: `td_handlers_core.py:3167-3170`. Downstream implementation: `core/tasks_content.py:3819+` (Rigby T0 SIGN Q2 probe). | **Dispatcher re-entry (Rigby Q4 audit hotspot — 1st observed instance):** the fanned-out task calls back into `tool_dispatcher._handle_*` inside its own execution, meaning the export-stage side effects are a full re-invocation of `competitor_comparison_tool.export_markdown` (which itself creates a Deliverable row + updates comparison state). Any changes to `competitor_comparison_tool.export_markdown` transitively change what `workflow_run_tool.start` produces. |
+| **A5. Observability + cancel semantics + revisit triggers** | (a) **Observability contract:** `WorkflowRun.status` is authoritative for high-level lifecycle (`pending` / `running` / `complete` / `failed` / `cancelled`) — model-side fields updated by the task via `run.advance_stage(stage, percent, stage_detail)` calls throughout `_impl_run_source_pack_workflow`. `WorkflowRun.events_json` (list, appended via `run.log_event(...)`) captures granular progress messages; `status` returns last 5, `detail` returns all. `WorkflowRun.output_json` populated at the export stage (before mark_complete); on failure, `error_message` (500-char truncated) + `output_json` (partial-progress recovery). `CeleryTaskEvent` is NOT the primary status source for this tool (unlike `studio_tool` which reads it first) — the `WorkflowRun` row is. (b) **Cancel semantics:** two-part — `celery_app.control.revoke(task_id, terminate=True)` (best-effort SIGKILL to worker; may miss if task not yet started or already past a cancel-check checkpoint) + `run.mark_cancelled()` (authoritative domain-side transition). Terminal-state guard prevents cancel on `complete` / `failed` / `cancelled`. No un-cancel. (c) **Revisit triggers:** any change to `_impl_run_source_pack_workflow` stage list or side-effect pattern; introduction of a new `workflow_key` enum value; any change to `WorkflowRun` model status transitions; **any new dispatcher-re-entry site added downstream** (the `_handle_competitor_comparison` re-entry at `tasks_content.py:4050-4057` is currently the only observed one — if a second appears, promote dispatcher-re-entry to a first-class Fold candidate per Rigby Q4). | `td_handlers_core.py:3183-3212, 3272-3298`; downstream stage boundaries at `core/tasks_content.py:3819+` (per Rigby probe) | Dual observability model (Celery-side task_id + domain-side WorkflowRun row) makes `cancel` semantically safer than studio's single-task_id model — the domain row transition is reliable even when Celery revoke misses. |
+
+## 6. Evidence
+
+### 6.1 T1a harness dispatches — this ship
+
+`SKIP_NLP_MODELS=1 python manage.py pa_tool_validate_harness workflow_run_tool` at HEAD `d884d9c8c`:
+
+Expected harness shape: 5 actions declared → 3 READ_ONLY dispatched live (`status`, `list`, `detail`), 2 MUTATION reported `skipped_mutation` per per-action `TOOL_ACTION_METADATA`. `status` / `detail` require a real `run_id`; on synthesized/missing `run_id`, harness should surface `{error: '<run_id> not found'}` (DoesNotExist branch at `:3191-3192`, `:3248-3249`) — an intended empty-state, not a failure. `list` with default `limit=10` should return `{action: 'list', count, runs: [...]}` shape even for a fresh DB (count may be 0).
+
+Artifact target: `docs/audits/pa_tools/harness_output/workflow_run_tool.json` (produced by harness run).
+
+### 6.2 Runtime-not-executed — this ship
+
+- **`start` (MUTATION)** — deferred per §5a rationale (each dispatch enqueues a 6-stage content pipeline with meaningful spend). Not exercised live this batch per D6 moratorium + spend-lane discipline.
+- **`cancel` (MUTATION)** — deferred per §5a rationale (destructive control-plane operation on a live worker). Not exercised live this batch. Coverage-note: a synthesized `run_id` that doesn't exist correctly errors out (DoesNotExist branch); a real `run_id` in terminal state correctly refuses (guard at `:3283-3284`); the SIGKILL side of the semantics is not exercised.
+- **No `dry_run` fast-path** exists at the handler layer. A `dry_run` for `start` would require the workflow implementation to accept a `record: bool` flag through `input_json` and short-circuit before spend-bearing calls — not proposed this batch per D6 moratorium on `dry_run` infrastructure arcs.
+
+---
+
+## Related
+
+- **Adjacent tools:**
+  - `studio_tool` (Slice 3 batch 7 async-duo sibling) — media-generation async fan-out via `execute_agent_task.apply_async(queue='long_running')`; also introduces Appendix A this batch. Contract asymmetry: studio returns single `task_id`, workflow_run returns dual `run_id`+`task_id`.
+  - `competitor_comparison_tool` (Slice 3 batch 5, S2915) — synchronous CRUD over `CompetitorComparison` rows. **Dispatcher-re-entry target:** `_impl_run_source_pack_workflow` calls `dispatcher._handle_competitor_comparison(...)` at export stage (`tasks_content.py:4050-4057`).
+  - `research_and_create_tool` (Slice 3 batch 5, S2915) — actionless synchronous research chain; distinct from workflow's multi-stage async pipeline.
+  - `initiative_tool` (Slice 3 batch 3, S2913) — durable multi-stage but Chris-driven governance; distinct from automated workflow.
+- **Substrate context:** Slice 3 batch 7 async duo; introduces §5b **Appendix A (Async-Fanout)** as the sibling to S2916 batch 6's Appendix N. Row #38 (standardized-appendices Fold) 2nd adoption trigger → promoted at Slice 3 CLOSE per Rigby T0 SIGN Q4 + Chris ratification. **workflow_run_tool.start provides the concrete evidence for the opaque-side-effecting-chain Fold promotion** (Rigby Q4 broadening from the actionless-only pattern to the actioned-but-opaque pattern).
+- **Metadata seed:** 5 `TOOL_ACTION_METADATA` entries this ship — 2 MUTATION (`start` + `cancel`) + 3 READ_ONLY (`status` / `list` / `detail`). No `TOOL_DEFAULTS` entry (MIXED composition per revenue_tracker_tool / session_tool / batch-4 precedent).
+- **Session provenance:** workflow_run_tool + `run_source_pack_workflow` + `WorkflowRun` model shipped as a unit for the source-pack-comparison pipeline; `_impl_run_source_pack_workflow` at `tasks_content.py:3819+` is the implementation. Referenced from `competitor_comparison_tool` (S2915) as an upstream pipeline that produces comparison rows for export.
+- **Ledger candidates raised this batch (workflow_run_tool-specific):**
+  - **Dispatcher re-entry as async-fanout audit hotspot (Rigby Q4 — 1st observed instance).** `_impl_run_source_pack_workflow` calls `dispatcher._handle_competitor_comparison(...)` at `tasks_content.py:4050-4057`. If a second async task calls back into `tool_dispatcher._handle_*`, promote "dispatcher-re-entry" to a first-class Fold candidate. Currently tracked in Appendix A field A5 revisit triggers on both batch 7 docs.
+  - **Undocumented handler-forwarded param (`focus_areas`).** Handler at `:3162` forwards `payload.get('focus_areas')` into `input_json`, but `focus_areas` is not in the schema `properties` block. Agentic loop won't suggest it; direct callers can still send it. Rigby Tool Gap Ledger candidate — 1st instance of "handler-side param not in schema" in the sweep.
+  - **`user_id`-optional user-scoping asymmetry.** `list` action filters by `user_id` only if truthy (`:3219-3220`); anonymous callers see all runs. Consistent with other Slice 3 read tools; flagged as a known-shape not a regression.
+  - **Best-effort revoke semantics.** `celery_app.control.revoke(..., terminate=True)` cannot guarantee interruption; the domain-side `mark_cancelled` is authoritative. If a future workflow needs deterministic mid-stage cancel, a cooperative cancel-check pattern (task polls `run.status`) would be required — not present today.
+- **Related ratifications:** S2915 batch 5 (§5b first-hop dependency proof shape + `competitor_comparison_tool` — dispatcher-re-entry target), S2916 batch 6 (Appendix N introduction), S2917 batch 7 (Appendix A introduction + row #38 Fold promotion + opaque-side-effecting-chain broadening).

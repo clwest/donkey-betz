@@ -123,6 +123,50 @@ ship-deferred in `## Covered actions`.]
 Blast-radius classification per mutation action + explicit deferral
 rationale + Slice-when-covered pointer.
 
+## 5b. First-hop dependency proof
+
+[OPTIONAL — recommended when tool has any first-hop that leaves the
+handler (network, Celery fan-out, LLM call, dispatcher re-entry, or
+sub-tool invocation). Introduced S2915 (row-create trio). Extended
+S2916 with **Appendix N (Network-Preflight)**. Extended S2917 with
+**Appendix A (Async-Fanout)** for tools whose first-hop is a Celery
+`apply_async` dispatch. Ratified S2917 Fold: standardized appendices
+prevent §5b "notes-field creep" into unreviewable policy surface
+(row #38 promoted at Slice 3 CLOSE).]
+
+Table format: one row per direct dependency. Columns: `Direct
+dependency | Classification | Evidence (file:line) | Callee-status`.
+Classification enum: `read` / `network` / `llm` / `db_write` /
+`db_delete` / `dispatch` / `opaque`.
+
+### Appendix N — Network-Preflight (first-hop = network)
+
+Fill only if a first-hop leaves the process via HTTP/socket. 5 fields:
+
+- **N1. Endpoint derivation source** — where the URL/host is resolved from (settings, env var, repo config, user payload). Enumerate; note if multi-endpoint.
+- **N2. Auth posture** — `bearer_token` / `basic_auth` / `none` / `hmac`. Cite the resolver function. Note redaction behavior.
+- **N3. Timeout envelope** — connect/read/write/pool timeouts + retry policy + total-run bound.
+- **N4. SSRF / egress allowlist** — allowlist regex + private-IP block behavior. Note if URL source is repo-controlled (may waive allowlist).
+- **N5. Redirect + non-2xx handling** — redirect follow behavior + how non-2xx surfaces to the caller.
+
+### Appendix A — Async-Fanout (first-hop = Celery `apply_async` or task-dispatch wrapper)
+
+Fill only if a first-hop dispatches asynchronously into a Celery task
+or task-wrapper that resolves to an agent/spider/workflow. Introduced
+S2917 batch 7 per Rigby T0 SIGN Q2 AGREE-with-edits.
+
+- **A1. Dispatch target type(s)** — enumerate: `agent_task_wrapper` (Celery task that resolves to an AGENT_MAP entry, e.g. `execute_agent_task`), `workflow_task` (multi-stage task like `run_source_pack_workflow`), `spider_job`, `direct_task`. Note first-hop opacity: what the handler SEES vs what actually runs.
+- **A2. Queue name(s) + priority** — Celery queue string(s) declared at each `apply_async` site. Priority optional; document only if set. Note whether queue is a shared-worker queue or dedicated pool.
+- **A3. Task_id envelope + polling contract** — three sub-fields:
+  - (a) **Identifiers returned**: minimally `task_id`; often also a domain-object id (e.g. `run_id`). Document dual-identifier envelope shape.
+  - (b) **Polling endpoint(s)**: how the caller checks completion — `AsyncResult`, a `CeleryTaskEvent` row, a domain-object row with a status field, or a dedicated status action on the same tool.
+  - (c) **Idempotency stance**: `none` / `dedupe_key: <key>` / `safe_re_run: yes|no`. Explicit declaration required even if the answer is `none`.
+- **A4. Downstream side-effect boundary** — the side effects that fire in the fanned-out work (LLM calls, DB writes, network fetches, sub-tool dispatch, dispatcher re-entry). Cite the task-implementation file+line, not just the entrypoint. Explicit call-out for **dispatcher re-entry** (fanned-out task calling back into `tool_dispatcher._handle_*`) as an audit hotspot.
+- **A5. Observability + cancel semantics + revisit triggers** — three sub-fields:
+  - (a) **Observability contract**: where the caller checks status; what fields are authoritative; what is best-effort.
+  - (b) **Cancel semantics**: revoke path (if any) + `terminate=True/False` + domain-side status marker. Explicit "no cancel" allowed as an answer.
+  - (c) **Revisit triggers**: what future evidence would force a re-audit of this Appendix A (schema/handler/queue/task changes; new dispatcher re-entry sites; new opaque callees added downstream).
+
 ## 6. Evidence
 
 [MANDATORY] Per-action evidence: request/response captures, latency,
