@@ -2,77 +2,79 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2913 CLOSE → S2913 shipped **3 accelerated batches** in Slice 3 (`td_handlers_core`), closing 12 tools in one session. **S2914 OPENS WITH SLICE 3 BATCH 4** (10 tools remain) — D6 MORATORIUM STILL IN FORCE
+## READ THIS FIRST — SESSION 2914 CLOSE → S2914 shipped **Slice 3 batch 4** (2 tools) + a post-merge doc-fix PR. **S2915 OPENS WITH SLICE 3 CLOSE — evaluate Concern C at 5 instances (D6 moratorium blocks substrate arc; observation-only) then pivot to network trio batch OR queue Slice 4 open** — D6 MORATORIUM STILL IN FORCE
 
-**Refreshed 2026-07-23 (S2913 close).** First triple-batch session of the accelerated post-substrate sweep. Slice 3 opened at S2913 and reached 12/22 tools shipped in a single session, matching S1218-style triple-ship cadence. Batches 1+2+3 all used the scoped-to-READ_ONLY-subset shape ratified at batch 1 T0 SIGN. Rigby joint SIGN 3 substantive cycles (0 rubber-stamp), including 1 Claude course-correction on `conversation_tool.search` LLM cost (batch 2) and 4 verify-before-commit flags all verified via direct handler read (batch 3).
+**Refreshed 2026-07-23 (S2914 close).** First batch to codify explicit READ-only allowlists + document transitive exclusions by name (Rigby Q3 zoom-out corrective: "gateway ambiguity debt" as the coupling risk accreting at accelerated pace). Rigby T0 SIGN CRITICAL CATCH: `intelligence_tool.search` reclassified READ_ONLY → MUTATION (hidden network via cross-file `_handle_web_search`) — second instance of the "hidden network/LLM in read-shaped gateway" pattern.
 
 **PRs shipped this session:**
-- u-d-b PR [#3453](https://github.com/clwest/donkey-betz-platform/pull/3453) — Slice 3 batch 1 (4 tools), merged at `00fcb352f`.
-- u-d-b PR [#3454](https://github.com/clwest/donkey-betz-platform/pull/3454) — Slice 3 batch 2 (4 tools), merged at `b2a2ae0e5`.
-- u-d-b PR [#3455](https://github.com/clwest/donkey-betz-platform/pull/3455) — Slice 3 batch 3 (4 tools) + session close batch, merged at `d6fc0480c`.
-- u-d-b PR `<TBD>` — S2913 close cascade (handoff + 00-START refresh + wrapper pin bump).
+- u-d-b PR [#3457](https://github.com/clwest/donkey-betz-platform/pull/3457) — Slice 3 batch 4 (2 tools), merged at `3c8b00ffc`.
+- u-d-b PR [#3458](https://github.com/clwest/donkey-betz-platform/pull/3458) — Batch 4 doc-fix (metadata classification = descriptive audit, NOT a runtime gate), merged at `a3ade5b43`.
+- u-d-b PR `<TBD>` — S2914 close cascade (handoff + 00-START refresh + wrapper pin bump).
 
-**Tools shipped (12):**
-- Batch 1: `paid_interest_status`, `platform_awareness_tool`, `persona_tool`, `platform_config_tool`
-- Batch 2: `active_repo_tool`, `db_health_tool`, `conversation_tool`, `remember_tool`
-- Batch 3: `messaging_tool`, `learning_tool`, `dream_tool`, `governance_tool`
+**Tools shipped (2):**
+- Batch 4: `work_tool` (7 R + 9 M), `intelligence_tool` (6 R in-scope + 10 documented-not-verified + 3 M)
 
-**Rigby joint SIGN (3 substantive cycles this session, zero rubber-stamp):**
-- Batch 1 T0 SIGN AGREE-with-edits (9 repo_tool probes, tool-grounded).
-- Batch 2 T1 SIGN AGREE-with-edits — **Claude course-correction on `conversation_tool.search`**: Rigby V1 assumed pure ORM; Claude direct handler read caught `EmbeddingService.create_embedding(query)` at :2038 (LLM cost). Reclassified as MUTATION per `feedback_verify_rigby_tool_runs_before_trusting_sign`.
-- Batch 3 T1 SIGN AGREE-with-edits — 4 verify-before-commit flags all verified: messaging read-receipt (NO writes on unread_count), messaging send_message (schema-hidden defense-in-depth per Session 1253 PR 4), governance decision_create naming (clean), no LLM on any covered read action.
+**Rigby joint SIGN (1 substantive T0 + 1 post-merge verify, zero rubber-stamp):**
+- Batch 4 T0 SIGN AGREE-with-edits (8+ repo_tool probes, tool-grounded). CRITICAL CATCH: `intelligence_tool.search` reclassified MUTATION (`_handle_web_search` at `td_handlers_agents.py:384`).
+- Batch 4 post-merge verify: 4 in-scope READ dispatches clean; 1 excluded search dispatched and hit network (3052ms) — surfaced doc-language overstatement; doc-fix PR #3458 shipped.
 
-**Sweep progress (post-S2913):**
-- Slice 3 (`td_handlers_core`): **12/22 shipped; 10 remaining.**
-- Total corpus untested: 69 → **57** (-12). Gap map: 32 → **44 full** + 8 partial + 57 untested.
-- Session cumulative pace: 12 tools / 3 batches / 1 session — first S1218-cadence session of the accelerated sweep.
+**Sweep progress (post-S2914):**
+- Slice 3 (`td_handlers_core`): **14/22 shipped; 8 remaining.**
+- Total corpus untested: 55 → **55** (batch 4 was already counted). Gap map: **44 full + 10 partial + 55 untested.**
+- Session cumulative pace: 2 tools / 1 batch / 1 session (with post-merge verify + doc-fix cycle).
 
-**Concern C — Slice 3 schema↔doc drift count reaches 3:**
-`platform_awareness_tool` + `platform_config_tool` (batch 1) + `governance_tool` (batch 3) all flagged `actions_not_mentioned_in_description`. Fold candidate promotion evaluated at Slice 3 CLOSE, NOT mid-slice (D6 moratorium — no substrate arc opens).
+**Concern C — Slice 3 schema↔doc drift count now at 5 (≥ threshold):**
+`platform_awareness_tool` + `platform_config_tool` (S2913 batch 1) + `governance_tool` (S2913 batch 3) + `work_tool` + `intelligence_tool` (S2914 batch 4). Rigby's ≥5-core-tools threshold met. **Evaluate at Slice 3 CLOSE (S2915) per D6 moratorium (no substrate arc opens mid-sweep).**
 
 **Post-merge live-dispatch (per PLAYBOOK-7.4.4):**
-- 3 clean recycles: batch 1 `sha=00fcb352f16b`, batch 2 `sha=b2a2ae0e5434`, batch 3 `sha=d6fc0480c089`. Surviving=none in all 3.
+- PR #3457 recycled clean at `sha=3c8b00ffc`: 5 fresh workers, zero surviving old PIDs.
+- PR #3458 doc-only — no recycle needed.
 
-Full session context: `docs/handoffs/SESSION_2913_SLICE_3_BATCHES_1_2_3.md`.
+Full session context: `docs/handoffs/SESSION_2914_SLICE_3_BATCH_4.md`.
 
 ---
 
-## S2914 open sequence
+## S2915 open sequence
 
-### Step 1 (REQUIRED FIRST ACTION) — Slice 3 batch 4
+### Step 1 (REQUIRED FIRST ACTION) — Slice 3 CLOSE evaluation + next batch
 
-**No blocking Chris D-verdict.** S2913 shipped 3 PRs cleanly; batch shape proven across 3 batches; sweep-arc pace accelerating.
+**No blocking Chris D-verdict.** Slice 3 is at 14/22 with 8 tools remaining split by risk class. Rigby T0 SIGN Q2 at batch 4 recommended closing Slice 3 at ~14/22 and shipping the remaining 8 tools via 3 specialty batches.
 
-**Remaining Slice 3 corpus (10 tools):**
-- **Network-suspect (defer to network-focused batch):** `fleet_health`, `http_smoke_test`, `signal_studio_judge_stats` (all direct HTTP).
-- **Celery/async-suspect (defer to MUTATION-coverage batch):** `studio_tool`, `workflow_run_tool` (both have `apply_async`).
-- **Row-create-suspect:** `competitor_comparison_tool` (`.create` at :2761), `research_and_create_tool`, `task_breakdown_tool`.
-- **Pure-ORM read candidates:** `work_tool` (16 actions with clear R/M split), `intelligence_tool` (20+ actions, mostly R).
+**S2915 T0 SIGN questions to route to Rigby:**
 
-**S2914 T0 SIGN questions to route to Rigby:**
-- **Q1 Batch composition:** continue pure-ORM opener shape with 3-4 more tools (work_tool as centerpiece is the highest-leverage remaining pick), OR pivot to a network-focused batch to close fleet_health / http_smoke_test / signal_studio_judge_stats trio in one dedicated batch?
-- **Q2 Substrate observation:** 3 batches proven the shape; consider closing Slice 3 sweep at 15/22 tools + 7 deferred to a dedicated MUTATION-coverage batch across Slices 3+4+5, OR push to close Slice 3 fully via more targeted per-tool investigation?
-- **Q3 zoom-out ask (required per feedback_zoom_out_ask_per_rigby_sign):** at 3 batches shipped in one session, what does the pattern *fail* to teach us that batch 4 T0 should target? What's the highest-risk assumption in the sweep-continues-unchanged posture?
+- **Q1 Slice 3 CLOSE decision:** Formally close Slice 3 at 14/22 and route remaining 8 tools to specialty batches (network trio / async trio / row-create trio), OR keep Slice 3 open and continue the same shape (accepting each remaining tool's transitive verification cost as-is)?
 
-### Alternative Step 1 candidates (unchanged from S2912/S2913 open)
+- **Q2 Concern C evaluation at close threshold:** 5 Slice 3 tools now flag `actions_not_mentioned_in_description`. Three candidate framings — (a) auto-append action-enum appendix to schema description (generator-side); (b) doc-only lint that fails when enum values are not mentioned in description; (c) accept the drift as intrinsic to gateway-shaped tools where description names action-families rather than each action. **D6 moratorium blocks substrate arc open — observation + framing only.** Which framing does Rigby recommend Chris ratifies at some future post-moratorium session?
+
+- **Q3 Next batch selection:** After Slice 3 close, first batch of the remaining 8 tools is:
+  - **network trio** (`fleet_health` + `http_smoke_test` + `signal_studio_judge_stats`) — dedicated shape-break batch introducing network-preflight test pattern
+  - **async trio** (`studio_tool` + `workflow_run_tool`) — dry_run + `apply_async` gating pattern
+  - **row-create trio** (`competitor_comparison_tool` + `research_and_create_tool` + `task_breakdown_tool`) — first WRITE-path coverage batch
+  - **pivot to Slice 4** (`td_handlers_gateway`, 17 tools) — leaves the 8 as backlog
+
+- **Q4 zoom-out ask (required per feedback_zoom_out_ask_per_rigby_sign):** the S2914 batch 4 explicit-allowlist shape caught a second hidden network/LLM pattern (`intelligence_tool.search` → `_handle_web_search`). What does the S2914 shape *fail* to teach that batch 5 T0 should target? Should batch 5 introduce a **transitive-dependency proof** requirement (e.g., every delegated action requires a direct handler read + documented no-hidden-cost verdict), or would that slow the pace unhelpfully?
+
+### Alternative Step 1 candidates (unchanged from prior sessions)
 
 - **Phase 0 heading fixes (8 tools)** — doc-only PR that clears remaining parity mismatches. Still valid.
 - **Slice 1.5b autopilot mutations** — staged-enforcement session per pre-commit note.
 
-### What's forbidden at S2914 (D6 MORATORIUM still in force)
+### What's forbidden at S2915 (D6 MORATORIUM still in force)
 
 - No new strategic discovery arcs. No opportunity portfolio expansions. No evaluation frameworks. No layer-boundary design arcs.
 - No R1a-shaped proposals (upgrading character-os to fleet HMAC).
-- **No v2 → v3 harness schema bump WITHOUT substrate-arc-scoped SIGN.** v2 is frozen at S2909 close.
+- **No v2 → v3 harness schema bump WITHOUT substrate-arc-scoped SIGN.**
 - No new gate/lint proposals.
 - No agent-substrate validation arc.
 - **No `minimal_safe_args_v2` arc opening without explicit Chris directive.**
 - **No entrypoint-side context-injection substrate arc without explicit Chris directive.**
-- **No "schema-drift-fix Fold promotion" without 2nd confirmed instance.**
+- **No "schema-drift-fix Fold promotion" without 2nd confirmed instance** (S2913 batch 3 `dream_tool.dream_type` was 1st; nothing new in S2914).
 - **No `dry_run` infrastructure arc for mutation-class dispatchers without explicit Chris directive.**
-- **No Concern C schema↔doc drift substrate arc mid-slice.** 3 instances in Slice 3 batches 1+3; evaluated at Slice 3 CLOSE per Rigby T0 Q4 threshold + D6 moratorium.
-- **No `post_save signal cascade` substrate arc without explicit Chris directive.** `dream_tool.approve` is a candidate class-example (S2913 batch 3); forward-carry ledger observation only.
-- **No harness-level soft_error accounting substrate arc without explicit Chris directive.** S2913 batches 2+3 observed harness soft_error counts don't distinguish structured `_handler_error` (S2886) from inline `{error}` (drift); forward-carry ledger observation.
+- **No Concern C schema↔doc drift substrate arc mid-slice.** **5 instances observed; framing evaluated at Slice 3 CLOSE per D6 moratorium.**
+- **No `post_save signal cascade` substrate arc without explicit Chris directive.**
+- **No harness-level soft_error accounting substrate arc without explicit Chris directive.**
+- **No "metadata-classification-as-runtime-gate" substrate arc without explicit Chris directive.** S2914 post-merge doc-fix corrected the descriptive-vs-enforcement framing. Watch for pattern recurrence; propose template guardrail at Slice 3 CLOSE if it recurs.
+- **No "hidden network/LLM in read-shaped gateway" Fold promotion without 3rd confirmed instance.** S2913 batch 2 `conversation_tool.search` (LLM) + S2914 batch 4 `intelligence_tool.search` (network) = 2 instances. 3rd would trigger Fold candidate evaluation.
 
 ### What's queued but deferred (do NOT open unless Chris directs)
 
@@ -84,25 +86,25 @@ Full session context: `docs/handoffs/SESSION_2913_SLICE_3_BATCHES_1_2_3.md`.
 - **Sweep batch cadence outcome gate** — Ledger row 158. Unchanged.
 - **Mutation-heavy single-tool batch pattern** — Ledger row 159. Unchanged.
 - **2-tier evidence template promotion** — Ledger row 160. Unchanged.
-- **Sweep-arc pace sustainability substrate arc** — Ledger row 161. **CLOSED at S2904.** S2913 sustained accelerated pace with 3-batch session.
+- **Sweep-arc pace sustainability substrate arc** — Ledger row 161. **CLOSED at S2904.** S2914 sustained decoupled pace (batch 4 was 2 tools + verify cycle vs. S2913's 12 tools — both healthy).
 - **Response-level introspection field creep** — Ledger row 162. Unchanged.
-- **S2905 metadata-pattern-selection lint** — batches 1+2+3 used per-action (via TOOL_ACTION_METADATA for mixed) + TOOL_DEFAULTS for actionless; no shadowing. Counter unchanged.
+- **S2905 metadata-pattern-selection lint** — batch 4 used per-action (TOOL_ACTION_METADATA only) for both work_tool + intelligence_tool; no TOOL_DEFAULTS + no shadowing. Counter unchanged.
 - **S2906/S2907/S2908 Ledger candidates** — unchanged.
 - **S2907 harness-substrate: MLEngine per-invocation NLP-model load** — unchanged.
 - **S2908 doc-fix candidate: `obs_tool_validation.md` §6.1** — unchanged.
 - **S2908 Ledger candidate: `media_tool.delete` first IRREVERSIBLE action** — unchanged.
 - **S2909 FT-1 through FT-5** — unchanged; FT-5 (`minimal_safe_args_v2`) still tracked as candidate arc.
-- **S2910 FT-1 (Ledger #33) — Entrypoint-side context-injection test coverage gap** — unchanged.
-- **S2910 FT-2 (Ledger #34) — Doc-pointer-verification lint candidate** — unchanged.
-- **S2911 Ledger #35 — Envelope-shape inconsistency on `opportunity_manager.delete` + `task_manager.delete`** — unchanged.
-- **S2911 Ledger #36 — Candidate Fold Trigger #1 (schema-drift-fix)** — NOT corroborated at S2913 batches 1+2+3.
+- **S2910 FT-1 (Ledger #33)** — unchanged.
+- **S2910 FT-2 (Ledger #34)** — unchanged.
+- **S2911 Ledger #35** — unchanged.
+- **S2911 Ledger #36 — Candidate Fold Trigger #1 (schema-drift-fix)** — NOT corroborated at S2914 batch 4.
 - **S2911 Ledger #37 — HIDDEN MUTATION planner-safety pattern** — unchanged.
 - **S2912 §5a mitigation note — `dry_run` add-flag pattern for actionless mutation-class dispatchers** — unchanged.
-- **NEW S2913 batch 2 Ledger candidate — envelope drift on `active_repo_tool.set/clear` + `conversation_tool.get` inline `{ok: False, error}` on missing-arg paths** — forward-carry; MUTATION-skipped this session.
-- **NEW S2913 batch 3 Ledger candidate — `dream_tool.dream_type` schema description ('creative_idea') vs handler ('user_request') default drift** — minor; forward-carry.
-- **NEW S2913 batch 3 Ledger candidate — `messaging_tool.send_message` schema-hidden defense-in-depth pattern (Session 1253 PR 4)** — pattern worth watching if more schema-hidden handler paths surface in Slice 3+4+5. Forward-carry.
-- **NEW S2913 batch 3 Ledger candidate — `dream_tool.approve` post_save signal cascade** (promote_to_initiative + execute_single_dream.delay) as class-example. Forward-carry.
-- **NEW S2913 batches 2+3 Ledger candidate — harness `soft_error` accounting doesn't distinguish S2886 `_handler_error` structured envelope from inline `{error}` drift.** Forward-carry harness-substrate observation; D6 moratorium.
+- **S2913 batch 2 Ledger candidate — envelope drift on `active_repo_tool.set/clear` + `conversation_tool.get`** — unchanged.
+- **S2913 batch 3 Ledger candidates** — unchanged.
+- **NEW S2914 batch 4 Ledger candidate — metadata-classification descriptive vs runtime-gate distinction.** Doc-fix in PR #3458 corrected the framing on batch 4 docs. Forward-carry: watch for the same overstatement pattern in future batch validation docs; propose shared "how to describe classification" boilerplate at Slice 3 CLOSE if it recurs.
+- **NEW S2914 batch 4 Ledger candidate — "hidden network/LLM in read-shaped gateway" pattern reaches 2nd instance.** S2913 batch 2 (`conversation_tool.search` LLM) + S2914 batch 4 (`intelligence_tool.search` network). Forward-carry: if 3rd instance surfaces in Slice 3 batch 5 / Slice 4 / Slice 5, evaluate for Fold promotion per PLAYBOOK-6.10.
+- **NEW S2914 batch 4 Ledger candidate — intelligence_tool 10 delegate/composite actions documented-but-not-verified.** Forward-carry: at Slice 3 CLOSE or a dedicated intelligence-delegates batch, read `_handle_stock_intelligence` / `_handle_sports_betting` / `_handle_legislation` / `_handle_rag_query` / `_handle_spider_data` handlers to confirm no hidden transitive network/LLM/write paths.
 - **Batched-items structural (Rigby Tool Gap Ledger entry #27)** — unchanged.
 - **Applicability metadata pattern (entry #28)** — unchanged.
 - **Baseline lookback cap (entry #29)** — MITIGATED at PR #3423 (S2899).
@@ -125,17 +127,19 @@ Full session context: `docs/handoffs/SESSION_2913_SLICE_3_BATCHES_1_2_3.md`.
 **Slice 2 — `td_handlers_agents` (25 tools):** **CLOSED at S2912.**
 
 **Slice 3 — `td_handlers_core` (22 tools):**
-- **S2913 batch 1: 4 tools ✓** (paid_interest_status, platform_awareness_tool, persona_tool, platform_config_tool). Actionless+scoped-to-READ_ONLY-subset opener.
-- **S2913 batch 2: 4 tools ✓** (active_repo_tool, db_health_tool, conversation_tool, remember_tool). Continuation shape.
-- **S2913 batch 3: 4 tools ✓** (messaging_tool, learning_tool, dream_tool, governance_tool). Session close batch.
-- **Remainder: 10 tools untested.** Fleet_health / http_smoke_test / signal_studio_judge_stats (network trio) + studio_tool / workflow_run_tool (async trio) + competitor_comparison_tool / research_and_create_tool / task_breakdown_tool (row-create trio) + work_tool / intelligence_tool (large-action pure-ORM candidates).
+- **S2913 batch 1: 4 tools ✓** (paid_interest_status, platform_awareness_tool, persona_tool, platform_config_tool).
+- **S2913 batch 2: 4 tools ✓** (active_repo_tool, db_health_tool, conversation_tool, remember_tool).
+- **S2913 batch 3: 4 tools ✓** (messaging_tool, learning_tool, dream_tool, governance_tool).
+- **S2914 batch 4: 2 tools ✓** (work_tool, intelligence_tool). Explicit allowlist + transitive exclusions shape.
+- **Remainder: 8 tools untested.** Network trio (`fleet_health` / `http_smoke_test` / `signal_studio_judge_stats`) + async trio (`studio_tool` / `workflow_run_tool`) + row-create trio (`competitor_comparison_tool` / `research_and_create_tool` / `task_breakdown_tool`).
+- **Slice 3 CLOSE evaluation opens at S2915** per Rigby T0 SIGN Q2 AGREE at batch 4 — close at 14/22 with 8 deferred to specialty batches.
 
 **Slice 4 — `td_handlers_gateway` (17 tools):** queued.
 **Slice 5 — `tool_dispatcher` (14 tools):** queued.
 
 **Substrate arcs CLOSED:** S2900-S2904 (Row 161 pace substrate) + S2909 (harness classifier + bridge preflight) + S2911 (reasoning_engine schema↔handler drift-fix).
 
-**Total remaining tools to close:** ~57. Post-substrate sweep pace at S2905-S2913 = 4/4/3/4/4/4/1/4/4/4 tools/batch. Extrapolated remaining ~10 sessions at accelerated pace with trustworthy harness.
+**Total remaining tools to close:** ~55. Post-S2914 pace: 2 tools this session with in-depth SIGN + post-merge verify + doc-fix cycle. If S2915 ships Slice 3 close + network trio batch, sweep is at 17/22 with 5 remaining (async + row-create trios remain).
 
 ---
 
@@ -151,9 +155,9 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2913 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2914 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2913: zero A4 spend — pure sweep-batch engineering (3 batches shipped).** A1 shipping spend was 3 PRs + close cascade.
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2914: zero A4 spend — pure sweep-batch engineering (1 batch + 1 doc-fix).** A1 shipping spend was 2 PRs + close cascade.
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
 3. **Capability claims:** (a)…(uu) as ratified at S2887 close. No additions this session.
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
@@ -162,10 +166,11 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2913)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2914)
 
 See:
-- **S2913 handoff (current):** `docs/handoffs/SESSION_2913_SLICE_3_BATCHES_1_2_3.md`
+- **S2914 handoff (current):** `docs/handoffs/SESSION_2914_SLICE_3_BATCH_4.md`
+- **S2913 handoff:** `docs/handoffs/SESSION_2913_SLICE_3_BATCHES_1_2_3.md`
 - **S2912 handoff:** `docs/handoffs/SESSION_2912_SLICE_2_CLOSE.md`
 - **S2911 handoff:** `docs/handoffs/SESSION_2911_SLICE_2_BATCH_6A_PLUS_DRIFT_FIX.md`
 - **S2910 handoff:** `docs/handoffs/SESSION_2910_SLICE_2_BATCH_5_MIXED_COMPOSITION_SWEEP.md`
@@ -177,13 +182,11 @@ See:
 - **S2905 handoff:** `docs/handoffs/SESSION_2905_SLICE_2_BATCH_1_ACCELERATED_SWEEP.md`
 - **S2904 handoff:** `docs/handoffs/SESSION_2904_T1B_TEMPLATE_EXTRACTION.md`
 - **T1b canonical template file:** `docs/audits/pa_tools/substrate/_TEMPLATE_per_tool_validation.md`
-- **S2913 per-tool validation docs (this session's 12):** at `docs/research/tools/validation/`
-  - `paid_interest_status_validation.md`, `platform_awareness_tool_validation.md`, `persona_tool_validation.md`, `platform_config_tool_validation.md` (batch 1)
-  - `active_repo_tool_validation.md`, `db_health_tool_validation.md`, `conversation_tool_validation.md`, `remember_tool_validation.md` (batch 2)
-  - `messaging_tool_validation.md`, `learning_tool_validation.md`, `dream_tool_validation.md`, `governance_tool_validation.md` (batch 3)
+- **S2914 per-tool validation docs (this session's 2):** at `docs/research/tools/validation/`
+  - `work_tool_validation.md`, `intelligence_tool_validation.md`
 - **Playbook v0.9.0 ratification envelope:** `docs/research/implementation/RATIFICATION_2026-07-22_PLAYBOOK_V0_9_0.md`
 - **Parent-workspace multi-Claude rulebook:** `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`
-- **PA tools sweep methodology:** `docs/audits/PA_TOOLS_GAP_MAP.md` + `docs/PA_TOOL_AUDIT.md` (both auto-generated) + `docs/research/tools/validation/*.md` (per-tool validation docs; 55 non-substrate post-S2913)
+- **PA tools sweep methodology:** `docs/audits/PA_TOOLS_GAP_MAP.md` + `docs/PA_TOOL_AUDIT.md` (both auto-generated) + `docs/research/tools/validation/*.md` (per-tool validation docs; 57 non-substrate post-S2914)
 - **Rigby Tool Gap Ledger deliverable:** `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` (unchanged from S2911).
 
 For older session history (S1-S2849), see `docs/handoffs/` + `docs/research/OPEN_ARCS.md`.
