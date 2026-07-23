@@ -237,7 +237,7 @@ Manage blocked/enabled agents. Use 'list' to see which agents are blocked. Use '
 
 ### `agent_introspection_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_agent_introspection` in `core/services/td_handlers_ops.py:6097`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_agent_introspection` in `core/services/td_handlers_ops.py:6117`
 
 Introspect agents: list registered agents, view capabilities, check which agents are available. Use when the user asks about agents, what agents exist, agent capabilities, or agent details.
 
@@ -253,7 +253,7 @@ Introspect agents: list registered agents, view capabilities, check which agents
 
 ### `agent_memory_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_agent_memory` in `core/services/td_handlers_ops.py:7060`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_agent_memory` in `core/services/td_handlers_ops.py:7080`
 
 Browse agent memories and knowledge sources. Use when the user asks about what agents remember, agent knowledge, memory entries, or agent learning history.
 
@@ -466,7 +466,7 @@ Manage the blog/content pipeline — stats, list, approve, reject, generate. Use
 
 ### `bpaas_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_bpaas` in `core/services/td_handlers_agents.py:6230`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_bpaas` in `core/services/td_handlers_agents.py:6261`
 
 Build Packet as a Service — create client projects from structured build packets. Actions: create_project (creates workspace project + repos + preview env + magic link from a build packet), generate_close_pack (generates SOW + delivery checklist + proposal from a build packet), get_schema (returns the build packet JSON schema), get_example (returns the Norman Handyman MVP example packet).
 
@@ -481,7 +481,7 @@ Build Packet as a Service — create client projects from structured build packe
 
 ### `brainstorm_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_brainstorm` in `core/services/td_handlers_agents.py:6098`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_brainstorm` in `core/services/td_handlers_agents.py:6129`
 
 Search and list brainstorm sessions: discussion panels, multi-agent debates, and collaborative insights. Use 'list' for bulk paginated export, 'search' for keyword search, 'details' for a single session, 'stats' for activity stats.
 
@@ -747,7 +747,7 @@ _(no schema description)_
 
 ### `cost_telemetry_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_cost_telemetry` in `core/services/td_handlers_agents.py:4854`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_cost_telemetry` in `core/services/td_handlers_agents.py:4885`
 
 Get real API cost and spend data from LLM call logs. Use when the user asks about actual costs, spending, most expensive agents, cost trends, cost breakdown, or wants a ranked list of agents by spend. This returns real dollar amounts, not budget gates.
 
@@ -859,7 +859,7 @@ Manage the deliverables library — create, read, update, search, save, export, 
 
 ### `diagnostics_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_diagnostics` in `core/services/td_handlers_ops.py:8161`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_diagnostics` in `core/services/td_handlers_ops.py:8181`
 
 Audit/inventory telemetry for subsystem health checks (Session 1202 §A.2). Distinct from ops_tool (which is SRE/SLO-focused on production reliability): diagnostics_tool surfaces per-component invocation counts and inventory state so Rigby can grade whether registered components are actually being used (advisors, LLM providers, beat schedules, workspaces). Read-only — no mutations.
 
@@ -1001,7 +1001,7 @@ _(no schema description)_
 
 ### `gates_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_gates` in `core/services/td_handlers_agents.py:5059`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_gates` in `core/services/td_handlers_agents.py:5090`
 
 Access quality gates: list gates, check gate status, view pass/fail history. Use when the user asks about gates, quality checks, or publish gates.
 
@@ -1021,7 +1021,7 @@ Get body system vitals: HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUS
 
 ### `get_system_alerts`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_system_alerts` in `core/services/td_handlers_agents.py:4822`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_system_alerts` in `core/services/td_handlers_agents.py:4836`
 
 Get active system alerts and warnings. Use when the user asks about alerts, warnings, or system notifications.
 
@@ -1070,7 +1070,7 @@ Beat Task Governor — controls which autonomous agent dispatches are allowed to
 
 ### `heartbeat_history_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_heartbeat_history` in `core/services/td_handlers_ops.py:7214`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_heartbeat_history` in `core/services/td_handlers_ops.py:7234`
 
 View heartbeat history and trends. Use when the user asks about system heartbeat history, health trends over time, uptime, or historical system status.
 
@@ -1103,7 +1103,7 @@ _(no schema description)_
 
 ### `infra_health_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_infra_health` in `core/services/td_handlers_ops.py:7293`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_infra_health` in `core/services/td_handlers_ops.py:7313`
 
 Deep infrastructure health checks — Redis, PostgreSQL, dependencies, and runtime metrics. Use when the user asks about Redis health, database performance, dependency status, memory usage, or infrastructure diagnostics.
 
@@ -1148,7 +1148,7 @@ Unified intelligence desk — stocks, sports betting, legislation, search, and K
 
 ### `kb_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_kb_browse` in `core/services/td_handlers_ops.py:7528`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_kb_browse` in `core/services/td_handlers_ops.py:7548`
 
 Browse the knowledge base — documents, embedding collections, chunk counts, and text search across all embedded content. Use when the user asks about KB content, embeddings, document chunks, what's been embedded, or RAG sources.
 
@@ -1387,7 +1387,7 @@ _(no schema description)_
 
 ### `ops_digest_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_ops_digest` in `core/services/td_handlers_ops.py:5471`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_ops_digest` in `core/services/td_handlers_ops.py:5491`
 
 Generate or post an autonomous ops digest summarizing system health, autopilot status, blocked agents, and recent activity. Use 'generate' to build a digest, 'post' to write it into a conversation.
 
@@ -1474,7 +1474,7 @@ Access 139 specialized AI persona agents across 14 categories: income generation
 
 ### `pilots_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_pilots` in `core/services/td_handlers_agents.py:5131`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_pilots` in `core/services/td_handlers_agents.py:5162`
 
 Access experiments and pilots: A/B tests, feature experiments, pilot results. Use when the user asks about experiments, pilots, A/B tests, or experimental features.
 
@@ -1619,7 +1619,7 @@ Railway platform infrastructure management. List services and their deployment s
 
 ### `reasoning_engine_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_reasoning_engine` in `core/services/td_handlers_agents.py:5326`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_reasoning_engine` in `core/services/td_handlers_agents.py:5357`
 
 Invoke the reasoning engine for complex analysis: multi-step reasoning, strategic thinking, trade-off analysis. Use when the user asks for deep analysis, strategic advice, or complex reasoning.
 
@@ -1734,13 +1734,13 @@ Delegate a task to a specialized agent. Use when the user asks to Run any of 58 
 
 ### `schedule_followup`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_schedule_followup` in `core/services/td_handlers_agents.py:6351`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_schedule_followup` in `core/services/td_handlers_agents.py:6382`
 
 Subscribe THIS conversation to a completion notification for a previously dispatched async agent task. Call this RIGHT AFTER you dispatch a long-running agent (run_agent / workflow_orchestration_agent / etc.) so the user gets an automatic 'agent finished' message in this same conversation when the task completes — instead of you going silent until the user manually asks. Pass `execution_id` (UUID returned by execution_history_tool) when you have it, or `task_id` (Celery task_id returned by the dispatch tool) as a convenience lookup. after_seconds is a TTL — if the agent hasn't finished in that window, the subscription quietly expires. Cap 600s. If the agent is already done at subscribe time, the notification fires immediately. Safe to call multiple times with the same IDs — a unique constraint dedupes per (execution, conversation).
 
 ### `scheduled_tasks_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_scheduled_tasks` in `core/services/td_handlers_ops.py:6350`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_scheduled_tasks` in `core/services/td_handlers_ops.py:6370`
 
 View and manage scheduled Celery tasks: list beat entries, enable/disable schedules. Use when the user asks about scheduled tasks, cron jobs, what runs automatically, or Celery beat. Supports search, pagination, and enable/disable management.
 
@@ -1752,7 +1752,7 @@ View and manage scheduled Celery tasks: list beat entries, enable/disable schedu
 
 ### `search_docs`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_search_docs` in `core/services/td_handlers_ops.py:7959`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_search_docs` in `core/services/td_handlers_ops.py:7979`
 
 Search the /docs/ corpus and return ranked chunks with inline citations. Use when the user asks 'where in the docs does it say X?', 'find the passage about X', or needs an answer grounded in specific doc passages. Complements kb_tool (which browses the Document table); search_docs is for finding the literal text. Powered by `core.rag.build_docs_context` over `.rag/corpus.jsonl` (19K+ chunks across 2K+ files). Returns [docs/path#chunk_id] citations. Session 1145 P2: optional originating_session filter restricts results to docs whose origin session matches (per docs/_provenance.json).
 
@@ -1836,7 +1836,7 @@ Group-by counts of SpiderData rows by data_type over a windowed time range, with
 
 ### `spider_status_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_spider_status` in `core/services/td_handlers_ops.py:6796`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_spider_status` in `core/services/td_handlers_ops.py:6816`
 
 View individual spider health and activity. Use when the user asks about spider status, which spiders are active/stale, spider item counts, or spider data history.
 
@@ -1851,7 +1851,7 @@ View individual spider health and activity. Use when the user asks about spider 
 
 ### `status_snapshot_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_status_snapshot` in `core/services/td_handlers_ops.py:5927`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_status_snapshot` in `core/services/td_handlers_ops.py:5947`
 
 Get a broad system overview snapshot: agents, spiders, initiatives, health scores, recent activity. Use when the user asks for an overview, executive summary, 'how is the system doing', or 'give me a summary'.
 
@@ -2123,7 +2123,7 @@ Start, poll, list, detail, or cancel multi-step workflow runs. Currently support
 
 ### `workspace_budget_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_workspace_budget` in `core/services/td_handlers_ops.py:4295`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_workspace_budget` in `core/services/td_handlers_ops.py:4315`
 
 Manage per-workspace LLM spend caps, downgrade state, and freeze state (A1 W1 Phase 3 + W1.5 + W2 #2a). Complements autopilot_tool.budget_report (global spend) and llm_enforcer's per-workspace freeze + downgrade hooks: caps are stored in SystemConfiguration under 'workspace_daily_cap:<uuid>' and enforced by BudgetController against the last-24h LLMCallLog spend for that workspace (sliding window, NOT calendar day — spend at 09:15 today is measured against 09:15 yesterday). Two enforcement tiers: at 70% of cap the workspace is DOWNGRADED (routed to BUDGET_DOWNGRADE_MODEL, currently gpt-5-mini) with hysteresis auto-clear at 60%; at 100% of cap the workspace is FROZEN (non-critical LLM calls blocked). Freeze wins over downgrade. S2849 W2 #2a adds a global default cap (workspace_default_daily_cap in SystemConfiguration) that surfaces via get_status/list_caps as an effective cap when the workspace has no explicit row; because autopilot enforcement iterates only workspaces with explicit caps, 'backfill_defaults' writes the default to unconfigured workspaces so enforcement actually fires. NOTE: workspace caps apply only to workspace-attributed LLMCallLog rows (currently the PA path); the NULL-bucket (agents, spiders, embeddings, background tasks) is governed by GLOBAL budget controls, not per-workspace. Actions: 'set_cap' writes a per-workspace cap; 'get_status' returns cap + spend + freeze + downgrade + cap_source for one workspace; 'clear_freeze' removes an active freeze flag; 'clear_downgrade' removes an active downgrade flag; 'list_caps' shows configured caps (or all workspaces with effective caps when include_defaults=true); 'clear_cap' removes an explicit cap; 'get_default_cap' returns the current global default; 'set_default_cap' writes/updates the global default (staff only); 'backfill_defaults' writes the default to all/selected workspaces missing an explicit cap. MUTATIONS (set_cap, clear_cap, clear_freeze, clear_downgrade, set_default_cap, backfill_defaults) require caller to own the workspace OR be staff (default-cap + backfill require staff), and are logged as AutopilotAction rows with policy='workspace_budget_tool' for symmetric visibility with the automatic enforce_workspace_freeze + enforce_workspace_downgrade audit trail. Use this tool when asked to set/change/clear a workspace budget cap, unfreeze or un-downgrade a workspace, check a workspace's spend vs cap, inventory configured caps, or roll out a default cap across workspaces.
 

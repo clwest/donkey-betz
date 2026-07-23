@@ -4819,6 +4819,20 @@ class AgentHandlersMixin:
             'recommendation': budget.get('recommendation'),
         }
 
+    # Schema-to-handler severity-domain mapping (S2906 drift fix).
+    # Schema exposes 4 marketing-standard levels (critical/high/medium/low);
+    # BodyCoordinator alerts use 3 log-level-standard values (info/warning/
+    # critical). Mapping is intentionally lossy on the schema side — `high`
+    # and `medium` both collapse to `warning` — because the handler-side
+    # substrate has no distinct threshold between them. Full drift context:
+    # `docs/research/tools/validation/get_system_alerts_validation.md` §5.
+    _SEVERITY_SCHEMA_TO_INTERNAL: Dict[str, str] = {
+        'critical': 'critical',
+        'high': 'warning',
+        'medium': 'warning',
+        'low': 'info',
+    }
+
     def _handle_system_alerts(
         self,
         tool_name: str,
@@ -4826,10 +4840,35 @@ class AgentHandlersMixin:
         user_id: Optional[int],
         trace_id: str
     ) -> Dict[str, Any]:
-        """Handle system alerts tool."""
+        """Handle system alerts tool.
+
+        Accepts `severity` (schema-declared, preferred) or `severity_threshold`
+        (legacy handler param) — S2906 drift fix. When both are present,
+        `severity` wins. Schema enum values map into the handler's internal
+        info/warning/critical domain via ``_SEVERITY_SCHEMA_TO_INTERNAL``.
+        Unknown values fall through to the ``warning`` default.
+        """
         from core.services.body_vitals import get_body_vitals_service
 
-        severity_threshold = payload.get('severity_threshold', 'warning')
+        severity_order = ['info', 'warning', 'critical']
+
+        raw_severity = payload.get('severity')
+        raw_threshold = payload.get('severity_threshold')
+
+        if raw_severity is not None:
+            severity_threshold = self._SEVERITY_SCHEMA_TO_INTERNAL.get(
+                raw_severity, 'warning'
+            )
+        elif raw_threshold is not None:
+            # Legacy path: normalize unknown values to 'warning' so callers
+            # passing invalid severity_threshold (e.g. 'HIGH', 'medium' from
+            # the schema domain) don't silently downgrade to 'info' —
+            # Rigby S2906 T1 SIGN B edit.
+            severity_threshold = (
+                raw_threshold if raw_threshold in severity_order else 'warning'
+            )
+        else:
+            severity_threshold = 'warning'
 
         vitals = get_body_vitals_service()
         all_vitals = vitals.get_all_vitals()
@@ -4837,7 +4876,6 @@ class AgentHandlersMixin:
         alerts = all_vitals.get('alerts', [])
 
         # Filter by severity
-        severity_order = ['info', 'warning', 'critical']
         threshold_idx = severity_order.index(severity_threshold) if severity_threshold in severity_order else 0
 
         filtered_alerts = [
