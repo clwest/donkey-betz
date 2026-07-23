@@ -247,6 +247,62 @@ TOOL_DEFAULTS: Dict[str, ToolDefaults] = {
         notes='deps: allowlisted Django ORM read-only inspection '
               '(Rigby Tool Gap Ledger #3, S2866)',
     ),
+    # Slice 2 batch 5 seed (S2910). Three actionless tools from
+    # td_handlers_agents.py. Batch 5 mixed shape across 4 tools:
+    #   - brainstorm_tool (7 actions, mixed READ_ONLY + MUTATION) →
+    #     per-action records below (Pattern C — session_tool /
+    #     revenue_tracker_tool / bpaas_tool precedent).
+    #   - web_fetch_tool + schedule_followup + legal_doc_drafter_agent
+    #     (actionless schemas — `_schema_actions()` returns []) → uniform
+    #     TOOL_DEFAULTS. Safety class + notes are doc-primary for these
+    #     since the harness emits 0-action artifacts; metadata drives
+    #     gap-map + audit surfaces rather than harness dispatch. Same
+    #     precedent as web_search (S2906 batch 2).
+    #
+    # Authoring evidence:
+    # - web_fetch_tool: `td_handlers_agents.py:426` — single-verb GET/POST
+    #   surface. httpx.Client with capped timeout (1-60s), max_bytes
+    #   (1024-2M), scheme allowlist (http/https), method allowlist
+    #   (GET/POST). No platform ORM write. Returns {ok, status_code,
+    #   final_url, content_type, body_bytes, truncated, body_text, ...}
+    #   on success; {ok: false, error, ...} on error. Rigby Tool Gap
+    #   Ledger #15, shipped S2865.
+    # - schedule_followup: `td_handlers_agents.py:6389` — single-verb
+    #   subscribe surface. Requires PA-context conversation_id (promoted
+    #   by unified_pa_entrypoint per _CONTEXT_PROMOTE_KEYS) + one of
+    #   execution_id / task_id. Writes AgentFollowupSubscription row via
+    #   get_or_create (idempotent). Rejects non-PA dispatches (NULL
+    #   conversation_id on AgentExecution) and cross-conversation
+    #   subscribes. Returns stable 11-key contract per
+    #   `_make_followup_response` (Session 1175 PR-2b-2).
+    # - legal_doc_drafter_agent: `td_handlers_agents.py:295` — single-verb
+    #   async dispatch surface (Session 1035). Routes through shared
+    #   `dispatch_legal_draft` helper (S2803 Phase 3.0) → Celery legal
+    #   queue. Gated by `disclaimer_acknowledged=True` in payload/context;
+    #   `DisclaimerRequired` exception maps to `error_code=disclaimer_required`
+    #   envelope. Writes `LegalDocumentDispatchLog` audit row on dispatch.
+    'web_fetch_tool': ToolDefaults(
+        default_safety_class='READ_ONLY',
+        default_applicability='always',
+        notes='env: external:network deps: httpx GET/POST; scheme/method '
+              'allowlist; caps timeout+max_bytes; no ORM write; '
+              'actionless schema',
+    ),
+    'schedule_followup': ToolDefaults(
+        default_safety_class='WRITE_GATED',
+        default_applicability='conditional',
+        notes='deps: AgentFollowupSubscription get_or_create (idempotent); '
+              'gate: pa_context (conversation_id promoted by '
+              'unified_pa_entrypoint) + execution_id|task_id; '
+              'actionless schema',
+    ),
+    'legal_doc_drafter_agent': ToolDefaults(
+        default_safety_class='MUTATION',
+        default_applicability='conditional',
+        notes='deps: dispatch_legal_draft → Celery legal queue + '
+              'LegalDocumentDispatchLog audit; gate: '
+              'disclaimer_acknowledged=True; actionless schema',
+    ),
 }
 
 
@@ -491,6 +547,63 @@ TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
         applicability='always',
         notes='destroys media row via obj.delete() — no confirm flag, '
               'no soft-delete',
+    ),
+    # Slice 2 batch 5 per-action records (S2910). brainstorm_tool is the
+    # one multi-action tool in batch 5 (schema `action` enum at
+    # `pa_tool_schemas.py:65-69`). Six READ_ONLY discovery/search
+    # actions + one MUTATION create action that dispatches a
+    # ThinkingAgent brainstorm conversation via Celery long_running
+    # queue. Per-action pattern (Pattern C) mirrors bpaas_tool + session_tool
+    # + revenue_tracker_tool precedent — chosen because create's MUTATION
+    # class deviates from the read-only default the other 6 actions share.
+    # Verified via `td_handlers_agents.py:6136` (_handle_brainstorm).
+    #
+    # dependency_surface (doc-note discipline per S2908 Rigby T0 SIGN):
+    # - all READ_ONLY actions: internal (BrainstormSearchService ORM reads
+    #   against Discussion/Panel/BrainstormConversation)
+    # - create: internal (Celery long_running queue dispatch of
+    #   ThinkingAgent via execute_agent_task.apply_async)
+    ('brainstorm_tool', 'search'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: BrainstormSearchService.search; '
+              'requires: query (raises ValueError if missing)',
+    ),
+    ('brainstorm_tool', 'recent'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: BrainstormSearchService.get_recent_summaries; '
+              'defaults days=7 limit=20',
+    ),
+    ('brainstorm_tool', 'details'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: BrainstormSearchService.get_conversation_insights; '
+              'requires: conversation_id | id (raises ValueError if missing)',
+    ),
+    ('brainstorm_tool', 'by_category'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: BrainstormSearchService.get_ideas_by_category; '
+              'requires: category (raises ValueError if missing)',
+    ),
+    ('brainstorm_tool', 'list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: BrainstormSearchService.list_conversations; '
+              'defaults days=30 offset=0 limit=50 (cap 200)',
+    ),
+    ('brainstorm_tool', 'stats'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: BrainstormSearchService.get_stats; defaults days=30',
+    ),
+    ('brainstorm_tool', 'create'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='deps: execute_agent_task.apply_async(ThinkingAgent) via '
+              'Celery long_running queue; requires: topic OR query '
+              '(non-empty after strip)',
     ),
 }
 
