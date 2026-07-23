@@ -1,0 +1,275 @@
+{
+  "actions": [
+    {
+      "action": "overview",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "version",
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 49,
+      "notes": null,
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "app",
+        "celery_workers_status",
+        "daphne_pid",
+        "daphne_pid_age_seconds",
+        "daphne_started_before_head_commit",
+        "environment",
+        "git",
+        "head_commit_sha",
+        "head_commit_timestamp",
+        "railway",
+        "runtime",
+        "service",
+        "staleness_verdict"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
+    },
+    {
+      "action": "slo_status",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "failure_signatures",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "tool_migration_report",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "timeout_config_read",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "proof_bundle",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "noise_metrics",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "conversation_metrics",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "focus_mode_status",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "focus_mode_update",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "celery_task_history",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "execution_detail",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "execution_search",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "memory_pressure",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "top_consumers",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "zombie_thread_rate",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "tenant_boundary_violations",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "staleness_warnings",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "recent_recycles",
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 3,
+      "notes": null,
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "count",
+        "items",
+        "limit",
+        "log_exists",
+        "log_path"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
+    },
+    {
+      "action": "recent_bridge_calls",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    },
+    {
+      "action": "bridge_activity_digest",
+      "expected_outcome": "skipped_metadata_missing",
+      "input_profile": "skipped_no_dispatch",
+      "latency_ms": 0,
+      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
+      "resolution_source": "unclassified",
+      "response_shape_keys": [],
+      "safety_class": null,
+      "status_code": null
+    }
+  ],
+  "harness_version": "v1",
+  "run_metadata": {
+    "generated_at": "2026-07-23T02:50:02.226959+00:00",
+    "git_sha": "85cceea41"
+  },
+  "schema_action_count": 22,
+  "tool_name": "ops_tool"
+}
