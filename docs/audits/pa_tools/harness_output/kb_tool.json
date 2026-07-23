@@ -4,7 +4,7 @@
       "action": "stats",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 17917,
+      "latency_ms": 16743,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -22,7 +22,7 @@
       "action": "documents",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 71,
+      "latency_ms": 66,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -36,10 +36,10 @@
     },
     {
       "action": "chunks",
-      "expected_outcome": "success",
+      "expected_outcome": "soft_error",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 3,
-      "notes": null,
+      "latency_ms": 7,
+      "notes": "inline_error_code=document_id_required; inline_msg=document_id required for chunks action",
       "resolution_source": "tool_default",
       "response_shape_keys": [
         "error",
@@ -50,10 +50,10 @@
     },
     {
       "action": "search_embeddings",
-      "expected_outcome": "success",
+      "expected_outcome": "soft_error",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 3,
-      "notes": null,
+      "latency_ms": 5,
+      "notes": "inline_error_code=filters_required; inline_msg=query or content_type required for search_embeddings",
       "resolution_source": "tool_default",
       "response_shape_keys": [
         "error",
@@ -64,10 +64,10 @@
     },
     {
       "action": "semantic_search",
-      "expected_outcome": "success",
+      "expected_outcome": "soft_error",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 3,
-      "notes": null,
+      "latency_ms": 5,
+      "notes": "inline_error_code=query_required; inline_msg=query is required for semantic_search",
       "resolution_source": "tool_default",
       "response_shape_keys": [
         "error",
@@ -77,10 +77,10 @@
       "status_code": 200
     }
   ],
-  "harness_version": "v1",
+  "harness_version": "v2",
   "run_metadata": {
-    "generated_at": "2026-07-23T15:04:29.011607+00:00",
-    "git_sha": "03ee92d5f"
+    "generated_at": "2026-07-23T15:46:56.913206+00:00",
+    "git_sha": "35aea0a61"
   },
   "schema_action_count": 5,
   "tool_name": "kb_tool"
