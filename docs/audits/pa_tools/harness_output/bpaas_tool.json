@@ -26,7 +26,7 @@
       "action": "get_schema",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 4,
+      "latency_ms": 5,
       "notes": null,
       "resolution_source": "action",
       "response_shape_keys": [
@@ -55,8 +55,8 @@
   ],
   "harness_version": "v2",
   "run_metadata": {
-    "generated_at": "2026-07-23T16:09:54.048410+00:00",
-    "git_sha": "dbea31254"
+    "generated_at": "2026-07-23T16:58:22.302283+00:00",
+    "git_sha": "e642c7aa8"
   },
   "schema_action_count": 4,
   "tool_name": "bpaas_tool"
