@@ -10,18 +10,18 @@
 
 - **Total tool names:** 161
 - **Per-category breakdown:**
-  - `untested` (untested): **95**
+  - `untested` (untested): **94**
   - `agent_via_run_agent` (agent (via run_agent)): **44**
   - `validated_full` (validated (full)): **12**
   - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
-  - `validated_partial` (validated (partial)): **2**
+  - `validated_partial` (validated (partial)): **3**
   - `meta_no_handler` (meta (no handler by design)): **1**
 
 ## Validation-doc corpus
 
-- **Total `*_validation.md` files:** 31
+- **Total `*_validation.md` files:** 32
 - **Substrate (cross-cutting) docs:** 10 — reduce risk platform-wide but do NOT validate per-tool invariants (S2795 F2 rename).
-- **Per-tool docs:** 21 — of which 13 have an explicit 'Covered actions' section (F1 checklist).
+- **Per-tool docs:** 22 — of which 14 have an explicit 'Covered actions' section (F1 checklist).
 
 ## Schema quality lints (F5 advisory column)
 
@@ -156,7 +156,7 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `audio_generation_agent` | handler | agent (via run_agent) | — | `core/services/tool_dispatcher.py` |
 | `audit_tool` | ✓✓ | untested | — | `core/services/td_handlers_gateway.py` |
 | `autonomous_content_studio_coordinator` | handler | agent (via run_agent) | — | `core/services/tool_dispatcher.py` |
-| `autopilot_tool` | ✓✓ | untested | actions_not_mentioned_in_description | `core/services/td_handlers_ops.py` |
+| `autopilot_tool` | ✓✓ | validated (partial) | actions_not_mentioned_in_description | `core/services/td_handlers_ops.py` |
 | `bear_case_agent` | handler | agent (via run_agent) | — | `core/services/tool_dispatcher.py` |
 | `blockchain_audit_coordinator` | handler | agent (via run_agent) | — | `core/services/tool_dispatcher.py` |
 | `blog_tool` | ✓✓ | untested | — | `core/services/td_handlers_content.py` |
