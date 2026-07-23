@@ -45,10 +45,12 @@ from django.test import SimpleTestCase
 
 from core.services.pa_tools_gap_map import (
     CATEGORY_LABEL,
+    COVERED_ACTIONS_HEADING_RE,
     SUBSTRATE_DOC_STEMS,
     build_gap_map,
     build_triage_slices,
     classify_tool,
+    evaluate_template_compliance,
     find_matching_doc_stem,
     index_validation_docs,
     lint_schema,
@@ -415,3 +417,295 @@ class GapMapIntegrationTest(SimpleTestCase):
         self.assertIn('## Headline', md)
         # Per-tool coverage table present.
         self.assertIn('## Per-tool coverage table', md)
+
+
+# ============================================================================
+# T1b (S2904) — Template-compliance lint tests.
+#
+# Ratchet-and-warn per T1b ship-shape §3. Rigby SIGN A/B/C/D/E/F folds
+# reflected in test coverage. Rigby ZO-Q3 (regex loosening), ZO-Q6
+# (both variants pass), ZO-Q9 (extra keys allowed) all exercised.
+# ============================================================================
+
+# Minimum valid v1 sweep doc used across tests. Trimmed to just enough
+# to satisfy every mandatory section + required frontmatter field.
+_SWEEP_V1_BODY = """\
+# `foo_tool` — Validation Report (S2999)
+
+**Tool:** `foo_tool`
+**Schema:** `core/services/pa_tool_schemas.py:1`
+**Handler:** `core/services/td_handlers_core.py:1` (`_handle_foo`)
+**Register site:** `core/services/tool_dispatcher.py:1`
+**Session:** S2999
+**HEAD at validation:** `deadbeef1` (2026-07-22)
+**Ship shape:** Doc-only.
+**Category upgrade target:** `untested` → `validated_full`
+**Rigby SIGN:** S2999 T1 SIGN AGREE.
+**Template variant:** sweep
+**Template version:** v1
+
+---
+
+## 1. Purpose / when-to-use
+purpose text
+
+## Covered actions
+- `list`
+
+## 3. Schema notes
+schema notes
+
+## 4. Golden-path examples
+examples
+
+## 5. Failure / empty-state / pagination notes
+failure notes
+
+## 6. Evidence
+evidence
+
+## Related
+related
+"""
+
+_PROTOCOL_V1_BODY = """\
+# `bar_tool` — Validation Report
+
+**Tool:** `bar_tool`
+**Schema:** `core/services/pa_tool_schemas.py:1`
+**Main handler:** `core/services/td_handlers_core.py:1` (`_handle_bar`)
+**Register site:** `core/services/tool_dispatcher.py:1`
+**Session validated:** S2999
+**HEAD at validation:** `deadbeef2`
+**Report status:** VERIFIED
+**Rigby cross-check:** deferred
+**Downstream service:** `core/services/bar_service.py`
+**Reviewer:** Claude
+**Template variant:** protocol
+**Template version:** v1
+
+---
+
+## 1. Intended purpose (per schema description)
+purpose
+
+## 2. Rigby's belief (per schema)
+belief
+
+## 3. Schema claim (verbatim capture)
+schema
+
+## 4. Handler behavior (traced)
+handler
+
+## Findings
+findings
+
+## Verdict
+verdict
+"""
+
+
+class T1bCoveredActionsRegexTests(SimpleTestCase):
+    """T1b — Rigby SIGN D-2 loosened regex acceptance/rejection."""
+
+    def test_accepts_bare_heading(self):
+        self.assertIsNotNone(
+            COVERED_ACTIONS_HEADING_RE.search('## Covered actions\n')
+        )
+
+    def test_accepts_numbered_with_period(self):
+        self.assertIsNotNone(
+            COVERED_ACTIONS_HEADING_RE.search('## 2. Covered actions\n')
+        )
+
+    def test_accepts_numbered_with_paren(self):
+        self.assertIsNotNone(
+            COVERED_ACTIONS_HEADING_RE.search('## 2) Covered actions\n')
+        )
+
+    def test_accepts_numbered_with_em_dash(self):
+        self.assertIsNotNone(
+            COVERED_ACTIONS_HEADING_RE.search('## 2 — Covered actions\n')
+        )
+
+    def test_rejects_word_order_reversal(self):
+        """Rigby SIGN E test requirement — false positive rejection."""
+        self.assertIsNone(
+            COVERED_ACTIONS_HEADING_RE.search('## Actions covered\n')
+        )
+
+
+class T1bTemplateComplianceTests(SimpleTestCase):
+    """T1b — evaluate_template_compliance verdicts across all doc states."""
+
+    def _index_with(self, tmpdir: Path, docs: dict) -> dict:
+        vdir = tmpdir / 'validation'
+        vdir.mkdir(parents=True, exist_ok=True)
+        for stem, body in docs.items():
+            (vdir / f'{stem}_validation.md').write_text(body)
+        return index_validation_docs(vdir)
+
+    def test_legacy_doc_no_marker_warns(self):
+        """No `Template version:` marker → warn (advisory)."""
+        legacy_body = (
+            '# `foo_tool` — Validation Report\n\n'
+            '**Tool:** `foo_tool`\n\n---\n\n## 1. Purpose\ntext\n'
+        )
+        with tempfile.TemporaryDirectory() as td:
+            idx = self._index_with(Path(td), {'foo_tool': legacy_body})
+        result = evaluate_template_compliance('foo_tool', idx)
+        self.assertEqual(result['verdict'], 'warn')
+        self.assertEqual(result['missing'], [])
+
+    def test_v1_sweep_doc_passes(self):
+        """v1 sweep doc with all mandatory sections + fields → pass."""
+        with tempfile.TemporaryDirectory() as td:
+            idx = self._index_with(Path(td), {'foo_tool': _SWEEP_V1_BODY})
+        result = evaluate_template_compliance('foo_tool', idx)
+        self.assertEqual(result['verdict'], 'pass', msg=result['missing'])
+        self.assertEqual(result['variant'], 'sweep')
+
+    def test_v1_sweep_missing_covered_actions_fails(self):
+        """v1 sweep missing `## Covered actions` → fail w/ correct tag."""
+        body = _SWEEP_V1_BODY.replace(
+            '## Covered actions\n- `list`\n\n', ''
+        )
+        with tempfile.TemporaryDirectory() as td:
+            idx = self._index_with(Path(td), {'foo_tool': body})
+        result = evaluate_template_compliance('foo_tool', idx)
+        self.assertEqual(result['verdict'], 'fail')
+        self.assertIn('template_v1_missing_covered_actions', result['missing'])
+
+    def test_v1_protocol_doc_passes_with_alias_frontmatter(self):
+        """v1 protocol doc using alias fields (Main handler, Rigby cross-check)
+        → pass. Rigby SIGN B edit (alias tolerance, presence-not-exact)."""
+        with tempfile.TemporaryDirectory() as td:
+            idx = self._index_with(Path(td), {'bar_tool': _PROTOCOL_V1_BODY})
+        result = evaluate_template_compliance('bar_tool', idx)
+        self.assertEqual(result['verdict'], 'pass', msg=result['missing'])
+        self.assertEqual(result['variant'], 'protocol')
+
+    def test_invalid_template_version_value_fails(self):
+        """`Template version: 1` (non-v-prefixed) → fail. Rigby SIGN C edit."""
+        body = _SWEEP_V1_BODY.replace(
+            '**Template version:** v1', '**Template version:** 1'
+        )
+        with tempfile.TemporaryDirectory() as td:
+            idx = self._index_with(Path(td), {'foo_tool': body})
+        result = evaluate_template_compliance('foo_tool', idx)
+        self.assertEqual(result['verdict'], 'fail')
+        self.assertIn('template_version_invalid', result['missing'])
+
+    def test_invalid_template_variant_value_fails(self):
+        """`Template variant: xyz` (unknown) → fail."""
+        body = _SWEEP_V1_BODY.replace(
+            '**Template variant:** sweep', '**Template variant:** xyz'
+        )
+        with tempfile.TemporaryDirectory() as td:
+            idx = self._index_with(Path(td), {'foo_tool': body})
+        result = evaluate_template_compliance('foo_tool', idx)
+        self.assertEqual(result['verdict'], 'fail')
+        self.assertIn('template_variant_invalid', result['missing'])
+
+    def test_missing_required_frontmatter_field_fails(self):
+        """v1 doc missing a required frontmatter field → fail w/ tag."""
+        body = _SWEEP_V1_BODY.replace(
+            '**Register site:** `core/services/tool_dispatcher.py:1`\n', ''
+        )
+        with tempfile.TemporaryDirectory() as td:
+            idx = self._index_with(Path(td), {'foo_tool': body})
+        result = evaluate_template_compliance('foo_tool', idx)
+        self.assertEqual(result['verdict'], 'fail')
+        self.assertIn(
+            'template_v1_missing_frontmatter_register_site',
+            result['missing'],
+        )
+
+    def test_extra_frontmatter_keys_do_not_break_pass(self):
+        """Rigby ZO-Q9: extra frontmatter keys allowed (presence-not-exact)."""
+        body = _SWEEP_V1_BODY.replace(
+            '**Template version:** v1\n',
+            '**Template version:** v1\n**Random extra key:** whatever\n',
+        )
+        with tempfile.TemporaryDirectory() as td:
+            idx = self._index_with(Path(td), {'foo_tool': body})
+        result = evaluate_template_compliance('foo_tool', idx)
+        self.assertEqual(result['verdict'], 'pass', msg=result['missing'])
+
+
+class T1bTemplateFileExclusionTests(SimpleTestCase):
+    """T1b Rigby SIGN D-1 blocking mitigation — `_`-prefix filter."""
+
+    def test_underscore_prefixed_file_excluded_from_index(self):
+        """`_TEMPLATE_per_tool_validation.md` MUST NOT be indexed."""
+        with tempfile.TemporaryDirectory() as td:
+            vdir = Path(td) / 'validation'
+            vdir.mkdir(parents=True)
+            (vdir / '_TEMPLATE_per_tool_validation.md').write_text(
+                _SWEEP_V1_BODY
+            )
+            (vdir / 'real_tool_validation.md').write_text(_SWEEP_V1_BODY)
+            idx = index_validation_docs(vdir)
+        self.assertIn('real_tool', idx['per_tool_stems'])
+        self.assertNotIn('_TEMPLATE_per_tool', idx['per_tool_stems'])
+        # Total count reflects the filter too.
+        self.assertEqual(idx['total_docs'], 1)
+
+
+class T1bLegacyStillWarnsInBuildGapMapTests(SimpleTestCase):
+    """T1b Rigby ZO-Q6 same-PR requirement — legacy docs remain warn-only
+    but still index correctly through the full build_gap_map flow."""
+
+    def test_legacy_doc_shows_warn_in_gap_map(self):
+        legacy_body = (
+            '# `legacy_tool` — Validation Report\n\n'
+            '**Tool:** `legacy_tool`\n\n---\n\n'
+            '## 1. Purpose\ntext\n\n## Covered actions\n- `list`\n'
+        )
+        with tempfile.TemporaryDirectory() as td:
+            vdir = Path(td) / 'validation'
+            vdir.mkdir(parents=True)
+            (vdir / 'legacy_tool_validation.md').write_text(legacy_body)
+            idx = index_validation_docs(vdir)
+        rows = [
+            {
+                'name': 'legacy_tool', 'has_schema': True, 'has_handler': True,
+                'actions': ['list'], 'description': 'legacy',
+                'required': [], 'handler_file': 'core/services/x.py',
+                'handler_name': '_h', 'handler_line': 1,
+                'param_names': [], 'action_desc': '',
+            },
+        ]
+        summary = build_gap_map(
+            rows=rows, docs_index=idx, schemas_by_name={},
+            run_agent_targets=set(),
+        )
+        self.assertEqual(rows[0]['template_compliance'], 'warn')
+        self.assertEqual(rows[0]['template_missing'], [])
+        # Summary counter reflects the warn.
+        per_tc = summary['headline']['per_template_compliance']
+        self.assertEqual(per_tc.get('warn', 0), 1)
+
+    def test_v1_doc_shows_pass_in_gap_map(self):
+        with tempfile.TemporaryDirectory() as td:
+            vdir = Path(td) / 'validation'
+            vdir.mkdir(parents=True)
+            (vdir / 'foo_tool_validation.md').write_text(_SWEEP_V1_BODY)
+            idx = index_validation_docs(vdir)
+        rows = [
+            {
+                'name': 'foo_tool', 'has_schema': True, 'has_handler': True,
+                'actions': ['list'], 'description': 'foo',
+                'required': [], 'handler_file': 'core/services/x.py',
+                'handler_name': '_h', 'handler_line': 1,
+                'param_names': [], 'action_desc': '',
+            },
+        ]
+        summary = build_gap_map(
+            rows=rows, docs_index=idx, schemas_by_name={},
+            run_agent_targets=set(),
+        )
+        self.assertEqual(rows[0]['template_compliance'], 'pass')
+        per_tc = summary['headline']['per_template_compliance']
+        self.assertEqual(per_tc.get('pass', 0), 1)
