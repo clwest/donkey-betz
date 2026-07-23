@@ -194,3 +194,133 @@ class ScheduleFollowupReturnShapeTests(TestCase):
             'Both Phase 1 and Phase 2 read from AgentFollowupSubscription.DEFAULT_TTL_SECONDS — '
             'if you changed one without updating the other, this test caught the bug.',
         )
+
+
+class ScheduleFollowupPAContextInvariantTests(TestCase):
+    """PA-context promotion invariant (S2910 batch 5 — Rigby T0 SIGN Q4 zoom-out).
+
+    ``schedule_followup`` is a WRITE_GATED tool whose only gate is a runtime
+    PA-context invariant: the caller MUST be dispatching from a PA
+    conversation. In practice this is enforced by two independent code paths
+    that MUST stay in sync:
+
+      (1) ``core/services/unified_pa_entrypoint.py:2262-2263`` — the PA
+          entrypoint calls ``arguments.setdefault('conversation_id', self.conversation_id)``
+          on every tool dispatch, so the handler sees ``conversation_id`` at
+          the payload root.
+      (2) ``core/services/td_handlers_agents.py:6425-6428`` — the handler
+          resolves conversation_id from ``payload.get('conversation_id')`` OR
+          the nested ``payload['context']['conversation_id']``, and fails
+          loud if neither is present.
+
+    If a future refactor changes ONE of these paths without the other, the
+    tool silently returns "no PA conversation context" errors even for
+    real PA-dispatched calls — the exact "fast batching can miss context
+    invariants" failure mode Rigby's S2910 T0 SIGN Q4 flagged.
+
+    These tests pin the handler's contract with the PA entrypoint:
+
+      - Both promotion paths (payload-root AND nested-context) work.
+      - The specific error string on missing context is stable enough
+        for callers / logs / dashboards to grep for.
+
+    Handler-level tests only; the entrypoint-side injection is covered
+    elsewhere (session_tool tests, PA integration tests). This class
+    guards the *contract*, not either endpoint in isolation.
+    """
+
+    _CONTEXT_MISSING_MARKER = 'requires a PA conversation context'
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='followup-context-test',
+            email='context@example.com',
+            password='x',
+        )
+        self.agent, _ = Agent.objects.get_or_create(
+            name='ResearchAgent',
+            defaults={'description': 'test', 'specialization': 'test'},
+        )
+        self.dispatcher = ToolDispatcher()
+        self.conversation_id = 'pa-context-invariant-abc123'
+
+    def _invoke(self, payload):
+        return self.dispatcher._handle_schedule_followup(
+            tool_name='schedule_followup',
+            payload=payload,
+            user_id=self.user.id,
+            trace_id='context-invariant-trace',
+        )
+
+    def test_missing_context_pins_pa_context_error_marker(self):
+        """Regression-guard for the specific error string.
+
+        The error message ``'schedule_followup requires a PA conversation
+        context (no conversation_id available).'`` is what callers / logs /
+        dashboards may grep for to distinguish "wrong tool for this caller"
+        from other error paths. Pinning the marker prevents an accidental
+        message rewrite from breaking downstream observability.
+        """
+        result = self._invoke({'execution_id': 'whatever'})
+        self.assertFalse(result['success'])
+        self.assertIsInstance(result['error'], str)
+        self.assertIn(
+            self._CONTEXT_MISSING_MARKER, result['error'],
+            f'PA-context error marker drifted. Got: {result["error"]!r}. '
+            f'Callers rely on the "{self._CONTEXT_MISSING_MARKER}" substring '
+            'to distinguish PA-context failures from other error paths — '
+            'do not rewrite this error message without updating callers.',
+        )
+
+    def test_nested_context_conversation_id_is_promoted(self):
+        """PA entrypoint could inject conversation_id at payload root OR
+        nested under ``payload['context']``; both MUST resolve equivalently.
+
+        The handler's OR-fallback at ``td_handlers_agents.py:6425-6428``
+        makes both shapes equivalent. If a future refactor collapses the
+        OR to only accept the root form, PA callers that nest under context
+        (via ``run_agent`` fallback path) silently break.
+        """
+        execution = AgentExecution.objects.create(
+            agent=self.agent, user=self.user, task='pa-task',
+            status='in_progress', conversation_id=self.conversation_id,
+        )
+        result = self._invoke({
+            'context': {'conversation_id': self.conversation_id},
+            'execution_id': str(execution.id),
+        })
+        self.assertTrue(
+            result['success'],
+            f'Nested-context promotion path broken. Handler must accept '
+            f"payload['context']['conversation_id'] as equivalent to "
+            f'payload root. Got: {result!r}',
+        )
+        self.assertEqual(result['mode'], 'subscribed')
+
+    def test_root_and_nested_forms_are_equivalent(self):
+        """Cross-check — both promotion paths produce the same subscription
+        state for the same execution + conversation_id. Idempotency via
+        the unique constraint means the second call returns
+        ``already_subscribed`` regardless of which promotion form is used.
+        """
+        execution = AgentExecution.objects.create(
+            agent=self.agent, user=self.user, task='pa-task',
+            status='in_progress', conversation_id=self.conversation_id,
+        )
+        root_result = self._invoke({
+            'conversation_id': self.conversation_id,
+            'execution_id': str(execution.id),
+        })
+        nested_result = self._invoke({
+            'context': {'conversation_id': self.conversation_id},
+            'execution_id': str(execution.id),
+        })
+        self.assertTrue(root_result['success'])
+        self.assertTrue(nested_result['success'])
+        self.assertEqual(root_result['mode'], 'subscribed')
+        self.assertEqual(nested_result['mode'], 'already_subscribed')
+        self.assertEqual(
+            root_result['subscription_id'],
+            nested_result['subscription_id'],
+            'Both promotion paths must resolve to the same subscription row.',
+        )
