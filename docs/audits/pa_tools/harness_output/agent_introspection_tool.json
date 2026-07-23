@@ -4,7 +4,7 @@
       "action": "list",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 74,
+      "latency_ms": 78,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -30,7 +30,7 @@
       "action": "stats",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 66,
+      "latency_ms": 56,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -54,7 +54,7 @@
       "action": "details",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 7,
+      "latency_ms": 6,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -70,7 +70,7 @@
       "action": "capabilities",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 8,
+      "latency_ms": 6,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -100,8 +100,8 @@
   ],
   "harness_version": "v2",
   "run_metadata": {
-    "generated_at": "2026-07-23T15:46:39.349967+00:00",
-    "git_sha": "35aea0a61"
+    "generated_at": "2026-07-23T16:09:53.941693+00:00",
+    "git_sha": "dbea31254"
   },
   "schema_action_count": 5,
   "tool_name": "agent_introspection_tool"

@@ -47,6 +47,13 @@ class ToolActionMetadata:
     safety_class: SafetyClass
     applicability: Applicability = 'always'
     notes: str = ''
+    # S2909 T2: name of the external bridge this action depends on, if any.
+    # Values are opaque strings that ``pa_tool_validate_harness._probe_bridge``
+    # dispatches on (currently 'obs' and 'resolve_node'). ``None`` means the
+    # action does not depend on an external bridge and skips the preflight
+    # entirely — used for tools whose only dependency is the local Django
+    # ORM or in-process constants.
+    bridge: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -399,21 +406,25 @@ TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
         safety_class='READ_ONLY',
         applicability='always',
         notes='deps: ResolveNodeClient.health_check (external_bridge)',
+        bridge='resolve_node',
     ),
     ('davinci_tool', 'status'): ToolActionMetadata(
         safety_class='READ_ONLY',
         applicability='always',
         notes='deps: ResolveNodeClient.get_status (external_bridge)',
+        bridge='resolve_node',
     ),
     ('davinci_tool', 'result'): ToolActionMetadata(
         safety_class='READ_ONLY',
         applicability='always',
         notes='deps: ResolveNodeClient.get_result_url (external_bridge)',
+        bridge='resolve_node',
     ),
     ('davinci_tool', 'jobs'): ToolActionMetadata(
         safety_class='READ_ONLY',
         applicability='always',
         notes='deps: ResolveNodeClient.list_jobs (external_bridge)',
+        bridge='resolve_node',
     ),
     ('davinci_tool', 'grades'): ToolActionMetadata(
         safety_class='READ_ONLY',
@@ -430,16 +441,19 @@ TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
         safety_class='READ_ONLY',
         applicability='always',
         notes='deps: OBS bridge GET /health (external_bridge)',
+        bridge='obs',
     ),
     ('obs_tool', 'status'): ToolActionMetadata(
         safety_class='READ_ONLY',
         applicability='always',
         notes='deps: OBS bridge GET /v1/recording/status (external_bridge)',
+        bridge='obs',
     ),
     ('obs_tool', 'last'): ToolActionMetadata(
         safety_class='READ_ONLY',
         applicability='always',
         notes='deps: OBS bridge GET /v1/recording/last (external_bridge)',
+        bridge='obs',
     ),
     ('obs_tool', 'start'): ToolActionMetadata(
         safety_class='MUTATION',
@@ -518,6 +532,22 @@ def resolve_safety(
     if tool_def is not None:
         return tool_def.default_safety_class, 'tool_default'
     return None, 'unclassified'
+
+
+def resolve_bridge(tool_name: str, action: str) -> Optional[str]:
+    """Return the external bridge name for ``(tool_name, action)`` or ``None``.
+
+    Only per-action records carry the ``bridge`` field — ``TOOL_DEFAULTS`` does
+    not, because bridge-dependency is action-specific (e.g., ``davinci_tool.grades``
+    is internal while ``davinci_tool.health`` needs the resolve_node bridge).
+
+    Used by ``pa_tool_validate_harness`` for the T2 bridge availability
+    precheck (S2909 substrate cleanup arc).
+    """
+    rec = TOOL_ACTION_METADATA.get((tool_name, action))
+    if rec is None:
+        return None
+    return rec.bridge
 
 
 def coverage_stats() -> Dict[str, int]:
