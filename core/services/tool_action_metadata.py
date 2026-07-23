@@ -1012,6 +1012,213 @@ TOOL_ACTION_METADATA: Dict[Tuple[str, str], ToolActionMetadata] = {
               'service config compare; may fail-loud when web service is '
               'unreachable or config-snapshot endpoint undeployed',
     ),
+    # Slice 3 batch 2 per-action records (S2913, second batch this session).
+    # 4 mixed-safety tools continuing the batch 1 scoped-to-READ_ONLY-subset
+    # shape. Rigby T1 SIGN AGREE-with-edits (short cycle — batch 2 mirrors
+    # batch 1 shape; Rigby had warm context).
+    #
+    # Course-correction applied post-Rigby-verdict: `conversation_tool.search`
+    # reclassified from Rigby-assumed READ_ONLY to MUTATION after Claude's
+    # direct handler read (`td_handlers_core.py:2038`) confirmed
+    # `EmbeddingService.create_embedding(query, agent_name='conversation_tool')`
+    # is invoked on every search call. This is LLM cost, not pure ORM. Per
+    # feedback_verify_rigby_tool_runs_before_trusting_sign — Rigby V1 verdict
+    # softened to include this factual correction. `remember_tool.search`
+    # remains READ_ONLY (verified pure `.filter(content__icontains=query)`
+    # at handler line 2345-2348 — no embedding).
+    #
+    # Batch 2 composition rationale (per Rigby T1 SIGN + Claude course-correct):
+    #   - active_repo_tool: 1R + 2M (get pure cache+ORM read; set writes cache
+    #     with 7-day TTL; clear deletes cache).
+    #   - db_health_tool: 7R at env='local' + env='prod' escalation to urllib
+    #     RPC documented-not-tested. Per Rigby V2 AGREE-with-edits — safety
+    #     class classifies intrinsic action (env='local' default is safe);
+    #     env='prod' escalation noted in per-action metadata.
+    #   - conversation_tool: 2R + 3M (get + recent pure ORM reads; search LLM
+    #     embedding; summary async Celery; pin_memory row create + embed).
+    #   - remember_tool: 2R + 1M + 1IR (list + search pure ORM reads; save
+    #     row create; delete row destroy).
+    #
+    # Rigby T1 SIGN Q4 zoom-out findings (forward-carry, not acted this ship):
+    #   - Concern C (schema↔doc drift): batch 2 hits ZERO new instances —
+    #     GAP_MAP flags all four batch 2 tools with no drift lints. Slice 3
+    #     drift count stays at 2 (from batch 1 only). Sub-threshold for
+    #     slice-level fold candidate.
+    #   - db_health env='prod' path is a NEW dependency-surface class
+    #     (env-parameter-dependent MUTATION) not seen in batch 1. Per
+    #     Rigby V4 AGREE-with-edits — documented-not-tested; no substrate
+    #     change (D6 moratorium).
+    #
+    # Authoring evidence:
+    # - active_repo_tool: `td_handlers_core.py:89` — 3 actions.
+    #   get returns cache.get(cache_key) + workspace lookup snapshot. set
+    #   writes cache.set with _ACTIVE_REPO_TTL_SECONDS (7 days). clear
+    #   writes cache.delete. Session 1119 carryover #4.
+    # - db_health_tool: `td_handlers_core.py:1442` — 7 actions.
+    #   Default env='local' path is `_handle_db_health_local` at :1469
+    #   (connection.introspection, call_command('showmigrations'), row
+    #   counts, pgvector extension). env='prod' path is
+    #   `_delegate_remote_db_health` at :1788 (urllib.request.urlopen to
+    #   PA_DB_HEALTH_RPC_URL, Token auth, 30s timeout). Session 1069 base
+    #   + Session 1249 P2(a) prod RPC client.
+    # - conversation_tool: `td_handlers_core.py:1974` — 5 actions.
+    #   get (paginated ChatConversation read). search (EmbeddingService
+    #   embed + pgvector semantic + keyword fallback ConversationMemory
+    #   + ChatConversation dedupe). summary (async
+    #   summarize_conversation_task.apply_async via apply_async_with_actor
+    #   at :2119). pin_memory (create_deliverable + ConversationMemory.
+    #   objects.create at :2160 + embed via EmbeddingService). recent
+    #   (aggregate distinct conversation_ids). Session 1086 pagination.
+    # - remember_tool: `td_handlers_core.py:2210` — 4 actions.
+    #   save (UserMemoryContext.objects.create at :2273 + dedup via
+    #   content_hash + cache.clear + OpsRun event). list (UserMemoryContext
+    #   filter+top-20 read). delete (UserMemoryContext.filter.delete +
+    #   cache.clear). search (UserMemoryContext.filter(content__icontains)
+    #   — pure ORM, no embedding).
+    ('active_repo_tool', 'get'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: cache.get(_active_repo_cache_key(user_id)); returns '
+              'cached ProjectWorkspace snapshot with set flag; no DB write',
+    ),
+    ('active_repo_tool', 'set'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes cache.set with _ACTIVE_REPO_TTL_SECONDS (7 days); '
+              'requires: repo (workspace name / repo_id); resolves '
+              'ProjectWorkspace user-scoped then falls back to name-only',
+    ),
+    ('active_repo_tool', 'clear'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='always',
+        notes='writes cache.delete(_active_repo_cache_key(user_id)); '
+              'reports cleared=True when cache had a value',
+    ),
+    ('db_health_tool', 'overview'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='READ_ONLY when env=local (default); env=prod escalates to '
+              'urllib RPC (documented not tested this batch); deps: '
+              'connection.vendor + call_command showmigrations + core '
+              'table counts',
+    ),
+    ('db_health_tool', 'migrations'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='READ_ONLY when env=local (default); env=prod escalates to '
+              'urllib RPC (documented not tested this batch); deps: '
+              'MigrationLoader + showmigrations diff',
+    ),
+    ('db_health_tool', 'tables'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='READ_ONLY when env=local (default); env=prod escalates to '
+              'urllib RPC (documented not tested this batch); deps: raw '
+              'SQL row counts across canonical core tables',
+    ),
+    ('db_health_tool', 'pgvector'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='READ_ONLY when env=local (default); env=prod escalates to '
+              'urllib RPC (documented not tested this batch); deps: '
+              'pg_extension row read + embedding_count aggregate',
+    ),
+    ('db_health_tool', 'verify_table'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='READ_ONLY when env=local (default); env=prod escalates to '
+              'urllib RPC (documented not tested this batch); deps: '
+              'information_schema lookup; requires: table_name',
+    ),
+    ('db_health_tool', 'search_tables'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='READ_ONLY when env=local (default); env=prod escalates to '
+              'urllib RPC (documented not tested this batch); deps: '
+              'information_schema.tables prefix filter (default core_)',
+    ),
+    ('db_health_tool', 'learning_stats'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='READ_ONLY when env=local (default); env=prod escalates to '
+              'urllib RPC (documented not tested this batch); deps: '
+              'ReadbackLog + Consultation + UserAgentLearning aggregate '
+              '(learning-feedback-loop introspection)',
+    ),
+    ('conversation_tool', 'get'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: ChatConversation ORM query filter by conversation_id; '
+              'paginated via offset+page_size (max 30 turns/page, 1000-char '
+              'content cap per turn); requires: conversation_id',
+    ),
+    ('conversation_tool', 'search'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='deps: EmbeddingService.create_embedding(query) — LLM cost '
+              'via query-side embedding generation at handler line 2038 '
+              '(before pgvector CosineDistance semantic search); ChatConv '
+              'keyword fallback dedupe against semantic hits; requires: '
+              'query',
+    ),
+    ('conversation_tool', 'summary'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='deps: summarize_conversation_task.apply_async_with_actor '
+              'at handler line 2119 → Celery async LLM summarization; '
+              'returns task_id + mode=async; requires: conversation_id',
+    ),
+    ('conversation_tool', 'pin_memory'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='deps: create_deliverable + ConversationMemory.objects.create '
+              'at handler line 2160 + EmbeddingService.create_embedding for '
+              'the pinned content (LLM cost); requires: pin_title + '
+              'pin_content (both non-empty after strip)',
+    ),
+    ('conversation_tool', 'recent'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: ChatConversation aggregate filtered to conversation_id '
+              'starts-with "pa-"; user-scoped when user_id present; '
+              'distinct conversation_ids with Max(created_at) as '
+              'last_activity',
+    ),
+    ('remember_tool', 'list'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='always',
+        notes='deps: UserMemoryContext.filter(user=user).order_by('
+              '-importance, -created_at)[:20] + total count aggregate; '
+              'no writes; requires: caller user_id (fail-loud '
+              'permission_denied envelope if missing)',
+    ),
+    ('remember_tool', 'search'): ToolActionMetadata(
+        safety_class='READ_ONLY',
+        applicability='conditional',
+        notes='deps: UserMemoryContext.filter(user=user, content__icontains'
+              '=query).order_by(-importance)[:10] — pure ORM text search '
+              '(no embedding, no LLM cost); requires: query + caller '
+              'user_id',
+    ),
+    ('remember_tool', 'save'): ToolActionMetadata(
+        safety_class='MUTATION',
+        applicability='conditional',
+        notes='writes UserMemoryContext row via .objects.create at handler '
+              'line 2273; dedup via content_hash (sha256[:16] of '
+              'lowercased content+memory_type) — duplicate returns '
+              'status=duplicate_updated without new row; cap enforced '
+              'via MEMORY_MAX_ITEMS env (default 200); requires: content '
+              '+ caller user_id',
+    ),
+    ('remember_tool', 'delete'): ToolActionMetadata(
+        safety_class='IRREVERSIBLE',
+        applicability='conditional',
+        notes='destroys UserMemoryContext row via '
+              '.filter(user=user, id=memory_id).delete(); user-scoped '
+              'so cross-user delete not possible; clears '
+              'memory_context_service cache; requires: memory_id + '
+              'caller user_id',
+    ),
 }
 
 
