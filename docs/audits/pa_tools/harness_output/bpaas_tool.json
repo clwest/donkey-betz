@@ -2,53 +2,61 @@
   "actions": [
     {
       "action": "create_project",
-      "expected_outcome": "skipped_metadata_missing",
+      "expected_outcome": "skipped_mutation",
       "input_profile": "skipped_no_dispatch",
       "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "notes": "MUTATION \u2014 not exercised at T1a MVP",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
+      "safety_class": "MUTATION",
       "status_code": null
     },
     {
       "action": "generate_close_pack",
-      "expected_outcome": "skipped_metadata_missing",
+      "expected_outcome": "skipped_mutation",
       "input_profile": "skipped_no_dispatch",
       "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
+      "notes": "MUTATION \u2014 not exercised at T1a MVP",
+      "resolution_source": "action",
       "response_shape_keys": [],
-      "safety_class": null,
+      "safety_class": "MUTATION",
       "status_code": null
     },
     {
       "action": "get_schema",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 4,
+      "notes": null,
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "schema",
+        "success"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     },
     {
       "action": "get_example",
-      "expected_outcome": "skipped_metadata_missing",
-      "input_profile": "skipped_no_dispatch",
-      "latency_ms": 0,
-      "notes": "metadata missing \u2014 no dispatch attempted. Author an entry in TOOL_ACTION_METADATA or TOOL_DEFAULTS to include.",
-      "resolution_source": "unclassified",
-      "response_shape_keys": [],
-      "safety_class": null,
-      "status_code": null
+      "expected_outcome": "success",
+      "input_profile": "minimal_safe_args_v1",
+      "latency_ms": 4,
+      "notes": null,
+      "resolution_source": "action",
+      "response_shape_keys": [
+        "action",
+        "example",
+        "success"
+      ],
+      "safety_class": "READ_ONLY",
+      "status_code": 200
     }
   ],
   "harness_version": "v1",
   "run_metadata": {
-    "generated_at": "2026-07-23T03:20:52.781387+00:00",
-    "git_sha": "fc5bca145"
+    "generated_at": "2026-07-23T15:04:10.395639+00:00",
+    "git_sha": "03ee92d5f"
   },
   "schema_action_count": 4,
   "tool_name": "bpaas_tool"
