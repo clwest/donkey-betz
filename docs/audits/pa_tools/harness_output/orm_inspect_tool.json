@@ -4,7 +4,7 @@
       "action": "list_models",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 4,
+      "latency_ms": 3,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -35,7 +35,7 @@
       "action": "get",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 4,
+      "latency_ms": 3,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -50,7 +50,7 @@
       "action": "filter",
       "expected_outcome": "success",
       "input_profile": "minimal_safe_args_v1",
-      "latency_ms": 3,
+      "latency_ms": 4,
       "notes": null,
       "resolution_source": "tool_default",
       "response_shape_keys": [
@@ -79,8 +79,8 @@
   ],
   "harness_version": "v1",
   "run_metadata": {
-    "generated_at": "2026-07-23T14:20:51.815270+00:00",
-    "git_sha": "b02f08016"
+    "generated_at": "2026-07-23T15:04:41.217513+00:00",
+    "git_sha": "03ee92d5f"
   },
   "schema_action_count": 5,
   "tool_name": "orm_inspect_tool"
