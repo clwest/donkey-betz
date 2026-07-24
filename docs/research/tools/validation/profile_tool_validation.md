@@ -16,15 +16,17 @@
 
 ## 1. Purpose / when-to-use
 
-`profile_tool` surfaces the platform's user-profile substrate — extended profile (`ExtendedUserProfile` at `core/models/__init__.py`), tracked skills (`UserSkill` at `core/models_user_learning.py`), learning summary aggregates, structured preferences (`EnhancedUserProfile` at `core/models/__init__.py`), and desk-scoped preference projections. Use it when Chris asks "show my profile" / "what skills am I tracked as having?" / "learning summary" / "my preferences" / "update my preference for X" / "what preferences apply on the sports desk?".
+`profile_tool` surfaces the platform's user-profile substrate — extended profile + skills list + learning summary (all sourced from `ExtendedUserProfile` at `core/models/__init__.py`; the `skills` field is a JSON list-of-dicts), structured preferences (`EnhancedUserProfile` at `core/models/__init__.py`), and desk-scoped preference projections. Use it when Chris asks "show my profile" / "what skills am I tracked as having?" / "learning summary" / "my preferences" / "update my preference for X" / "what preferences apply on the sports desk?".
+
+**S2925 Ledger #33 resolution note:** `skills` + `learning_summary` originally read from `UserSkill` (`core/models_user_learning.py`), whose backing table was `DeleteModel`'d by migration `0229_initiative_last_activity_at` in Feb 2026. The Django model class was left behind, creating a latent stale-model bug. S2925 rewrote `skills` + `learning_summary` to source from `ExtendedUserProfile.skills` (the same JSON field already used by the `profile` action). Envelope shape changed — see §Covered actions below. Broader stale-model latent bug (5 other services still import UserSkill) filed as separate Ledger entry.
 
 Distinct from `personal_assistant_interviewer` (interview-driven skill discovery — populates the same substrate but via conversation, not view/update), from `governance_tool` (advisor identity/routing — not user profile), from `mobile_tool` (mobile-app introspection — no profile CRUD surface), and from Discord user-mapping (Discord IDs live on `ChatConversation`, not `ExtendedUserProfile`).
 
 ## Covered actions
 
 - `profile` — **in scope this ship — pure READ (default action)** — verified live. Returns `ExtendedUserProfile` for the calling user via `ExtendedUserProfile.objects.filter(user_id=user_id).first()` at handler line 2301. Envelope: `{action, profile: {full_name, location, timezone, current_title, years_experience, experience_level, skills, certifications, remote_preference, profile_completeness}}` OR `{action, profile: null, message: 'No extended profile found'}` when no row exists. User-scoped strictly — no user_id → null profile (no fallback to global).
-- `skills` — **in scope this ship — pure READ** — **verify-blocked by dev-env drift** (Rigby Tool Gap Ledger #33). Returns first 50 `UserSkill` rows for the calling user ordered by `-confidence, -last_demonstrated` at handler line 2322. User-scoped when `user_id` is present at line 2324. Envelope: `{action, count, skills: [{id, skill_name, category, proficiency_level, evidence_count, confidence, last_demonstrated}]}`. Note: hard-coded 50-row cap (no `limit` param); differs from most Slice 4 READ actions (default 20 / cap 50). Recorded as authoring detail. **S2924 verify surfaced `relation "core_userskill" does not exist` — dev DB migration for `UserSkill` model not applied. Not a batch 7 code regression (code path unchanged). Ledger #33 LOW.** Envelope shape claim above is authored from static code read; ORM-verified when migration lands.
-- `learning_summary` — **in scope this ship — pure READ** — **verify-blocked by same dev-env drift as `skills` above** (Rigby Tool Gap Ledger #33). Aggregates `UserSkill` via `Count('id')` + `Avg('confidence')` at handler line 2346. User-scoped when `user_id` is present at line 2344. Envelope: `{action, total_skills, avg_confidence, by_category: {<category>: <count>, ...}}`.
+- `skills` — **in scope this ship — pure READ** — **verified live at S2925 (Ledger #33 resolved via code fix)**. Returns up to 50 entries from `ExtendedUserProfile.skills` (JSON list-of-dicts) for the calling user. Fetches profile via `ExtendedUserProfile.objects.filter(user_id=user_id).first()`; normalizes each entry to `{skill_name, category, proficiency_level, years}`, tolerating both dict entries (`{'name': 'Python', 'proficiency': 'Expert', 'years': 5}`) and bare string entries. Envelope: `{action, count, skills: [{skill_name, category, proficiency_level, years}], source: 'extended_user_profile.skills'}`. User-scoped strictly — no user_id → empty list (no fallback to global). Note: hard-coded 50-row cap (no `limit` param); consistent with vip_invite's `list` action. **Envelope change from pre-S2925:** removed `id` / `evidence_count` / `confidence` / `last_demonstrated` (UserSkill-specific fields, no equivalent on JSON schema); added `years` + `source`.
+- `learning_summary` — **in scope this ship — pure READ** — **verified live at S2925 (Ledger #33 resolved via code fix)**. Aggregates from `ExtendedUserProfile.skills`: counts entries per `category` (defaulting to `uncategorized`) and computes `avg_years` across entries that have a numeric `years` field. Envelope: `{action, total_skills, by_category: {<category>: <count>, ...}, avg_years, source: 'extended_user_profile.skills'}`. **Envelope change from pre-S2925:** replaced `avg_confidence` (UserSkill-only field) with `avg_years` (derived from ExtendedUserProfile.skills entries).
 - `preferences` — **in scope this ship — pure READ (with implicit-write side effect)** — verified live. Fetches (or `get_or_create` inserts if missing) an `EnhancedUserProfile` row via `EnhancedUserProfile.objects.get_or_create(user=user)` at handler line 2365. Returns 12 preference fields as JSON. Envelope: `{action, preferences: {long_term_goals, current_projects, quarterly_objectives, learning_style, communication_style, decision_framework, current_learning_goals, personal_values, delegation_preferences, work_schedule, time_zone, privacy_level}}` OR `{action, error: 'No user context'}` when `user_id` is absent (line 2362–2363). **Note:** classified pure-READ from caller perspective but IS a spreading-tier write on first-touch (see §5a).
 - `update_preferences` — **in scope this ship — mutation, classified `spreading`** — verified live. `EnhancedUserProfile.objects.get_or_create(user=user)` at handler line 2394 (may create row) + `enhanced.save()` at line 2415 (persists field changes IFF applied dict is non-empty). Accepts either bulk `updates` dict OR single `field`+`value` pair (line 2405–2406). Only 12 whitelisted `ALLOWED_FIELDS` (line 2397–2402) can be set; unknown fields are silently ignored. Envelope: `{action, updated_fields: [<list>], count, success: <bool>}`.
 - `desk_preferences` — **in scope this ship — pure READ** — verified live. Reads BOTH `EnhancedUserProfile` (via `.filter(user=user).first()` at line 2435) AND `ExtendedUserProfile` (via `.filter(user=user).first()` at line 2436), applies a desk-specific projection (`sports` / `stocks` / `content` / `general`) from `DESK_PROJECTIONS` dict at handler lines 2444–2461, and returns a merged view with fallback semantics (Enhanced → Extended → typed empty default). Envelope: `{action, desk, communication_style, long_term_goals, <projected fields>..., context, available_desks}`.
@@ -36,7 +38,7 @@ Default action = `profile` (per `payload.get('action', 'profile')` at handler li
 - **Required:** `action` (enum: `profile` / `skills` / `learning_summary` / `preferences` / `update_preferences` / `desk_preferences`).
 - **Optional:** `field` (str; `update_preferences` — allowed values enumerated in schema description at `pa_tool_schemas.py:4981`); `value` (str; `update_preferences`); `desk` (enum: `sports` / `stocks` / `content` / `general`; `desk_preferences`).
 - **Cross-reference:** verbatim schema at `pa_tool_schemas.py:4958-4987`.
-- **Envelope shape:** each action returns a distinct top-level shape — `profile` returns `{action, profile: {...} | null, message?}`; `skills` returns `{action, count, skills: [...]}`; `learning_summary` returns `{action, total_skills, avg_confidence, by_category}`; `preferences` returns `{action, preferences: {...}}`; `update_preferences` returns `{action, updated_fields, count, success}`; `desk_preferences` returns `{action, desk, <flat projected fields>, context, available_desks}`. Envelope-key-asymmetry-across-actions pattern (3/3 triggered post-S2919) — this tool is another instance.
+- **Envelope shape:** each action returns a distinct top-level shape — `profile` returns `{action, profile: {...} | null, message?}`; `skills` returns `{action, count, skills: [...], source}`; `learning_summary` returns `{action, total_skills, by_category, avg_years, source}`; `preferences` returns `{action, preferences: {...}}`; `update_preferences` returns `{action, updated_fields, count, success}`; `desk_preferences` returns `{action, desk, <flat projected fields>, context, available_desks}`. Envelope-key-asymmetry-across-actions pattern (3/3 triggered post-S2919) — this tool is another instance.
 - **`updates` param NOT in schema:** handler line 2396 accepts `payload.get('updates', {})` (bulk-dict form) but the schema at `pa_tool_schemas.py:4966-4987` only surfaces `field` + `value`. The bulk-dict form works but is undocumented in the tool-schema. **1st instance of "handler accepts bulk form but schema surfaces only single form"** — Ledger candidate.
 - **`ALLOWED_FIELDS` whitelist:** 12 fields (line 2397–2402). Schema description at line 4981 enumerates the same 12 by name. Attempts to set fields outside the whitelist are silently dropped from `applied` dict at line 2410 — no error surfaced. Sharp edge — caller receives `success: false` (or `success: true` with a smaller `count` than requested) but no per-field feedback on which fields were rejected.
 - **`get_or_create` on READ path:** `preferences` action's read semantically implies a write on first-touch — `get_or_create(user=user)` at line 2365 will INSERT a new `EnhancedUserProfile` row if the user has never touched preferences. Documented in §5a as an implicit-write side effect. First-touch is idempotent-in-effect (a fresh row with all-null fields materializes; subsequent reads return the same row).
@@ -50,11 +52,11 @@ Default action = `profile` (per `payload.get('action', 'profile')` at handler li
 ```
 Expected envelope: `{"action": "profile", "profile": {"full_name": "<str>", "location": "<str>", "timezone": "<str>", "current_title": "<str>", "years_experience": <int|null>, "experience_level": "<str>", "skills": [<list>], "certifications": [<list>], "remote_preference": "<str>", "profile_completeness": <int 0-100>}}`. Returns `{"action": "profile", "profile": null, "message": "No extended profile found"}` if no row exists for `user_id`.
 
-**Example 2 — top 10 tracked skills:**
+**Example 2 — tracked skills (post-S2925 shape, sourced from `ExtendedUserProfile.skills`):**
 ```json
 {"action": "skills"}
 ```
-Expected envelope: `{"action": "skills", "count": <≤50>, "skills": [{"id": "<uuid>", "skill_name": "<str>", "category": "<str>", "proficiency_level": "<str>", "evidence_count": <int>, "confidence": <float>, "last_demonstrated": "<isoformat>"}, ...]}`.
+Expected envelope: `{"action": "skills", "count": <≤50>, "skills": [{"skill_name": "<str>", "category": "<str>", "proficiency_level": "<str>", "years": <int|null>}, ...], "source": "extended_user_profile.skills"}`.
 
 **Example 3 — structured preferences view (pure READ + implicit-write on first-touch):**
 ```json
@@ -86,12 +88,12 @@ Expected envelope: `{"action": "desk_preferences", "desk": "sports", "communicat
 - **Handler exception:** caught at line 2477, logged via `logger.error("[PROFILE] {action} error: {e}", exc_info=True)`, returns `{"error": <str>}`. Handler omits `error_code`; **dispatcher auto-backfills `error_code='legacy_error'`** at `tool_dispatcher.py:862-885` per S2874 mixed-mode migration. **This is the 21st corroborating instance of the unmigrated-handler pattern** post-S2923's 19-instance count (proactive_tool in this same batch is the 20th). Threshold-crossed note surfaced at Slice-4 close per S2924 Q5(iii) Chris ratification.
 - **`preferences` / `update_preferences` / `desk_preferences` — no user context:** returns `{action, error: 'No user context'}` at handler lines 2363 / 2392 / 2433. **Note:** the error envelope key is `error` (not `error_code`) — action returns success shape structure with error field, not the standard `{"error": <str>}` envelope. Divergence from other actions' error shapes. Sharp edge — callers should check `'error' in response` regardless of envelope shape.
 - **`profile` — no extended profile row:** returns `{action, profile: null, message: 'No extended profile found'}` at handler line 2303. Not treated as error — the `profile: null` signal is sufficient for callers.
-- **`skills` empty:** returns `{action, count: 0, skills: []}`. Not an error.
-- **`learning_summary` empty:** returns `{action, total_skills: 0, avg_confidence: 0.0, by_category: {}}`. Not an error.
+- **`skills` empty:** returns `{action, count: 0, skills: [], source: 'extended_user_profile.skills'}`. Not an error. Also the shape when `user_id` is absent (no fallback to global — user-scoped strictly).
+- **`learning_summary` empty:** returns `{action, total_skills: 0, by_category: {}, avg_years: 0, source: 'extended_user_profile.skills'}`. Not an error.
 - **`update_preferences` — no matching fields:** returns `{action, updated_fields: [], count: 0, success: false}`. Also no `.save()` fires (guarded at line 2414 `if applied:`). Distinguishable from a successful update by `count: 0` + `success: false`.
 - **`update_preferences` — unknown field:** silently dropped from `applied` dict at line 2410. Caller sees smaller `count` than requested with no per-field rejection info.
 - **`desk_preferences` — unknown desk:** falls back to `general` projection at line 2463. No error surfaced. `desk` field in envelope reflects the caller-supplied string (not the fallback), while `context` reflects the general projection — mild inconsistency, documented sharp edge.
-- **50-row cap on `skills` is silent:** if the calling user has >50 skills, only the top 50 by `(confidence, last_demonstrated)` are surfaced with no `has_more` flag. Same divergence-from-count pattern as vip_invite's `list`.
+- **50-row cap on `skills` is silent:** if the calling user has >50 skills, only the first 50 entries from `ExtendedUserProfile.skills` are surfaced (JSON list order — no ordering key) with no `has_more` flag. Same divergence-from-count pattern as vip_invite's `list`.
 
 ## 5a. Mutation containment (per Rigby SIGN Q3 — §5a 4-tier blast-radius taxonomy amended S2921)
 
@@ -115,8 +117,8 @@ Two mutation actions in this tool. One is the explicit `update_preferences` muta
 | Direct dependency | Classification | Evidence (file:line) | Callee-status |
 |---|---|---|---|
 | `ExtendedUserProfile.objects.filter(user_id=user_id).first()` | `read` | `td_handlers_gateway.py:2301` | ORM SELECT; documented |
-| `UserSkill.objects.order_by(...).filter(user_id=...)[:50]` | `read` | `td_handlers_gateway.py:2322-2325` | ORM SELECT with slice; documented |
-| `UserSkill.objects.aggregate(Avg('confidence'))` + `values_list.annotate(Count('id'))` | `read` | `td_handlers_gateway.py:2346-2347` | ORM aggregate; documented |
+| `ExtendedUserProfile.objects.filter(user_id=user_id).first()` (skills action) | `read` | `td_handlers_gateway.py:2327` | ORM SELECT + `.skills` JSON traversal; documented |
+| `ExtendedUserProfile.objects.filter(user_id=user_id).first()` (learning_summary action) | `read` | `td_handlers_gateway.py:2347` | ORM SELECT + in-Python aggregation of `.skills` JSON; documented |
 | `User.objects.filter(id=user_id).first()` | `read` | `td_handlers_gateway.py:2361`, `:2390`, `:2431` | ORM SELECT by PK; documented — user-context gate |
 | `EnhancedUserProfile.objects.get_or_create(user=user)` | `db_write` | `td_handlers_gateway.py:2365`, `:2394` | ORM UPSERT (0 or 1 row); documented — `preferences` implicit + `update_preferences` explicit |
 | `enhanced.save()` | `db_write` | `td_handlers_gateway.py:2415` | ORM UPDATE (≤12 whitelisted fields on 1 row); documented — `update_preferences` mutation |
@@ -141,17 +143,17 @@ For `profile`:
 3. If profile exists (non-null): ORM cross-check `ExtendedUserProfile.objects.get(user_id=<current_user_id>)` — every field in envelope matches the ORM row.
 4. If profile is null: envelope's `message` == 'No extended profile found'. No side effect.
 
-For `skills` (**verify-blocked in dev by Ledger #33 until UserSkill migration lands**):
+For `skills` (**S2925: Ledger #33 resolved via code fix — verify-unblocked**):
 1. Dispatch `{"action": "skills"}`.
-2. Expected response envelope: `{action, count, skills: [...]}` with `count == len(skills)` and `count ≤ 50`.
-3. ORM cross-check: `UserSkill.objects.filter(user_id=<current_user_id>).order_by('-confidence', '-last_demonstrated')[:count]` matches envelope entries in the same order; key fields per §Covered actions.
-4. **Current dev-env behavior:** returns `{error: 'relation "core_userskill" does not exist ...', error_code: 'legacy_error'}` — migration not applied. Re-run this verify after Ledger #33 resolution.
+2. Expected response envelope: `{action, count, skills: [...], source: 'extended_user_profile.skills'}` with `count == len(skills)` and `count ≤ 50`.
+3. ORM cross-check: `ExtendedUserProfile.objects.get(user_id=<current_user_id>).skills[:50]` — envelope entries match the JSON list in list order after per-entry normalization.
+4. **Empty case:** user has no `ExtendedUserProfile` row OR `skills` field is empty → envelope is `{action: 'skills', count: 0, skills: [], source: 'extended_user_profile.skills'}` (no error).
 
-For `learning_summary` (**verify-blocked in dev by Ledger #33 until UserSkill migration lands**):
+For `learning_summary` (**S2925: Ledger #33 resolved via code fix — verify-unblocked**):
 1. Dispatch `{"action": "learning_summary"}`.
-2. Expected response envelope: `{action, total_skills, avg_confidence, by_category: {...}}`.
-3. ORM cross-check: `UserSkill.objects.filter(user_id=<current_user_id>).count() == total_skills`; `by_category` matches `.values_list('category').annotate(c=Count('id'))`; `avg_confidence` matches `.aggregate(Avg('confidence'))['confidence__avg'] or 0`.
-4. **Current dev-env behavior:** same UserSkill relation missing error as `skills`. Re-run after Ledger #33 resolution.
+2. Expected response envelope: `{action, total_skills, by_category: {...}, avg_years, source: 'extended_user_profile.skills'}`.
+3. ORM cross-check: `total_skills == len(ExtendedUserProfile.objects.get(user_id=<current_user_id>).skills)`; `by_category` counts match a Python `Counter` over the `category` field (default `uncategorized`); `avg_years == mean(years)` across entries with numeric `years` (0 if none).
+4. **Empty case:** returns `{action, total_skills: 0, by_category: {}, avg_years: 0, source: 'extended_user_profile.skills'}`.
 
 For `preferences` (READ + implicit first-touch write):
 1. Before dispatch, capture `EnhancedUserProfile.objects.filter(user_id=<current_user_id>).exists()`.
