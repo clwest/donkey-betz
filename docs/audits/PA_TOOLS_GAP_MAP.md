@@ -10,26 +10,26 @@
 
 - **Total tool names:** 161
 - **Per-category breakdown:**
-  - `validated_full` (validated (full)): **67**
+  - `validated_full` (validated (full)): **69**
   - `agent_via_run_agent` (agent (via run_agent)): **44**
-  - `untested` (untested): **32**
+  - `untested` (untested): **30**
   - `validated_partial` (validated (partial)): **10**
   - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
   - `meta_no_handler` (meta (no handler by design)): **1**
 
 ## Validation-doc corpus
 
-- **Total `*_validation.md` files:** 94
+- **Total `*_validation.md` files:** 96
 - **Substrate (cross-cutting) docs:** 10 — reduce risk platform-wide but do NOT validate per-tool invariants (S2795 F2 rename).
-- **Per-tool docs:** 84 — of which 76 have an explicit 'Covered actions' section (F1 checklist).
-- **Per-tool docs with `Template version` marker:** 62 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
+- **Per-tool docs:** 86 — of which 78 have an explicit 'Covered actions' section (F1 checklist).
+- **Per-tool docs with `Template version` marker:** 64 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
 
 ## Template compliance (T1b)
 
 Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without `Template version:` marker); `pass` = v1-conformant; `fail` = v1 marker present but mandatory section/frontmatter missing.
 
-- `warn`: **99**
-- `pass`: **62**
+- `warn`: **97**
+- `pass`: **64**
 
 ## Schema quality lints (F5 advisory column)
 
@@ -178,8 +178,8 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `podcast_coordinator_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `podcast_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `prediction_market_analyst` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
-| `proactive_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_gateway.py` |
-| `profile_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_gateway.py` |
+| `proactive_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
+| `profile_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `railway_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_railway.py` |
 | `reasoning_engine_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `recent_activity_tool` | ✓✓ | untested | warn | no_required | `core/services/td_handlers_content.py` |
