@@ -103,6 +103,8 @@ Both Appendices declared N/A per S2918 T0 SIGN Q2 gateway-wide DISAGREE (0/17 ga
 
 Doc-only sweep this ship. Post-merge Rigby live-dispatch verification appended to the S2919 handoff. Expected shapes documented in §4 golden-path examples.
 
+**Runtime status — S2919 post-merge live verify (2026-07-23):** Rigby dispatch `narrative_tool action=narratives limit=5 domain=politics` returned in 8ms with `{"error": "relation \"narrative\" does not exist ... SELECT COUNT(*) ... FROM \"narrative\" ...", "error_code": "legacy_error"}`. **Dev-env DB drift, not a defect in this batch's shipped shape**: model declares `db_table='narrative'` explicitly at `core/models_narrative_drift.py:103`; `django_migrations` records migration `0103_session_471_narrative_drift_detector` (which contains `CreateModel('Narrative')`) as applied; but `pg_tables` lookup in local `public` schema returns 0 rows matching `%narrative%`. Migration state ≠ table state — likely cause: DB was recreated / snapshot restored without re-running the narrative migrations, OR migrations were manually reverted. Not blocking batch-2 close. Logged as Rigby Tool Gap Ledger entry (deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0`) for engineering-backlog triage; envelope shape declared in §4 remains the canonical shape spec when the table is restored.
+
 ## Related
 
 - **Adjacent tools:** `analytics_tool` (event-stream aggregates, no narrative context) — batch 1; `proactive_tool` (user-facing alerts, unrelated model tree); `cockpit_tool` (Celery infra).
