@@ -216,6 +216,35 @@ class Command(BaseCommand):
             default=None,
             help="Override wrapper file path (tests / unusual layouts only).",
         )
+        # Ledger #16 — twin-mirror enforcement (S2941).
+        close_p.add_argument(
+            "--content-mirror-id",
+            default=None,
+            help=(
+                "UUID of the engineering-truth content mirror Deliverable "
+                "(twin-mirror per feedback_twin_deliverable_at_every_ratification). "
+                "Required together with --ratification-envelope-id, unless "
+                "--allow-no-mirror is passed."
+            ),
+        )
+        close_p.add_argument(
+            "--ratification-envelope-id",
+            default=None,
+            help=(
+                "UUID of the governance-truth ratification envelope Deliverable "
+                "(deliverable_type='ratification_record'). Required together "
+                "with --content-mirror-id, unless --allow-no-mirror is passed."
+            ),
+        )
+        close_p.add_argument(
+            "--allow-no-mirror",
+            action="store_true",
+            help=(
+                "Ledger #16 escape hatch: explicitly proceed without twin-mirror "
+                "verification (e.g., cascade-only / doc-bump closes). Logged for "
+                "audit. Mutually exclusive with mirror-ID flags."
+            ),
+        )
 
     def handle(self, *args, **options):
         subcommand = options["subcommand"]
@@ -246,6 +275,9 @@ class Command(BaseCommand):
                 carry_forward=options.get("carry_forward"),
                 retire_only=bool(options.get("retire_only")),
                 dry_run=bool(options.get("dry_run")),
+                content_mirror_id=options.get("content_mirror_id"),
+                ratification_envelope_id=options.get("ratification_envelope_id"),
+                allow_no_mirror=bool(options.get("allow_no_mirror")),
             )
 
     # ─────────────────────────── helpers ───────────────────────────── #
@@ -555,6 +587,9 @@ class Command(BaseCommand):
         carry_forward: Optional[str],
         retire_only: bool,
         dry_run: bool,
+        content_mirror_id: Optional[str] = None,
+        ratification_envelope_id: Optional[str] = None,
+        allow_no_mirror: bool = False,
     ):
         wrapper_text = self._read_wrapper(wrapper_path)
         current_pin = self._extract_current_pin(wrapper_text, wrapper_path)
@@ -563,6 +598,25 @@ class Command(BaseCommand):
             raise CommandError(
                 "close requires --label (for the fresh pin) unless --retire-only is set."
             )
+
+        # Ledger #16 (S2941): twin-mirror enforcement. Ran pre-transaction so
+        # a refuse produces clean rollback semantics (no retire_pin / mint has
+        # occurred yet). Skipped for retire_only closes — those are recovery
+        # ops, not ratification ceremonies.
+        mirror_result = None
+        if not retire_only:
+            from core.services.twin_mirror_enforcement import (
+                TwinMirrorEnforcementError,
+                assert_twin_mirror_at_close,
+            )
+            try:
+                mirror_result = assert_twin_mirror_at_close(
+                    content_mirror_id=content_mirror_id,
+                    ratification_envelope_id=ratification_envelope_id,
+                    allow_no_mirror=allow_no_mirror,
+                )
+            except TwinMirrorEnforcementError as exc:
+                raise CommandError(str(exc)) from exc
 
         derived_source = "explicit" if carry_forward is not None else "auto"
         if carry_forward is None and not retire_only:
@@ -640,6 +694,23 @@ class Command(BaseCommand):
                 "  mode: retire-only — wrapper still points to retired pin. "
                 "Run: python manage.py session_lifecycle open --label X"
             )
+
+        # Ledger #16: stdout audit line for the twin-mirror decision.
+        if mirror_result is not None:
+            if mirror_result.mode == "verified":
+                self.stdout.write(
+                    f"  [TWIN-MIRROR VERIFIED] content_mirror="
+                    f"{mirror_result.content_mirror_id} "
+                    f"({mirror_result.content_mirror_title!r}); "
+                    f"ratification_envelope="
+                    f"{mirror_result.ratification_envelope_id} "
+                    f"({mirror_result.ratification_envelope_title!r})"
+                )
+            elif mirror_result.mode == "allowed_no_mirror":
+                self.stdout.write(
+                    "  [TWIN-MIRROR ALLOW_NO_MIRROR] close proceeded without "
+                    "twin-mirror verification (--allow-no-mirror)."
+                )
 
 
     # ─────────────────────────── freshness telemetry (N15) ────────── #
