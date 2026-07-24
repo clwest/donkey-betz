@@ -5169,7 +5169,16 @@ class ContentHandlersMixin:
         }
 
         if dry_run:
-            result['message'] = f'DRY RUN: {min(total_matching, cap)} published items would be archived. Set dry_run=false and confirm=true to execute.'
+            # S2943 Ledger #38 batch 2 — align with S2942 blog_tool /
+            # feedback_tool dry_run envelope shape so the gap-map
+            # scoreboard classifier recognizes this action as
+            # dry_run_supported. Adds ``would_*`` + ``no_writes:True``
+            # sentinel per the Ledger #38 contract.
+            result['would_action'] = 'archive_published'
+            result['would_change_to'] = 'archived'
+            result['would_archive_count'] = min(total_matching, cap)
+            result['no_writes'] = True
+            result['message'] = f'dry_run=true: {min(total_matching, cap)} published items would be archived. No writes performed. Set dry_run=false and confirm=true to execute.'
             return result
 
         # ── Execute requires confirm ──
