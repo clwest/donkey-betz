@@ -152,6 +152,9 @@ from ..models_signal_intelligence import (
     TopicSuggestion,
 )
 
+# Session 2933 A3 v1 — signal-triggered agent dispatch audit
+from ..models_signal_dispatch import SignalDispatch  # noqa: F401
+
 # Import audio cache model (Session 926 - Universal Agent Voice System)
 from ..models_audio_cache import AudioCache
 

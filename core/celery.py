@@ -488,6 +488,16 @@ app.conf.beat_schedule = {
         'kwargs': {'top_n': 10},
         'options': {'queue': 'long_running', 'expires': 4 * 3600},
     },
+    # Session 2933 A3 v1 — signal-triggered agent auto-dispatch.
+    # Scans SignalDispatch rules (code-defined in
+    # core.services.signal_dispatch_service.SIGNAL_DISPATCH_RULES) every
+    # 5 min, enqueues per-cluster dispatch tasks with global +
+    # per-rule caps. Kill switch: settings.SIGNAL_DISPATCH_ENABLED.
+    'scan-signal-dispatch-rules': {
+        'task': 'scan_signal_dispatch_rules',
+        'schedule': crontab(minute='*/5'),
+        'options': {'queue': 'long_running', 'expires': 300},
+    },
     # Scan spider data for opportunities
     'scan-spider-opportunities': {
         'task': 'intelligence.tasks.scan_spider_opportunities',
