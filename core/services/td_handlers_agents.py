@@ -120,7 +120,10 @@ class AgentHandlersMixin:
             'campaign_orchestrator_agent': 'CampaignOrchestratorAgent',
             'opportunity_pipeline_agent': 'OpportunityPipelineAgent',
             'ai_series_workflow_agent': 'AISeriesWorkflowAgent',
-            'workflow_orchestration_agent': 'WorkflowAgent',
+            # WorkflowOrchestrationAgent (template-based, 16+ workflows) is
+            # distinct from WorkflowAgent (delegate coordinator); both are
+            # registered separately in AGENT_MAP.
+            'workflow_orchestration_agent': 'WorkflowOrchestrationAgent',
             # ── Development (Session 1093 P3) ──
             'code_review_agent': 'CodeReviewAgent',
             'create_brand_video': 'WorkflowAgent',
