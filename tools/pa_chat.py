@@ -42,7 +42,7 @@ DEFAULT_BASE_URL = "http://localhost:8000"
 PROD_BASE_URL = "https://donkey-betz-platform-production.up.railway.app"
 POLL_INTERVAL = 3  # seconds
 POLL_TIMEOUT = 300  # 5 minutes — matches Celery PA task hard limit
-MAX_CONTENT_LENGTH = 5000  # truncate long responses
+MAX_CONTENT_LENGTH = 30000  # truncate long responses (bumped 2026-07-24 per Chris — 5000 was cutting Rigby SIGN responses mid-word, causing Claude to work off incomplete reviews)
 WATCH_POLL_INTERVAL = 2  # seconds for watch mode
 
 
