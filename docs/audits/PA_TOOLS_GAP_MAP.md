@@ -10,26 +10,26 @@
 
 - **Total tool names:** 161
 - **Per-category breakdown:**
-  - `validated_full` (validated (full)): **69**
+  - `validated_full` (validated (full)): **73**
   - `agent_via_run_agent` (agent (via run_agent)): **44**
-  - `untested` (untested): **30**
+  - `untested` (untested): **26**
   - `validated_partial` (validated (partial)): **10**
   - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
   - `meta_no_handler` (meta (no handler by design)): **1**
 
 ## Validation-doc corpus
 
-- **Total `*_validation.md` files:** 96
+- **Total `*_validation.md` files:** 100
 - **Substrate (cross-cutting) docs:** 10 — reduce risk platform-wide but do NOT validate per-tool invariants (S2795 F2 rename).
-- **Per-tool docs:** 86 — of which 78 have an explicit 'Covered actions' section (F1 checklist).
-- **Per-tool docs with `Template version` marker:** 64 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
+- **Per-tool docs:** 90 — of which 82 have an explicit 'Covered actions' section (F1 checklist).
+- **Per-tool docs with `Template version` marker:** 68 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
 
 ## Template compliance (T1b)
 
 Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without `Template version:` marker); `pass` = v1-conformant; `fail` = v1 marker present but mandatory section/frontmatter missing.
 
-- `warn`: **97**
-- `pass`: **64**
+- `warn`: **92**
+- `pass`: **69**
 
 ## Schema quality lints (F5 advisory column)
 
@@ -39,18 +39,14 @@ Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without
 
 ## Triage slices (F3 decision aid — pick, do not queue)
 
-### `tool_dispatcher` — 14 untested (~4 sessions at 4/session)
+### `tool_dispatcher` — 10 untested (~3 sessions at 4/session)
 
-_14 untested tools dispatch through `tool_dispatcher`. Grouping keeps validation-cycle setup cost low — one handler file, consistent primitives._
+_10 untested tools dispatch through `tool_dispatcher`. Grouping keeps validation-cycle setup cost low — one handler file, consistent primitives._
 
-- `brand_strategy_agent`
 - `character_training_agent`
-- `competitor_analysis_agent`
 - `content_strategy_agent`
 - `content_writer_agent`
 - `create_brand_video`
-- `create_project_from_research`
-- `customer_research_agent`
 - `image_editing_agent`
 - `marketing_strategy_agent`
 - `strategic_review`
@@ -92,7 +88,7 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `bpaas_tool` | ✓✓ | validated (partial) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `brainstorm_tool` | ✓✓ | validated (partial) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `brand_identity_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
-| `brand_strategy_agent` | ✓✓ | untested | warn | — | `core/services/tool_dispatcher.py` |
+| `brand_strategy_agent` | ✓✓ | validated (full) | ✓ | — | `core/services/tool_dispatcher.py` |
 | `calendar_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `campaign_orchestrator_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `campaign_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
@@ -102,7 +98,7 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `cockpit_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_gateway.py` |
 | `code_job_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_codejobs.py` |
 | `code_review_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
-| `competitor_analysis_agent` | ✓✓ | untested | warn | — | `core/services/tool_dispatcher.py` |
+| `competitor_analysis_agent` | ✓✓ | validated (full) | ✓ | — | `core/services/tool_dispatcher.py` |
 | `competitor_comparison_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_core.py` |
 | `conceptforge_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `content_audit_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
@@ -115,10 +111,10 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `coo_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `cost_telemetry_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_agents.py` |
 | `create_brand_video` | ✓✓ | untested | warn | — | `core/services/tool_dispatcher.py` |
-| `create_project_from_research` | ✓✓ | untested | warn | — | `core/services/tool_dispatcher.py` |
+| `create_project_from_research` | ✓✓ | validated (full) | ✓ | — | `core/services/tool_dispatcher.py` |
 | `creative_director_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `cto_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
-| `customer_research_agent` | ✓✓ | untested | warn | — | `core/services/tool_dispatcher.py` |
+| `customer_research_agent` | ✓✓ | validated (full) | ✓ | — | `core/services/tool_dispatcher.py` |
 | `davinci_tool` | ✓✓ | validated (partial) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `db_health_tool` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_core.py` |
 | `deliverable_tool` | ✓✓ | validated (doc, unknown coverage) | warn | — | `core/services/td_handlers_content.py` |
@@ -185,7 +181,7 @@ _7 untested tools dispatch through `td_handlers_content`. Grouping keeps validat
 | `recent_activity_tool` | ✓✓ | untested | warn | no_required | `core/services/td_handlers_content.py` |
 | `remember_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_core.py` |
 | `repo_tool` | ✓✓ | validated (doc, unknown coverage) | warn | — | `core/services/td_handlers_gateway.py` |
-| `research_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
+| `research_agent` | handler | agent (via run_agent) | ✓ | — | `core/services/tool_dispatcher.py` |
 | `research_and_create_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_core.py` |
 | `resolve_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `revenue_tracker_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_agents.py` |
