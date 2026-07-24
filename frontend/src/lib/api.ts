@@ -112,6 +112,14 @@ export const agentsApi = {
   unifiedExecutions: (params?: { limit?: number; offset?: number; agent_name?: string; status?: string }) =>
     api.get('/v1/agents/unified-executions/', { params }),
   executionDetail: (executionId: string) => api.get(`/v1/agents/execution/${executionId}/`),
+  // S2934 A4: Signal Dispatch observability list — backs SignalDispatchesTab.
+  signalDispatches: (params?: {
+    limit?: number
+    offset?: number
+    pattern_type?: string
+    outcome?: string
+    rule_key?: string
+  }) => api.get('/v1/agents/signal-dispatches/', { params }),
 }
 
 // Session 734: Agent Channels API - "Slack for AI Agents"

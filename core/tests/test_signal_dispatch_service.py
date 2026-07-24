@@ -62,6 +62,19 @@ class TestSignalDispatchRulesRegistry(TestCase):
         self.assertEqual(rule.pattern_type, 'content_gap')
         self.assertEqual(rule.agent_name, 'ContentStrategyAgent')
 
+    def test_opportunity_window_rule_maps_to_OpportunityScoringAgent(self):
+        # S2934 A5: third rule shipped this session.
+        rule = get_rule('opportunity_window__opportunity_scoring')
+        self.assertIsNotNone(rule)
+        assert rule is not None
+        self.assertEqual(rule.pattern_type, 'opportunity_window')
+        self.assertEqual(rule.agent_name, 'OpportunityScoringAgent')
+
+    def test_s2934_ships_three_rules_total(self):
+        # Anchor: v1 shipped 2 rules (trend_emergence + content_gap); S2934
+        # added a third (opportunity_window). Anti-regression on registry size.
+        self.assertEqual(len(SIGNAL_DISPATCH_RULES), 3)
+
     def test_get_rule_returns_none_for_unknown(self):
         self.assertIsNone(get_rule('nonexistent__nowhere'))
 
