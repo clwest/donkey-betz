@@ -247,7 +247,26 @@ Verify protocol:
 5. Post-a-few-seconds poll: `{"action": "task_status", "task_id": "<uuid>"}` — should progress QUEUED → STARTED → SUCCESS as worker picks up.
 6. Verify cascade non-fire for the tool's own eager QUEUED insert: `HumanAttentionItem.objects.filter(source_type='failure_cluster', payload__task_name='core.tasks.run_body_system_check', created_at__gte=<dispatch_time>).exists()` returns False (gate exempted the insert). Note: `payload__task_name` predicate assumes the failure-cluster bridge stores `task_name` at the top level of payload — confirm via `attention_bridge.create_failure_cluster_attention` signature if false-positive suspected; fall back to `payload__icontains='run_body_system_check'` if the exact key path shifts.
 7. Optional stricter check: `HumanAttentionItem.objects.filter(source_type='failure_cluster').order_by('-created_at').first().created_at` is UNCHANGED after step 3 — proves no HAI row landed from the tool's insert.
-8. **Latent-cascade reclassify probe (DEV/LOCAL ONLY — do NOT run against prod):** in a scratch Django shell on a dev/local DB, `CeleryTaskEvent.objects.create(task_id='__s2923_cockpit_probe__', task_name='__s2923_cockpit_probe__', status='FAILURE', queue='long_running')` should trigger the cascade (visible in `[FAILURE_CLUSTER]` worker log — the tagged task_name makes the log line unambiguous). Delete the scratch row + any resulting HAI row afterward: `CeleryTaskEvent.objects.filter(task_id='__s2923_cockpit_probe__').delete()` + `HumanAttentionItem.objects.filter(source_type='failure_cluster', payload__task_name='__s2923_cockpit_probe__').delete()`. This assertion confirms the gate condition is active — if the cascade does NOT fire from a manually-forced FAILURE status, either the kill switch is off or the receiver isn't wired; both invalidate the `external` classification and the doc must be amended.
+8. **Latent-cascade reclassify probe (DEV/LOCAL ONLY — do NOT run against prod).** Split into two substeps because a single-row FAILURE insert cannot distinguish "receiver not wired" from "receiver wired + threshold-gated" — the receiver returns early at `failure_cluster_aggregator.py:_DEFAULT_THRESHOLD = 5` (needs ≥5 distinct `task_id` values with matching `task_name` inside the 5-minute sliding window before `snapshot.exceeds_threshold` flips true). One row will always short-circuit at that gate regardless of whether the receiver is wired.
+
+   **Substep A (immediate — receiver-wired check via startup log grep):** in the worker log, look for the init line emitted at `core/apps.py::CoreConfig._register_signals`:
+   ```bash
+   grep -E '\[FAILURE_CLUSTER_SIGNALS\] receiver wired on CeleryTaskEvent\.post_save' logs/celery.log logs/celery-long-running.log
+   ```
+   Expected: at least one hit per worker process on startup. Presence confirms the `escalate_failure_cluster` post_save receiver is registered. Absence invalidates the `external` classification (receiver not wired → mutations may cascade unobserved) and the doc must be amended. This substep runs on every recycle and is the required verify.
+
+   **Substep B (OPTIONAL — cascade-fires check via ≥5-tagged-FAILURE-rows probe):** only run when Substep A alone is insufficient (e.g., re-verifying gate mechanics after a threshold config change). In a scratch Django shell on a dev/local DB, insert **five distinct-task_id** FAILURE rows sharing the tagged task_name within the 5-minute window:
+   ```python
+   from core.models_celery_telemetry import CeleryTaskEvent
+   for i in range(5):
+       CeleryTaskEvent.objects.create(
+           task_id=f'__s2923_cockpit_probe_{i}__',
+           task_name='__s2923_cockpit_probe__',
+           status='FAILURE',
+           queue='long_running',
+       )
+   ```
+   Expected: `[FAILURE_CLUSTER]` action log line (not just the init line) AND one `HumanAttentionItem(source_type='failure_cluster', payload__task_name='__s2923_cockpit_probe__')` row landed. Cleanup after: `CeleryTaskEvent.objects.filter(task_name='__s2923_cockpit_probe__').delete()` + `HumanAttentionItem.objects.filter(source_type='failure_cluster', payload__task_name='__s2923_cockpit_probe__').delete()`. If the cascade does NOT fire from ≥5 tagged FAILURE rows in-window, either the kill switch (`FAILURE_CLUSTER_HAI_ENABLED`) is off or the threshold config was raised — inspect `SystemConfiguration` before invalidating the `external` classification.
 
 For `revoke_task` (on a queued task_id from step 3 above, before it starts running):
 1. Immediately after step 3 of `trigger_task` verify, dispatch `{"action": "revoke_task", "task_id": "<uuid>", "terminate": false}`.
