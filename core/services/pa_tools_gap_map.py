@@ -119,6 +119,68 @@ TEMPLATE_VERSION_VALID_RE = re.compile(r'^v\d+$')
 SHORT_DESC_THRESHOLD_CHARS: int = 40
 ACTIONS_MENTIONED_RATIO: float = 0.25
 
+
+# ── Ledger #5 substrate (S2938) — schema-vs-handler consistency lint ─
+#
+# 3-cycle promotion trigger (S2935/S2936/S2937) for the
+# "schema-under-describes-handler" drift class. Tier 1 MVP: two
+# parse-based lints, high precision, no LLM. Tier 2 (envelope-JSON
+# parse) and Tier 3 (semantic distance between prose and field names)
+# deferred to separate ships per Rigby S2938 T0 SIGN AGREE.
+
+# Number-word → int for docstring action-count detection.
+_NUMBER_WORD_TO_INT: Dict[str, int] = {
+    'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+    'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10,
+}
+
+# Matches "four actions" / "5 actions" / "3 action" (single/plural).
+# Case-insensitive at use site.
+_DOCSTRING_ACTION_COUNT_RE = re.compile(
+    r'\b(one|two|three|four|five|six|seven|eight|nine|ten|\d+)\s+actions?\b',
+    re.IGNORECASE,
+)
+
+# Negative-claim patterns per Rigby S2938 T0 Q3 refinement — module
+# docstring assertions that constrain runtime behavior. When one of
+# these fires, the corresponding _EVIDENCE_SIGNATURES entry is scanned
+# in the handler source; a hit means the docstring claim contradicts
+# runtime and drift is flagged.
+_NEGATIVE_CLAIM_PATTERNS: Dict[str, re.Pattern] = {
+    'dispatch': re.compile(
+        r"\b(no\s+agent\s+dispatch|no\s+dispatch|does\s+not\s+dispatch|doesn'?t\s+dispatch|no\s+async\s+dispatch)\b",
+        re.IGNORECASE,
+    ),
+    'mutation': re.compile(
+        r'\b(no\s+state\s+mutation|no\s+mutation|read[-\s]?only|side[-\s]?effect\s+free)\b',
+        re.IGNORECASE,
+    ),
+    'feature_flag': re.compile(
+        r'\b(no\s+feature\s+flag|no\s+settings\s+flag|always\s+live)\b',
+        re.IGNORECASE,
+    ),
+}
+
+# Handler-source signatures that contradict the corresponding negative
+# claim. Rigby S2938 T0 Q3: dispatch detection must include curated
+# service-layer functions since celery primitives may live one call
+# deep from the handler (e.g. ``rigby_mission_delegation.delegate_work_item``
+# is what the handler calls; the ``.apply_async()`` lives inside).
+_EVIDENCE_SIGNATURES: Dict[str, re.Pattern] = {
+    'dispatch': re.compile(
+        r'\.apply_async\(|\.delay\(|\bsend_task\(|'
+        r'\brigby_mission_delegation\b|\bdelegate_work_item\(',
+    ),
+    'mutation': re.compile(
+        r'\.save\(|\.delete\(|\bupdate_or_create\(|\bbulk_create\(|'
+        r'\bget_or_create\(',
+    ),
+    'feature_flag': re.compile(
+        r'getattr\(settings\s*,|from\s+django\.conf\s+import\s+settings|'
+        r'\bos\.environ\b',
+    ),
+}
+
 # T1b (S2904) template-compliance canon.
 TEMPLATE_VARIANTS: Set[str] = {'sweep', 'protocol'}
 
@@ -483,6 +545,70 @@ def lint_schema(schema: Optional[Dict[str, Any]]) -> List[str]:
     return lints
 
 
+def lint_schema_vs_handler(
+    schema: Optional[Dict[str, Any]],
+    handler_source: str,
+    handler_docstring: str,
+) -> List[str]:
+    """Return schema-vs-handler consistency lint tags (Ledger #5 substrate).
+
+    S2938 Tier 1 MVP per Rigby T0 SIGN AGREE. Two lints, both parse-based
+    and precision-first (false negatives acceptable; false positives are
+    the failure mode to avoid). Advisory only; does not gate anything.
+
+    Lints emitted:
+
+      * ``handler_drift_action_count`` — module docstring names an action
+        count (via number word or digit followed by "action(s)") that
+        disagrees with ``schema.parameters.properties.action.enum``
+        length. Silent when docstring omits the count claim.
+
+      * ``handler_drift_negative_claim_{dispatch,mutation,feature_flag}``
+        — module docstring asserts a negative behavioral claim (e.g.
+        "No agent dispatch", "read-only", "always live") but the handler
+        source contains a contradicting evidence signature (celery
+        primitives, ORM writes, settings/env reads, or curated
+        service-layer functions like ``rigby_mission_delegation``).
+
+    Deferred to Tier 2 (separate ship): envelope-JSON top-level-key
+    parity check against schema description text. See module docstring.
+    """
+    if not schema or not handler_docstring:
+        return []
+    lints: List[str] = []
+
+    # ── Lint 1: docstring action-count vs schema enum length ─────────
+    parameters = schema.get('parameters', {}) or {}
+    properties = parameters.get('properties', {}) or {}
+    action_prop = properties.get('action') or {}
+    schema_actions = list(action_prop.get('enum', []) or [])
+    if schema_actions:
+        match = _DOCSTRING_ACTION_COUNT_RE.search(handler_docstring)
+        if match:
+            raw = match.group(1).lower()
+            claimed = _NUMBER_WORD_TO_INT.get(raw)
+            if claimed is None:
+                try:
+                    claimed = int(raw)
+                except ValueError:
+                    claimed = None
+            if claimed is not None and claimed != len(schema_actions):
+                lints.append('handler_drift_action_count')
+
+    # ── Lint 2: docstring negative claim vs handler-source evidence ──
+    if handler_source:
+        for domain, claim_re in _NEGATIVE_CLAIM_PATTERNS.items():
+            if not claim_re.search(handler_docstring):
+                continue
+            evidence_re = _EVIDENCE_SIGNATURES.get(domain)
+            if evidence_re is None:
+                continue
+            if evidence_re.search(handler_source):
+                lints.append(f'handler_drift_negative_claim_{domain}')
+
+    return lints
+
+
 def _handler_file_for(handler_file_str: str) -> str:
     """Bucket handler_file into a short slug for grouping.
 
@@ -591,7 +717,11 @@ def build_gap_map(
             is_agent_via_run_agent=is_agent_via,
         )
         row['category'] = category
-        row['lints'] = lint_schema(schema)
+        row['lints'] = lint_schema(schema) + lint_schema_vs_handler(
+            schema,
+            row.get('handler_source', '') or '',
+            row.get('handler_docstring', '') or '',
+        )
 
         # T1b S2904 — template-compliance evaluation. Only per-tool
         # docs get a meaningful verdict; tools without a doc land as
