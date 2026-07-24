@@ -75,6 +75,19 @@ SIGNAL_DISPATCH_RULES: tuple[SignalDispatchRuleDef, ...] = (
         min_confidence=0.5,
         max_per_day=10,
     ),
+    # S2934 A5: OpportunityScoringAgent. Verified at S2934 open via
+    # agent_introspection_tool — 33 total executions, effectiveness 96,
+    # recent 7d 2/2 100% success. Cluster volume verified via ORM —
+    # 117 opportunity_window clusters exist (1 currently active, others
+    # rotate through detecting/decayed/archived).
+    SignalDispatchRuleDef(
+        key='opportunity_window__opportunity_scoring',
+        pattern_type='opportunity_window',
+        agent_name='OpportunityScoringAgent',
+        min_strength=0.5,
+        min_confidence=0.5,
+        max_per_day=10,
+    ),
 )
 
 

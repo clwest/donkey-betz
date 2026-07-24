@@ -1441,6 +1441,7 @@ from core.views_ai_ecosystem import (
 )
 # Import enhanced agent execution views
 from core import views_agent_execution
+from core import views_signal_dispatch  # S2934 A4: Signal Dispatch list endpoint
 from core import views_categorized_opportunities
 from core import views_agent_work_platform
 from core import views_self_development
@@ -2599,6 +2600,9 @@ urlpatterns = [
     # Session 760: Unified execution history and detail for Output Modal
     path('api/v1/agents/unified-executions/', views_agent_execution.unified_execution_history, name='unified-execution-history'),
     path('api/v1/agents/execution/<str:execution_id>/', views_agent_execution.execution_detail, name='execution-detail'),
+
+    # S2934 A4: Signal Dispatch observability list — backs the Workspace tab.
+    path('api/v1/agents/signal-dispatches/', views_signal_dispatch.signal_dispatches_list, name='signal-dispatches-list'),
     path('api/v1/agents/batch-execute/', views_agent_execution.execute_agent_batch, name='agent-batch-execute'),
 
     # Session 761: Agent Monitoring API Endpoints
