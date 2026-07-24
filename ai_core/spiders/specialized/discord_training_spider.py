@@ -139,7 +139,8 @@ class DiscordTrainingSpider(BaseIntelligenceSpider):
         'LegalDocDrafterAgent': ['legal', 'law', 'court', 'motion', 'contract'],
         'ResearchAgent': ['research', 'analysis', 'data', 'study', 'investigation'],
         'ContentStrategyAgent': ['content', 'strategy', 'marketing', 'engagement'],
-        'BusinessContentStrategyAgent': ['business', 'strategy', 'market', 'revenue'],
+        # Session 2932: BusinessContentStrategyAgent entry removed — duplicate
+        # class consolidated into ContentStrategyAgent above.
     }
 
     # Keywords that indicate high-quality training data
