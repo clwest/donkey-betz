@@ -1,14 +1,14 @@
-# `content_tool` — Validation Report (S2944)
+# `content_tool` — Validation Report (S2945)
 
 **Tool:** `content_tool`
 **Schema:** `core/services/pa_tool_schemas.py:4117-4217`
-**Handler:** `core/services/td_handlers_content.py:4577-4919` (`_handle_content`)
+**Handler:** `core/services/td_handlers_content.py:4577-4967` (`_handle_content`)
 **Register site:** `core/services/tool_dispatcher.py:1122`
-**Session:** S2944 (Ledger #38 batch 3 — bundled `generate_newsletter` + `bulk_archive` dry_run alignment). Extends S2943 (Slice 6 close + `bulk_archive_published` alignment) which extended S2796 sweep shape.
-**HEAD at validation:** `e0e15561e` (2026-07-24, S2943 close cascade merged) → S2944 PR extends
-**Ship shape:** Doc + code + live-verify (S2796 shape extended with S2942-aligned dry_run evidence for two additional mutations). Gateway tool — most action families delegate to sibling tools with dedicated validation docs.
-**Category upgrade target:** unchanged (`validated_full` + Metric B `dry_run_supported` already earned at S2943). S2944 adds two additional actions to the per-action dry_run-aligned count (2/3 mutations now pattern-aligned).
-**Rigby SIGN:** S2944 T1 SIGN AGREE (Option B bundle) — reconciliation confirmed via 6 `repo_tool` tool_runs; pre-existing schema/handler default-mismatch on generate_newsletter surfaced as record-only. Live-verified via Rigby dispatch (see §6.5).
+**Session:** S2945 (Ledger #38 batch 4 — `run_cleanup` dry_run alignment via shared `_gather_cleanup_preview` helper). Closes content_tool's last unaligned mutation — content_tool now 100% per-action pattern-aligned. Extends S2944 (batch 3), S2943 (batch 2), S2942 (batch 1).
+**HEAD at validation:** `6a3f066b6` (2026-07-24, S2944 close cascade merged) → S2945 PR extends
+**Ship shape:** Doc + code + live-verify (S2796 shape extended with S2942-aligned dry_run evidence for the fourth and final content_tool mutation). Introduces `_gather_cleanup_preview` helper in `core/tasks_misc.py` as single source of truth between preview and real archive filter.
+**Category upgrade target:** unchanged (`validated_full` + Metric B `dry_run_supported` already earned at S2943). S2945 closes content_tool per-action alignment count 3 → 4 (all 4 mutations now pattern-aligned).
+**Rigby SIGN:** S2945 T1 SIGN AGREE with Option B (rich preview helper) over Option A (minimal stub); DISAGREE with Option A as final. Substantive tool_runs (searched precedent shapes + read handler+tasks+tasks_misc). Rationale: destructive-action semantics + generate_newsletter precedent + single-source-of-truth guarantee.
 **Template variant:** sweep
 **Template version:** v1
 **Execution mode:** live
@@ -48,7 +48,7 @@ documented at §5a mutation containment.
 - `generate_newsletter` — **mutation (external)** — Celery `apply_async` to `generate_operator_edge_newsletter`; native `dry_run=true` returns cluster preview + S2942-aligned `no_writes` / `would_action=dispatch_celery` envelope without LLM call (td_handlers_content.py:4707-4732, S2944 batch 3 alignment).
 - `bulk_archive` — **mutation (spreading)** — delegated to `_handle_bulk_archive`; `dry_run=TRUE` default via `require_write_authorization` + S2942-aligned `no_writes` / `would_action=archive` envelope (td_handlers_content.py:5044-5057, S2944 batch 3 alignment).
 - `bulk_archive_published` — **mutation (cascading)** — admin-only category-scoped archive; delegated to `_handle_bulk_archive_published`. Requires `categories + created_before + confirm`; S2942-aligned dry_run envelope shipped S2943.
-- `run_cleanup` — **mutation (external)** — Celery `apply_async` to `cleanup_stale_content`; no dry_run affordance on the async path.
+- `run_cleanup` — **mutation (external)** — Celery `.delay()` to `cleanup_stale_content`; native `dry_run=TRUE` default returns S2942-aligned envelope (`would_action=dispatch_celery`, `would_task=cleanup_stale_content`, `no_writes=true`) + preview (`would_archive_count`, `top_by_type`, `top_by_category`) via shared `_gather_cleanup_preview` helper in `core/tasks_misc.py` (single source of truth with the real `_impl_cleanup_stale_content` archive filter). S2945 batch 4 alignment (td_handlers_content.py:4670-4738).
 - `deliverable_list` — **read** — delegated to `_handle_deliverables`; covered by `deliverable_tool.list`.
 - `deliverable_detail` — **read** — delegated to `_handle_deliverables`; covered by `deliverable_tool.detail`.
 - `deliverable_search` — **read** — delegated to `_handle_deliverables`; covered by `deliverable_tool.search`.
@@ -158,10 +158,10 @@ Response shape:
 | `generate_newsletter` | `external` | Celery `apply_async` to `generate_operator_edge_newsletter` → LLM call + evidence gather | S2944 batch 3: `dry_run=true` returns cluster preview + S2942 envelope (`would_action=dispatch_celery`, `would_task=generate_operator_edge_newsletter`, `no_writes=true`) without LLM call |
 | `bulk_archive` | `spreading` | user-scoped `.update()` over ≤`cap` rows (default 500, max 2000) | S2944 batch 3: `dry_run=TRUE` default via `require_write_authorization` + S2942 envelope (`would_action=archive`, `would_change_to=archived`, `would_archive_count=N`, `no_writes=true`) |
 | `bulk_archive_published` | `cascading` | admin-only category-scoped `.update()` on published rows | S2943 batch 2: `dry_run` gate + S2942 envelope (`would_action=archive_published`, `would_change_to=archived`, `would_archive_count=N`, `no_writes=true`) |
-| `run_cleanup` | `external` | Celery `apply_async` to `cleanup_stale_content` | no dry_run affordance on async path; async task itself may have dry_run |
+| `run_cleanup` | `external` | Celery `.delay()` to `cleanup_stale_content` (bulk `.update()` on stale rows) | S2945 batch 4: `dry_run=TRUE` default + S2942 envelope (`would_action=dispatch_celery`, `would_task=cleanup_stale_content`, `no_writes=true`) + `would_archive_count`/`top_by_type`/`top_by_category` preview via shared `_gather_cleanup_preview` helper. Preview count cannot drift from real archive filter (same helper called by `_impl_cleanup_stale_content`). |
 | `deliverable_save`/`create`/`update`/`append`/`export_pdf` | see `deliverable_tool_validation.md` | delegated to deliverables handler | per-action coverage in sibling doc |
 
-**S2944 batch 3:** `bulk_archive` + `generate_newsletter` alignment closes the last two content_tool mutations that predated the S2942 envelope contract. `run_cleanup` remains the only mutation without a dry_run affordance (async-only Celery dispatch; would require a new dry_run branch, deferred as separate ledger candidate).
+**S2945 batch 4:** `run_cleanup` alignment closes content_tool's last unaligned mutation — all 4 mutations (`bulk_archive_published`, `bulk_archive`, `generate_newsletter`, `run_cleanup`) now carry the S2942 envelope contract. Content_tool per-action alignment is **100%**. The `_gather_cleanup_preview` helper extracted in `core/tasks_misc.py` guarantees single-source-of-truth between preview and real archive filter — no drift risk if the queryset later gains new safety guards.
 
 ## 5b. First-hop dependency proof
 
@@ -280,7 +280,7 @@ Operators editing `_handle_content` should also review sibling handlers for shar
 
 ### 6.4 Analyzed-only actions (not exercised live this ship)
 
-Native-family read actions (`podcasts`/`series`/`content_studio`/`initiative_doc`) are analyzed from code + adjacent existing evidence; live-verify deferred as low-risk (pure ORM reads, no writes). `run_cleanup` async dispatch (Celery `apply_async` to `cleanup_stale_content`) has no dry_run affordance; adding one is deferred as a separate ledger candidate.
+Native-family read actions (`podcasts`/`series`/`content_studio`/`initiative_doc`) are analyzed from code + adjacent existing evidence; live-verify deferred as low-risk (pure ORM reads, no writes). `run_cleanup` async dispatch (Celery `.delay()` to `cleanup_stale_content`) — dry_run affordance shipped S2945 (see §6.6).
 
 ### 6.5 S2944 Ledger #38 batch 3 — `generate_newsletter` + `bulk_archive` alignment
 
@@ -371,9 +371,81 @@ Native-family read actions (`podcasts`/`series`/`content_studio`/`initiative_doc
 
 Rigby T1 SIGN surfaced a pre-existing schema/handler default mismatch: the shared `dry_run` schema description says "DEFAULT: true" for `generate_newsletter` (pa_tool_schemas.py:4190), but the handler treats missing as `False` (td_handlers_content.py:4705). S2944 preserves the pre-existing behavior — flipping the default is a separate ledger candidate that would need per-caller regression review.
 
+### 6.6 S2945 Ledger #38 batch 4 — `run_cleanup` alignment (closes content_tool 100%)
+
+**Dispatch context:** Rigby PA route via `tools/pa_local.sh` (S2945 wrapper pin `pa-2306c73855774b75`), post `make celery-recycle` twice (once for handler+schema change, once for the same-PR autofill fix), HEAD at `6a3f066b6` + this PR's handler + `_gather_cleanup_preview` helper loaded in worker.
+
+#### 6.6.a `run_cleanup` with `dry_run` unset (new default TRUE)
+
+**Payload:** `{"action":"run_cleanup","cutoff_days":30}` (dry_run + statuses omitted intentionally to exercise both the safety-first default AND the S2944-derived autofill fix)
+
+**Response (raw from `content_tool` handler, 15ms — pure ORM read via `_gather_cleanup_preview`):**
+```json
+{
+  "gateway": "content_tool",
+  "action": "run_cleanup",
+  "dry_run": true,
+  "mode": "dry_run",
+  "would_action": "dispatch_celery",
+  "would_task": "cleanup_stale_content",
+  "no_writes": true,
+  "total_found": 0,
+  "would_archive_count": 0,
+  "cutoff_days": 30,
+  "safe_statuses": ["ready", "draft"],
+  "cap": 500,
+  "top_by_type": [],
+  "top_by_category": [],
+  "message": "dry_run=true: 0 of 0 stale items would be archived (cutoff=30d, statuses=['ready', 'draft'], cap=500). No Celery task enqueued and no writes performed. Set dry_run=false to dispatch the cleanup task."
+}
+```
+
+**S2942-alignment check (4/4 sentinel fields present):**
+- `dry_run: true` ✓ (defaulted TRUE — safety-first for destructive action)
+- `would_action: "dispatch_celery"` ✓
+- `would_task: "cleanup_stale_content"` ✓
+- `no_writes: true` ✓
+
+**S2945 preview fields (4/4 present):**
+- `total_found: 0` (helper-computed, real ORM query — DB currently has no stale rows matching default filter)
+- `would_archive_count: 0` (equal to `min(total_found, cap)`)
+- `top_by_type: []` (empty because 0 matches — envelope structure verified)
+- `top_by_category: []` (same)
+
+**No-dispatch guarantee:** confirmed at handler level (short-circuits before `cleanup_stale_content.delay(...)` at td_handlers_content.py:4732). Corroborated by regression tests `test_dry_run_default_true_returns_s2942_envelope` + `test_dry_run_no_db_writes` in `core/tests/test_s2945_dry_run_batch_4.py` (both mock `.delay` and assert `not_called`).
+
+#### 6.6.b Same-PR fold: statuses-autofill 2nd-trigger fix
+
+Rigby's first live-verify (before this fix) returned `{"success":false,"error_code":"invalid_params","error":"No valid statuses after safety filter (published/archived stripped)."}` — GPT-5.2 autofilled `statuses:[]` (empty list) despite the schema not requiring the key. Empty list survived `payload.get('statuses', ['ready','draft'])` (returns `[]`, not the default, because the key exists), then the safety filter stripped it further to empty, triggering the invalid_params gate.
+
+This is the **2nd trigger** of the S2944 record-only autofill quirk (1st trigger: `bulk_archive` at S2944 batch 3 live-verify). Same-PR mitigatable per PLAYBOOK-6.10.8: the fix lives in `_gather_cleanup_preview` (`if not statuses: statuses = ['ready', 'draft']`) so it hardens BOTH the dry_run handler path AND the real `_impl_cleanup_stale_content` task path against the same autofill quirk (single source of truth).
+
+Regression coverage: `test_dry_run_autofilled_empty_statuses_coerces_to_default` in `core/tests/test_s2945_dry_run_batch_4.py`.
+
+**Bulk_archive autofill fix (Ledger candidate I from 00-START):** still deferred. Different handler, different queryset construction path — fix pattern is portable but requires per-handler touch.
+
+#### 6.6.c Regression coverage (S2945)
+
+`core/tests/test_s2945_dry_run_batch_4.py` (14 tests, all pass):
+
+- **RunCleanupDryRunTests (10 tests):** default dry_run TRUE, explicit dry_run TRUE, preview matches filter, no DB writes, top_by_type/top_by_category present, message summary, dry_run=false dispatches Celery, invalid_statuses error shape, protected_types exclusion, empty-statuses autofill coercion (2nd-trigger fix).
+- **GatherCleanupPreviewHelperTests (4 tests):** helper is read-only, respects cap, invalid_statuses returns error dict, zero-matches returns empty-shape (not None).
+
+**Combined S2942 + S2943 + S2944 + S2945 suite:** 42 tests, ~1.1s, all pass. Gap-map `--check` exits 0.
+
+#### 6.6.d Single-source-of-truth guarantee (Option B rationale)
+
+`_gather_cleanup_preview` in `core/tasks_misc.py:34-102` is called by:
+1. **Dry_run handler path** — `td_handlers_content.py:4692` (this PR)
+2. **Real archive path** — `_impl_cleanup_stale_content` at `core/tasks_misc.py:104-159` (refactored this PR to delegate the queryset step)
+
+Same filter, same safety guards (`published`/`archived` stripped, `is_saved=False`, `is_pinned=False` when column exists, `protected_types` exclusion), same cap-limited archive-ID selection. Preview count `would_archive_count` is byte-identical to what the real task will archive when dispatched. If future safety guards get added to the queryset (e.g. a new `is_locked=False` filter), the change lands once in the helper and both paths inherit it — no drift window.
+
+This was Rigby T1 SIGN's key reason for AGREE-ing with Option B over Option A: destructive-action semantics + generate_newsletter helper precedent + zero drift risk.
+
 ## Related
 
 - **Sibling tools with dedicated docs:** `blog_tool_validation.md`, `deliverable_tool_validation.md`, `feedback_tool_validation.md`, `execution_history_tool_validation.md`, `learning_patterns_tool_validation.md`, `recent_activity_tool_validation.md`, `surgical_moves_status_tool_validation.md`.
-- **Ledger #38 (dry_run alignment arc):** `docs/audits/PA_TOOLS_GAP_MAP.md` + S2942 close handoff. Content_tool's mutation actions have native alignment (S2943 bulk_archive_published, S2944 bulk_archive + generate_newsletter) or inherit dry_run coverage from delegated targets where flagged (blog_tool, feedback_tool, deliverable_tool).
+- **Ledger #38 (dry_run alignment arc):** `docs/audits/PA_TOOLS_GAP_MAP.md` + S2942 close handoff. Content_tool's mutation actions have native alignment (S2943 bulk_archive_published, S2944 bulk_archive + generate_newsletter, **S2945 run_cleanup — closes content_tool 100%**) or inherit dry_run coverage from delegated targets where flagged (blog_tool, feedback_tool, deliverable_tool).
 - **Substrate docs:** `docs/audits/pa_tools/substrate/T1b_ship_shape_s2904.md` (template ratification); `_TEMPLATE_per_tool_validation.md` v1 template.
 - **Prior ratifications:** S2944 (Ledger #38 batch 3), S2943 (Slice 6 close + Ledger #38 batch 2), S2942 close (Ledger #38 + #41), S2728 (deliverable_tool DEFECT-PATCHED-VERIFIED batch).
