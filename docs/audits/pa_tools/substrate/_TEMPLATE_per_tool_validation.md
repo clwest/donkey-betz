@@ -115,13 +115,80 @@ shape. Focus on the "obvious call" a Rigby operator would make.
 [MANDATORY] What returns when: no data, invalid input, unauthorized,
 pagination cursor exhausted, edge cases discovered during exercise.
 
-## 5a. Mutation containment (per Rigby SIGN zoom-out #1)
+## 5a. Mutation containment (per Rigby SIGN zoom-out #1; 4-tier
+blast-radius taxonomy added S2921)
 
 [OPTIONAL — required when tool has mutation actions declared as
-ship-deferred in `## Covered actions`.]
+in-scope OR ship-deferred in `## Covered actions`.]
 
-Blast-radius classification per mutation action + explicit deferral
-rationale + Slice-when-covered pointer.
+Blast-radius classification per mutation action + explicit
+deferral or in-scope rationale + Slice-when-covered pointer (or
+"this ship" when in-scope).
+
+### 4-tier blast-radius taxonomy (recommended enum; added S2921)
+
+Introduced as authoring taxonomy — not a governance rule. Doc-only
+per S2921 T0 SIGN Q3 Rigby+Claude joint verdict (§5a as-shipped
+already accommodated the schema without changing the template) +
+Chris ratification. Every mutation action in `## Covered actions`
+SHOULD carry one of these labels; deviations MUST be justified
+in-doc.
+
+| Tier | Meaning | Typical shape |
+|---|---|---|
+| `contained` | Single-row INSERT / UPDATE / DELETE on a table with no FK cascade, no `post_save` signal chain, no cross-user reach. Retries produce duplicate rows or idempotent updates but do not corrupt existing state. | Append-only telemetry row; per-user preference toggle on an isolated table; single-row status flip with no downstream observers. |
+| `spreading` | Row-level mutation that reaches across rows within the same user's dataset OR into a second table that stores user-scoped state. Includes bulk multi-row `.update()` calls that are user-scoped but broad (e.g. bulk-ack N rows). Blast-radius stays within a single user but is broader than a single row. | Bulk `.update(is_read=True)` over ≤200 rows; `.save()` on a row + a related-model flag flip; `get_or_create` that implicitly writes a new row into a shared table. |
+| `cascading` | Mutation that fires FK cascades OR `post_save` / `pre_save` signal chains OR triggers downstream ORM-observer effects. Requires signal-chain grep to classify accurately. | Delete on a parent row that cascades to N child rows; `.save()` on a model whose `post_save` receiver enqueues a Celery task or writes a second row. |
+| `external` | Mutation that leaves the process — network call, Celery `apply_async` fan-out, LLM invocation, dispatcher re-entry, or sub-tool invocation as a first-hop side effect of the mutation. | POST to an external service on `.save()`; enqueue a workflow task after row-write; publish to a broker as part of the mutation path. |
+
+Grep discipline required: `contained` claims MUST be backed by a
+signal-chain grep (search for `post_save.connect` / `@receiver` on
+the model) + FK-cascade check. If either surfaces evidence, the
+tier is reclassified up and the doc is amended. First mis-classification
+that surfaces post-merge is a Ledger candidate.
+
+### Mutation-scan-swap pattern (sweep-doc-only, S2921 codification)
+
+**Pattern:** During a sweep batch's T0 SIGN, if Rigby's mutation-verb
+scan flags a candidate tool as mutation-capable that the batch-open
+frame assumed was pure-read, do NOT force the tool into the pure-read
+template. Instead:
+
+1. Swap the mutation-capable tool out of the batch (defer to a
+   future mutation-shaped batch).
+2. Swap in a confirmed pure-read tool from the same slice, OR
+3. Escalate to split-batch: ship the confirmed pure-read subset,
+   defer the mutation-capable subset to the next appropriate batch.
+
+**Applied at:** S2919 (vip_invite → narrative swap) + S2920
+(proactive+self_awareness+profile split-batch escalation). 2
+triggers, both inside the current PA-tools sweep.
+
+**Promotion rule (Playbook candidate threshold):** This pattern
+stays a sweep-doc note UNTIL a 3rd trigger occurs OUTSIDE the
+current PA-tools sweep context (i.e., in a different workstream, a
+post-sweep audit, or an unrelated batch-based initiative). At that
+point, promote to Playbook via the normal amendment process. Until
+then, keep applied but ungoverned — sweep tactic, not global rule.
+Precedent for two-trigger sweep-note → three-trigger Playbook
+promotion: PLAYBOOK-6.10.6 (S2739 + S2741 sweep-note, promoted at
+third trigger).
+
+### Process hygiene — freeze template per ship session (S2921)
+
+If a ship session needs template changes mid-flight (a mutation-shape
+gap, a new §5a tier, a §5b appendix that didn't exist yet), the
+correct move is to end that ship session with 0-or-1-tool progress
+and dedicate the next session to template design. Do NOT edit the
+template AND ship multiple tools in the same session — that mixes
+"design substrate" with "validate under substrate" and produces the
+false-safety hazard where earlier tools in the session were
+validated under a different template than later tools. When only 1
+low-risk pilot tool is available (unambiguous mutation surface,
+`contained` tier), shipping the pilot alongside a template
+amendment is acceptable — the pilot itself is the amendment
+exercise. When 2+ tools would need to ship under the changing
+template, split into design-only + ship-only sessions.
 
 ## 5b. First-hop dependency proof
 
