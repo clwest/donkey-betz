@@ -741,6 +741,20 @@ class AgentHandlersMixin:
                 'app_label': 'core', 'sensitive': False,
                 'expensive_text_fields': ('description',),
             },
+            # S2931 Rigby Tool Gap Ledger #33 — AgentExecution surfacing.
+            # Complements Agent (already in allowlist). S2930 recon forced
+            # 3× Django shell fallback to trace agent-run status/latency/cost;
+            # this closes that gap so Rigby can filter/count executions by
+            # agent/status/user/tenant/trace without leaving the tool surface.
+            # `task` + `error_message` are TextFields that can each exceed
+            # a few KB per row so both are blocked from contains lookups.
+            # `input_data` / `output_data` are JSONFields — model marked
+            # non-sensitive so they render with recursive key-redaction (no
+            # tokens/creds expected in agent I/O, but redaction is defensive).
+            'AgentExecution': {
+                'app_label': 'core', 'sensitive': False,
+                'expensive_text_fields': ('task', 'error_message'),
+            },
             'AutopilotAction': {
                 'app_label': 'core', 'sensitive': True,
                 'expensive_text_fields': (),
