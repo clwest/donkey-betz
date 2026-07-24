@@ -21,9 +21,9 @@
 
 ## Validation coverage (S2795)
 
-- `validated_full` (validated (full)): **56**
+- `validated_full` (validated (full)): **60**
 - `agent_via_run_agent` (agent (via run_agent)): **44**
-- `untested` (untested): **43**
+- `untested` (untested): **39**
 - `validated_partial` (validated (partial)): **10**
 - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
 - `meta_no_handler` (meta (no handler by design)): **1**
@@ -44,7 +44,7 @@
 | `agent_memory_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Browse agent memories and knowledge sources |
 | `ai_series_workflow_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
 | `analytics_tool` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Query behavioral analytics: DeliverableEvent counts, ATR-24h metrics, event breakdowns by type/role/time |
-| `ats_tool` | ✓ ✓ | 4 | 1 | untested | — | View ATS keyword mappings, resume optimization logs, persona templates, and stats |
+| `ats_tool` | ✓ ✓ | 4 | 1 | validated_full | — | View ATS keyword mappings, resume optimization logs, persona templates, and stats |
 | `audio_generation_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
 | `audit_tool` | ✓ ✓ | 4 | 1 | validated_full | — | View audit findings, wiring defects, citation violations, and P0 summary |
 | `autonomous_content_studio_coordinator` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
@@ -86,8 +86,8 @@
 | `db_health_tool` | ✓ ✓ | 7 | — | validated_full | no_required | Check database health: migration status, table row counts, PostgreSQL connection info, pgvector extension s… |
 | `deliverable_tool` | ✓ ✓ | 18 | 1 | validated_doc_exists_unknown | — | Manage the deliverables library — create, read, update, search, save, export, and archive deliverables |
 | `diagnostics_tool` | ✓ ✓ | 7 | 1 | validated_full | actions_not_mentioned_in_description | Audit/inventory telemetry for subsystem health checks (Session 1202 §A.2) |
-| `discord_tool` | ✓ ✓ | 3 | 1 | untested | — | Inspect the Discord bot: list registered commands, check slot usage, view cog structure, and verify bot con… |
-| `distribution_tool` | ✓ ✓ | 4 | 1 | untested | — | View content distribution platforms, listings, revenue, and stats |
+| `discord_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Inspect the Discord bot: list registered commands, check slot usage, view cog structure, and verify bot con… |
+| `distribution_tool` | ✓ ✓ | 4 | 1 | validated_full | — | View content distribution platforms, listings, revenue, and stats |
 | `dream_tool` | ✓ ✓ | 6 | 1 | validated_full | — | Browse and act on agent dreams: list top-scored dreams, view details, approve or dismiss |
 | `editor_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
 | `employee_tool` | ✓ ✓ | 4 | 2 | untested | — | Inspect or dispatch jobs on the AI Employee registry |
@@ -121,7 +121,7 @@
 | `mission_verdict` | ✓ ✓ | 3 | 2 | untested | — | Rigby-only: certify, reject, or defer a MissionRun |
 | `ml_analysis` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Run ML analysis on platform data: prediction models, feature importance, model accuracy |
 | `mobile_tool` | ✓ ✓ | 4 | 1 | untested | — | Inspect the React Native / Expo mobile app: project config, implemented screens, API modules, dependencies |
-| `narrative_tool` | ✓ ✓ | 5 | 1 | untested | — | Access narrative drift analysis, trend break detection, and cultural impact assessments |
+| `narrative_tool` | ✓ ✓ | 5 | 1 | validated_full | — | Access narrative drift analysis, trend break detection, and cultural impact assessments |
 | `newsletter_tool` | ✓ ✓ | 7 | 1 | untested | — | Newsletter publishing pipeline — prepare issues for Substack/Beehiiv, generate outlines, validate against T… |
 | `obs_tool` | ✓ ✓ | 6 | 1 | validated_partial | — | Control OBS Studio recording via the local bridge |
 | `opportunity_manager_tool` | ✓ ✓ | 6 | 1 | validated_full | — | Manage opportunities: list, view details, get stats, create, or update status |
