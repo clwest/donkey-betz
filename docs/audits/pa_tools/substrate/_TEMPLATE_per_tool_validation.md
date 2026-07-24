@@ -71,6 +71,42 @@ future flexibility.
 **Rigby SIGN:** S<NNNN> T1 SIGN <verdict> — <one-line summary + tool_runs pointer>
 **Template variant:** sweep
 **Template version:** v1
+**Execution mode:** <live | analyzed>
+**Mutation safety:** <dry_run_supported | unsafe_no_dry_run>
+
+<!--
+========================================================================
+S2942 Ledger #41 — TWO-METRIC SCOREBOARD FRONTMATTER (opt-in per doc).
+========================================================================
+
+Both fields are OPT-IN. If a doc omits them, the gap-map classifier
+normalizes to `unknown` (no silent default). Verbatim values only —
+anything else falls to `unknown`.
+
+- **Execution mode:** how was this tool actually validated?
+  - `live`     — actions were invoked end-to-end and observed
+                 through the PA/Rigby tool surface (per §6 evidence).
+  - `analyzed` — actions were audited from code/schema only,
+                 no live dispatch (typical of pre-dry_run mutation
+                 branches — see S2936 batch shape).
+
+- **Mutation safety:** for tools with any mutation action, does the
+  handler expose a `dry_run=true` no-write path?
+  - `dry_run_supported`   — handler accepts `dry_run=true`, returns
+                            a `would_*` envelope with `no_writes:true`,
+                            performs zero DB writes + zero Celery
+                            enqueues. Enables safe live-verification.
+  - `unsafe_no_dry_run`   — mutation actions lack a dry_run affordance;
+                            cannot be safely live-verified without
+                            state impact. Substrate gap — candidate
+                            for a future dry_run expansion PR.
+
+For pure-read tools, `Mutation safety: dry_run_supported` is
+technically accurate (there's nothing to guard) but noisy — prefer
+`dry_run_supported` if the tool has any write path, or omit both
+fields (→ `unknown`) if all actions are read-only.
+-->
+
 
 ---
 
