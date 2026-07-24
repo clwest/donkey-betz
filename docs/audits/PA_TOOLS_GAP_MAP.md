@@ -10,26 +10,26 @@
 
 - **Total tool names:** 161
 - **Per-category breakdown:**
-  - `validated_full` (validated (full)): **87**
+  - `validated_full` (validated (full)): **89**
   - `agent_via_run_agent` (agent (via run_agent)): **44**
   - `validated_partial` (validated (partial)): **11**
-  - `untested` (untested): **11**
+  - `untested` (untested): **9**
   - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
   - `meta_no_handler` (meta (no handler by design)): **1**
 
 ## Validation-doc corpus
 
-- **Total `*_validation.md` files:** 114
+- **Total `*_validation.md` files:** 116
 - **Substrate (cross-cutting) docs:** 10 — reduce risk platform-wide but do NOT validate per-tool invariants (S2795 F2 rename).
-- **Per-tool docs:** 104 — of which 96 have an explicit 'Covered actions' section (F1 checklist).
-- **Per-tool docs with `Template version` marker:** 82 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
+- **Per-tool docs:** 106 — of which 98 have an explicit 'Covered actions' section (F1 checklist).
+- **Per-tool docs with `Template version` marker:** 84 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
 
 ## Template compliance (T1b)
 
 Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without `Template version:` marker); `pass` = v1-conformant; `fail` = v1 marker present but mandatory section/frontmatter missing.
 
-- `pass`: **84**
-- `warn`: **77**
+- `pass`: **86**
+- `warn`: **75**
 
 ## Schema quality lints (F5 advisory column)
 
@@ -58,7 +58,7 @@ _No untested-tool groups met the threshold._
 | `autopilot_tool` | ✓✓ | validated (partial) | warn | actions_not_mentioned_in_description | `core/services/td_handlers_ops.py` |
 | `bear_case_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `blockchain_audit_coordinator` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
-| `blog_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_content.py` |
+| `blog_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_content.py` |
 | `bpaas_tool` | ✓✓ | validated (partial) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `brainstorm_tool` | ✓✓ | validated (partial) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `brand_identity_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
@@ -100,7 +100,7 @@ _No untested-tool groups met the threshold._
 | `employee_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_employee.py` |
 | `execution_history_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_content.py` |
 | `experiment_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
-| `feedback_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_content.py` |
+| `feedback_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_content.py` |
 | `fleet_health` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_core.py` |
 | `game_predictor` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `gates_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
