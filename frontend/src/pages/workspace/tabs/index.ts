@@ -79,3 +79,6 @@ export { RagDiagnosticsTab } from './RagDiagnosticsTab'
 
 // S2930: Agent Runs — persistent view of AgentExecution history
 export { AgentRunsTab } from './AgentRunsTab'
+
+// S2934: Signal Dispatches — observability for S2933 A3 auto-dispatch pipeline
+export { SignalDispatchesTab } from './SignalDispatchesTab'
