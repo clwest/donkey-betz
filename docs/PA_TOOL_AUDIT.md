@@ -21,17 +21,19 @@
 
 ## Validation coverage (S2795)
 
-- `validated_full` (validated (full)): **89**
+- `validated_full` (validated (full)): **92**
 - `agent_via_run_agent` (agent (via run_agent)): **44**
 - `validated_partial` (validated (partial)): **11**
-- `untested` (untested): **9**
 - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
+- `untested` (untested): **6**
 - `meta_no_handler` (meta (no handler by design)): **1**
 
 **Schema quality lints:**
 - `actions_not_mentioned_in_description`: **22** tools
 - `no_required`: **14** tools
 - `no_properties`: **1** tools
+- `handler_drift_action_count`: **1** tools
+- `handler_drift_negative_claim_dispatch`: **1** tools
 
 ## Tool overview
 
@@ -152,8 +154,8 @@
 | `research_and_create_tool` | ✓ ✓ | — | 2 | validated_full | — | Research a topic via web search and create content (blog post, comparison, script, analysis) |
 | `resolve_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
 | `revenue_tracker_tool` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Track revenue metrics, income progress, and record new revenue |
-| `rigby_shift_brief_tool` | ✓ ✓ | 1 | 1 | untested | actions_not_mentioned_in_description | Rigby's operator shift brief — a one-minute pulse for Chris at the start of a session |
-| `rigby_work_item` | ✓ ✓ | 5 | 1 | untested | actions_not_mentioned_in_description | Rigby's internal operational work queue |
+| `rigby_shift_brief_tool` | ✓ ✓ | 1 | 1 | validated_full | actions_not_mentioned_in_description | Rigby's operator shift brief — a one-minute pulse for Chris at the start of a session |
+| `rigby_work_item` | ✓ ✓ | 5 | 1 | untested | actions_not_mentioned_in_description, handler_drift_action_count, handler_drift_negative_claim_dispatch | Rigby's internal operational work queue |
 | `run_agent` | schema only | — | 2 | meta_no_handler | — | Delegate a task to a specialized agent |
 | `schedule_followup` | ✓ ✓ | — | — | validated_full | no_required | Subscribe THIS conversation to a completion notification for a previously dispatched async agent task |
 | `scheduled_tasks_tool` | ✓ ✓ | 3 | — | validated_full | no_required | View and manage scheduled Celery tasks: list beat entries, enable/disable schedules |
@@ -165,7 +167,7 @@
 | `sharp_action_detector` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
 | `signal_studio_judge_stats` | ✓ ✓ | — | — | validated_full | no_required | Return signal-studio's LLM auto-summarizer judge stats over the last N days: counts of clusters accepted (s… |
 | `social_media_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `spider_data_aggregation_tool` | ✓ ✓ | 1 | 1 | untested | actions_not_mentioned_in_description | Group-by counts of SpiderData rows by data_type over a windowed time range, with optional spider_name + dat… |
+| `spider_data_aggregation_tool` | ✓ ✓ | 1 | 1 | validated_full | actions_not_mentioned_in_description | Group-by counts of SpiderData rows by data_type over a windowed time range, with optional spider_name + dat… |
 | `spider_status_tool` | ✓ ✓ | 4 | 1 | validated_full | — | View individual spider health and activity |
 | `status_snapshot_tool` | ✓ ✓ | — | — | validated_full | no_required | Get a broad system overview snapshot: agents, spiders, initiatives, health scores, recent activity |
 | `stock_analyst_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
@@ -197,7 +199,7 @@
 | `workflow_run_tool` | ✓ ✓ | 5 | 1 | validated_full | — | Start, poll, list, detail, or cancel multi-step workflow runs |
 | `workspace_budget_tool` | ✓ ✓ | 11 | 1 | validated_full | — | Manage per-workspace LLM spend caps, downgrade state, and freeze state (A1 W1 Phase 3 + W1.5 + W2 #2a) |
 | `workspace_tool` | ✓ ✓ | 13 | 1 | validated_partial | — | Manage workspaces and workspace-scoped operations |
-| `zoom_out_tool` | ✓ ✓ | 1 | 1 | untested | actions_not_mentioned_in_description | Read the Rigby SIGN zoom-out concern ledger — logs/zoom_out_classifications.jsonl |
+| `zoom_out_tool` | ✓ ✓ | 1 | 1 | validated_full | actions_not_mentioned_in_description | Read the Rigby SIGN zoom-out concern ledger — logs/zoom_out_classifications.jsonl |
 
 ## Detail appendix
 

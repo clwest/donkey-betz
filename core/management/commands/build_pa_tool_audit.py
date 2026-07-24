@@ -31,6 +31,7 @@ Default behavior (no flags) unchanged for BC.
 """
 from __future__ import annotations
 
+import ast
 import inspect
 import json as _json
 from pathlib import Path
@@ -42,6 +43,41 @@ from django.core.management.base import BaseCommand
 REPO_ROOT = Path(__file__).resolve().parents[3]
 OUTPUT_PATH = REPO_ROOT / 'docs' / 'PA_TOOL_AUDIT.md'
 VALIDATION_DOCS_DIR = REPO_ROOT / 'docs' / 'research' / 'tools' / 'validation'
+
+
+# Per-file cache so the same handler module is only read+parsed once even
+# though many tools resolve to the same handler file (e.g. mixin surfaces
+# like ``td_handlers_content.py`` host 6 tools). Keyed by absolute path.
+_HANDLER_MODULE_CACHE: dict[str, tuple[str, str]] = {}
+
+
+def _load_handler_module(handler_file_rel: str) -> tuple[str, str]:
+    """Return ``(source_text, module_docstring)`` for a handler file.
+
+    Ledger #5 substrate (S2938) — needed by the schema-vs-handler
+    consistency lint in ``pa_tools_gap_map.lint_schema_vs_handler``.
+    Silent-fail on read/parse errors (returns two empty strings) so
+    handler introspection stays advisory and does not break the audit.
+    """
+    if not handler_file_rel:
+        return ('', '')
+    abs_path = str(REPO_ROOT / handler_file_rel)
+    cached = _HANDLER_MODULE_CACHE.get(abs_path)
+    if cached is not None:
+        return cached
+    try:
+        source = Path(abs_path).read_text(encoding='utf-8', errors='replace')
+    except OSError:
+        _HANDLER_MODULE_CACHE[abs_path] = ('', '')
+        return ('', '')
+    docstring = ''
+    try:
+        docstring = ast.get_docstring(ast.parse(source)) or ''
+    except (SyntaxError, ValueError):
+        docstring = ''
+    result = (source, docstring)
+    _HANDLER_MODULE_CACHE[abs_path] = result
+    return result
 
 
 class Command(BaseCommand):
@@ -236,6 +272,8 @@ class Command(BaseCommand):
             except (TypeError, OSError):
                 pass
 
+        handler_source, handler_docstring = _load_handler_module(handler_file)
+
         return {
             'name': name,
             'has_schema': schema is not None,
@@ -248,6 +286,8 @@ class Command(BaseCommand):
             'handler_name': handler_name,
             'handler_file': handler_file,
             'handler_line': handler_line,
+            'handler_source': handler_source,
+            'handler_docstring': handler_docstring,
         }
 
     # ---------------------------------------------------------- findings
