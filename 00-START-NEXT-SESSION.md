@@ -2,89 +2,100 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2935 SHIPPED SLICE 6 BATCH 1 (Chris "yes proceed" ratification). 4 pure-read validation docs + schema-realignment fix for 2 tools + Ledger entry #35 for the schema-under-describes-handler drift class. Clean substrate progress diff. **S2936 OPENS WITH A NATURAL NEXT MOVE: Slice 6 batch 2 (mutation-heavy pair `blog_tool` + `feedback_tool`)**.
+## READ THIS FIRST — SESSION 2936 SHIPPED SLICE 6 BATCH 2 → SLICE 6 CLOSED (Chris "yes proceed" ratification). 2 validation docs (blog_tool + feedback_tool) under bifurcated Option C shape + 3 Ledger entries + clean substrate progress. **S2937 OPENS WITH SLICE 7 (singleton bucket — 9 tools across 8 handler files)**.
 
-**Refreshed 2026-07-24 (S2935 close).** Chris ratified 4-tool pure-read batch + schema-fix-in-PR + Ledger entry at S2935 T1 ("yes proceed") after Claude+Rigby joint AGREE. Rigby's Q4(c) zoom-out surfaced the schema-under-describes-handler drift as bundle-into-PR (preferred over Ledger-only or future-carry). Shipped as PR #3506 (merge SHA `628f7bde1`).
+**Refreshed 2026-07-24 (S2936 close).** Chris ratified Option C at S2936 T1 ("yes proceed") after Claude+Rigby joint AGREE with 2 F-BLOCKINGs (bifurcated §6 LIVE vs §5a ANALYZED labeling + Deliverable/SelfBlog approve-path correctness trap Ledger). Rigby executed the Ledger append (3 entries: #36/#37/#38) in one atomic tool call. Shipped as PR #3508 (merge SHA `a681b7ec0`).
 
 **PRs shipped this session:**
-- u-d-b PR [#3506](https://github.com/clwest/donkey-betz-platform/pull/3506) — S2935 Slice 6 batch 1 pure-read quartet + schema-realignment, merged at `628f7bde1`.
-- u-d-b PR `<TBD>` — S2935 close cascade (handoff + 00-START refresh + wrapper pin bump).
+- u-d-b PR [#3508](https://github.com/clwest/donkey-betz-platform/pull/3508) — S2936 Slice 6 batch 2 CLOSE (blog_tool + feedback_tool validation docs, Option C bifurcated shape), merged at `a681b7ec0`.
+- u-d-b PR `<TBD>` — S2936 close cascade (handoff + 00-START refresh + wrapper pin bump).
 
 **Code shipped this session:**
-- **4 new validation docs (T1b sweep template v1, all `pass`):** `execution_history_tool` (§6 primary anchor — 5 actions exercised live) + `learning_patterns_tool` (3 actions) + `recent_activity_tool` + `surgical_moves_status_tool`.
-- **Schema realignment fixes (3 tools in `pa_tool_schemas.py`):**
-  - `recent_activity_tool`: added `action` (summary/detailed) + `hours`; deprecated `limit`+`minutes`.
-  - `surgical_moves_status_tool`: added `action` + `hours` + `session_id`; deprecated `verbose`.
-  - `learning_patterns_tool`: expanded description to enumerate actions (cleared lint).
-- **Rigby Tool Gap Ledger entry #35** — schema-under-describes-handler drift class, 2/3 instances resolved this ship.
+- **2 new validation docs (T1b sweep template v1, both `pass`):**
+  - `blog_tool_validation.md` (8 actions: 5 read LIVE-VERIFIED + 3 mutation ANALYZED-NOT-EXECUTED, §5b Appendix A for `generate` async-fanout).
+  - `feedback_tool_validation.md` (4 actions: 2 read LIVE-VERIFIED + 2 mutation ANALYZED-NOT-EXECUTED, both `contained` per zero-receiver grep).
+- **Blast-radius classification (§5a 4-tier per Rigby taxonomy S2921):**
+  - `blog_tool.approve/reject`: **spreading** (or contained if `RIGBY_EVENT_INTAKE_ENABLED=False` — current default).
+  - `blog_tool.generate`: **external + cascading** — Celery `apply_async` + LLM invocation.
+  - `feedback_tool.submit/update`: **contained** — zero post_save receivers on UserFeedback.
+- **Rigby Tool Gap Ledger entries #36 + #37 + #38** — blog_tool Deliverable/SelfBlog approve-path gap + feedback_tool `.save()` write-scope drift + missing `dry_run` affordance across 5 batch-2 mutations.
 
 **Post-merge live-dispatch (per PLAYBOOK-7.4.4):**
-- PR #3506 recycled clean at `sha=628f7bde1917` via `make recycle-all`.
-- Rigby verified all 3 tools post-recycle:
-  1. `execution_history_tool action=stats` — envelope stable, `avg_time` nullability confirmed as documented.
-  2. `recent_activity_tool action=detailed hours=24` — **NEW schema-declared params work end-to-end**; `sections.spider_data.top_spiders` returned 15 entries (confirms `item_limit=15` behavior visible in the wire).
-  3. `surgical_moves_status_tool action=detailed hours=168` — NEW schema-declared params work; `total_sessions=6, decision_verdict=null` for all (data condition, documented).
+- PR #3508 recycled clean at `sha=a681b7ec09a1` via `make recycle-all` (surviving=none).
+- Rigby verified 4 tools post-recycle: `blog_tool action=stats` + `blog_tool action=recent days=7` + `feedback_tool action=stats` + `feedback_tool action=list limit=5`. Envelope shapes stable across all 4; `blog_tool.recent` shows data-condition drift (count 10→0, same total=204, envelope shape stable — documented behavior per validation doc §5).
 
-**Gap-map ratchet:** validated_full 83 → 87 (+4); untested 15 → 11 (-4); template pass 80 → 84 (+4). No regressions.
+**Gap-map ratchet:** validated_full 87 → 89 (+2); untested 11 → 9 (-2); template pass 84 → 86 (+2). No regressions.
 
 **Governance:** none this session. D6 moratorium unchanged. Zero new forbidden-entry candidates.
 
-**Rigby Tool Gap Ledger:** entry #35 added (schema-under-describes-handler drift, 2 resolved + 1 deferred + 1 sibling divergence future work). Reinforces Ledger #5 (systemic detection lint) as approaching third-instance promotion threshold.
+**Rigby Tool Gap Ledger:** 3 entries appended (#36/#37/#38). Ledger #5 systemic detection lint approaches third-instance promotion threshold — S2935 (schema-under-describes-handler drift) + S2936 (5 sub-drifts noted) reinforce.
 
-Full session context: `docs/handoffs/SESSION_2935_SLICE_6_BATCH_1.md`.
+Full session context: `docs/handoffs/SESSION_2936_SLICE_6_BATCH_2_CLOSE.md`.
 
 ---
 
-## S2936 open sequence — SLICE 6 BATCH 2 (mutation-heavy pair)
+## S2937 open sequence — SLICE 7 (singleton bucket)
 
-**Natural next action per S2935 close:** Slice 6 batch 2 covers the 2 mutation-heavy tools deferred at batch 1 per S2921 process hygiene (don't mix mutation-shape design with pure-read validate-under-substrate in one session).
+**Natural next action:** open Slice 7 — 9 tools across 8 handler files, no shared handler-file coupling. This is the final sweep bucket before the sweep closes.
 
-### First action — Slice 6 batch 2: `blog_tool` + `feedback_tool`
+### Slice 7 inventory (9 tools across 8 handler files)
 
-**Batch inventory:**
+| Tool | Handler file | Mutation posture (from schema) |
+|---|---|---|
+| `code_job_tool` | `core/services/td_handlers_code_jobs.py` (or similar) | TBD — read at T0 |
+| `employee_tool` | `core/services/td_handlers_employees.py` (or similar) | Likely has update/create actions |
+| `mission_verdict` | (same handler as employee_tool per S2934 A7 harness) | Mutation-heavy (records verdicts) |
+| `newsletter_tool` | `core/services/td_handlers_newsletter.py` | Likely mutation-bearing (create/publish) |
+| `railway_tool` | `core/services/td_handlers_railway.py` | External (Railway API) — probably risky |
+| `rigby_shift_brief_tool` | `core/services/td_handlers_rigby_shift_brief.py` | TBD — read at T0 |
+| `rigby_work_item` | `core/services/td_handlers_rigby_work_queue.py` | Mutation (queue ops) |
+| `spider_data_aggregation_tool` | `core/services/spider_data_aggregation_tool.py` | Read-only probable |
+| `zoom_out_tool` | `core/services/td_handlers_governance.py` | Read-only probable |
 
-| Tool | Actions | Mutation posture | Handler file |
-|---|---|---|---|
-| `blog_tool` | 8 (stats/list/detail/search/recent/approve/reject/generate) | MUTATION-HEAVY: `approve` (publish) + `reject` (archive) + `generate` (LLM+deliberation dispatch) | `core/services/td_handlers_content.py:213` (routes through `_handle_blog_direct` + `_handle_blog_query` + `_handle_content_review`) |
-| `feedback_tool` | 4 (list/stats/submit/update) | MUTATION: `submit` (INSERT UserFeedback) + `update` (UPDATE UserFeedback) | `core/services/td_handlers_content.py:3587` (`_handle_feedback`) |
+### First action — Slice 7 batch composition at T0 SIGN
 
-**Methodology anchors:**
+**S2937 first action:** read all 8 handler files (or first 3-4 by hazard classification) + surface batch composition options to Rigby.
 
-- **T1b template §5a 4-tier blast-radius taxonomy (added S2921)** — mandatory for tools with mutation actions declared as in-scope OR ship-deferred. Both tools need §5a tables classifying each mutation action (contained/spreading/cascading/external).
-- **Grep discipline for `contained` claims:** signal-chain grep (`post_save.connect` / `@receiver`) + FK-cascade check. First mis-classification post-merge = Ledger candidate.
-- **Batch shape decision at S2936 T0 SIGN:** three canonical shapes per S2907 Fold E — gated-write dry_run-only is likely the right fit for this batch (both tools cross into DB write + LLM dispatch). Rigby picks at T0.
-- **Prior Slice 5 batch 4 close artifact for pattern:** `docs/audits/pa_tools/substrate/slice_5_close_artifact.md` — Slice 5 was agent-forwarding single-shared-handler shape; Slice 6 batch 2 is per-tool multi-action + mutation containment. Different but the §5a authoring guidance still applies.
+Three canonical shapes per S2907 Fold E:
+1. **Split by handler file** — 8 batches over ~4 sessions (each session covers 2-3 tools).
+2. **Split by mutation posture** — 2 batches: pure-read subset (spider_data_aggregation + zoom_out + rigby_shift_brief likely) then mutation subset (railway + employee + mission_verdict + newsletter + rigby_work_item + code_job).
+3. **Split by risk posture** — touch railway (external Railway API) + employee/mission_verdict (governance-adjacent) last; ship the safe read-only tools first.
 
-**S2936 open sequence:**
+**Recommended: Option 2 (mutation-posture split)** — matches Slice 6 batch-1/batch-2 pattern (pure-read first, mutation second). Rigby picks at T0 SIGN.
 
-1. Read the two mutation handlers in full — `_handle_blog_direct` at `td_handlers_content.py:213` (routes to `_handle_blog_query` + `_handle_content_review`) + `_handle_feedback` at `:3587`.
-2. Grep-verify `post_save` / `@receiver` on `UserFeedback` + `SelfBlog` / `Deliverable` (blog_tool downstream) to classify mutation blast radius correctly.
-3. Route batch composition + shape decision (uniform gated-write / mixed / other) to Rigby at S2936 T0 SIGN — joint AGREE, then Chris yes/no per `feedback_claude_rigby_agree_first_chris_yes_no`.
-4. Execute the batch (2 docs + §5a tables for each mutation action + §5b Appendix A if async fan-out surfaces).
-5. Slice 6 CLOSE at end of S2936 (batch 2 = final 2 tools). Slice 6 close-artifact optional depending on structural pattern surfaced.
+### S2937 open sequence
+
+1. Read all 8 handler files (or first 3-4 by hazard classification).
+2. Grep signal receivers for the models each tool touches (mission_verdict → OpsRun/OpsRunEvent, railway → Railway API state, etc.).
+3. Route batch composition + shape decision to Rigby at S2937 T0 SIGN — joint AGREE, then Chris yes/no per `feedback_claude_rigby_agree_first_chris_yes_no`.
+4. Execute the batch (2-4 docs + §5a tables where mutations declared).
+5. Slice 7 may close in 1-2 sessions depending on batch shape.
 
 ### Alternative next actions (not blocked — still available if Chris redirects)
 
-- **Slice 7 (singleton bucket)** — 7 tools across 7 handler files: `code_job_tool` / `employee_tool` + `mission_verdict` / `newsletter_tool` / `railway_tool` / `rigby_shift_brief_tool` / `rigby_work_item` / `spider_data_aggregation_tool` / `zoom_out_tool`. Bundle after Slice 6 batch 2 closes.
 - **(A8) Signal Dispatches "Manual dispatch" button** (Rigby S2934 zoom-out fold — ~30 min).
 - **(A9) Fourth signal-dispatch rule** — `demand_spike` (250 clusters) or `skill_demand` (131 clusters). One-line rule + agent verification.
 - **(A6) SignalCluster promotion audit** — only 0.58% of clusters are active; investigate `SignalAggregationService`.
 - **(B) Slice 5-hardening** — 3-4 executable invariants deferred at S2928 fork A.
 - **(D) Docs restructuring arc** — unblocked at S2800, still queued.
+- **(E) Dry-run substrate design for the 5 batch-2 mutations (Ledger #38)** — enables live mutation verification of `blog_tool.approve/reject/generate` + `feedback_tool.submit/update`.
 
 ---
 
-## What's forbidden at S2935 (D6 MORATORIUM still in force)
+## What's forbidden at S2936 (D6 MORATORIUM still in force)
 
-All prior forbidden entries carry forward. **S2935 new forbidden entries:** none. Clean session.
+All prior forbidden entries carry forward. **S2936 new forbidden entries:** none. Clean session.
 
 ---
 
 ## What's queued but deferred (do NOT open unless Chris directs)
 
-- **`execution_history_tool` `hours` schema declaration** — ~3 min follow-up PR. Ledger entry #35 references. Bundle with Slice 6 batch 2 close if convenient.
+- **Ledger #36 (blog_tool Deliverable/SelfBlog approve-path fix)** — extend `_handle_content_review` publish/archive branches to fall back to SelfBlog. Correctness bug candidate. Bundle with future blog_tool follow-up.
+- **Ledger #37 (feedback_tool.update `.save()` → update_fields)** — ~1-line fix. Bundle with any future feedback_tool follow-up or dry_run substrate work.
+- **Ledger #38 (dry_run affordance across 5 batch-2 mutations)** — substrate design session. Blocks live mutation verification of Slice 6 batch 2 mutations.
+- **`execution_history_tool` `hours` schema declaration** — ~3 min follow-up PR. Ledger entry #35 references. Bundle with next content_tool touch.
 - **Invalid-action non-gating consistency across Slice 6 handlers** — `recent_activity_tool` + `surgical_moves_status_tool` don't `raise ValueError` on unknown actions (unlike siblings). Ledger #35 references.
-- **Schema-vs-handler param-set consistency lint in `pa_tools_gap_map.py`** — Ledger #5 systemic detection lint (S2845) + reinforced by S2935 ship. Third-instance promotion threshold approaching.
+- **Schema-vs-handler param-set consistency lint in `pa_tools_gap_map.py`** — Ledger #5 systemic detection lint (S2845) + reinforced by S2935 + S2936 ships. **Third-instance promotion threshold approached** — multiple drifts documented in S2936: `blog_tool.recent` days default, invalid-action message drift, `feedback_tool` unused `target_id`+`rating`, silent `target_type` coercion, non-validated `new_status`.
 - **A8 — Signal Dispatches "Manual dispatch" UI button** — Rigby S2934 zoom-out fold.
 - **A6 — SignalCluster promotion audit** — substrate investigation.
 - **CompetitorAnalysisAgent hardening candidate** — S2929 deferred.
@@ -120,11 +131,12 @@ All prior forbidden entries carry forward. **S2935 new forbidden entries:** none
 **Slice 3 — `td_handlers_core` (22 tools):** CLOSED at S2917 (22/22).
 **Slice 4 — `td_handlers_gateway` (17 tools):** CLOSED at S2924 (17/17).
 **Slice 5 — `tool_dispatcher` (14 tools):** CLOSED at S2928 (14/14). ✅
-**Slice 6 — `td_handlers_content` (6 tools):** **batch 1 CLOSED at S2935 (4/6)** — batch 2 open with `blog_tool` + `feedback_tool`.
+**Slice 6 — `td_handlers_content` (6 tools):** **CLOSED at S2936 (6/6, batch 1 + 2).** ✅
+**Slice 7 — singleton bucket (9 tools across 8 handler files):** **OPEN at S2937.**
 
-**Total remaining tools to close:** **11 across 8 handler files** (down from 15 at S2934 close).
+**Total remaining tools to close:** **9 across 8 handler files** (down from 11 at S2935 close).
 
-**Substrate arcs CLOSED at S2935:** none. S2935 shipped 1 sweep-progress PR (validation quartet + schema-realignment) + Ledger entry #35.
+**Substrate arcs CLOSED at S2936:** Slice 6 (via batch 2 shipping the final 2/6 tools). S2936 shipped 1 sweep-progress PR + 3 Ledger entries.
 
 ---
 
@@ -140,9 +152,9 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2935 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2936 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2935: zero A4 spend** — pure substrate progress (Slice 6 batch 1 validation ship).
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2936: zero A4 spend** — pure substrate progress (Slice 6 batch 2 CLOSE ship).
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
 3. **Capability claims:** (a)…(uu) as ratified at S2887 close. No additions.
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
@@ -151,10 +163,11 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2935)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2936)
 
 See:
-- **S2935 handoff (current):** `docs/handoffs/SESSION_2935_SLICE_6_BATCH_1.md`
+- **S2936 handoff (current):** `docs/handoffs/SESSION_2936_SLICE_6_BATCH_2_CLOSE.md`
+- **S2935 handoff:** `docs/handoffs/SESSION_2935_SLICE_6_BATCH_1.md`
 - **S2934 handoff:** `docs/handoffs/SESSION_2934_SIGNAL_DISPATCH_OBSERVABILITY.md`
 - **S2933 handoff:** `docs/handoffs/SESSION_2933_A3_SIGNAL_DISPATCH_V1.md`
 - **S2932 handoff:** `docs/handoffs/SESSION_2932_A2_CONTENT_STRATEGY_CONSOLIDATION.md`
@@ -167,6 +180,7 @@ See:
 - **S2925 handoff:** `docs/handoffs/SESSION_2925_SLICE_5_BATCH_1.md`
 - **Slice 5 CLOSE artifact:** `docs/audits/pa_tools/substrate/slice_5_close_artifact.md`
 - **T1b canonical template file:** `docs/audits/pa_tools/substrate/_TEMPLATE_per_tool_validation.md`
+- **S2936 validation docs:** `docs/research/tools/validation/{blog,feedback}_tool_validation.md`
 - **S2935 validation docs:** `docs/research/tools/validation/{execution_history,learning_patterns,recent_activity,surgical_moves_status}_tool_validation.md`
 - **S2929 regression test:** `core/tests/test_base_business_research_agent_synthesis_gate.py` (5 tests, all pass)
 - **S2930 Agent Runs endpoint test:** `core/tests/test_agent_runs_list_endpoint.py` (7 tests, all pass)
@@ -181,8 +195,8 @@ See:
 - **S2934 A4 tab component:** `frontend/src/pages/workspace/tabs/SignalDispatchesTab.tsx`
 - **S2934 test file:** `core/tests/test_s2934_signal_dispatch_harness.py` (13 tests, all pass)
 - **BaseBusinessResearchAgent content-shape FAIL Fold:** engineering item deliverable `5703a6c8-9bfa-4b11-81cc-baff7c90b3d5`.
-- **Rigby Tool Gap Ledger deliverable:** `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` (entry #35 added S2935 — schema-under-describes-handler drift class).
-- **PA tools sweep methodology:** `docs/audits/PA_TOOLS_GAP_MAP.md` + `docs/PA_TOOL_AUDIT.md` (both auto-generated) + `docs/research/tools/validation/*.md` (104 per-tool validation docs post-S2935).
+- **Rigby Tool Gap Ledger deliverable:** `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` (entries #36 + #37 + #38 added S2936 — blog_tool Deliverable/SelfBlog approve-path gap + feedback_tool `.save()` write-scope drift + no `dry_run` affordance across 5 mutations).
+- **PA tools sweep methodology:** `docs/audits/PA_TOOLS_GAP_MAP.md` + `docs/PA_TOOL_AUDIT.md` (both auto-generated) + `docs/research/tools/validation/*.md` (106 per-tool validation docs post-S2936).
 - **Parent-workspace multi-Claude rulebook:** `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`
 
 For older session history (S1-S2849), see `docs/handoffs/` + `docs/research/OPEN_ARCS.md`.
