@@ -1,14 +1,14 @@
-# `content_tool` — Validation Report (S2943)
+# `content_tool` — Validation Report (S2944)
 
 **Tool:** `content_tool`
 **Schema:** `core/services/pa_tool_schemas.py:4117-4217`
 **Handler:** `core/services/td_handlers_content.py:4577-4919` (`_handle_content`)
 **Register site:** `core/services/tool_dispatcher.py:1122`
-**Session:** S2943 (Slice 6 close — td_handlers_content.py sweep; PR-A docs-only, PR-B code + live-verify)
-**HEAD at validation:** `11745a9bd` (2026-07-24, PR-A merged) → PR-B extends
-**Ship shape:** Doc + code + live-verify (S2796 shape extended with S2942-aligned dry_run evidence). Gateway tool — most action families delegate to sibling tools with dedicated validation docs.
-**Category upgrade target:** `validated_partial` → `validated_full` (PR-A) + Metric B `unknown` → `dry_run_supported` (PR-B, this ship)
-**Rigby SIGN:** S2943 T1 SIGN AGREE (PR-A) — reconciliation confirmed via 4 `repo_tool` tool_runs. PR-B live-verified via Rigby dispatch (21ms, 5/5 envelope fields confirmed; see §6).
+**Session:** S2944 (Ledger #38 batch 3 — bundled `generate_newsletter` + `bulk_archive` dry_run alignment). Extends S2943 (Slice 6 close + `bulk_archive_published` alignment) which extended S2796 sweep shape.
+**HEAD at validation:** `e0e15561e` (2026-07-24, S2943 close cascade merged) → S2944 PR extends
+**Ship shape:** Doc + code + live-verify (S2796 shape extended with S2942-aligned dry_run evidence for two additional mutations). Gateway tool — most action families delegate to sibling tools with dedicated validation docs.
+**Category upgrade target:** unchanged (`validated_full` + Metric B `dry_run_supported` already earned at S2943). S2944 adds two additional actions to the per-action dry_run-aligned count (2/3 mutations now pattern-aligned).
+**Rigby SIGN:** S2944 T1 SIGN AGREE (Option B bundle) — reconciliation confirmed via 6 `repo_tool` tool_runs; pre-existing schema/handler default-mismatch on generate_newsletter surfaced as record-only. Live-verified via Rigby dispatch (see §6.5).
 **Template variant:** sweep
 **Template version:** v1
 **Execution mode:** live
@@ -45,9 +45,9 @@ documented at §5a mutation containment.
 - `content_reject` — **mutation (archive w/ feedback)** — delegated to `_handle_content_review`; dry_run-supported at `blog_tool.reject` per S2942 Ledger #38.
 - `content_complete` — **mutation** — terminal-state alias (Session 1170); delegated to `_handle_content_review` `complete` branch. Analyzed only.
 - `generate_blog` — **mutation (external)** — delegated to `_handle_generate_blog`; dry_run-supported at `blog_tool.generate` per S2942 Ledger #38.
-- `generate_newsletter` — **mutation (external)** — Celery `apply_async` to `generate_operator_edge_newsletter`; native `dry_run=true` returns cluster preview without LLM call (td_handlers_content.py:4707-4721).
-- `bulk_archive` — **mutation (spreading)** — delegated to `_handle_bulk_archive`; `dry_run=TRUE` default + `confirm` gate (S1228 PR-A).
-- `bulk_archive_published` — **mutation (cascading)** — admin-only category-scoped archive; delegated to `_handle_bulk_archive_published`. Requires `categories + created_before + confirm`. **S2943 PR-B candidate for dry_run scoreboard-flip.**
+- `generate_newsletter` — **mutation (external)** — Celery `apply_async` to `generate_operator_edge_newsletter`; native `dry_run=true` returns cluster preview + S2942-aligned `no_writes` / `would_action=dispatch_celery` envelope without LLM call (td_handlers_content.py:4707-4732, S2944 batch 3 alignment).
+- `bulk_archive` — **mutation (spreading)** — delegated to `_handle_bulk_archive`; `dry_run=TRUE` default via `require_write_authorization` + S2942-aligned `no_writes` / `would_action=archive` envelope (td_handlers_content.py:5044-5057, S2944 batch 3 alignment).
+- `bulk_archive_published` — **mutation (cascading)** — admin-only category-scoped archive; delegated to `_handle_bulk_archive_published`. Requires `categories + created_before + confirm`; S2942-aligned dry_run envelope shipped S2943.
 - `run_cleanup` — **mutation (external)** — Celery `apply_async` to `cleanup_stale_content`; no dry_run affordance on the async path.
 - `deliverable_list` — **read** — delegated to `_handle_deliverables`; covered by `deliverable_tool.list`.
 - `deliverable_detail` — **read** — delegated to `_handle_deliverables`; covered by `deliverable_tool.detail`.
@@ -155,13 +155,13 @@ Response shape:
 | `content_reject` | `cascading` | delegates to blog_tool.reject → status flip + feedback persistence + audit-log signal | dry_run-supported at delegated tool (S2942) |
 | `content_complete` | `spreading` | delegates to `_handle_content_review` complete branch → status flip + DeliverableEvent row | not currently dry_run-gated at content_tool surface; delegated coverage TBD |
 | `generate_blog` | `external` | delegates to blog_tool.generate → deliberation pipeline (LLM + Celery fan-out) | dry_run-supported at delegated tool (S2942 Ledger #38) |
-| `generate_newsletter` | `external` | Celery `apply_async` to `generate_operator_edge_newsletter` → LLM call + evidence gather | native `dry_run=true` returns cluster preview without LLM call (td_handlers_content.py:4707-4721) |
-| `bulk_archive` | `spreading` | user-scoped `.update()` over ≤`cap` rows (default 500, max 2000) | dry_run=TRUE default + confirm gate |
-| `bulk_archive_published` | `cascading` | admin-only category-scoped `.update()` on published rows | dry_run gate documented in schema but handler behavior needs live-verify at PR-B (S2943 candidate) |
+| `generate_newsletter` | `external` | Celery `apply_async` to `generate_operator_edge_newsletter` → LLM call + evidence gather | S2944 batch 3: `dry_run=true` returns cluster preview + S2942 envelope (`would_action=dispatch_celery`, `would_task=generate_operator_edge_newsletter`, `no_writes=true`) without LLM call |
+| `bulk_archive` | `spreading` | user-scoped `.update()` over ≤`cap` rows (default 500, max 2000) | S2944 batch 3: `dry_run=TRUE` default via `require_write_authorization` + S2942 envelope (`would_action=archive`, `would_change_to=archived`, `would_archive_count=N`, `no_writes=true`) |
+| `bulk_archive_published` | `cascading` | admin-only category-scoped `.update()` on published rows | S2943 batch 2: `dry_run` gate + S2942 envelope (`would_action=archive_published`, `would_change_to=archived`, `would_archive_count=N`, `no_writes=true`) |
 | `run_cleanup` | `external` | Celery `apply_async` to `cleanup_stale_content` | no dry_run affordance on async path; async task itself may have dry_run |
 | `deliverable_save`/`create`/`update`/`append`/`export_pdf` | see `deliverable_tool_validation.md` | delegated to deliverables handler | per-action coverage in sibling doc |
 
-**S2943 PR-B candidate:** `bulk_archive_published` is the natural next dry_run-scoreboard target after S2942 (sibling of already-supported `bulk_archive`). See PR-B scope in ratification envelope.
+**S2944 batch 3:** `bulk_archive` + `generate_newsletter` alignment closes the last two content_tool mutations that predated the S2942 envelope contract. `run_cleanup` remains the only mutation without a dry_run affordance (async-only Celery dispatch; would require a new dry_run branch, deferred as separate ledger candidate).
 
 ## 5b. First-hop dependency proof
 
@@ -280,12 +280,100 @@ Operators editing `_handle_content` should also review sibling handlers for shar
 
 ### 6.4 Analyzed-only actions (not exercised live this ship)
 
-Native-family read actions (`podcasts`/`series`/`content_studio`/`initiative_doc`) are analyzed from code + adjacent existing evidence; live-verify deferred as low-risk (pure ORM reads, no writes). Native async `generate_newsletter` has native `dry_run=true` short-circuit in existing code (td_handlers_content.py:4707-4721) but not live-verified this ship — candidate for a future Ledger #38 batch.
+Native-family read actions (`podcasts`/`series`/`content_studio`/`initiative_doc`) are analyzed from code + adjacent existing evidence; live-verify deferred as low-risk (pure ORM reads, no writes). `run_cleanup` async dispatch (Celery `apply_async` to `cleanup_stale_content`) has no dry_run affordance; adding one is deferred as a separate ledger candidate.
+
+### 6.5 S2944 Ledger #38 batch 3 — `generate_newsletter` + `bulk_archive` alignment
+
+**Dispatch context:** Rigby PA route via `tools/pa_local.sh` (S2944 wrapper pin `pa-ea0a625600184be2`), post `make celery-recycle`, HEAD at `e0e15561e` + this PR's handler changes loaded in worker.
+
+#### 6.5.a `generate_newsletter` with `dry_run=true`
+
+**Payload:** `{"action":"generate_newsletter","dry_run":true,"hours":72,"cluster_limit":3}`
+
+**Response (raw from `content_tool` handler, 4164ms — evidence-gather runs real DB queries over signal clusters):**
+```json
+{
+  "gateway": "content_tool",
+  "action": "generate_newsletter",
+  "dry_run": true,
+  "mode": "dry_run",
+  "would_action": "dispatch_celery",
+  "would_task": "generate_operator_edge_newsletter",
+  "no_writes": true,
+  "clusters_found": 5,
+  "top_clusters": ["Iran, Trump emerging trend", "Anthropic, Opus opportunity window", "Openai, Face opportunity window"],
+  "evidence_preview": "### Cluster: Iran, Trump emerging trend (type: trend_emergence, confidence: 100%, signals: 15)\n...",
+  "message": "dry_run=true: found 5 clusters. No Celery task enqueued and no writes performed. Run with dry_run=false to generate the newsletter."
+}
+```
+
+**S2942-alignment check (4/4 sentinel fields present):**
+- `dry_run: true` ✓
+- `would_action: "dispatch_celery"` ✓
+- `would_task: "generate_operator_edge_newsletter"` ✓
+- `no_writes: true` ✓
+
+**Pre-existing preview data preserved:** `clusters_found: 5`, `top_clusters` (3 non-empty entries), `evidence_preview` (non-empty markdown block).
+
+**No-dispatch guarantee:** confirmed at handler level (short-circuits before the `generate_operator_edge_newsletter.apply_async(...)` call at td_handlers_content.py:4733). Corroborated by regression test `test_dry_run_true_returns_s2942_envelope` in `core/tests/test_s2944_dry_run_batch_3.py` (mocks `apply_async` and asserts `not_called`).
+
+#### 6.5.b `bulk_archive` with `dry_run=true`
+
+**Payload:** `{"action":"bulk_archive","category":"s2944_live_verify_nonexistent","statuses":["draft"]}`
+
+**Response (raw from `content_tool` handler, 33ms):**
+```json
+{
+  "action": "bulk_archive",
+  "dry_run": true,
+  "total_matching": 0,
+  "cap": 500,
+  "will_archive": 0,
+  "filters": {"statuses": ["draft"], "type": "", "category": "s2944_live_verify_nonexistent", "agent": "", "created_before": "", "created_after": ""},
+  "breakdown": {"by_type": [], "by_category": [], "by_agent": [], "by_status": []},
+  "sample_items": [],
+  "would_action": "archive",
+  "would_change_to": "archived",
+  "would_archive_count": 0,
+  "no_writes": true,
+  "message": "dry_run=true: 0 items would be archived. No writes performed. Set dry_run=false AND confirm=true to execute."
+}
+```
+
+**S2942-alignment check (5/5 sentinel fields present):**
+- `dry_run: true` ✓
+- `would_action: "archive"` ✓
+- `would_change_to: "archived"` ✓
+- `would_archive_count: 0` ✓
+- `no_writes: true` ✓
+
+**No-writes guarantee:** confirmed at handler level (short-circuits before the `Deliverable.objects.filter(id__in=...).update(status='archived', ...)` call at td_handlers_content.py:5062). Corroborated by regression test `test_dry_run_true_default_returns_would_envelope` in `core/tests/test_s2944_dry_run_batch_3.py`.
+
+**Autofill observation (record-only, S2944 zoom-out surface):** first Rigby dispatch WITHOUT explicit `statuses` triggered `invalid_params` — GPT-5.2 autofilled `statuses: []` (empty list) instead of omitting the key, so `payload.get('statuses', ['ready','draft','completed'])` returned `[]` rather than the default. Handler robustness candidate: coerce empty list back to default before the `safe_statuses` gate. Deferred as separate ledger candidate.
+
+#### 6.5.c Regression coverage (S2944)
+
+`core/tests/test_s2944_dry_run_batch_3.py` (7 tests, all pass):
+
+- **generate_newsletter (3 tests):**
+  - `test_dry_run_true_returns_s2942_envelope` — all 4 sentinel fields + `apply_async` not called
+  - `test_dry_run_true_preserves_evidence_preview` — existing `clusters_found` / `top_clusters` / `evidence_preview` still present
+  - `test_dry_run_false_dispatches_celery` — regression sanity that non-dry-run still enqueues
+- **bulk_archive (4 tests):**
+  - `test_dry_run_true_default_returns_would_envelope` — envelope shape + no writes
+  - `test_dry_run_true_explicit_returns_would_envelope` — same when `dry_run=True` explicit
+  - `test_dry_run_false_without_confirm_stays_safe` — belt-and-suspenders (`require_write_authorization`) coerces back to dry_run
+  - `test_dry_run_false_with_confirm_actually_archives` — real archive lands (regression sanity)
+
+**Combined S2942 + S2943 + S2944 suite:** 24 tests, 1.081s, all pass. Gap-map `--check` exits 0.
+
+#### 6.5.d Pre-existing record-only observation
+
+Rigby T1 SIGN surfaced a pre-existing schema/handler default mismatch: the shared `dry_run` schema description says "DEFAULT: true" for `generate_newsletter` (pa_tool_schemas.py:4190), but the handler treats missing as `False` (td_handlers_content.py:4705). S2944 preserves the pre-existing behavior — flipping the default is a separate ledger candidate that would need per-caller regression review.
 
 ## Related
 
 - **Sibling tools with dedicated docs:** `blog_tool_validation.md`, `deliverable_tool_validation.md`, `feedback_tool_validation.md`, `execution_history_tool_validation.md`, `learning_patterns_tool_validation.md`, `recent_activity_tool_validation.md`, `surgical_moves_status_tool_validation.md`.
-- **Ledger #38 (dry_run MVP):** `docs/audits/PA_TOOLS_GAP_MAP.md` + S2942 close handoff. Content_tool's mutation actions inherit dry_run coverage from delegated targets where flagged.
-- **S2943 PR-B candidate:** `bulk_archive_published` mutation-safety scoreboard flip (sibling of already-supported `bulk_archive`). See S2943 ratification envelope.
+- **Ledger #38 (dry_run alignment arc):** `docs/audits/PA_TOOLS_GAP_MAP.md` + S2942 close handoff. Content_tool's mutation actions have native alignment (S2943 bulk_archive_published, S2944 bulk_archive + generate_newsletter) or inherit dry_run coverage from delegated targets where flagged (blog_tool, feedback_tool, deliverable_tool).
 - **Substrate docs:** `docs/audits/pa_tools/substrate/T1b_ship_shape_s2904.md` (template ratification); `_TEMPLATE_per_tool_validation.md` v1 template.
-- **Prior ratifications:** S2942 close (Ledger #38 + #41), S2728 (deliverable_tool DEFECT-PATCHED-VERIFIED batch).
+- **Prior ratifications:** S2944 (Ledger #38 batch 3), S2943 (Slice 6 close + Ledger #38 batch 2), S2942 close (Ledger #38 + #41), S2728 (deliverable_tool DEFECT-PATCHED-VERIFIED batch).
