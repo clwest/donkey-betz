@@ -2317,39 +2317,54 @@ class GatewayHandlersMixin:
                     },
                 }
 
+            # S2925 Ledger #33 fix: UserSkill table was DeleteModel'd by migration
+            # 0229 (Feb 2026). Skills now live on ExtendedUserProfile.skills (JSON
+            # list) — same source read by the `profile` action above. Broader
+            # latent-bug sweep (5 other services still import UserSkill) filed
+            # as separate Ledger entry — this PR restores profile_tool only.
             if action == 'skills':
-                from core.models_user_learning import UserSkill
-                qs = UserSkill.objects.order_by('-confidence', '-last_demonstrated')
-                if user_id:
-                    qs = qs.filter(user_id=user_id)
-                skills = qs[:50]
+                from core.models import ExtendedUserProfile
+                profile = ExtendedUserProfile.objects.filter(user_id=user_id).first() if user_id else None
+                raw = (profile.skills or []) if profile else []
+                skills = []
+                for s in raw[:50]:
+                    if isinstance(s, dict):
+                        skills.append({
+                            'skill_name': s.get('name') or s.get('skill_name') or '',
+                            'category': s.get('category') or '',
+                            'proficiency_level': s.get('proficiency') or s.get('proficiency_level') or '',
+                            'years': s.get('years'),
+                        })
+                    elif isinstance(s, str):
+                        skills.append({'skill_name': s, 'category': '', 'proficiency_level': '', 'years': None})
                 return {
                     'action': 'skills',
                     'count': len(skills),
-                    'skills': [{
-                        'id': str(s.id),
-                        'skill_name': s.skill_name,
-                        'category': s.category or '',
-                        'proficiency_level': s.proficiency_level or '',
-                        'evidence_count': s.evidence_count or 0,
-                        'confidence': float(s.confidence) if s.confidence else None,
-                        'last_demonstrated': s.last_demonstrated.isoformat() if s.last_demonstrated else None,
-                    } for s in skills],
+                    'skills': skills,
+                    'source': 'extended_user_profile.skills',
                 }
 
             if action == 'learning_summary':
-                from core.models_user_learning import UserSkill
-                from django.db.models import Count, Avg
-                qs = UserSkill.objects.all()
-                if user_id:
-                    qs = qs.filter(user_id=user_id)
-                agg = qs.aggregate(avg_proficiency=Avg('confidence'))
-                category_counts = dict(qs.values_list('category').annotate(c=Count('id')).values_list('category', 'c'))
+                from core.models import ExtendedUserProfile
+                from collections import Counter
+                profile = ExtendedUserProfile.objects.filter(user_id=user_id).first() if user_id else None
+                raw = (profile.skills or []) if profile else []
+                by_category = Counter()
+                total_years = 0
+                years_count = 0
+                for s in raw:
+                    if isinstance(s, dict):
+                        by_category[s.get('category') or 'uncategorized'] += 1
+                        y = s.get('years')
+                        if isinstance(y, (int, float)):
+                            total_years += y
+                            years_count += 1
                 return {
                     'action': 'learning_summary',
-                    'total_skills': qs.count(),
-                    'avg_confidence': float(agg['avg_proficiency'] or 0),
-                    'by_category': category_counts,
+                    'total_skills': len(raw),
+                    'by_category': dict(by_category),
+                    'avg_years': (total_years / years_count) if years_count else 0,
+                    'source': 'extended_user_profile.skills',
                 }
 
             # Gap 9: User preferences CRUD
