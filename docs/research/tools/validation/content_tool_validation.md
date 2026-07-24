@@ -4,13 +4,15 @@
 **Schema:** `core/services/pa_tool_schemas.py:4117-4217`
 **Handler:** `core/services/td_handlers_content.py:4577-4919` (`_handle_content`)
 **Register site:** `core/services/tool_dispatcher.py:1122`
-**Session:** S2943 (Slice 6 close — td_handlers_content.py sweep, PR-A docs-only)
-**HEAD at validation:** `adbae9074` (2026-07-24)
-**Ship shape:** Doc-only (S2796 shape). Gateway tool — most action families delegate to sibling tools with dedicated validation docs.
-**Category upgrade target:** `validated_partial` → `validated_full`
-**Rigby SIGN:** S2943 T1 SIGN AGREE — reconciliation confirmed only 2 tools in Slice 6 need doc work post-S2942; content_tool is one of them (tool_runs: 4 repo_tool searches verified gap-map classifier logic + existing doc surface).
+**Session:** S2943 (Slice 6 close — td_handlers_content.py sweep; PR-A docs-only, PR-B code + live-verify)
+**HEAD at validation:** `11745a9bd` (2026-07-24, PR-A merged) → PR-B extends
+**Ship shape:** Doc + code + live-verify (S2796 shape extended with S2942-aligned dry_run evidence). Gateway tool — most action families delegate to sibling tools with dedicated validation docs.
+**Category upgrade target:** `validated_partial` → `validated_full` (PR-A) + Metric B `unknown` → `dry_run_supported` (PR-B, this ship)
+**Rigby SIGN:** S2943 T1 SIGN AGREE (PR-A) — reconciliation confirmed via 4 `repo_tool` tool_runs. PR-B live-verified via Rigby dispatch (21ms, 5/5 envelope fields confirmed; see §6).
 **Template variant:** sweep
 **Template version:** v1
+**Execution mode:** live
+**Mutation safety:** dry_run_supported
 
 ---
 
@@ -211,12 +213,74 @@ Operators editing `_handle_content` should also review sibling handlers for shar
 
 ## 6. Evidence
 
-**Ship shape:** doc-only. No live-dispatch exercise this ship. content_tool's mutation surface is covered via sibling-tool live-verify (`blog_tool` + `deliverable_tool` docs already carry S2728 + S2942 live evidence for the delegated code paths). Native-family read actions (`podcasts`/`series`/`content_studio`/`initiative_doc`) are analyzed from code + adjacent existing evidence; live-verify deferred as low-risk (pure ORM reads, no writes).
+### 6.1 PR-B live-verify — `bulk_archive_published` with `dry_run=true` (S2943)
 
-**Prior evidence pointers:**
+**Dispatch context:** Rigby PA route via `tools/pa_local.sh` (pin `pa-5e0a153475dd44f7`), post `make celery-recycle`, HEAD at `11745a9bd` + this PR's handler changes loaded in worker.
+
+**Payload:**
+```json
+{
+  "action": "bulk_archive_published",
+  "categories": ["s2943_live_verify_nonexistent"],
+  "created_before": "2026-07-24T00:00:00Z",
+  "dry_run": true
+}
+```
+
+**Response (raw from `content_tool` handler, 21ms):**
+```json
+{
+  "action": "bulk_archive_published",
+  "dry_run": true,
+  "total_matching": 0,
+  "cap": 500,
+  "will_archive": 0,
+  "filters": {
+    "status": "published",
+    "categories": ["s2943_live_verify_nonexistent"],
+    "created_before": "2026-07-24T00:00:00Z",
+    "agent": ""
+  },
+  "breakdown": {"by_type": [], "by_category": [], "by_agent": []},
+  "sample_items": [],
+  "would_action": "archive_published",
+  "would_change_to": "archived",
+  "would_archive_count": 0,
+  "no_writes": true,
+  "message": "dry_run=true: 0 published items would be archived. No writes performed. Set dry_run=false and confirm=true to execute."
+}
+```
+
+**S2942-alignment check (5/5 fields present):**
+- `dry_run: true` ✓
+- `would_action: "archive_published"` ✓
+- `would_change_to: "archived"` ✓
+- `would_archive_count: 0` ✓
+- `no_writes: true` ✓
+
+**No-writes guarantee:** confirmed at handler level (short-circuits before the `Deliverable.objects.filter(...).update(...)` call at td_handlers_content.py:5199). Corroborated by regression tests in `core/tests/test_s2943_bulk_archive_published_dry_run.py` (6/6 pass, 0.150s).
+
+### 6.2 Regression coverage (S2943)
+
+`core/tests/test_s2943_bulk_archive_published_dry_run.py` (6 tests):
+- `test_dry_run_true_default_returns_would_envelope` — dry_run defaults TRUE; all 5 S2942 fields; 0 rows archived
+- `test_dry_run_true_explicit_returns_would_envelope` — same when `dry_run=True` explicit
+- `test_dry_run_false_without_confirm_refuses` — belt-and-suspenders (S1228 PR-A) still fires
+- `test_dry_run_false_with_confirm_actually_archives` — real archive lands (regression sanity)
+- `test_non_admin_denied` — permission gate holds
+- `test_blog_type_blocked` — `types=['blog']` refused
+
+**Combined S2942 + S2943 suite:** 27 tests, 0.364s, all pass. Gap-map `--check` exits 0.
+
+### 6.3 Prior evidence pointers (sibling tools)
+
 - `blog_tool_validation.md` §6 — S2942 live-verify of `blog_tool.approve` + `blog_tool.reject` + `blog_tool.generate` with `dry_run=true`.
 - `deliverable_tool_validation.md` §6 (implicit) — S2728 DEFECT-PATCHED-VERIFIED trace covering 16-action deliverable surface.
 - `feedback_tool_validation.md` §6 — S2942 live-verify of `feedback_tool.submit` with `dry_run=true`.
+
+### 6.4 Analyzed-only actions (not exercised live this ship)
+
+Native-family read actions (`podcasts`/`series`/`content_studio`/`initiative_doc`) are analyzed from code + adjacent existing evidence; live-verify deferred as low-risk (pure ORM reads, no writes). Native async `generate_newsletter` has native `dry_run=true` short-circuit in existing code (td_handlers_content.py:4707-4721) but not live-verified this ship — candidate for a future Ledger #38 batch.
 
 ## Related
 
