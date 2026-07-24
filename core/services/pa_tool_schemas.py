@@ -640,7 +640,16 @@ PA_TOOL_SCHEMAS = [
                 "comment": {"type": "string", "description": "Feedback comment (required for submit)"},
                 "id": {"type": "string", "description": "Feedback UUID (for update)"},
                 "new_status": {"type": "string", "description": "New status (for update): open, acknowledged, in_progress, addressed, wont_fix"},
+                "notes": {"type": "string", "description": "Resolution notes (for update)"},
                 "limit": {"type": "integer", "description": "Max items (default 10, for list)"},
+                "dry_run": {
+                    "type": "boolean",
+                    "description": (
+                        "S2942 Ledger #38 MVP: For submit/update, preview the mutation without writing. "
+                        "Returns a would_* envelope (dry_run=true, would_action, current_status/would_change_to, "
+                        "no_writes=true). Zero DB writes when true. Default false."
+                    ),
+                },
             },
             "required": ["action"],
         },
@@ -4309,11 +4318,21 @@ PA_TOOL_SCHEMAS = [
                 "id": {"type": "string", "description": "UUID of the blog"},
                 "query": {"type": "string", "description": "Search term"},
                 "status": {"type": "string", "description": "Status filter"},
+                "type": {"type": "string", "description": "Content type filter (e.g. 'blog' routes through SelfBlog path)"},
                 "topic": {"type": "string", "description": "Blog topic for generate action"},
                 "tone": {"type": "string", "description": "Tone for generate (default: enthusiastic)"},
                 "feedback": {"type": "string", "description": "Feedback when rejecting"},
                 "days": {"type": "integer", "description": "Lookback days for recent (default 30)"},
                 "limit": {"type": "integer", "description": "Max items"},
+                "dry_run": {
+                    "type": "boolean",
+                    "description": (
+                        "S2942 Ledger #38 MVP: For approve/reject/generate, preview the mutation without writing. "
+                        "Returns a would_* envelope (dry_run=true, would_action=publish/archive/dispatch_celery, "
+                        "current_status/would_change_to for approve/reject; would_task for generate). Zero DB writes "
+                        "and zero Celery enqueues when true. Default false."
+                    ),
+                },
             },
             "required": ["action"],
         },
