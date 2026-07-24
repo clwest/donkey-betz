@@ -61,6 +61,17 @@ elif len(SECRET_KEY) < 50:
 
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
+# S2931 Ledger #34 — hoist test-mode detection to module level so any code
+# path (learning bridges, signal receivers) can gate expensive side effects
+# via `getattr(settings, 'TESTING', False)`. The postgres branch below reuses
+# this via its own `_running_under_test()` helper for the DB-alias switch;
+# both must stay in sync.
+TESTING = (
+    'test' in sys.argv
+    or 'pytest' in (sys.argv[0] if sys.argv else '')
+    or os.environ.get('DJANGO_TEST_RUNNER_ACTIVE') == '1'
+)
+
 # Dynamic ALLOWED_HOSTS for production
 ALLOWED_HOSTS_STR = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1')
 ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS_STR.split(',') if host.strip()]
