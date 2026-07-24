@@ -485,6 +485,36 @@ Research Type: {self.research_type}""")
 
                 # Session 1200: Use synthesis content as message (not hardcoded count)
                 analysis_text = synthesis.get('analysis', '') if isinstance(synthesis, dict) else str(synthesis)
+
+                # Session 2929 (BaseBusinessResearchAgent Content-Shape FAIL Fold remediation):
+                # Fail-loud when data was gathered but the synthesis is missing or degenerate.
+                # Prior behavior returned success=True with data['analysis']='{}' (str of empty
+                # dict) — the false-success shape that produced the ratified Fold at S2928.
+                # An empty analysis after any data gathering means the GPT loop never called
+                # synthesize_* AND the polymorphism-fixed fallback couldn't extract content.
+                # Distinct from the evidence-gate path above (returns success=True with
+                # type='insufficient_evidence' when no data was gathered — that's a valid outcome).
+                # Rigby T2 nit: strip whitespace before sentinel check so ' {} ' or '\n{}\n'
+                # variants also trip the gate.
+                analysis_stripped = analysis_text.strip() if isinstance(analysis_text, str) else ''
+                analysis_empty = not analysis_stripped or analysis_stripped in ('{}', 'None')
+                if analysis_empty and all_data:
+                    logger.error(
+                        f"{self.name}: Synthesis missing/empty despite {len(all_data)} "
+                        f"data sources gathered — returning fail-loud instead of false-success"
+                    )
+                    return AgentResult(
+                        success=False,
+                        error=(
+                            f"{self.name} gathered {len(all_data)} data sources but produced "
+                            f"no synthesis. The synthesize_{self.research_type} tool was not "
+                            f"called and fallback content extraction was empty. "
+                            f"Retry with more explicit synthesis instructions."
+                        ),
+                        agent_name=self.name,
+                        execution_time_ms=execution_time,
+                    )
+
                 analysis_msg = analysis_text if analysis_text else f"{self.name} completed with {len(all_data)} data sources"
 
                 return AgentResult(
@@ -656,11 +686,20 @@ Research Type: {self.research_type}""")
                 logger.debug(f"{self.name}: No tool calls, breaking")
                 break
 
-        # If no synthesis was captured, try to extract from last message
+        # If no synthesis was captured, try to extract from last message.
+        # Session 2929 (BaseBusinessResearchAgent Content-Shape FAIL Fold remediation):
+        # messages[-1] can be a dict (tool response or system/user prompt) OR an
+        # OpenAI ChatCompletionMessage object. `hasattr(dict, 'content')` is False,
+        # so the pre-S2929 fallback never rescued when the loop ended on a tool
+        # response. Handle both shapes.
         if not synthesis and messages:
             last_msg = messages[-1]
-            if hasattr(last_msg, 'content') and last_msg.content:
-                synthesis = {'analysis': last_msg.content}
+            if isinstance(last_msg, dict):
+                content = last_msg.get('content')
+            else:
+                content = getattr(last_msg, 'content', None)
+            if content:
+                synthesis = {'analysis': content if isinstance(content, str) else str(content)}
 
         return all_data, synthesis
 
