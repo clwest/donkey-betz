@@ -417,7 +417,8 @@ def unified_execution_history(request):
     try:
         from core.models_unified_system import AgentExecution
 
-        limit = int(request.GET.get('limit', 20))
+        limit = max(1, min(int(request.GET.get('limit', 20)), 200))
+        offset = max(0, int(request.GET.get('offset', 0)))
         agent_name = request.GET.get('agent_name')
         status = request.GET.get('status')
 
@@ -432,7 +433,9 @@ def unified_execution_history(request):
         if status:
             queryset = queryset.filter(status=status)
 
-        executions = queryset[:limit]
+        total_count = queryset.count()
+        executions = list(queryset[offset:offset + limit])
+        has_more = (offset + len(executions)) < total_count
 
         return Response({
             'success': True,
@@ -456,7 +459,10 @@ def unified_execution_history(request):
                     for ex in executions
                 ],
                 'count': len(executions),
-                'limit': limit
+                'total_count': total_count,
+                'limit': limit,
+                'offset': offset,
+                'has_more': has_more,
             }
         })
     except Exception as e:

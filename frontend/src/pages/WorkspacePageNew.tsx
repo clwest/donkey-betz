@@ -101,6 +101,7 @@ import {
   OutreachInboxTab,
   GovernanceTab,
   RagDiagnosticsTab,
+  AgentRunsTab,
 } from './workspace/tabs'
 import { ZoomOutLedgerSection } from './workspace/tabs/ZoomOutLedgerSection'
 import { TenantBoundaryHealthSection } from './workspace/tabs/TenantBoundaryHealthSection'
@@ -178,6 +179,7 @@ const primaryTabs: PrimaryTab[] = [
       { id: 'tenant-boundary', label: 'Tenant Boundary', icon: ShieldAlert },
       { id: 'self-healing', label: 'Self-Healing', icon: Wrench },
       { id: 'autopilot', label: 'Autopilot', icon: Bot },
+      { id: 'agent-runs', label: 'Agent Runs', icon: Bot },
       { id: 'cost', label: 'Cost', icon: DollarSign },
       { id: 'queues', label: 'Queues', icon: Layers },
       { id: 'config', label: 'Config', icon: Settings },
@@ -1325,6 +1327,9 @@ export default function WorkspacePage() {
               showSuccess={showSuccess}
               showError={showError}
             />
+          )}
+          {activePrimary === 'system' && activeSub === 'agent-runs' && (
+            <AgentRunsTab />
           )}
         </>
       )}

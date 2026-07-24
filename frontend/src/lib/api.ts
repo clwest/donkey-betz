@@ -107,8 +107,9 @@ export const agentsApi = {
   execute: (agentName: string, task: string) =>
     api.post('/v1/agents/execute/', { agent_name: agentName, task }),
   executionHistory: (limit = 20) => api.get(`/v1/agents/execution-history/?limit=${limit}`),
-  // Session 760: Unified executions with full output_data for Output Modal
-  unifiedExecutions: (params?: { limit?: number; agent_name?: string; status?: string }) =>
+  // Session 760: Unified executions with full output_data for Output Modal.
+  // S2930: offset added for paginated Agent Runs tab.
+  unifiedExecutions: (params?: { limit?: number; offset?: number; agent_name?: string; status?: string }) =>
     api.get('/v1/agents/unified-executions/', { params }),
   executionDetail: (executionId: string) => api.get(`/v1/agents/execution/${executionId}/`),
 }
