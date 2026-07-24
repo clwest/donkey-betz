@@ -11,6 +11,7 @@ handler keeps working unchanged.
 import logging
 from typing import Any, Dict, List
 
+from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.db.models import F
@@ -316,7 +317,17 @@ agent_execution_learning = AgentExecutionLearningLoop()
 
 @receiver(post_save, sender=AgentExecution)
 def on_agent_execution_completed(sender, instance, created, **kwargs):
-    """Learn from completed agent executions"""
+    """Learn from completed agent executions.
+
+    S2931 Rigby Tool Gap Ledger #34: skip in test mode — the learning cycle
+    fans out through `learning_orchestrator._generate_optimizations` and
+    `_collect_bridge_insights`, each of which invokes downstream services
+    that can hit OpenAI. Test suites that create many AgentExecution rows
+    (e.g. `test_agent_runs_list_endpoint.py`: 7 tests × ~11 rows = ~77 calls)
+    burn real API spend on every run. Gate on `settings.TESTING`.
+    """
+    if getattr(settings, 'TESTING', False):
+        return
     if instance.status in ['completed', 'failed']:
         try:
             agent_execution_learning.process_execution(instance)
