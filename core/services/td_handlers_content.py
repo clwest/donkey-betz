@@ -4709,14 +4709,25 @@ class ContentHandlersMixin:
                 from core.tasks_content import _gather_newsletter_evidence
                 evidence = _gather_newsletter_evidence(hours=hours, cluster_limit=cluster_limit)
                 clusters = evidence['clusters']
+                # S2944 Ledger #38 batch 3 — align with S2942 blog_tool
+                # generate_blog dispatch_celery envelope so the scoreboard
+                # classifier recognizes generate_newsletter as
+                # dry_run_supported. Adds ``would_action`` + ``would_task``
+                # + ``no_writes:True`` sentinel; preserves the pre-existing
+                # cluster preview data (real value-add over blog_tool stub).
                 return {
                     'gateway': 'content_tool',
                     'action': 'generate_newsletter',
+                    'dry_run': True,
                     'mode': 'dry_run',
+                    'would_action': 'dispatch_celery',
+                    'would_task': 'generate_operator_edge_newsletter',
+                    'no_writes': True,
                     'clusters_found': len(clusters),
                     'top_clusters': [c['name'] for c in clusters[:3]],
                     'evidence_preview': evidence['evidence_block'][:2000],
-                    'message': f'Dry run: found {len(clusters)} clusters. '
+                    'message': f'dry_run=true: found {len(clusters)} clusters. '
+                               f'No Celery task enqueued and no writes performed. '
                                f'Run with dry_run=false to generate the newsletter.',
                 }
 
@@ -5042,7 +5053,16 @@ class ContentHandlersMixin:
         }
 
         if dry_run:
-            result['message'] = f'DRY RUN: {min(total_matching, cap)} items would be archived. Set dry_run=false AND confirm=true to execute.'
+            # S2944 Ledger #38 batch 3 — align with S2942 / S2943
+            # bulk_archive_published envelope shape so the scoreboard
+            # classifier recognizes this action as dry_run_supported.
+            # Adds ``would_*`` + ``no_writes:True`` sentinel per the
+            # Ledger #38 contract.
+            result['would_action'] = 'archive'
+            result['would_change_to'] = 'archived'
+            result['would_archive_count'] = min(total_matching, cap)
+            result['no_writes'] = True
+            result['message'] = f'dry_run=true: {min(total_matching, cap)} items would be archived. No writes performed. Set dry_run=false AND confirm=true to execute.'
             return result
 
         # Execute archive
