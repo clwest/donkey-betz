@@ -14,6 +14,12 @@ Two behaviors under test:
    data={'analysis': '{}'})` — the false-success shape that produced
    the ratified Fold. Post-S2929, this is `AgentResult(success=False,
    error=<explicit message>)`.
+
+Session 2932: Retargeted from the deleted `business.ContentStrategyAgent`
+duplicate onto `MarketingStrategyAgent` — the remaining concrete
+`BaseBusinessResearchAgent` subclass. The test exercises base-class
+behavior, so any concrete subclass is a valid target; the error-message
+assertion below now references `synthesize_marketing_strategy` accordingly.
 """
 
 from types import SimpleNamespace
@@ -21,7 +27,7 @@ from unittest.mock import MagicMock, patch
 
 from django.test import SimpleTestCase
 
-from core.agents.business.content_strategy_agent import ContentStrategyAgent
+from core.agents.business.marketing_strategy_agent import MarketingStrategyAgent
 
 
 def _make_gpt_response(*, tool_calls=None, finish_reason="stop", content=None):
@@ -42,7 +48,7 @@ class ExecuteGptLoopFallbackTests(SimpleTestCase):
     """The polymorphism fix at :660-665."""
 
     def test_fallback_extracts_content_from_dict_tool_message(self):
-        agent = ContentStrategyAgent()
+        agent = MarketingStrategyAgent()
 
         first_response = _make_gpt_response(
             tool_calls=[_make_tool_call("call_1", "spider_query", '{"query": "x"}')],
@@ -71,7 +77,7 @@ class ExecuteGptLoopFallbackTests(SimpleTestCase):
         """Rigby T2 Q2 nit: the object-shaped branch (ChatCompletionMessage) also
         needs coverage. Simulates GPT returning an assistant message with plain
         text content on its last iteration (finish_reason='stop', no tool_calls)."""
-        agent = ContentStrategyAgent()
+        agent = MarketingStrategyAgent()
 
         # First iter: tool call so we get past the initial user/system prompts.
         first_response = _make_gpt_response(
@@ -118,7 +124,7 @@ class ExecuteFailLoudGateTests(SimpleTestCase):
     """The fail-loud gate at :490-520."""
 
     def _make_agent(self):
-        agent = ContentStrategyAgent()
+        agent = MarketingStrategyAgent()
         # Skip DB / spider / project touches so the test stays a unit test.
         agent._auto_refresh_spiders = MagicMock(return_value=None)
         agent._get_prior_research_context = MagicMock(return_value="")
@@ -152,7 +158,7 @@ class ExecuteFailLoudGateTests(SimpleTestCase):
         self.assertIsNotNone(result.error)
         assert result.error is not None  # narrow for type checker
         self.assertIn("no synthesis", result.error)
-        self.assertIn("synthesize_content_strategy", result.error)
+        self.assertIn("synthesize_marketing_strategy", result.error)
 
     def test_fail_loud_when_analysis_is_empty_dict_string(self):
         """The pre-S2929 false-success signature was data['analysis']='{}'.

@@ -485,6 +485,36 @@ the user should use ImageAgent, VideoAgent, etc."""
 
                     execution_time = int((time.time() - start_time) * 1000)
 
+                    # Session 2932: fail-loud analog of the S2929 BaseBusinessResearchAgent
+                    # gate — when GPT dispatched strategy tools but every tool returned
+                    # zero recommendations, the pre-S2932 shape was success=True with
+                    # message="Generated 0 content recommendations". Downstream callers
+                    # (workspace UI, PA follow-ups, learning-outcome hooks) treated that
+                    # as a real answer. This gate returns success=False so the failure
+                    # surfaces at the same layer S2929 does for BBRA subclasses. Scoped
+                    # strictly to the tool_calls branch per Rigby T0 SIGN concern #1 —
+                    # the conversational branch below stays success=True since narrative
+                    # text is a legitimate strategy output.
+                    if not recommendations:
+                        logger.error(
+                            f"{self.name}: {len(tool_calls_made)} tool call(s) executed "
+                            "but produced zero recommendations — returning fail-loud "
+                            "instead of false-success"
+                        )
+                        return AgentResult(
+                            success=False,
+                            error=(
+                                f"{self.name} dispatched {len(tool_calls_made)} strategy "
+                                "tool call(s) but every call returned empty "
+                                "recommendations. Retry with a more specific niche/goal, "
+                                "or verify spider intelligence is available for the "
+                                "requested category."
+                            ),
+                            agent_name=self.name,
+                            execution_time_ms=execution_time,
+                            tool_calls=tool_calls_made,
+                        )
+
                     result = AgentResult(
                         success=True,
                         message=f"Generated {len(recommendations)} content recommendations",

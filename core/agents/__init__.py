@@ -73,12 +73,13 @@ Available Agents (41 total):
     SECURITY AGENTS (1) - Session 281:
         MemoryIsolationAgent    - Memory isolation and security
 
-    BUSINESS RESEARCH AGENTS (5) - Session 293, expanded Session 337:
+    BUSINESS RESEARCH AGENTS (4) - Session 293, expanded Session 337,
+    consolidated Session 2932 (duplicate BusinessContentStrategyAgent removed;
+    canonical class is strategy.ContentStrategyAgent registered in AGENT_MAP):
         CompetitorAnalysisAgent - Competitor analysis, SWOT, positioning
         CustomerResearchAgent   - Customer personas, pain points, sentiment
         BrandStrategyAgent      - Brand positioning, messaging, visual direction
         MarketingStrategyAgent  - Channel strategy, campaigns, funnel optimization
-        BusinessContentStrategyAgent - Content pillars, formats, topic ideas
 
     DEVELOPMENT AGENTS (4) - Session 436:
         CodeGeneratorAgent       - Generate code from specifications
@@ -206,12 +207,13 @@ from core.agents.security import (
     MemoryIsolationAgent,
 )
 
-# Business Research Agents (Session 293, expanded Session 337)
+# Business Research Agents (Session 293, expanded Session 337; Session 2932
+# removed the BusinessContentStrategyAgent duplicate — canonical class is
+# strategy.ContentStrategyAgent, imported above.)
 from core.agents.business import (
     CompetitorAnalysisAgent,
     CustomerResearchAgent,
     BrandStrategyAgent,
-    ContentStrategyAgent as BusinessContentStrategyAgent,  # Alias to avoid conflict
     MarketingStrategyAgent,
 )
 
@@ -387,11 +389,11 @@ __all__ = [
     # Security Agents (1) - Session 281
     'MemoryIsolationAgent',
 
-    # Business Research Agents (5) - Session 293, expanded Session 337
+    # Business Research Agents (4) - Session 293, expanded Session 337,
+    # consolidated Session 2932 (BusinessContentStrategyAgent duplicate removed)
     'CompetitorAnalysisAgent',
     'CustomerResearchAgent',
     'BrandStrategyAgent',
-    'BusinessContentStrategyAgent',
     'MarketingStrategyAgent',
 
     # Development Agents (5) - Session 436, expanded Session 778

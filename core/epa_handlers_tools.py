@@ -1574,7 +1574,11 @@ class EPAToolHandlersMixin:
         logger.info(f"📝 Arguments: {arguments}")
 
         try:
-            from core.agents.business import ContentStrategyAgent
+            # Session 2932: duplicate class at core.agents.business.ContentStrategyAgent
+            # removed; canonical class lives in core.agents.strategy (AGENT_MAP source
+            # of truth). This handler is only reached via the legacy
+            # personal_ai_assistant_enhanced.py entrypoint (refactored out at S184).
+            from core.agents.strategy import ContentStrategyAgent
 
             project_id = arguments.get('project_id')
             topic = arguments.get('topic', '')
