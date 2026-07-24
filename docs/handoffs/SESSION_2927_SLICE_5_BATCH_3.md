@@ -189,6 +189,52 @@ Ledger candidates carried forward from prior sessions — no additions.
 
 ---
 
+## Post-close completion observations (amended after original close cascade shipped)
+
+**Context:** The original close cascade documented all 4 batch 3 completions as "in-progress at close" (workflow_orchestration_agent explicitly; the 3 receipt-verify tools implicitly). Chris asked at ~05:41 whether completions had landed during the close-cascade authoring window. They had — all 4 completed between 05:36 and 05:39, before the close cascade PR was even opened. This section captures the actual completion outcomes and folds the observations back into the session record.
+
+**Root-cause of the "in-progress at close" claim staleness:** the completion window was shorter than the close-cascade authoring window. Rigby dispatched at 05:35; completions landed 05:36–05:39; close cascade PR #3489 was opened 05:41. The receipt-verify report captured `status='in_progress'` at 05:36 (correct snapshot) — but the handoff was written assuming that snapshot would still hold at close. Codified as `feedback_wait_for_agent_completions_before_close_cascade.md` — new rule for future sessions.
+
+### Completion timings (ORM-observed)
+
+| Tool | task_id | completed_at | latency_ms |
+|---|---|---|---|
+| `content_strategy_agent` | `b2af49ff-...` | 05:36:05 | 18,566 |
+| `marketing_strategy_agent` | `d70e38de-...` | 05:37:57 | 110,791 |
+| `strategic_review` | `dcb12206-...` | 05:38:07 | 10,033 |
+| `workflow_orchestration_agent` | `58d165dd-...` | 05:39:08 | 204,380 |
+
+### Material observations
+
+**1. PR #3487 mapping fix VALIDATED at output-data layer (stronger than the original handoff claimed).**
+
+The receipt-verify + parent AgentExecution `owner_agent` check was already documented as "PR #3487 VALIDATED at envelope + ORM layer." The completion output is a stronger signal: `workflow_orchestration_agent`'s `output_data.data.keys` = `['image_ids', 'project_created', 'step_results', 'summary', 'video_ids', 'workflow']` — exact match for the `WorkflowOrchestrationAgent.run` return shape documented at `core/agents/workflow_orchestration_agent.py:313-320`. If the pre-fix mapping had been in effect, the payload would have carried WorkflowAgent's `delegate_to_agent`-shaped output, not the template-shaped output. **Fix confirmed end-to-end at 3 distinct observation surfaces: dispatch envelope, parent AgentExecution row, and completion payload shape.**
+
+Actual completion message: `"Workflow 'business_research' completed"` + summary `"Researched Research small-business AI adoption trends, got executive direction, created 0 logos."` — the `business_research` template ran through its declared steps.
+
+**2. `strategic_review` alias semantic-mismatch CONFIRMED at runtime.**
+
+Sent a SWOT-shaped prompt (`"Conduct a SWOT analysis of a small-business AI advisory offering"`) via `strategic_review`. Received `output_data.message = "Generated 3 content recommendations"` — content-strategy-shaped output, not SWOT-shaped. This is exactly the risk documented in `docs/research/tools/validation/strategic_review_validation.md` §5. The doc's warning graduates from **theoretical** to **observed once**. Multi-tool-single-class asymmetry pattern (`content_strategy_agent` + `strategic_review` → same `ContentStrategyAgent` with identical `data.keys = ['recommendations', 'task', 'tool_results']`) is confirmed at runtime.
+
+**3. Content-shape FAIL Fold candidate — stays at 1/2 (marketing_strategy_agent did NOT surface 2nd instance).**
+
+`marketing_strategy_agent`'s completion produced real structured Markdown output — `output_data.message` starts with `"## Target Audience Summary\n- Primary audience segments\n  - SMB Owners & Founders (revenues $500k–$20M): time-poor, want measurable ROI and low-risk pilots..."`. Not a generic "concept too vague" false-PASS. Content-shape FAIL Fold candidate remains at 1st instance (S2926 CompetitorAnalysisAgent, deliverable `5703a6c8-...`). S2928 or later can pick a different high-signal test candidate (`content_writer_agent` from batch 4 is a natural next candidate).
+
+**4. Retracted: false-alarm on marketing_strategy_agent `file_write_failures`.**
+
+Initial inspection flagged the presence of keys `file_write_errors`, `file_write_failures`, `partial_failure`, `workspace_write` in `marketing_strategy_agent` output_data as a discovery signal. Deeper inspection: the VALUES for all four keys were `null` on this dispatch. The keys are schema-surface opt-in slots on `MarketingStrategyAgent`'s AgentResult data — they always exist on completions, and are null when no file write was attempted. No incident. No ledger entry. Documented here so future sessions don't repeat the false-read.
+
+**5. Sub-agent tree enumeration deferred.**
+
+The completed `workflow_orchestration_agent` execution's sub-agent tree (per Q3 new-evidence-class fanout shape verification) requires an `AgentExecution.objects.filter(parent_execution_id=...)` query — the parent-execution linkage field was not directly queryable via `values_list('owner_agent__name', 'status')` during post-close verification (raised `FieldError`). Not a blocker; can be re-queried in S2928 with the correct field name. Parent AgentExecution id for the query: reachable via `AgentExecution.objects.filter(celery_task_id='58d165dd-46b2-4f52-b647-0439b3b6ecdc').first().id`.
+
+### Amendment impact
+
+- **PR #3489** (original close cascade) — unchanged. Documents accurate close-cascade-authoring-time state.
+- **PR #3490** (this amendment) — adds this "Post-close completion observations" section + updates 00-START-NEXT-SESSION.md to reflect completion state. Ships `feedback_wait_for_agent_completions_before_close_cascade.md` to Claude memory (agent-side; not repo-tracked).
+
+---
+
 ## Next session (S2928) suggested open
 
 Slice 5 has 2 remaining tools: `content_writer_agent` + `image_editing_agent`. Batch 4 (final Slice 5 batch) composition candidate:
