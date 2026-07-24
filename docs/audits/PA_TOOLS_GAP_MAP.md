@@ -10,26 +10,25 @@
 
 - **Total tool names:** 161
 - **Per-category breakdown:**
-  - `validated_full` (validated (full)): **95**
+  - `validated_full` (validated (full)): **98**
   - `agent_via_run_agent` (agent (via run_agent)): **44**
   - `validated_partial` (validated (partial)): **11**
   - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
-  - `untested` (untested): **3**
   - `meta_no_handler` (meta (no handler by design)): **1**
 
 ## Validation-doc corpus
 
-- **Total `*_validation.md` files:** 122
+- **Total `*_validation.md` files:** 125
 - **Substrate (cross-cutting) docs:** 10 — reduce risk platform-wide but do NOT validate per-tool invariants (S2795 F2 rename).
-- **Per-tool docs:** 112 — of which 104 have an explicit 'Covered actions' section (F1 checklist).
-- **Per-tool docs with `Template version` marker:** 90 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
+- **Per-tool docs:** 115 — of which 107 have an explicit 'Covered actions' section (F1 checklist).
+- **Per-tool docs with `Template version` marker:** 93 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
 
 ## Template compliance (T1b)
 
 Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without `Template version:` marker); `pass` = v1-conformant; `fail` = v1 marker present but mandatory section/frontmatter missing.
 
-- `pass`: **92**
-- `warn`: **69**
+- `pass`: **95**
+- `warn`: **66**
 
 ## Schema quality lints (F5 advisory column)
 
@@ -72,7 +71,7 @@ _No untested-tool groups met the threshold._
 | `check_resource_budget` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_agents.py` |
 | `claude_code_tool` | ✓✓ | validated (doc, unknown coverage) | warn | — | `core/services/td_handlers_codejobs.py` |
 | `cockpit_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_gateway.py` |
-| `code_job_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_codejobs.py` |
+| `code_job_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_codejobs.py` |
 | `code_review_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `competitor_analysis_agent` | ✓✓ | validated (full) | ✓ | — | `core/services/tool_dispatcher.py` |
 | `competitor_comparison_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_core.py` |
@@ -99,7 +98,7 @@ _No untested-tool groups met the threshold._
 | `distribution_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `dream_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_core.py` |
 | `editor_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
-| `employee_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_employee.py` |
+| `employee_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_employee.py` |
 | `execution_history_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_content.py` |
 | `experiment_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `feedback_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_content.py` |
@@ -152,7 +151,7 @@ _No untested-tool groups met the threshold._
 | `prediction_market_analyst` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `proactive_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `profile_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
-| `railway_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_railway.py` |
+| `railway_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_railway.py` |
 | `reasoning_engine_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `recent_activity_tool` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_content.py` |
 | `remember_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_core.py` |
