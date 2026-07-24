@@ -2478,7 +2478,14 @@ self,
                     if execution_record:
                         try:
                             _hb_close_old_connections()
-                            rowcount = AgentTaskExecution.objects.filter(
+                            # S2926: previously referenced AgentTaskExecution
+                            # (`core.models.agents_registry`, no last_heartbeat_at
+                            # field) — heartbeat writes raised FieldError every
+                            # tick and never advanced the row. execution_record is
+                            # an AgentExecution from `core.models_unified_system`
+                            # (imported at :2121); use that here so the write
+                            # matches the sister pattern at agent_router.py:2989.
+                            rowcount = AgentExecution.objects.filter(
                                 id=_hb_execution_id
                             ).update(last_heartbeat_at=timezone.now())
                             tick_count += 1
