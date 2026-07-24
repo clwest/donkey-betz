@@ -2,75 +2,71 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2939 SHIPPED SLICE 7 BATCH 2a: 3 mutation-tool validation docs (mission_verdict + newsletter_tool + rigby_work_item) as PR #3514, bifurcated Option C shape with Chris D-verdict guardrails (§6 read-only scope + §5a mutation proof bar). First live-in-force consumer of the S2938 Ledger #5 lint substrate — 2 handler_drift hits on `rigby_work_item` (both Ledger #39 case) auto-rendered inline; zero false positives across other 115 wired tools. Sweep: Slice 7 Batch 2a CLOSED (3/9 → 6 remaining). **S2940 OPENS WITH SLICE 7 BATCH 2b — likely pure-read trio (`employee_tool` + 2 more singletons).**
+## READ THIS FIRST — SESSION 2940 CLOSED SLICE 7 (9/9 tools). BATCH 2b shipped 3 validation docs (`code_job_tool` + `employee_tool` + `railway_tool`) as PR #3515 at SHA `260ec6508`. §6 LIVE-VERIFIED coverage DOUBLED vs S2939 (7 read actions across the 3 docs vs 4 at S2939 Batch 2a). Second live-in-force Ledger #5 lint consumer — 0 handler_drift hits across all 3 Batch 2b tools (substrate remained clean). Gap-map headline: **`98 validated_full / 0 untested`** (was `95 / 3` at S2939 close). **S2941 OPENS WITH LEDGER #16 TWIN-MIRROR ENFORCEMENT** — the S2940 T0 D-verdict deferred substrate ship.
 
-**Refreshed 2026-07-24 (S2939 close).** Chris D-verdict at S2939 T0 RATIFIED joint plan with two guardrails baked into all 3 docs. Rigby S2939 T0 SIGN AGREE-WITH-EDITS 4/4 (Q1/Q2/Q3 + ZO; tool-grounded — 8 tool_runs). Q3 edit caught a "hard-claim without code-cite" risk on mission_verdict's post_save receivers — verified at `mission_verdict_signals.py:57` + `mission_verdict_attention_signals.py:68` before writing the assertion. PR merged as SHA `edaa3f16e`.
+**Refreshed 2026-07-24 (S2940 close).** Chris D-verdict at S2940 T0 RATIFIED Batch 2b = 3-tool ship (`code_job_tool` + `employee_tool` + `railway_tool`) closes Slice 7 in one final ship (no Batch 2c needed — the 00-START "6 remaining" claim at S2939 close reflected accounting drift; reality was 3 `untested`). Chris D-verdict at S2940 T1 RATIFIED ship. Rigby SIGN AGREE 4/4 twice (T0 + T1). One minor §6.3/§6.4 code_job_tool reword applied inline before commit.
+
+**Gap-map headline (Chris D-verdict condition — quoted at close per S2940 T0 zoom-out AGREE):**
+```
+Total tool names: 161
+Per-category:
+  validated_full: 98
+  validated_partial: 11
+  validated_doc_exists_unknown: 7
+  untested: 0
+  agent_via_run_agent: 44
+  meta_no_handler: 1
+```
 
 **PRs shipped this session:**
-- u-d-b PR [#3514](https://github.com/clwest/donkey-betz-platform/pull/3514) — Slice 7 Batch 2a (3 mutation-tool validation docs, bifurcated Option C). Merge SHA `edaa3f16e`.
-- u-d-b PR `<TBD>` — S2939 close cascade (handoff + 00-START refresh + wrapper pin bump).
+- u-d-b PR [#3515](https://github.com/clwest/donkey-betz-platform/pull/3515) — Slice 7 Batch 2b (3 validation docs, CLOSES Slice 7). Merge SHA `260ec6508`.
+- u-d-b PR `<TBD>` — S2940 close cascade (handoff + 00-START refresh + wrapper pin bump).
 
 **Docs shipped this session:**
-- **`docs/research/tools/validation/mission_verdict_tool_validation.md`** (new, 161 lines) — all-mutation shape (certify/reject/defer). No §6 LIVE-VERIFY (no read actions); §5a covers 3 actions with `cascading` blast-radius + code-cited post_save receivers (broadcast + HAI) + idempotency proof bar.
-- **`docs/research/tools/validation/newsletter_tool_validation.md`** (new, 326 lines) — 4-mut/3-read bifurcated. §6.1–6.4 cover 4 read-path envelopes (validate/list_issues/sources/config) captured LIVE at S2939 T0; §5a covers 4 mutations with `spreading`/`contained` tier + Deliverable post_save receiver chain.
-- **`docs/research/tools/validation/rigby_work_item_tool_validation.md`** (new, 259 lines) — 5-action flag-gated. §6.1 LIVE-VERIFIES the `disabled_response` path (flag defaults OFF, revealed `error_code: "legacy_error"` field appended by dispatcher normalizer — patched inline before commit); §5a covers 4 mutations with `spreading`/`external` tier + Appendix A async-fanout for `delegate`.
-- **Auto-gen doc regen** (`--include-validation-xref`): `docs/PA_TOOL_AUDIT.md` (+10 lines) + `docs/audits/PA_TOOLS_GAP_MAP.md` (+20 lines) — all 3 tools flip `untested → validated_full`.
-
-**Live backfill (Ledger #5 lint pre-flight at S2939 open):** 117 tools scanned → 2 hits (both on `rigby_work_item`, both Ledger #39 case surfaced at S2937 manual scan) → 0 false positives across 115 remaining wired tools. Auto-flag disposition rendered inline in `rigby_work_item` §5c.1 with pointer to Ledger #39 as pre-existing known cause — **first auto-detected-drift precedent in the sweep**.
+- **`docs/research/tools/validation/code_job_tool_validation.md`** (new, 302 lines) — 4-read/3-mut bifurcated. §5a: submit=external Celery, cancel=cascading, add_repo=contained. §5b Appendix A for submit async-fanout on `code_jobs` queue. §6.1+6.2 LIVE-VERIFIED (`list_repos` returns 1 repo — donkey-betz-platform; `list` returns empty state).
+- **`docs/research/tools/validation/employee_tool_validation.md`** (new, 406 lines) — 3-read/1-mut bifurcated. §5a: run_now=external Celery. §5b Appendix A for 4-pair `_RUN_NOW_TASKS` registry (rigby/docs_manager, platform_auditor/platform_audit, chief_of_staff/morning_brief, bug_triage_specialist/triage_daily). §6.1+6.2+6.3 LIVE-VERIFIED (describe rigby + describe platform_auditor + status rigby docs_manager 7d — trust.ratio=1.0, streak=5 certified). Cross-links `mission_verdict` (shared handler file — Employee OS dispatch → observe → certify loop).
+- **`docs/research/tools/validation/railway_tool_validation.md`** (new, 312 lines) — 5-read/2-mut bifurcated. §5a: restart+redeploy=external HTTP (both fire identical `serviceInstanceRedeploy` GraphQL mutation). §5b Appendix N (Network-Preflight) — hardcoded endpoint at line 21, bearer_token via `RAILWAY_API_TOKEN`, 20s per-call timeout. §6.1 LIVE-VERIFIED (`help` — no network). §6.2 LIVE-VERIFIED refusal path (`RAILWAY_API_TOKEN not configured`, `error_code=legacy_error` — same 2-field signature as S2939 rigby_work_item `_disabled_response`).
+- **Auto-gen doc regen** (`--include-validation-xref`): `docs/PA_TOOL_AUDIT.md` + `docs/audits/PA_TOOLS_GAP_MAP.md` — all 3 tools flip `untested → validated_full`.
 
 **Post-merge live-dispatch (per PLAYBOOK-7.4.4):**
-- PR #3514 recycled clean at `sha=edaa3f16e9d0` via `make recycle-all` (surviving=none).
-- Rigby verified (3/3 PASS): (1) `newsletter_tool action=list_issues limit=3` envelope matches §6.2; (2) `rigby_work_item action=list` disabled_response matches §6.1 incl. `error_code`; (3) all 3 tools show `validated_full` in `PA_TOOL_AUDIT.md`; `rigby_work_item` row still carries 2 lint tags.
+- PR #3515 recycled clean at `sha=260ec6508ec0` via `make recycle-all` (surviving=none).
+- Rigby verified (3/3 PASS): (1) `code_job_tool action=list_repos` envelope matches §6.1; (2) `railway_tool action=help` envelope matches §6.1 (no error_code because token check bypassed); (3) `employee_tool action=describe employee=rigby` envelope matches §6.1.
 
 **Governance:** none this session. D6 moratorium unchanged.
 
-**Rigby Tool Gap Ledger:** no new entries. Ledger #39 auto-detected by Ledger #5 lint (natural fold-in at next `rigby_work_queue` touch, ~5-min docstring refresh).
+**Rigby Tool Gap Ledger:** no new formal entries. 4 new record-only Ledger candidates surfaced in-doc (all deferred):
+1. `code_job_tool.submit` silent-degrade on Celery dispatch failure (line 148-149 warning-log-only).
+2. `employee_tool.run_now` double-dispatch hazard (no idempotency check at handler layer).
+3. `railway_tool` `restart`+`redeploy` functional equivalence (identical GraphQL mutation).
+4. Sixth-instance invalid-action bare-envelope pattern (Ledger #5 Tier-2 candidate — 2+ more corroborations before promoting).
 
-Full session context: `docs/handoffs/SESSION_2939_SLICE_7_BATCH_2A.md`.
+Full session context: `docs/handoffs/SESSION_2940_SLICE_7_CLOSE.md`.
 
 ---
 
-## S2940 open sequence — SLICE 7 BATCH 2b + LEDGER #16 TWIN-MIRROR ENFORCEMENT
+## S2941 open sequence — LEDGER #16 TWIN-MIRROR ENFORCEMENT (S2940 T0 D-verdict deferred substrate ship)
 
-**S2940 has TWO ratified first-actions** (Chris D-verdict at S2939 close 2026-07-24):
+**S2941 first-action is ratified from S2940 T0:** Ledger #16 twin-mirror enforcement substrate hardening. The 3-trigger corroboration was met at S2939 close (S2937 + S2938 + S2939 all shipped without content_mirror + ratification_envelope deliverables — twin-mirror pattern per `feedback_twin_deliverable_at_every_ratification` was skipped 3 sessions). Backfill option (A) was executed at S2939 close (6 mirrors via ORM). Chris D-verdict at S2940 T0 RATIFIED the substrate promotion for S2941.
 
-### (1) SLICE 7 BATCH 2b (sweep continuation — likely pure-read trio)
+### Scope for S2941 (Ledger #16 hardening)
 
-**Natural next action:** open Batch 2b — 3 tools from the remaining 6:
-- **employee_tool** — 4 read actions (describe / run_now / status / evidence_for_mission). **run_now is Rigby-gated dispatch** — actually a MUTATION in the broader sense (fires MissionRunner). Requires shape-decision at T0 SIGN: is run_now analyzed-only (like mission_verdict) or is describe/status/evidence_for_mission the "safe read subset" for LIVE-VERIFY? **Shared handler file with `mission_verdict` (Batch 2a) — cross-link in-doc.**
-- 2 more singletons TBD — Chris/Rigby to select at T0 SIGN from the remaining 5 handler files. Likely candidates: any tools where dominant surface is pure-read (avoids re-forcing bifurcated Option C or Ledger #38 pressure).
+Two shape options — decide at T0 SIGN with Rigby:
 
-### Batch 2b inventory (from remaining pool)
+**Option A (hard-refuse):** Extend `session_lifecycle close` (`core/management/commands/session_lifecycle.py`) to **refuse close** when both mirror IDs (content_mirror + ratification_envelope) are not provided or discoverable. Requires new CLI flags OR ORM lookup + fail-loud disposition.
 
-Remaining 6 tools across 5 handler files (per S2939 close):
-- `employee_tool` (`td_handlers_employee.py:100`) — shared module with mission_verdict (Batch 2a).
-- Plus 5 more singletons in 4 other handler files (Chris/Rigby select at T0 SIGN based on read-vs-mutation posture scan).
+**Option B (soft-checklist):** Add an explicit close-checklist gate that lists "twin mirrors written?" alongside handoff / 00-START / wrapper-pin bump items and prompts before finalizing. Softer; still allows override.
 
-### S2940 open sequence
+Estimated: ~2 hr substrate session either shape. Chris directive at S2940 T0: "queued alongside Batch 2b" was deferred to standalone S2941 session per Rigby T0 SIGN Q4 recommendation ("avoid compounding close-cascade complexity").
 
-1. **First-action lint pre-flight:** run `python manage.py build_pa_tool_audit --gap-only --emit-gap-json --check` and grep for `handler_drift_*` on the 3 Batch 2b tools. Verify hits against expected count. Any new hits = pre-existing drift; disposition inline in §5c.1.
-2. **T0 SIGN mutation-verb scan (per S2921 mutation-scan-swap pattern):** classify each Batch 2b tool as pure-read vs mutation-capable BEFORE finalizing the batch shape. If any tool surfaces as mutation-capable when frame assumed pure-read, swap per S2921 discipline.
-3. Route Batch 2b shape decision + `employee_tool run_now` handling to Rigby at S2940 T0 SIGN. Ask: pure-read trio possible, or does employee_tool force another bifurcation?
-4. Execute batch (3 docs + §5a tables + §5c dispositions per doc, including employee_tool ↔ mission_verdict cross-link).
-5. Live-verify read actions.
-6. Ledger appends if any drift surfaces.
-7. PR + admin-merge + recycle + post-merge verify + close cascade.
+### S2941 open sequence
 
-### (2) LEDGER #16 TWIN-MIRROR ENFORCEMENT — substrate hardening (queued alongside Batch 2b)
-
-**3-trigger corroboration met at S2939 close** (Chris flagged 2026-07-24 that S2937 + S2938 + S2939 all shipped without content_mirror + ratification_envelope deliverables — twin-mirror pattern per `feedback_twin_deliverable_at_every_ratification` was skipped 3 sessions in a row). Backfill option (A) executed at S2939 close (6 mirrors created via ORM — bypassed diagnostic-flag bug per `feedback_pa_deliverables_tool_flags_ratifications_as_diagnostic`). Ledger #16 promotion to substrate ratified as S2940 second first-action.
-
-**Scope for S2940 (Ledger #16 hardening):**
-- Extend `session_lifecycle close` to **refuse close** when both mirror IDs (content + ratification) are not provided or discoverable.
-- Alternative shape (softer): add an explicit close-checklist gate that lists "twin mirrors written?" and prompts before finalizing.
-- Estimated: ~2 hr substrate session.
-
-**Ordering:** Batch 2b can ship first (mirror discipline is now caught up); Ledger #16 substrate can be an afternoon follow-on OR a full separate ship — Chris/Rigby to decide at T0 SIGN based on Batch 2b scope shape.
-
-**S2939 close mirror backfill IDs (for reference):**
-- S2937: content `27da3b4d-7b43-4fc8-84ae-92d30c7c40e8` + ratification `3da8db2f-3f3c-4e40-aa23-7a57c210f832`
-- S2938: content `94f04fcd-6ef3-44e6-aa19-315589146358` + ratification `422d8e72-ff8e-4087-9488-88e60b7435fc`
-- S2939: content `23dcfe23-3b6a-474e-b882-af6e4d919f2b` + ratification `fbc9f386-17d0-46f0-ab09-362c10102858`
+1. **First-action lint pre-flight:** run `python manage.py build_pa_tool_audit --gap-only --emit-gap-json --check` and confirm gap-map headline still reads `98 validated_full / 0 untested` — sanity that no drift between sessions.
+2. **T0 SIGN with Rigby:** present Option A vs Option B for Ledger #16 substrate shape. Ask her preferred posture (hard-refuse vs soft-checklist). Include mutation-verb scan on `core/management/commands/session_lifecycle.py` — this is a real code substrate ship, not a doc ship.
+3. **Chris D-verdict:** joint recommendation from Claude+Rigby with plain-English decision framing (what we lose / more work later).
+4. **Implementation:** edit `session_lifecycle.py` per chosen shape. Add regression test at `core/tests/test_session_lifecycle_twin_mirror.py` (or extend existing test file).
+5. **Rigby T1 SIGN** with tool-grounded verification asks.
+6. **PR + admin-merge + recycle + post-merge verify.**
+7. **Close cascade** (handoff + 00-START refresh + wrapper pin bump).
 
 ### Alternative next actions (not blocked — still available if Chris redirects)
 
@@ -80,30 +76,40 @@ Remaining 6 tools across 5 handler files (per S2939 close):
 - **(B) Slice 5-hardening** — 3-4 executable invariants deferred at S2928 fork A.
 - **(D) Docs restructuring arc** — unblocked at S2800, still queued.
 - **(E) Tier 2 lint promotion** — envelope-JSON top-level-key parse against schema description text. Ledger #5 sub-substrate. ~1 session.
-- **(F) Dry-run substrate design (Ledger #38)** — enables live mutation verification of remaining Slice 7 batch 2b/2c mutations AND retroactively for Batch 2a. ~1 session.
+- **(F) Dry-run substrate design (Ledger #38)** — enables live mutation verification of Slice 7 mutations retroactively (all 4 mut tools now have analyzed-only §6). ~1 session.
 - **(G) Ledger #40 candidate promotion** — expand Ledger #5 Tier 1 lint to catch `newsletter_tool` sources-drift class. Threshold: 2+ more corroborations before promoting.
 - **(H) Ledger #41 candidate** — teach gap-map classifier to distinguish live-verified vs analyzed-only actions (fine-grained `validated_partial` vs `validated_full` disposition).
 
 ---
 
-## What's forbidden at S2940 (D6 MORATORIUM still in force)
+## What's forbidden at S2941 (D6 MORATORIUM still in force)
 
-All prior forbidden entries carry forward. **S2940 new forbidden entries:** none. Clean session.
+All prior forbidden entries carry forward. **S2941 new forbidden entries:** none. Clean session.
 
 ---
 
 ## What's queued but deferred (do NOT open unless Chris directs)
 
-- **Ledger #5 Tier 2 (envelope-JSON parse)** — deferred per Rigby S2938 ZO AGREE. Would catch `rigby_shift_brief` PARTIAL DRIFT + `newsletter_tool` `sources` drift (Ledger #40 candidate). Bring back when 2+ additional §5c.1 findings prove Tier 1 leaves detection gaps.
+All S2939 close deferred entries carry forward. **S2940 additions to the deferred queue:**
+
+- **Ledger candidate — `code_job_tool.submit` silent-degrade on Celery dispatch fail** — line 148-149 warning-log-only path. Candidate for a first-class refusal envelope OR a `celery_dispatched: false` field.
+- **Ledger candidate — `employee_tool.run_now` double-dispatch hazard** — no idempotency check at handler layer; concurrent re-dispatch creates concurrent OpsRun rows. Candidate for a refuse-if-non-terminal check.
+- **Ledger candidate — `railway_tool` `restart`+`redeploy` functional equivalence** — both fire identical `serviceInstanceRedeploy` mutation.
+- **Ledger #5 Tier-2 candidate — bare invalid-action envelope pattern** — sixth-instance corroboration surfaced at S2940 (`code_job_tool` + `railway_tool` both use bare `{error: ...}` shape). Threshold: 2+ more corroborations before promoting.
+- **`_handle_railway` docstring under-lists actions** (5/7 named — omits `metrics` + `help`) — ~2-min doc fix at next `td_handlers_railway.py` touch.
+
+All prior S2939 deferred entries unchanged:
+
+- **Ledger #5 Tier 2 (envelope-JSON parse)** — deferred per Rigby S2938 ZO AGREE. Bring back when 2+ additional §5c.1 findings prove Tier 1 leaves detection gaps.
 - **Ledger #5 Tier 3 (semantic distance between prose and field names)** — too fuzzy for MVP; needs curated corpus first.
-- **Ledger #36 (blog_tool Deliverable/SelfBlog approve-path fix)** — extend `_handle_content_review` publish/archive branches to fall back to SelfBlog. Correctness bug candidate.
+- **Ledger #36 (blog_tool Deliverable/SelfBlog approve-path fix)** — correctness bug candidate.
 - **Ledger #37 (feedback_tool.update `.save()` → update_fields)** — ~1-line fix.
-- **Ledger #38 (dry_run affordance across batch-2 mutations)** — substrate design session. Blocks live mutation verification of Slice 6 batch 2 mutations AND Slice 7 batch 2a/2b/2c mutations.
+- **Ledger #38 (dry_run affordance across batch-2 mutations)** — substrate design session. Would enable live verification of Slice 7 batch 2a/2b mutations retroactively.
 - **Ledger #39 (rigby_work_queue module docstring stale)** — **AUTO-DETECTED by Ledger #5 lint.** ~5-min doc fix; natural fold-in at next `rigby_work_queue` touch.
-- **Ledger #40 candidate (newsletter_tool sources drift)** — record-only; did NOT trip current Tier 1 MVP heuristic. Promote to Tier 1 lint expansion if pattern surfaces in 2+ more docs.
-- **Ledger #41 candidate (classifier live-vs-analyzed distinction)** — gap-map classifier refinement. Record-only.
+- **Ledger #40 candidate (newsletter_tool sources drift)** — record-only.
+- **Ledger #41 candidate (classifier live-vs-analyzed distinction)** — record-only.
 - **`execution_history_tool` `hours` schema declaration** — ~3 min follow-up PR. Ledger #35 references.
-- **Invalid-action non-gating consistency across Slice 6+7 handlers** — Ledger #5 consolidation candidate. Fourth-instance corroboration observed at S2939 (rigby_work_item + earlier mission_verdict + newsletter_tool `_handler_error` variant + prior in-envelope pattern).
+- **Invalid-action non-gating consistency across Slice 6+7 handlers** — Ledger #5 consolidation candidate. Now at sixth-instance corroboration (S2940).
 - **`zoom_out_tool include=aggregations` Rigby-wrapper investigation (S2937 §6.1a anomaly)** — PA-wrapper investigation. Bundle with any Rigby wrapper touch.
 - **A8 — Signal Dispatches "Manual dispatch" UI button** — Rigby S2934 zoom-out fold.
 - **A6 — SignalCluster promotion audit** — substrate investigation.
@@ -111,7 +117,7 @@ All prior forbidden entries carry forward. **S2940 new forbidden entries:** none
 - **Dedicated `agent_execution_query` PA tool** — S2931 Ledger #33.
 - **Shared `skip_in_test` decorator** — S2931 Ledger #34.
 - **Slice 5-hardening session** — 3-4 executable invariants deferred at S2928 fork A.
-- **Bundled dev-env drift slate** — pyright warnings on `pa_tool_schemas.py` + `build_pa_tool_audit.py` + `pa_tools_gap_map.py` (pre-existing dev-env drift; unchanged this ship — same class, deferred).
+- **Bundled dev-env drift slate** — pyright warnings on `pa_tool_schemas.py` + `build_pa_tool_audit.py` + `pa_tools_gap_map.py` (pre-existing dev-env drift; unchanged this ship).
 - **Phase 0 heading fixes (8 tools)** — doc-only PR that clears remaining parity mismatches.
 - **Slice 1.5b autopilot mutations** — staged-enforcement session per pre-commit note.
 - **S2907 harness-substrate: MLEngine per-invocation NLP-model load** — unchanged.
@@ -141,11 +147,11 @@ All prior forbidden entries carry forward. **S2940 new forbidden entries:** none
 **Slice 4 — `td_handlers_gateway` (17 tools):** CLOSED at S2924 (17/17).
 **Slice 5 — `tool_dispatcher` (14 tools):** CLOSED at S2928 (14/14). ✅
 **Slice 6 — `td_handlers_content` (6 tools):** CLOSED at S2936 (6/6, batch 1 + 2). ✅
-**Slice 7 — singleton bucket (9 tools across 8 handler files):** **BATCH 1 CLOSED at S2937 (3/9). BATCH 2a CLOSED at S2939 (3/9).** Batches 2b + 2c queued for S2940+ (6 tools remaining across 5 handler files).
+**Slice 7 — singleton bucket (9 tools across 8 handler files):** **CLOSED at S2940 (9/9).** ✅ Batches 1 (S2937, 3) + 2a (S2939, 3) + 2b (S2940, 3).
 
-**Substrate arcs CLOSED at S2938:** Ledger #5 (Tier 1 MVP — schema-vs-handler consistency lint). Tier 2 + Tier 3 deferred to future ships.
+**Substrate arcs CLOSED:** Ledger #5 Tier 1 MVP (S2938 — schema-vs-handler consistency lint).
 
-**Total remaining tools to close:** **6 across 5 handler files** (down from 9 at S2937 open).
+**Total remaining tools to close: 0.**
 
 ---
 
@@ -161,9 +167,9 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2939 close)
+## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force — refreshed at S2940 close)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2939: zero A4 spend** — pure substrate/docs progress (Batch 2a docs shipped).
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2940: zero A4 spend** — pure substrate/docs progress (Batch 2b docs shipped; Slice 7 CLOSED).
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
 3. **Capability claims:** (a)…(uu) as ratified at S2887 close. No additions.
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
@@ -172,10 +178,11 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## For fuller A1 W1 + W2 arc context (spans S2846 → S2939)
+## For fuller A1 W1 + W2 arc context (spans S2846 → S2940)
 
 See:
-- **S2939 handoff (current):** `docs/handoffs/SESSION_2939_SLICE_7_BATCH_2A.md`
+- **S2940 handoff (current):** `docs/handoffs/SESSION_2940_SLICE_7_CLOSE.md`
+- **S2939 handoff:** `docs/handoffs/SESSION_2939_SLICE_7_BATCH_2A.md`
 - **S2938 handoff:** `docs/handoffs/SESSION_2938_LEDGER_5_LINT.md`
 - **S2937 handoff:** `docs/handoffs/SESSION_2937_SLICE_7_BATCH_1.md`
 - **S2936 handoff:** `docs/handoffs/SESSION_2936_SLICE_6_BATCH_2_CLOSE.md`
@@ -193,6 +200,7 @@ See:
 - **Slice 5 CLOSE artifact:** `docs/audits/pa_tools/substrate/slice_5_close_artifact.md`
 - **T1b canonical template file (with §5c retro-fold):** `docs/audits/pa_tools/substrate/_TEMPLATE_per_tool_validation.md`
 - **S2938 Ledger #5 lint code:** `core/services/pa_tools_gap_map.py` (`lint_schema_vs_handler` line 431) + `core/tests/test_pa_tools_gap_map_ledger_5.py`
+- **S2940 Batch 2b validation docs (CLOSES Slice 7):** `docs/research/tools/validation/{code_job_tool,employee_tool,railway_tool}_validation.md`
 - **S2939 Batch 2a validation docs:** `docs/research/tools/validation/{mission_verdict,newsletter_tool,rigby_work_item}_tool_validation.md`
 - **S2937 validation docs:** `docs/research/tools/validation/{rigby_shift_brief,spider_data_aggregation,zoom_out}_tool_validation.md`
 - **S2936 validation docs:** `docs/research/tools/validation/{blog,feedback}_tool_validation.md`
@@ -210,8 +218,8 @@ See:
 - **S2934 A4 tab component:** `frontend/src/pages/workspace/tabs/SignalDispatchesTab.tsx`
 - **S2934 test file:** `core/tests/test_s2934_signal_dispatch_harness.py` (13 tests, all pass)
 - **BaseBusinessResearchAgent content-shape FAIL Fold:** engineering item deliverable `5703a6c8-9bfa-4b11-81cc-baff7c90b3d5`.
-- **Rigby Tool Gap Ledger deliverable:** `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` (no new entries S2939; Ledger #39 auto-detected by Ledger #5 lint substrate).
-- **PA tools sweep methodology:** `docs/audits/PA_TOOLS_GAP_MAP.md` + `docs/PA_TOOL_AUDIT.md` (both auto-generated with `--include-validation-xref`) + `docs/research/tools/validation/*.md` (112 per-tool validation docs post-S2939).
+- **Rigby Tool Gap Ledger deliverable:** `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` (no new formal entries S2940; 4 record-only candidates deferred).
+- **PA tools sweep methodology:** `docs/audits/PA_TOOLS_GAP_MAP.md` + `docs/PA_TOOL_AUDIT.md` (both auto-generated with `--include-validation-xref`) + `docs/research/tools/validation/*.md` (115 per-tool validation docs post-S2940).
 - **Parent-workspace multi-Claude rulebook:** `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`
 
 For older session history (S1-S2849), see `docs/handoffs/` + `docs/research/OPEN_ARCS.md`.
