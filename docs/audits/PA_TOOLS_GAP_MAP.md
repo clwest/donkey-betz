@@ -36,6 +36,8 @@ Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without
 - `actions_not_mentioned_in_description`: **22** tools
 - `no_required`: **14** tools
 - `no_properties`: **1** tools
+- `handler_drift_action_count`: **1** tools
+- `handler_drift_negative_claim_dispatch`: **1** tools
 
 ## Triage slices (F3 decision aid — pick, do not queue)
 
@@ -160,7 +162,7 @@ _No untested-tool groups met the threshold._
 | `resolve_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `revenue_tracker_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_agents.py` |
 | `rigby_shift_brief_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_rigby_shift_brief.py` |
-| `rigby_work_item` | ✓✓ | untested | warn | actions_not_mentioned_in_description | `core/services/td_handlers_rigby_work_queue.py` |
+| `rigby_work_item` | ✓✓ | untested | warn | actions_not_mentioned_in_description, handler_drift_action_count, handler_drift_negative_claim_dispatch | `core/services/td_handlers_rigby_work_queue.py` |
 | `run_agent` | schema | meta (no handler by design) | warn | — | `—` |
 | `schedule_followup` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_agents.py` |
 | `scheduled_tasks_tool` | ✓✓ | validated (full) | warn | no_required | `core/services/td_handlers_ops.py` |
