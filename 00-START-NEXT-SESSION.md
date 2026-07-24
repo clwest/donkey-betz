@@ -23,9 +23,10 @@ All 4 dispatch through shared handler `_handle_agent_tool` at `tool_dispatcher.p
 - PR #3487 recycled clean at `sha=389c048b0a04`: 5 fresh workers + beat, zero surviving old PIDs.
 - PR #3488 recycled clean at `sha=c06bf7e57f76`: 5 fresh workers + beat, zero surviving old PIDs.
 - Rigby dispatch **4/4 receipt PASS** (task_ids `58d165dd` / `b2af49ff` / `d70e38de` / `dcb12206`).
-- **PR #3487 fix VALIDATED end-to-end** — `workflow_orchestration_agent` envelope + ORM parent execution both show `agent_name='WorkflowOrchestrationAgent'`. Pre-PR-A would have been `'WorkflowAgent'`.
-- **`strategic_review` alias VALIDATED** — envelope + ORM show `agent='ContentStrategyAgent'` (documented Session 1068 alias behaves as expected).
-- Completion-verify outcome: see S2927 handoff §"Post-merge live-dispatch verify" (background ORM poll ran through session close for workflow_orchestration_agent business_research template — still in_progress at close).
+- **PR #3487 fix VALIDATED end-to-end at 3 observation surfaces** — dispatch envelope + parent AgentExecution `owner_agent` field + completion `output_data.data.keys` shape (all show `WorkflowOrchestrationAgent`; template payload shape `['image_ids', 'project_created', 'step_results', 'summary', 'video_ids', 'workflow']` matches `workflow_orchestration_agent.py:313-320`).
+- **`strategic_review` alias mismatch VALIDATED at runtime (post-close observation)** — SWOT prompt → content-strategy-shaped output (`"Generated 3 content recommendations"` message + identical `data.keys` to `content_strategy_agent`). Doc §5 warning graduated from theoretical to observed once.
+- **All 4 completed by 05:39:08** (2 min–5.5 min latency window). See handoff §"Post-close completion observations" for full detail. **Content-shape FAIL Fold candidate stays at 1/2** — `marketing_strategy_agent` produced real structured Markdown target-audience content, not a 2nd false-PASS instance.
+- **New feedback rule saved to Claude memory:** wait for in-flight agent completions before starting close cascade (see `feedback_wait_for_agent_completions_before_close_cascade.md`).
 
 **§5a end-to-end classification (batch 3):** `workflow_orchestration_agent` = `external` amplified via template-driven bounded fanout (16+ AVAILABLE_WORKFLOWS templates); `content_strategy_agent` = `external` non-amplified; `marketing_strategy_agent` = `external` amplified via `BaseBusinessResearchAgent` spider + web_search integration + auto-Deliverable INSERT (post_save cascading); `strategic_review` = `external` non-amplified (identical to `content_strategy_agent` — same class).
 
