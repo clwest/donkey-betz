@@ -339,12 +339,17 @@ class CloseTests(_WrapperFileMixin, TestCase):
         wrapper = self._write_fixture(_wrapper_fixture(self.original_pin))
 
         out = StringIO()
+        # --allow-no-mirror satisfies Ledger #16 (S2941) enforcement gate
+        # for tests that exercise the retire/mint/rewrite flow rather than
+        # mirror-verification behavior. Dedicated twin-mirror coverage lives
+        # in test_session_lifecycle_twin_mirror.py.
         call_command(
             "session_lifecycle", "close",
             "--label", "next-arc",
             "--carry-forward", "test",
             "--user", _TEST_USERNAME,
             "--wrapper-path", str(wrapper),
+            "--allow-no-mirror",
             stdout=out,
         )
         output = out.getvalue()
@@ -398,12 +403,14 @@ class CloseTests(_WrapperFileMixin, TestCase):
         original_body = wrapper.read_text()
 
         out = StringIO()
+        # --allow-no-mirror to satisfy Ledger #16 gate (S2941).
         call_command(
             "session_lifecycle", "close",
             "--label", "next",
             "--user", _TEST_USERNAME,
             "--wrapper-path", str(wrapper),
             "--dry-run",
+            "--allow-no-mirror",
             stdout=out,
         )
         self.assertIn("dry-run", out.getvalue())
