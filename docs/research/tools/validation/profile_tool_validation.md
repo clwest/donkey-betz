@@ -23,8 +23,8 @@ Distinct from `personal_assistant_interviewer` (interview-driven skill discovery
 ## Covered actions
 
 - `profile` — **in scope this ship — pure READ (default action)** — verified live. Returns `ExtendedUserProfile` for the calling user via `ExtendedUserProfile.objects.filter(user_id=user_id).first()` at handler line 2301. Envelope: `{action, profile: {full_name, location, timezone, current_title, years_experience, experience_level, skills, certifications, remote_preference, profile_completeness}}` OR `{action, profile: null, message: 'No extended profile found'}` when no row exists. User-scoped strictly — no user_id → null profile (no fallback to global).
-- `skills` — **in scope this ship — pure READ** — verified live. Returns first 50 `UserSkill` rows for the calling user ordered by `-confidence, -last_demonstrated` at handler line 2322. User-scoped when `user_id` is present at line 2324. Envelope: `{action, count, skills: [{id, skill_name, category, proficiency_level, evidence_count, confidence, last_demonstrated}]}`. Note: hard-coded 50-row cap (no `limit` param); differs from most Slice 4 READ actions (default 20 / cap 50). Recorded as authoring detail.
-- `learning_summary` — **in scope this ship — pure READ** — verified live. Aggregates `UserSkill` via `Count('id')` + `Avg('confidence')` at handler line 2346. User-scoped when `user_id` is present at line 2344. Envelope: `{action, total_skills, avg_confidence, by_category: {<category>: <count>, ...}}`.
+- `skills` — **in scope this ship — pure READ** — **verify-blocked by dev-env drift** (Rigby Tool Gap Ledger #33). Returns first 50 `UserSkill` rows for the calling user ordered by `-confidence, -last_demonstrated` at handler line 2322. User-scoped when `user_id` is present at line 2324. Envelope: `{action, count, skills: [{id, skill_name, category, proficiency_level, evidence_count, confidence, last_demonstrated}]}`. Note: hard-coded 50-row cap (no `limit` param); differs from most Slice 4 READ actions (default 20 / cap 50). Recorded as authoring detail. **S2924 verify surfaced `relation "core_userskill" does not exist` — dev DB migration for `UserSkill` model not applied. Not a batch 7 code regression (code path unchanged). Ledger #33 LOW.** Envelope shape claim above is authored from static code read; ORM-verified when migration lands.
+- `learning_summary` — **in scope this ship — pure READ** — **verify-blocked by same dev-env drift as `skills` above** (Rigby Tool Gap Ledger #33). Aggregates `UserSkill` via `Count('id')` + `Avg('confidence')` at handler line 2346. User-scoped when `user_id` is present at line 2344. Envelope: `{action, total_skills, avg_confidence, by_category: {<category>: <count>, ...}}`.
 - `preferences` — **in scope this ship — pure READ (with implicit-write side effect)** — verified live. Fetches (or `get_or_create` inserts if missing) an `EnhancedUserProfile` row via `EnhancedUserProfile.objects.get_or_create(user=user)` at handler line 2365. Returns 12 preference fields as JSON. Envelope: `{action, preferences: {long_term_goals, current_projects, quarterly_objectives, learning_style, communication_style, decision_framework, current_learning_goals, personal_values, delegation_preferences, work_schedule, time_zone, privacy_level}}` OR `{action, error: 'No user context'}` when `user_id` is absent (line 2362–2363). **Note:** classified pure-READ from caller perspective but IS a spreading-tier write on first-touch (see §5a).
 - `update_preferences` — **in scope this ship — mutation, classified `spreading`** — verified live. `EnhancedUserProfile.objects.get_or_create(user=user)` at handler line 2394 (may create row) + `enhanced.save()` at line 2415 (persists field changes IFF applied dict is non-empty). Accepts either bulk `updates` dict OR single `field`+`value` pair (line 2405–2406). Only 12 whitelisted `ALLOWED_FIELDS` (line 2397–2402) can be set; unknown fields are silently ignored. Envelope: `{action, updated_fields: [<list>], count, success: <bool>}`.
 - `desk_preferences` — **in scope this ship — pure READ** — verified live. Reads BOTH `EnhancedUserProfile` (via `.filter(user=user).first()` at line 2435) AND `ExtendedUserProfile` (via `.filter(user=user).first()` at line 2436), applies a desk-specific projection (`sports` / `stocks` / `content` / `general`) from `DESK_PROJECTIONS` dict at handler lines 2444–2461, and returns a merged view with fallback semantics (Enhanced → Extended → typed empty default). Envelope: `{action, desk, communication_style, long_term_goals, <projected fields>..., context, available_desks}`.
@@ -141,15 +141,17 @@ For `profile`:
 3. If profile exists (non-null): ORM cross-check `ExtendedUserProfile.objects.get(user_id=<current_user_id>)` — every field in envelope matches the ORM row.
 4. If profile is null: envelope's `message` == 'No extended profile found'. No side effect.
 
-For `skills`:
+For `skills` (**verify-blocked in dev by Ledger #33 until UserSkill migration lands**):
 1. Dispatch `{"action": "skills"}`.
-2. Response envelope: `{action, count, skills: [...]}` with `count == len(skills)` and `count ≤ 50`.
+2. Expected response envelope: `{action, count, skills: [...]}` with `count == len(skills)` and `count ≤ 50`.
 3. ORM cross-check: `UserSkill.objects.filter(user_id=<current_user_id>).order_by('-confidence', '-last_demonstrated')[:count]` matches envelope entries in the same order; key fields per §Covered actions.
+4. **Current dev-env behavior:** returns `{error: 'relation "core_userskill" does not exist ...', error_code: 'legacy_error'}` — migration not applied. Re-run this verify after Ledger #33 resolution.
 
-For `learning_summary`:
+For `learning_summary` (**verify-blocked in dev by Ledger #33 until UserSkill migration lands**):
 1. Dispatch `{"action": "learning_summary"}`.
-2. Response envelope: `{action, total_skills, avg_confidence, by_category: {...}}`.
+2. Expected response envelope: `{action, total_skills, avg_confidence, by_category: {...}}`.
 3. ORM cross-check: `UserSkill.objects.filter(user_id=<current_user_id>).count() == total_skills`; `by_category` matches `.values_list('category').annotate(c=Count('id'))`; `avg_confidence` matches `.aggregate(Avg('confidence'))['confidence__avg'] or 0`.
+4. **Current dev-env behavior:** same UserSkill relation missing error as `skills`. Re-run after Ledger #33 resolution.
 
 For `preferences` (READ + implicit first-touch write):
 1. Before dispatch, capture `EnhancedUserProfile.objects.filter(user_id=<current_user_id>).exists()`.
