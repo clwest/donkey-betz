@@ -19,171 +19,185 @@
 - Handler-only entries that the LLM reaches via the `run_agent(agent_name=…)` meta-tool (by design, not a bug): 44 agents — these are the agent-routing bypass paths sharing `_handle_agent_tool`.
 - Heavily-shared handlers (≥5 tool names route to the same function — usually a gateway / meta-tool by design): `ToolDispatcher._handle_agent_tool` (58).
 
+## Validation coverage (S2795)
+
+- `validated_full` (validated (full)): **56**
+- `agent_via_run_agent` (agent (via run_agent)): **44**
+- `untested` (untested): **43**
+- `validated_partial` (validated (partial)): **10**
+- `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
+- `meta_no_handler` (meta (no handler by design)): **1**
+
+**Schema quality lints:**
+- `actions_not_mentioned_in_description`: **23** tools
+- `no_required`: **14** tools
+- `no_properties`: **1** tools
+
 ## Tool overview
 
-| Tool | Wiring | Actions | Required | Summary |
-|---|:-:|:-:|:-:|---|
-| `active_priority_tool` | ✓ ✓ | 6 | 1 | Manage Rigby's active priorities for priority-aware routing |
-| `active_repo_tool` | ✓ ✓ | 3 | 1 | Persist or read the 'currently working in repo X' pointer for the user, so multi-repo workflows don't need … |
-| `agent_control_tool` | ✓ ✓ | 4 | 1 | Manage blocked/enabled agents |
-| `agent_introspection_tool` | ✓ ✓ | 5 | 1 | Introspect agents: list registered agents, view capabilities, check which agents are available |
-| `agent_memory_tool` | ✓ ✓ | 3 | 1 | Browse agent memories and knowledge sources |
-| `ai_series_workflow_agent` | handler only | — | — | _(no description)_ |
-| `analytics_tool` | ✓ ✓ | 3 | 1 | Query behavioral analytics: DeliverableEvent counts, ATR-24h metrics, event breakdowns by type/role/time |
-| `ats_tool` | ✓ ✓ | 4 | 1 | View ATS keyword mappings, resume optimization logs, persona templates, and stats |
-| `audio_generation_agent` | handler only | — | — | _(no description)_ |
-| `audit_tool` | ✓ ✓ | 4 | 1 | View audit findings, wiring defects, citation violations, and P0 summary |
-| `autonomous_content_studio_coordinator` | handler only | — | — | _(no description)_ |
-| `autopilot_tool` | ✓ ✓ | 95 | 1 | Monitor and configure the Ops Autopilot — automated incident response with governance guardrails |
-| `bear_case_agent` | handler only | — | — | _(no description)_ |
-| `blockchain_audit_coordinator` | handler only | — | — | _(no description)_ |
-| `blog_tool` | ✓ ✓ | 8 | 1 | Manage the blog/content pipeline — stats, list, approve, reject, generate |
-| `bpaas_tool` | ✓ ✓ | 4 | 1 | Build Packet as a Service — create client projects from structured build packets |
-| `brainstorm_tool` | ✓ ✓ | 7 | 1 | Search and list brainstorm sessions: discussion panels, multi-agent debates, and collaborative insights |
-| `brand_identity_agent` | handler only | — | — | _(no description)_ |
-| `brand_strategy_agent` | ✓ ✓ | — | 1 | Develop brand strategy: positioning, messaging, voice, identity, brand architecture, differentiation |
-| `calendar_tool` | ✓ ✓ | 4 | 1 | View content channels, episodes, and upcoming schedule |
-| `campaign_orchestrator_agent` | handler only | — | — | _(no description)_ |
-| `campaign_tool` | ✓ ✓ | 3 | 1 | View campaigns, campaign deliverables, and stats |
-| `character_training_agent` | ✓ ✓ | — | 1 | Train a custom character model from reference images for consistent character generation |
-| `check_resource_budget` | ✓ ✓ | — | — | Check resource budgets: API costs, token usage, compute limits |
-| `claude_code_tool` | ✓ ✓ | — | 1 | Spawn an autonomous Claude Code engineering session that can read files, write code, create branches, and o… |
-| `cockpit_tool` | ✓ ✓ | 8 | 1 | System operations cockpit for Celery infrastructure |
-| `code_job_tool` | ✓ ✓ | 7 | 1 | Submit, monitor, and manage remote code jobs |
-| `code_review_agent` | handler only | — | — | _(no description)_ |
-| `competitor_analysis_agent` | ✓ ✓ | — | 1 | Analyze competitors: market positioning, strengths, weaknesses, product comparison, pricing analysis, marke… |
-| `competitor_comparison_tool` | ✓ ✓ | 8 | 1 | Generate, check status, list, view, delete, or regenerate competitor comparisons |
-| `conceptforge_tool` | ✓ ✓ | 3 | 1 | View ConceptForge pipeline runs, stages, artifacts, and stats |
-| `content_audit_agent` | handler only | — | — | _(no description)_ |
-| `content_diversity_orchestrator` | handler only | — | — | _(no description)_ |
-| `content_strategy_agent` | ✓ ✓ | — | 1 | Develop content strategy: editorial calendar, content pillars, distribution plan, SEO strategy, content audit |
-| `content_tool` | ✓ ✓ | 26 | 1 | Unified content gateway — blogs, deliverables, publishing, and editorial |
-| `content_writer_agent` | ✓ ✓ | — | 1 | Write content: blog posts, articles, marketing copy, social media posts, email newsletters, product descrip… |
-| `contrarian_agent` | handler only | — | — | _(no description)_ |
-| `conversation_tool` | ✓ ✓ | 5 | 1 | Search and retrieve past PA conversations |
-| `coo_agent` | handler only | — | — | _(no description)_ |
-| `cost_telemetry_tool` | ✓ ✓ | 3 | 1 | Get real API cost and spend data from LLM call logs |
-| `create_brand_video` | ✓ ✓ | — | 1 | Create a brand video by orchestrating multiple agents: script writing, image generation, video generation, … |
-| `create_project_from_research` | ✓ ✓ | — | 1 | Create a full project from research: web research, analysis, project planning, deliverable creation |
-| `creative_director_agent` | handler only | — | — | _(no description)_ |
-| `cto_agent` | handler only | — | — | _(no description)_ |
-| `customer_research_agent` | ✓ ✓ | — | 1 | Research target customers: demographics, pain points, buying behavior, user personas, customer journey mapp… |
-| `davinci_tool` | ✓ ✓ | 6 | 1 | Direct control surface for DaVinci Resolve rendering and color grading |
-| `db_health_tool` | ✓ ✓ | 7 | — | Check database health: migration status, table row counts, PostgreSQL connection info, pgvector extension s… |
-| `deliverable_tool` | ✓ ✓ | 18 | 1 | Manage the deliverables library — create, read, update, search, save, export, and archive deliverables |
-| `diagnostics_tool` | ✓ ✓ | 7 | 1 | Audit/inventory telemetry for subsystem health checks (Session 1202 §A.2) |
-| `discord_tool` | ✓ ✓ | 3 | 1 | Inspect the Discord bot: list registered commands, check slot usage, view cog structure, and verify bot con… |
-| `distribution_tool` | ✓ ✓ | 4 | 1 | View content distribution platforms, listings, revenue, and stats |
-| `dream_tool` | ✓ ✓ | 6 | 1 | Browse and act on agent dreams: list top-scored dreams, view details, approve or dismiss |
-| `editor_agent` | handler only | — | — | _(no description)_ |
-| `employee_tool` | ✓ ✓ | 4 | 2 | Inspect or dispatch jobs on the AI Employee registry |
-| `execution_history_tool` | ✓ ✓ | 5 | 1 | View agent execution history: recent runs, success/failure rates, execution details, and full output data |
-| `experiment_tool` | ✓ ✓ | 3 | 1 | View A/B tests, experiment results, and stats |
-| `feedback_tool` | ✓ ✓ | 4 | 1 | Submit or view feedback on agent outputs, content quality, or platform features |
-| `fleet_health` | ✓ ✓ | — | — | Read-only rollup of every Dockerized fleet app's /api/health endpoint |
-| `game_predictor` | handler only | — | — | _(no description)_ |
-| `gates_tool` | ✓ ✓ | 3 | 1 | Access quality gates: list gates, check gate status, view pass/fail history |
-| `get_body_vitals` | ✓ ✓ | — | — | Get body system vitals: HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN health s… |
-| `get_system_alerts` | ✓ ✓ | — | — | Get active system alerts and warnings |
-| `governance_tool` | ✓ ✓ | 17 | 1 | Unified governance inbox — attention items, decisions, and triage |
-| `governor_tool` | ✓ ✓ | 4 | 1 | Beat Task Governor — controls which autonomous agent dispatches are allowed to run based on mission alignme… |
-| `heartbeat_history_tool` | ✓ ✓ | 2 | 1 | View heartbeat history and trends |
-| `http_smoke_test` | ✓ ✓ | — | — | Run HTTP smoke tests against platform API endpoints |
-| `image_editing_agent` | ✓ ✓ | — | 1 | Edit an existing image: upscale, remove background, apply filters, crop, resize, add text overlay, style tr… |
-| `image_generation_agent` | handler only | — | — | _(no description)_ |
-| `infra_health_tool` | ✓ ✓ | 4 | 1 | Deep infrastructure health checks — Redis, PostgreSQL, dependencies, and runtime metrics |
-| `intelligence_tool` | ✓ ✓ | 19 | 1 | Unified intelligence desk — stocks, sports betting, legislation, search, and KB |
-| `kb_tool` | ✓ ✓ | 5 | 1 | Browse the knowledge base — documents, embedding collections, chunk counts, and text search across all embe… |
-| `learning_patterns_tool` | ✓ ✓ | 3 | 1 | View learning patterns: feedback loops, improvement trends, agent learning metrics |
-| `learning_tool` | ✓ ✓ | 6 | 1 | Manage the PA's learned tool-usage insights |
-| `legal_doc_drafter_agent` | ✓ ✓ | — | 1 | Draft legal documents: contracts, agreements, legal letters, compliance documents |
-| `line_movement_analyzer` | handler only | — | — | _(no description)_ |
-| `market_intelligence_coordinator` | handler only | — | — | _(no description)_ |
-| `marketing_strategy_agent` | ✓ ✓ | — | 1 | Develop marketing strategy: campaign planning, channel strategy, go-to-market plan, growth strategy, market… |
-| `media_tool` | ✓ ✓ | 4 | 1 | Browse the user's media library: AI-generated images, videos, and audio files |
-| `meeting_coordinator_agent` | handler only | — | — | _(no description)_ |
-| `memory_isolation_agent` | handler only | — | — | _(no description)_ |
-| `messaging_tool` | ✓ ✓ | 3 | 1 | Read-only access to in-app messaging threads |
-| `mission_verdict` | ✓ ✓ | 3 | 2 | Rigby-only: certify, reject, or defer a MissionRun |
-| `ml_analysis` | ✓ ✓ | 3 | 1 | Run ML analysis on platform data: prediction models, feature importance, model accuracy |
-| `mobile_tool` | ✓ ✓ | 4 | 1 | Inspect the React Native / Expo mobile app: project config, implemented screens, API modules, dependencies |
-| `narrative_tool` | ✓ ✓ | 5 | 1 | Access narrative drift analysis, trend break detection, and cultural impact assessments |
-| `newsletter_tool` | ✓ ✓ | 7 | 1 | Newsletter publishing pipeline — prepare issues for Substack/Beehiiv, generate outlines, validate against T… |
-| `obs_tool` | ✓ ✓ | 6 | 1 | Control OBS Studio recording via the local bridge |
-| `opportunity_manager_tool` | ✓ ✓ | 6 | 1 | Manage opportunities: list, view details, get stats, create, or update status |
-| `opportunity_pipeline_agent` | handler only | — | — | _(no description)_ |
-| `opportunity_scoring_agent` | handler only | — | — | _(no description)_ |
-| `ops_digest_tool` | ✓ ✓ | 2 | 1 | Generate or post an autonomous ops digest summarizing system health, autopilot status, blocked agents, and … |
-| `ops_tool` | ✓ ✓ | 22 | 1 | Production operations surface: check deployment version/build info, monitor SLO compliance (task success ra… |
-| `orm_inspect_tool` | ✓ ✓ | 5 | 1 | Read-only, allowlisted Django ORM row inspection |
-| `paid_interest_status` | ✓ ✓ | — | — | Return the Decision 13 demand-gate trigger state for a fleet app's paid-interest signal |
-| `performance_analyst_agent` | handler only | — | — | _(no description)_ |
-| `persona_tool` | ✓ ✓ | 2 | 1 | Access 139 specialized AI persona agents across 14 categories: income generation, career development, job s… |
-| `pilots_tool` | ✓ ✓ | 3 | 1 | Access experiments and pilots: A/B tests, feature experiments, pilot results |
-| `pipeline_orchestrator_tool` | ✓ ✓ | 1 | 1 | Get pipeline orchestration status and initiative stage breakdown |
-| `platform_audit_agent` | handler only | — | — | _(no description)_ |
-| `platform_awareness_tool` | ✓ ✓ | 7 | 1 | Enumerate platform capabilities: UI routes, studios, feature flags, and deploy verification |
-| `platform_config_tool` | ✓ ✓ | 5 | — | Inspect runtime platform configuration: active LLM providers, environment variables (secrets masked), Djang… |
-| `podcast_coordinator_agent` | handler only | — | — | _(no description)_ |
-| `podcast_tool` | ✓ ✓ | 4 | 1 | View podcast shows, episodes, scripts, and stats |
-| `prediction_market_analyst` | handler only | — | — | _(no description)_ |
-| `proactive_tool` | ✓ ✓ | 8 | 1 | View proactive alerts, notifications, smart suggestions, and automated actions generated by the system |
-| `profile_tool` | ✓ ✓ | 6 | 1 | View extended user profile, tracked skills, and learning summary |
-| `railway_tool` | ✓ ✓ | 7 | 1 | Railway platform infrastructure management |
-| `reasoning_engine_tool` | ✓ ✓ | 3 | 1 | Query or trigger the ThinkingAgent reasoning engine |
-| `recent_activity_tool` | ✓ ✓ | — | — | View recent platform activity: latest agent executions, Celery tasks, spider runs, and system events |
-| `remember_tool` | ✓ ✓ | 4 | 1 | Save something to persistent memory so you remember it across sessions |
-| `repo_tool` | ✓ ✓ | 5 | 1 | Read-only codebase introspection: browse file tree, read file contents, search/grep across code, and check … |
-| `research_agent` | handler only | — | — | _(no description)_ |
-| `research_and_create_tool` | ✓ ✓ | — | 2 | Research a topic via web search and create content (blog post, comparison, script, analysis) |
-| `resolve_agent` | handler only | — | — | _(no description)_ |
-| `revenue_tracker_tool` | ✓ ✓ | 3 | 1 | Track revenue metrics, income progress, and record new revenue |
-| `rigby_shift_brief_tool` | ✓ ✓ | 1 | 1 | Rigby's operator shift brief — a one-minute pulse for Chris at the start of a session |
-| `rigby_work_item` | ✓ ✓ | 5 | 1 | Rigby's internal operational work queue |
-| `run_agent` | schema only | — | 2 | Delegate a task to a specialized agent |
-| `schedule_followup` | ✓ ✓ | — | — | Subscribe THIS conversation to a completion notification for a previously dispatched async agent task |
-| `scheduled_tasks_tool` | ✓ ✓ | 3 | — | View and manage scheduled Celery tasks: list beat entries, enable/disable schedules |
-| `search_docs` | ✓ ✓ | — | 1 | Search the /docs/ corpus and return ranked chunks with inline citations |
-| `security_agent` | handler only | — | — | _(no description)_ |
-| `self_awareness_tool` | ✓ ✓ | 5 | 1 | View system self-awareness metrics, analysis reports, and evolution history |
-| `seo_optimizer_agent` | handler only | — | — | _(no description)_ |
-| `session_tool` | ✓ ✓ | 7 | 1 | Manage conversation sessions: check conversation health/freshness, create a fresh conversation, or list rec… |
-| `sharp_action_detector` | handler only | — | — | _(no description)_ |
-| `signal_studio_judge_stats` | ✓ ✓ | — | — | Return signal-studio's LLM auto-summarizer judge stats over the last N days: counts of clusters accepted (s… |
-| `social_media_agent` | handler only | — | — | _(no description)_ |
-| `spider_data_aggregation_tool` | ✓ ✓ | 1 | 1 | Group-by counts of SpiderData rows by data_type over a windowed time range, with optional spider_name + dat… |
-| `spider_status_tool` | ✓ ✓ | 4 | 1 | View individual spider health and activity |
-| `status_snapshot_tool` | ✓ ✓ | — | — | Get a broad system overview snapshot: agents, spiders, initiatives, health scores, recent activity |
-| `stock_analyst_agent` | handler only | — | — | _(no description)_ |
-| `stock_audit_coordinator` | handler only | — | — | _(no description)_ |
-| `strategic_review` | ✓ ✓ | — | 1 | Conduct a strategic review: evaluate strategy, assess market position, review business model, SWOT analysis… |
-| `studio_tool` | ✓ ✓ | 6 | 1 | Unified creative studio: generate images, videos, and audio |
-| `surgical_moves_status_tool` | ✓ ✓ | — | — | Check status of deliberation pipeline and content verification |
-| `system_intelligence_agent` | handler only | — | — | _(no description)_ |
-| `talking_character_agent` | handler only | — | — | _(no description)_ |
-| `task_breakdown_tool` | ✓ ✓ | 2 | 1 | Celery task volume breakdown and load analysis |
-| `task_manager_tool` | ✓ ✓ | 6 | 1 | Manage tasks linked to opportunities: list tasks, view stats |
-| `thinking_agent` | handler only | — | — | _(no description)_ |
-| `three_d_generation_agent` | ✓ ✓ | — | 1 | Generate 3D models from text descriptions or images |
-| `topic_miner_agent` | handler only | — | — | _(no description)_ |
-| `trained_creation_agent` | handler only | — | — | _(no description)_ |
-| `trend_analysis_agent` | handler only | — | — | _(no description)_ |
-| `universal_agent_tool` | ✓ ✓ | — | 1 | Route a task to a specific agent or auto-route to the best-fit agent |
-| `video_editing_agent` | ✓ ✓ | — | 1 | Edit an existing video: trim, cut, speed change, add effects, concatenate clips, add text overlay, transiti… |
-| `video_generation_agent` | handler only | — | — | _(no description)_ |
-| `video_history_tool` | ✓ ✓ | 7 | 1 | Search, browse, and process the user's videos (VideoHistory model) |
-| `vip_invite_tool` | ✓ ✓ | 3 | 1 | Manage VIP magic-link invites for demo viewers |
-| `voice_clone_tool` | ✓ ✓ | 5 | 1 | Manage voice cloning and the voice marketplace |
-| `voice_critic_agent` | handler only | — | — | _(no description)_ |
-| `web_fetch_tool` | ✓ ✓ | — | 1 | Raw HTTP GET/POST to a URL, returning status_code, headers, and body (parsed JSON when content-type is appl… |
-| `web_search` | ✓ ✓ | — | 1 | Search the web for current information |
-| `whale_watcher_agent` | handler only | — | — | _(no description)_ |
-| `work_tool` | ✓ ✓ | 16 | 1 | Work execution gateway: manage initiatives and action items |
-| `workflow_orchestration_agent` | ✓ ✓ | — | 1 | Orchestrate multi-step workflows that chain multiple agents together |
-| `workflow_run_tool` | ✓ ✓ | 5 | 1 | Start, poll, list, detail, or cancel multi-step workflow runs |
-| `workspace_budget_tool` | ✓ ✓ | 11 | 1 | Manage per-workspace LLM spend caps, downgrade state, and freeze state (A1 W1 Phase 3 + W1.5 + W2 #2a) |
-| `workspace_tool` | ✓ ✓ | 13 | 1 | Manage workspaces and workspace-scoped operations |
-| `zoom_out_tool` | ✓ ✓ | 1 | 1 | Read the Rigby SIGN zoom-out concern ledger — logs/zoom_out_classifications.jsonl |
+| Tool | Wiring | Actions | Required | Category | Lint | Summary |
+|---|:-:|:-:|:-:|---|---|---|
+| `active_priority_tool` | ✓ ✓ | 6 | 1 | validated_full | — | Manage Rigby's active priorities for priority-aware routing |
+| `active_repo_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Persist or read the 'currently working in repo X' pointer for the user, so multi-repo workflows don't need … |
+| `agent_control_tool` | ✓ ✓ | 4 | 1 | validated_full | — | Manage blocked/enabled agents |
+| `agent_introspection_tool` | ✓ ✓ | 5 | 1 | validated_doc_exists_unknown | — | Introspect agents: list registered agents, view capabilities, check which agents are available |
+| `agent_memory_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Browse agent memories and knowledge sources |
+| `ai_series_workflow_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `analytics_tool` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Query behavioral analytics: DeliverableEvent counts, ATR-24h metrics, event breakdowns by type/role/time |
+| `ats_tool` | ✓ ✓ | 4 | 1 | untested | — | View ATS keyword mappings, resume optimization logs, persona templates, and stats |
+| `audio_generation_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `audit_tool` | ✓ ✓ | 4 | 1 | validated_full | — | View audit findings, wiring defects, citation violations, and P0 summary |
+| `autonomous_content_studio_coordinator` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `autopilot_tool` | ✓ ✓ | 95 | 1 | validated_partial | actions_not_mentioned_in_description | Monitor and configure the Ops Autopilot — automated incident response with governance guardrails |
+| `bear_case_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `blockchain_audit_coordinator` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `blog_tool` | ✓ ✓ | 8 | 1 | untested | — | Manage the blog/content pipeline — stats, list, approve, reject, generate |
+| `bpaas_tool` | ✓ ✓ | 4 | 1 | validated_partial | — | Build Packet as a Service — create client projects from structured build packets |
+| `brainstorm_tool` | ✓ ✓ | 7 | 1 | validated_partial | — | Search and list brainstorm sessions: discussion panels, multi-agent debates, and collaborative insights |
+| `brand_identity_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `brand_strategy_agent` | ✓ ✓ | — | 1 | untested | — | Develop brand strategy: positioning, messaging, voice, identity, brand architecture, differentiation |
+| `calendar_tool` | ✓ ✓ | 4 | 1 | untested | — | View content channels, episodes, and upcoming schedule |
+| `campaign_orchestrator_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `campaign_tool` | ✓ ✓ | 3 | 1 | validated_full | — | View campaigns, campaign deliverables, and stats |
+| `character_training_agent` | ✓ ✓ | — | 1 | untested | — | Train a custom character model from reference images for consistent character generation |
+| `check_resource_budget` | ✓ ✓ | — | — | validated_full | no_required | Check resource budgets: API costs, token usage, compute limits |
+| `claude_code_tool` | ✓ ✓ | — | 1 | validated_doc_exists_unknown | — | Spawn an autonomous Claude Code engineering session that can read files, write code, create branches, and o… |
+| `cockpit_tool` | ✓ ✓ | 8 | 1 | untested | actions_not_mentioned_in_description | System operations cockpit for Celery infrastructure |
+| `code_job_tool` | ✓ ✓ | 7 | 1 | untested | — | Submit, monitor, and manage remote code jobs |
+| `code_review_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `competitor_analysis_agent` | ✓ ✓ | — | 1 | untested | — | Analyze competitors: market positioning, strengths, weaknesses, product comparison, pricing analysis, marke… |
+| `competitor_comparison_tool` | ✓ ✓ | 8 | 1 | validated_full | — | Generate, check status, list, view, delete, or regenerate competitor comparisons |
+| `conceptforge_tool` | ✓ ✓ | 3 | 1 | untested | — | View ConceptForge pipeline runs, stages, artifacts, and stats |
+| `content_audit_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `content_diversity_orchestrator` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `content_strategy_agent` | ✓ ✓ | — | 1 | untested | — | Develop content strategy: editorial calendar, content pillars, distribution plan, SEO strategy, content audit |
+| `content_tool` | ✓ ✓ | 26 | 1 | untested | — | Unified content gateway — blogs, deliverables, publishing, and editorial |
+| `content_writer_agent` | ✓ ✓ | — | 1 | untested | — | Write content: blog posts, articles, marketing copy, social media posts, email newsletters, product descrip… |
+| `contrarian_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `conversation_tool` | ✓ ✓ | 5 | 1 | validated_full | — | Search and retrieve past PA conversations |
+| `coo_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `cost_telemetry_tool` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Get real API cost and spend data from LLM call logs |
+| `create_brand_video` | ✓ ✓ | — | 1 | untested | — | Create a brand video by orchestrating multiple agents: script writing, image generation, video generation, … |
+| `create_project_from_research` | ✓ ✓ | — | 1 | untested | — | Create a full project from research: web research, analysis, project planning, deliverable creation |
+| `creative_director_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `cto_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `customer_research_agent` | ✓ ✓ | — | 1 | untested | — | Research target customers: demographics, pain points, buying behavior, user personas, customer journey mapp… |
+| `davinci_tool` | ✓ ✓ | 6 | 1 | validated_partial | — | Direct control surface for DaVinci Resolve rendering and color grading |
+| `db_health_tool` | ✓ ✓ | 7 | — | validated_full | no_required | Check database health: migration status, table row counts, PostgreSQL connection info, pgvector extension s… |
+| `deliverable_tool` | ✓ ✓ | 18 | 1 | validated_doc_exists_unknown | — | Manage the deliverables library — create, read, update, search, save, export, and archive deliverables |
+| `diagnostics_tool` | ✓ ✓ | 7 | 1 | validated_full | actions_not_mentioned_in_description | Audit/inventory telemetry for subsystem health checks (Session 1202 §A.2) |
+| `discord_tool` | ✓ ✓ | 3 | 1 | untested | — | Inspect the Discord bot: list registered commands, check slot usage, view cog structure, and verify bot con… |
+| `distribution_tool` | ✓ ✓ | 4 | 1 | untested | — | View content distribution platforms, listings, revenue, and stats |
+| `dream_tool` | ✓ ✓ | 6 | 1 | validated_full | — | Browse and act on agent dreams: list top-scored dreams, view details, approve or dismiss |
+| `editor_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `employee_tool` | ✓ ✓ | 4 | 2 | untested | — | Inspect or dispatch jobs on the AI Employee registry |
+| `execution_history_tool` | ✓ ✓ | 5 | 1 | untested | — | View agent execution history: recent runs, success/failure rates, execution details, and full output data |
+| `experiment_tool` | ✓ ✓ | 3 | 1 | validated_full | — | View A/B tests, experiment results, and stats |
+| `feedback_tool` | ✓ ✓ | 4 | 1 | untested | — | Submit or view feedback on agent outputs, content quality, or platform features |
+| `fleet_health` | ✓ ✓ | — | — | validated_full | no_required | Read-only rollup of every Dockerized fleet app's /api/health endpoint |
+| `game_predictor` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `gates_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Access quality gates: list gates, check gate status, view pass/fail history |
+| `get_body_vitals` | ✓ ✓ | — | — | validated_full | no_properties, no_required | Get body system vitals: HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN health s… |
+| `get_system_alerts` | ✓ ✓ | — | — | validated_full | no_required | Get active system alerts and warnings |
+| `governance_tool` | ✓ ✓ | 17 | 1 | validated_full | actions_not_mentioned_in_description | Unified governance inbox — attention items, decisions, and triage |
+| `governor_tool` | ✓ ✓ | 4 | 1 | validated_full | — | Beat Task Governor — controls which autonomous agent dispatches are allowed to run based on mission alignme… |
+| `heartbeat_history_tool` | ✓ ✓ | 2 | 1 | validated_full | — | View heartbeat history and trends |
+| `http_smoke_test` | ✓ ✓ | — | — | validated_full | no_required | Run HTTP smoke tests against platform API endpoints |
+| `image_editing_agent` | ✓ ✓ | — | 1 | untested | — | Edit an existing image: upscale, remove background, apply filters, crop, resize, add text overlay, style tr… |
+| `image_generation_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `infra_health_tool` | ✓ ✓ | 4 | 1 | validated_full | actions_not_mentioned_in_description | Deep infrastructure health checks — Redis, PostgreSQL, dependencies, and runtime metrics |
+| `intelligence_tool` | ✓ ✓ | 19 | 1 | validated_partial | actions_not_mentioned_in_description | Unified intelligence desk — stocks, sports betting, legislation, search, and KB |
+| `kb_tool` | ✓ ✓ | 5 | 1 | validated_doc_exists_unknown | — | Browse the knowledge base — documents, embedding collections, chunk counts, and text search across all embe… |
+| `learning_patterns_tool` | ✓ ✓ | 3 | 1 | untested | actions_not_mentioned_in_description | View learning patterns: feedback loops, improvement trends, agent learning metrics |
+| `learning_tool` | ✓ ✓ | 6 | 1 | validated_full | — | Manage the PA's learned tool-usage insights |
+| `legal_doc_drafter_agent` | ✓ ✓ | — | 1 | validated_full | — | Draft legal documents: contracts, agreements, legal letters, compliance documents |
+| `line_movement_analyzer` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `market_intelligence_coordinator` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `marketing_strategy_agent` | ✓ ✓ | — | 1 | untested | — | Develop marketing strategy: campaign planning, channel strategy, go-to-market plan, growth strategy, market… |
+| `media_tool` | ✓ ✓ | 4 | 1 | validated_partial | — | Browse the user's media library: AI-generated images, videos, and audio files |
+| `meeting_coordinator_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `memory_isolation_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `messaging_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Read-only access to in-app messaging threads |
+| `mission_verdict` | ✓ ✓ | 3 | 2 | untested | — | Rigby-only: certify, reject, or defer a MissionRun |
+| `ml_analysis` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Run ML analysis on platform data: prediction models, feature importance, model accuracy |
+| `mobile_tool` | ✓ ✓ | 4 | 1 | untested | — | Inspect the React Native / Expo mobile app: project config, implemented screens, API modules, dependencies |
+| `narrative_tool` | ✓ ✓ | 5 | 1 | untested | — | Access narrative drift analysis, trend break detection, and cultural impact assessments |
+| `newsletter_tool` | ✓ ✓ | 7 | 1 | untested | — | Newsletter publishing pipeline — prepare issues for Substack/Beehiiv, generate outlines, validate against T… |
+| `obs_tool` | ✓ ✓ | 6 | 1 | validated_partial | — | Control OBS Studio recording via the local bridge |
+| `opportunity_manager_tool` | ✓ ✓ | 6 | 1 | validated_full | — | Manage opportunities: list, view details, get stats, create, or update status |
+| `opportunity_pipeline_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `opportunity_scoring_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `ops_digest_tool` | ✓ ✓ | 2 | 1 | validated_full | — | Generate or post an autonomous ops digest summarizing system health, autopilot status, blocked agents, and … |
+| `ops_tool` | ✓ ✓ | 22 | 1 | validated_partial | actions_not_mentioned_in_description | Production operations surface: check deployment version/build info, monitor SLO compliance (task success ra… |
+| `orm_inspect_tool` | ✓ ✓ | 5 | 1 | validated_full | — | Read-only, allowlisted Django ORM row inspection |
+| `paid_interest_status` | ✓ ✓ | — | — | validated_full | no_required | Return the Decision 13 demand-gate trigger state for a fleet app's paid-interest signal |
+| `performance_analyst_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `persona_tool` | ✓ ✓ | 2 | 1 | validated_full | — | Access 139 specialized AI persona agents across 14 categories: income generation, career development, job s… |
+| `pilots_tool` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Access experiments and pilots: A/B tests, feature experiments, pilot results |
+| `pipeline_orchestrator_tool` | ✓ ✓ | 1 | 1 | validated_full | — | Get pipeline orchestration status and initiative stage breakdown |
+| `platform_audit_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `platform_awareness_tool` | ✓ ✓ | 7 | 1 | validated_full | actions_not_mentioned_in_description | Enumerate platform capabilities: UI routes, studios, feature flags, and deploy verification |
+| `platform_config_tool` | ✓ ✓ | 5 | — | validated_full | no_required, actions_not_mentioned_in_description | Inspect runtime platform configuration: active LLM providers, environment variables (secrets masked), Djang… |
+| `podcast_coordinator_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `podcast_tool` | ✓ ✓ | 4 | 1 | untested | — | View podcast shows, episodes, scripts, and stats |
+| `prediction_market_analyst` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `proactive_tool` | ✓ ✓ | 8 | 1 | untested | — | View proactive alerts, notifications, smart suggestions, and automated actions generated by the system |
+| `profile_tool` | ✓ ✓ | 6 | 1 | untested | — | View extended user profile, tracked skills, and learning summary |
+| `railway_tool` | ✓ ✓ | 7 | 1 | untested | — | Railway platform infrastructure management |
+| `reasoning_engine_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Query or trigger the ThinkingAgent reasoning engine |
+| `recent_activity_tool` | ✓ ✓ | — | — | untested | no_required | View recent platform activity: latest agent executions, Celery tasks, spider runs, and system events |
+| `remember_tool` | ✓ ✓ | 4 | 1 | validated_full | — | Save something to persistent memory so you remember it across sessions |
+| `repo_tool` | ✓ ✓ | 5 | 1 | validated_doc_exists_unknown | — | Read-only codebase introspection: browse file tree, read file contents, search/grep across code, and check … |
+| `research_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `research_and_create_tool` | ✓ ✓ | — | 2 | validated_full | — | Research a topic via web search and create content (blog post, comparison, script, analysis) |
+| `resolve_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `revenue_tracker_tool` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Track revenue metrics, income progress, and record new revenue |
+| `rigby_shift_brief_tool` | ✓ ✓ | 1 | 1 | untested | actions_not_mentioned_in_description | Rigby's operator shift brief — a one-minute pulse for Chris at the start of a session |
+| `rigby_work_item` | ✓ ✓ | 5 | 1 | untested | actions_not_mentioned_in_description | Rigby's internal operational work queue |
+| `run_agent` | schema only | — | 2 | meta_no_handler | — | Delegate a task to a specialized agent |
+| `schedule_followup` | ✓ ✓ | — | — | validated_full | no_required | Subscribe THIS conversation to a completion notification for a previously dispatched async agent task |
+| `scheduled_tasks_tool` | ✓ ✓ | 3 | — | validated_full | no_required | View and manage scheduled Celery tasks: list beat entries, enable/disable schedules |
+| `search_docs` | ✓ ✓ | — | 1 | validated_doc_exists_unknown | — | Search the /docs/ corpus and return ranked chunks with inline citations |
+| `security_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `self_awareness_tool` | ✓ ✓ | 5 | 1 | untested | — | View system self-awareness metrics, analysis reports, and evolution history |
+| `seo_optimizer_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `session_tool` | ✓ ✓ | 7 | 1 | validated_doc_exists_unknown | actions_not_mentioned_in_description | Manage conversation sessions: check conversation health/freshness, create a fresh conversation, or list rec… |
+| `sharp_action_detector` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `signal_studio_judge_stats` | ✓ ✓ | — | — | validated_full | no_required | Return signal-studio's LLM auto-summarizer judge stats over the last N days: counts of clusters accepted (s… |
+| `social_media_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `spider_data_aggregation_tool` | ✓ ✓ | 1 | 1 | untested | actions_not_mentioned_in_description | Group-by counts of SpiderData rows by data_type over a windowed time range, with optional spider_name + dat… |
+| `spider_status_tool` | ✓ ✓ | 4 | 1 | validated_full | — | View individual spider health and activity |
+| `status_snapshot_tool` | ✓ ✓ | — | — | validated_full | no_required | Get a broad system overview snapshot: agents, spiders, initiatives, health scores, recent activity |
+| `stock_analyst_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `stock_audit_coordinator` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `strategic_review` | ✓ ✓ | — | 1 | untested | — | Conduct a strategic review: evaluate strategy, assess market position, review business model, SWOT analysis… |
+| `studio_tool` | ✓ ✓ | 6 | 1 | validated_full | actions_not_mentioned_in_description | Unified creative studio: generate images, videos, and audio |
+| `surgical_moves_status_tool` | ✓ ✓ | — | — | untested | no_required | Check status of deliberation pipeline and content verification |
+| `system_intelligence_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `talking_character_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `task_breakdown_tool` | ✓ ✓ | 2 | 1 | validated_full | actions_not_mentioned_in_description | Celery task volume breakdown and load analysis |
+| `task_manager_tool` | ✓ ✓ | 6 | 1 | validated_full | — | Manage tasks linked to opportunities: list tasks, view stats |
+| `thinking_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `three_d_generation_agent` | ✓ ✓ | — | 1 | untested | — | Generate 3D models from text descriptions or images |
+| `topic_miner_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `trained_creation_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `trend_analysis_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `universal_agent_tool` | ✓ ✓ | — | 1 | validated_full | — | Route a task to a specific agent or auto-route to the best-fit agent |
+| `video_editing_agent` | ✓ ✓ | — | 1 | untested | — | Edit an existing video: trim, cut, speed change, add effects, concatenate clips, add text overlay, transiti… |
+| `video_generation_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `video_history_tool` | ✓ ✓ | 7 | 1 | validated_full | — | Search, browse, and process the user's videos (VideoHistory model) |
+| `vip_invite_tool` | ✓ ✓ | 3 | 1 | untested | — | Manage VIP magic-link invites for demo viewers |
+| `voice_clone_tool` | ✓ ✓ | 5 | 1 | validated_full | — | Manage voice cloning and the voice marketplace |
+| `voice_critic_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `web_fetch_tool` | ✓ ✓ | — | 1 | validated_full | — | Raw HTTP GET/POST to a URL, returning status_code, headers, and body (parsed JSON when content-type is appl… |
+| `web_search` | ✓ ✓ | — | 1 | validated_full | — | Search the web for current information |
+| `whale_watcher_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
+| `work_tool` | ✓ ✓ | 16 | 1 | validated_partial | actions_not_mentioned_in_description | Work execution gateway: manage initiatives and action items |
+| `workflow_orchestration_agent` | ✓ ✓ | — | 1 | untested | — | Orchestrate multi-step workflows that chain multiple agents together |
+| `workflow_run_tool` | ✓ ✓ | 5 | 1 | validated_full | — | Start, poll, list, detail, or cancel multi-step workflow runs |
+| `workspace_budget_tool` | ✓ ✓ | 11 | 1 | validated_full | — | Manage per-workspace LLM spend caps, downgrade state, and freeze state (A1 W1 Phase 3 + W1.5 + W2 #2a) |
+| `workspace_tool` | ✓ ✓ | 13 | 1 | validated_partial | — | Manage workspaces and workspace-scoped operations |
+| `zoom_out_tool` | ✓ ✓ | 1 | 1 | untested | actions_not_mentioned_in_description | Read the Rigby SIGN zoom-out concern ledger — logs/zoom_out_classifications.jsonl |
 
 ## Detail appendix
 
