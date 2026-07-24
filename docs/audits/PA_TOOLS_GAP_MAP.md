@@ -10,26 +10,26 @@
 
 - **Total tool names:** 161
 - **Per-category breakdown:**
-  - `validated_full` (validated (full)): **89**
+  - `validated_full` (validated (full)): **92**
   - `agent_via_run_agent` (agent (via run_agent)): **44**
   - `validated_partial` (validated (partial)): **11**
-  - `untested` (untested): **9**
   - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
+  - `untested` (untested): **6**
   - `meta_no_handler` (meta (no handler by design)): **1**
 
 ## Validation-doc corpus
 
-- **Total `*_validation.md` files:** 116
+- **Total `*_validation.md` files:** 119
 - **Substrate (cross-cutting) docs:** 10 — reduce risk platform-wide but do NOT validate per-tool invariants (S2795 F2 rename).
-- **Per-tool docs:** 106 — of which 98 have an explicit 'Covered actions' section (F1 checklist).
-- **Per-tool docs with `Template version` marker:** 84 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
+- **Per-tool docs:** 109 — of which 101 have an explicit 'Covered actions' section (F1 checklist).
+- **Per-tool docs with `Template version` marker:** 87 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
 
 ## Template compliance (T1b)
 
 Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without `Template version:` marker); `pass` = v1-conformant; `fail` = v1 marker present but mandatory section/frontmatter missing.
 
-- `pass`: **86**
-- `warn`: **75**
+- `pass`: **89**
+- `warn`: **72**
 
 ## Schema quality lints (F5 advisory column)
 
@@ -159,7 +159,7 @@ _No untested-tool groups met the threshold._
 | `research_and_create_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_core.py` |
 | `resolve_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `revenue_tracker_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_agents.py` |
-| `rigby_shift_brief_tool` | ✓✓ | untested | warn | actions_not_mentioned_in_description | `core/services/td_handlers_rigby_shift_brief.py` |
+| `rigby_shift_brief_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_rigby_shift_brief.py` |
 | `rigby_work_item` | ✓✓ | untested | warn | actions_not_mentioned_in_description | `core/services/td_handlers_rigby_work_queue.py` |
 | `run_agent` | schema | meta (no handler by design) | warn | — | `—` |
 | `schedule_followup` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_agents.py` |
@@ -172,7 +172,7 @@ _No untested-tool groups met the threshold._
 | `sharp_action_detector` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `signal_studio_judge_stats` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_core.py` |
 | `social_media_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
-| `spider_data_aggregation_tool` | ✓✓ | untested | warn | actions_not_mentioned_in_description | `core/services/spider_data_aggregation_tool.py` |
+| `spider_data_aggregation_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/spider_data_aggregation_tool.py` |
 | `spider_status_tool` | ✓✓ | validated (full) | warn | — | `core/services/td_handlers_ops.py` |
 | `status_snapshot_tool` | ✓✓ | validated (full) | warn | no_required | `core/services/td_handlers_ops.py` |
 | `stock_analyst_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
@@ -204,5 +204,5 @@ _No untested-tool groups met the threshold._
 | `workflow_run_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_core.py` |
 | `workspace_budget_tool` | ✓✓ | validated (full) | warn | — | `core/services/td_handlers_ops.py` |
 | `workspace_tool` | ✓✓ | validated (partial) | warn | — | `core/services/td_handlers_agents.py` |
-| `zoom_out_tool` | ✓✓ | untested | warn | actions_not_mentioned_in_description | `core/services/td_handlers_governance.py` |
+| `zoom_out_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_governance.py` |
 
