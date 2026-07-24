@@ -234,6 +234,63 @@ S2917 batch 7 per Rigby T0 SIGN Q2 AGREE-with-edits.
   - (b) **Cancel semantics**: revoke path (if any) + `terminate=True/False` + domain-side status marker. Explicit "no cancel" allowed as an answer.
   - (c) **Revisit triggers**: what future evidence would force a re-audit of this Appendix A (schema/handler/queue/task changes; new dispatcher re-entry sites; new opaque callees added downstream).
 
+## 5c. Contract ↔ Implementation Consistency (S2937 retro-fold; per Rigby zoom-out #4)
+
+[MANDATORY] Three-item consistency check between what the docstrings /
+schema descriptions / module headers CLAIM and what the code ACTUALLY
+does. Added S2937 open before Slice 7 batch 1 shipped, motivated by a
+concrete drift found in Slice 7 handler-read (Ledger #39): the
+`td_handlers_rigby_work_queue.py` module docstring stated "four actions"
++ "No agent dispatch", but the handler has 5 actions with async
+dispatch via a service. Without this consistency check, the sweep-close
+artifact codifies stale docstrings as "trusted contracts."
+
+Each item requires an explicit one-sentence disposition per doc.
+Mismatches surface a Ledger hygiene candidate — recording is required;
+same-PR fix is optional.
+
+### 5c.1 Handler / module header claims match action reality
+
+Cross-check the module docstring + tool-schema `description` field
+against the handler's actual behavior:
+- Number of actions in the `action` enum vs. what the docstring names.
+- Which actions are mutations vs. reads (matches §5a classification).
+- Whether any action triggers **dispatch** (Celery `apply_async`),
+  **external API calls** (network I/O), **LLM invocations**, or other
+  side effects — matches §5b Appendix N / Appendix A.
+
+**Disposition:** state PASS / DRIFT + one sentence. On DRIFT, cite
+handler line evidence and open a Ledger entry (record-only is fine).
+
+### 5c.2 Gating truth matches runtime behavior
+
+If the tool is flag-gated (Django settings toggle, env var, feature
+flag), the doc must state:
+- What the tool returns when the flag is OFF (usually a
+  short-circuited `disabled_response` shape).
+- What §6 LIVE-VERIFY actually verifies given the flag's current
+  default state — the disabled-path shape (when flag defaults OFF) OR
+  the enabled behavior (when flag defaults ON).
+
+If NOT flag-gated, one sentence noting "no gate — always live" is
+sufficient.
+
+**Disposition:** state PASS / DRIFT + one sentence. Flag-gated tools
+whose §6 evidence doesn't align with current flag state = DRIFT.
+
+### 5c.3 Shared handler-file coupling noted
+
+When multiple tools share a handler module (e.g., `employee_tool` +
+`mission_verdict` both live in `td_handlers_employee.py`), each
+per-tool doc must include a short "shared module" cross-link so future
+operators editing the shared file don't miss coupled tools.
+
+If the tool has a dedicated handler file (1 tool per file), one
+sentence noting "dedicated handler — no shared-module coupling" is
+sufficient.
+
+**Disposition:** state coupling status + cite sibling tools if any.
+
 ## 6. Evidence
 
 [MANDATORY] Per-action evidence: request/response captures, latency,
