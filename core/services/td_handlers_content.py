@@ -4667,12 +4667,62 @@ class ContentHandlersMixin:
             return self._handle_bulk_archive_published(payload, user_id, trace_id)
 
         # ── Session 1101: Manual cleanup trigger ──
+        # S2945 Ledger #38 batch 4: dry_run defaults TRUE (safety-first for
+        # destructive action; matches bulk_archive/bulk_archive_published
+        # precedent). Callers wanting immediate dispatch must pass dry_run=false.
         if action == 'run_cleanup':
             from core.tasks import cleanup_stale_content
             cutoff_days = int(payload.get('cutoff_days') or 7)  # Session 1228 PR-B autofill safety
             statuses = payload.get('statuses', ['ready', 'draft'])
             cap = min(int(payload.get('cap') or 500), 2000)  # Session 1228 PR-B autofill safety
             protected_types = payload.get('protected_types', [])
+            dry_run = bool(payload.get('dry_run', True))
+
+            if dry_run:
+                # S2945 Ledger #38 batch 4 — align with S2942 blog_tool
+                # generate_blog dispatch_celery envelope. Uses shared
+                # _gather_cleanup_preview() helper so preview count/breakdown
+                # cannot drift from the actual archive filter executed by
+                # _impl_cleanup_stale_content. Preview data is a real
+                # value-add over the blog_tool stub (would_archive_count +
+                # top breakdown so Chris/Rigby can go/no-go informed).
+                from core.tasks_misc import _gather_cleanup_preview
+                preview = _gather_cleanup_preview(
+                    cutoff_days=cutoff_days,
+                    statuses=statuses,
+                    protected_types=protected_types,
+                    cap=cap,
+                )
+                if preview.get('error') == 'no_valid_statuses':
+                    return _handler_error(
+                        'run_cleanup', 'invalid_params',
+                        'No valid statuses after safety filter (published/archived stripped).',
+                    )
+                would_count = preview['would_archive_count']
+                total_found = preview['total_found']
+                return {
+                    'gateway': 'content_tool',
+                    'action': 'run_cleanup',
+                    'dry_run': True,
+                    'mode': 'dry_run',
+                    'would_action': 'dispatch_celery',
+                    'would_task': 'cleanup_stale_content',
+                    'no_writes': True,
+                    'total_found': total_found,
+                    'would_archive_count': would_count,
+                    'cutoff_days': cutoff_days,
+                    'safe_statuses': preview['safe_statuses'],
+                    'cap': cap,
+                    'top_by_type': preview['by_type'][:5],
+                    'top_by_category': preview['by_category'][:5],
+                    'message': (
+                        f'dry_run=true: {would_count} of {total_found} stale items would be archived '
+                        f'(cutoff={cutoff_days}d, statuses={preview["safe_statuses"]}, cap={cap}). '
+                        f'No Celery task enqueued and no writes performed. '
+                        f'Set dry_run=false to dispatch the cleanup task.'
+                    ),
+                }
+
             task = cleanup_stale_content.delay(
                 cutoff_days=cutoff_days,
                 statuses=statuses,

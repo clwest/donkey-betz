@@ -31,28 +31,33 @@ from core.tasks import (  # noqa: F401 — private helpers from tasks.py
 
 
 
-def _impl_cleanup_stale_content(
-self,
+def _gather_cleanup_preview(
     cutoff_days: int = 7,
     statuses: list = None,
     protected_types: list = None,
     cap: int = 500,
 ):
-    """
-    Session 1101: Archive stale deliverables older than cutoff_days.
+    """S2945 Ledger #38 batch 4 — read-only queryset builder for
+    ``cleanup_stale_content``. Returns preview data (safe_statuses, cutoff,
+    total_found, would_archive_count, archive_ids, breakdowns) WITHOUT
+    executing any writes. Single source of truth called by both:
+    - ``td_handlers_content.run_cleanup`` dry_run branch (envelope preview)
+    - ``_impl_cleanup_stale_content`` (real archive path)
 
-    - Targets 'ready' and 'draft' statuses by default (never touches published/archived)
-    - Skips saved/pinned items
-    - Produces a breakdown report by type/category/agent
-    - Can be triggered manually or scheduled via Celery Beat
+    On invalid input (all statuses stripped by safety filter) returns
+    ``{'error': 'no_valid_statuses', 'safe_statuses': []}`` — caller decides
+    how to render.
+
+    S2945 batch 4 (2nd trigger of S2944 record-only statuses-autofill quirk):
+    treats ``statuses=None`` AND ``statuses=[]`` as "use default" — GPT-5.2
+    autofills empty-list where the schema expects omission.
     """
     from core.models_deliverables import Deliverable
-    from django.db.models import Count, Q
+    from django.db.models import Count
     from django.utils import timezone
     from datetime import timedelta
 
-    task_id = self.request.id if self.request else 'unknown'
-    if statuses is None:
+    if not statuses:
         statuses = ['ready', 'draft']
     if protected_types is None:
         protected_types = []
@@ -60,8 +65,7 @@ self,
     # Safety: never touch published or archived
     safe_statuses = [s for s in statuses if s not in ('published', 'archived')]
     if not safe_statuses:
-        logger.warning(f"[CONTENT_CLEANUP] {task_id} No valid statuses to clean")
-        return {'error': 'no_valid_statuses', 'task_id': task_id}
+        return {'error': 'no_valid_statuses', 'safe_statuses': []}
 
     cutoff = timezone.now() - timedelta(days=cutoff_days)
 
@@ -75,20 +79,81 @@ self,
     if hasattr(Deliverable, 'is_pinned'):
         qs = qs.filter(is_pinned=False)
 
-    total = qs.count()
+    total_found = qs.count()
+
+    if total_found == 0:
+        return {
+            'safe_statuses': safe_statuses,
+            'cutoff': cutoff,
+            'total_found': 0,
+            'would_archive_count': 0,
+            'archive_ids': [],
+            'by_type': [],
+            'by_category': [],
+            'by_agent': [],
+        }
+
+    by_type = list(qs.values('deliverable_type').annotate(count=Count('id')).order_by('-count'))
+    by_category = list(qs.values('category').annotate(count=Count('id')).order_by('-count')[:15])
+    by_agent = list(qs.values('agent_name').annotate(count=Count('id')).order_by('-count')[:15])
+
+    archive_ids = list(qs.order_by('created_at').values_list('id', flat=True)[:cap])
+
+    return {
+        'safe_statuses': safe_statuses,
+        'cutoff': cutoff,
+        'total_found': total_found,
+        'would_archive_count': len(archive_ids),
+        'archive_ids': archive_ids,
+        'by_type': by_type,
+        'by_category': by_category,
+        'by_agent': by_agent,
+    }
+
+
+def _impl_cleanup_stale_content(
+self,
+    cutoff_days: int = 7,
+    statuses: list = None,
+    protected_types: list = None,
+    cap: int = 500,
+):
+    """
+    Session 1101 (S2945 refactor): Archive stale deliverables older than cutoff_days.
+
+    - Targets 'ready' and 'draft' statuses by default (never touches published/archived)
+    - Skips saved/pinned items
+    - Produces a breakdown report by type/category/agent
+    - Can be triggered manually or scheduled via Celery Beat
+
+    S2945 Ledger #38 batch 4: filter + breakdown logic extracted to
+    ``_gather_cleanup_preview`` so the ``content_tool.run_cleanup`` dry_run
+    envelope cannot drift from what the real task archives.
+    """
+    from core.models_deliverables import Deliverable
+    from django.utils import timezone
+
+    task_id = self.request.id if self.request else 'unknown'
+
+    preview = _gather_cleanup_preview(
+        cutoff_days=cutoff_days,
+        statuses=statuses,
+        protected_types=protected_types,
+        cap=cap,
+    )
+
+    if preview.get('error') == 'no_valid_statuses':
+        logger.warning(f"[CONTENT_CLEANUP] {task_id} No valid statuses to clean")
+        return {'error': 'no_valid_statuses', 'task_id': task_id}
+
+    total = preview['total_found']
+    safe_statuses = preview['safe_statuses']
     logger.info(f"[CONTENT_CLEANUP] {task_id} Found {total} stale items (>{cutoff_days}d, statuses={safe_statuses})")
 
     if total == 0:
         return {'cleaned': 0, 'total_found': 0, 'task_id': task_id}
 
-    # Build report before archiving
-    by_type = list(qs.values('deliverable_type').annotate(count=Count('id')).order_by('-count'))
-    by_category = list(qs.values('category').annotate(count=Count('id')).order_by('-count')[:15])
-    by_agent = list(qs.values('agent_name').annotate(count=Count('id')).order_by('-count')[:15])
-
-    # Archive with cap
-    to_archive_ids = list(qs.order_by('created_at').values_list('id', flat=True)[:cap])
-    archived = Deliverable.objects.filter(id__in=to_archive_ids).update(
+    archived = Deliverable.objects.filter(id__in=preview['archive_ids']).update(
         status='archived',
         updated_at=timezone.now(),
     )
@@ -100,9 +165,9 @@ self,
         'cutoff_days': cutoff_days,
         'statuses': safe_statuses,
         'cap': cap,
-        'by_type': by_type,
-        'by_category': by_category,
-        'by_agent': by_agent,
+        'by_type': preview['by_type'],
+        'by_category': preview['by_category'],
+        'by_agent': preview['by_agent'],
     }
     logger.info(f"[CONTENT_CLEANUP] {task_id} Archived {archived}/{total} items")
     return report
