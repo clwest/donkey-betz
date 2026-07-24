@@ -2,53 +2,50 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2942 CLOSED. S2942 EXECUTED THE PRE-RATIFIED CLOSURE PLAN with a scope revision Chris ratified mid-flight: **Ledger #33 + #34 were already closed at S2931** (ledger status was stale — never flipped when S2931 shipped), so S2942 real scope narrowed to **Ledger #38 committed close (dry_run for blog_tool + feedback_tool) + Ledger #41 promotion (gap-map two-metric scoreboard classifier) + validation-doc refresh + ledger hygiene**. Acceptance gate SATISFIED — Rigby live-verified 3 mutation actions under dry_run (feedback_tool.submit + blog_tool.reject + blog_tool.generate). Plan §7 four litmus points all pass. Metric B moved from 0 → 2 (two per-tool docs now `live` + `dry_run_supported`). 68/68 tests pass (S2942 dry_run MVP 11 + S2942 Ledger #41 10 + S2931 bundle 8 + gap-map 39).
+## READ THIS FIRST — SESSION 2943 CLOSED. Slice 6 doc closure + Ledger #38 batch 2 shipped. Chris directed engineering-first at S2943 open (option B from 3-option kickoff menu): resume PA-tools sweep per `project_s2935_resume_pa_tools_sweep`. Post-S2942 reconciliation (Rigby T1 SIGN AGREE via 4 tool_runs) surfaced that only 2 tools in `td_handlers_content.py` needed doc work (not the pre-S2942 "6 untested" claim from S2934 memory): `content_tool` (no dedicated doc) + `deliverable_tool` (missing `## Covered actions` heading). Rigby zoom-out (Q3) pushed for a 2-PR split to avoid bundling docs-only wins with code churn; adopted. PR-A shipped docs-only; PR-B shipped `bulk_archive_published` dry_run alignment per `project_s2908_batch_4_shape_break_commitment` (chose bulk/maintenance sibling of already-supported `bulk_archive` over `set_status` per Rigby verdict on semantic coupling). Third mutation tool to earn `live` + `dry_run_supported`.
 
-**Refreshed 2026-07-24 (S2942 close).** Gap-map headline: `98 validated_full / 0 untested` (unchanged); new scoreboard baseline: `per_execution_mode: {unknown: 159, live: 2}` + `per_mutation_safety: {unknown: 159, dry_run_supported: 2}`.
+**Refreshed 2026-07-24 (S2943 close).** Gap-map headline: `100 validated_full / 0 untested` (+2 from S2942). New scoreboard baseline: `per_execution_mode: {unknown: 158, live: 3}` + `per_mutation_safety: {unknown: 158, dry_run_supported: 3}`.
 
 **PRs shipped this session:**
-- u-d-b PR `<TBD>` — S2942 Ledger #38 dry_run MVP + #41 classifier extension + validation-doc refresh + ledger hygiene + allowlist expansion (UserFeedback + SelfBlog).
+- u-d-b PR **#3523** — S2943 Slice 6 PR-A (docs-only): new `content_tool_validation.md` + `## Covered actions` heading on `deliverable_tool_validation.md`.
+- u-d-b PR **#3524** — S2943 Slice 6 PR-B (code + live-verify): `bulk_archive_published` dry_run pattern-alignment; scoreboard 2 → 3.
 
-**Twin mirrors shipped this session (dogfooding Ledger #16 enforcement):**
-- Content mirror: `<TBD>` (Architecture & Research workspace, category `initiative_phase_doc`).
-- Ratification envelope: `<TBD>` (Architecture & Research workspace, `deliverable_type='ratification_record'`).
+**Twin mirrors shipped this session (per `feedback_twin_deliverable_at_every_ratification`):**
+- Content mirror: `a3cb246d-48bf-4825-bbac-5c3547136bf9` (Architecture & Research workspace, category `initiative_phase_doc`; missing_initiative_id diagnostic cleared post-create).
+- Ratification envelope: `7b1eeaa7-18b5-45f8-9b1d-5e3e898a8a08` (Architecture & Research workspace, `deliverable_type='ratification_record'`, category `governance`; no diagnostic flagged — S2942 pre-set workaround baked in).
 
 **Files shipped this session:**
-- **MODIFIED** `core/services/td_handlers_content.py` — dry_run branches in `_handle_feedback` (submit/update at :3600+/:3676+), `_handle_content_review` (publish/archive at :640+/:656+), `_handle_blog_query` (publish/archive at :1400+/:1450+), `_handle_generate_blog` (:1550+).
-- **MODIFIED** `core/services/pa_tool_schemas.py` — `dry_run` param declared on feedback_tool (:645) + blog_tool (:4328).
-- **MODIFIED** `core/services/td_handlers_agents.py` — `UserFeedback` + `SelfBlog` entries added to `_MODEL_POLICIES` (:759-768).
-- **MODIFIED** `core/services/pa_tools_gap_map.py` — `EXECUTION_MODES` + `MUTATION_SAFETY_VALUES` + `UNKNOWN_LABEL` constants; frontmatter parsing extended; per-row + per-headline scoreboard emission; markdown renderer updated.
-- **MODIFIED** `docs/research/tools/validation/{blog_tool,feedback_tool}_validation.md` — new frontmatter fields + §6 dry_run live-verify evidence.
-- **MODIFIED** `docs/audits/pa_tools/substrate/_TEMPLATE_per_tool_validation.md` — canonical template updated with new opt-in fields.
-- **REGENERATED** `docs/audits/PA_TOOLS_GAP_MAP.md`.
-- **UPDATED** Rigby Tool Gap Ledger `5c84e75a-...` via ORM — rows #33/#34/#38 flipped to `mitigated`, reconciliation banner prepended, #38 mitigated stanza added.
-- **NEW** `core/tests/test_s2942_dry_run_mvp.py` (11 tests) + `core/tests/test_s2942_ledger_41_scoreboard.py` (10 tests).
+- **NEW** `docs/research/tools/validation/content_tool_validation.md` — S2796 sweep shape v1; 27 actions enumerated flat; blast-radius per §5a; Appendix A Celery fan-out; §6.1 live-verify evidence; frontmatter gains `Execution mode: live` + `Mutation safety: dry_run_supported`.
+- **MODIFIED** `docs/research/tools/validation/deliverable_tool_validation.md` — flat `## Covered actions` heading between §3 and §4; enumerates all 18 current actions (S2728 covered 16; `delete` + `clear_diagnostic` added S2860/S2868).
+- **MODIFIED** `core/services/td_handlers_content.py` — `_handle_bulk_archive_published` dry_run branch (line 5171-5181) emits S2942-aligned envelope: `would_action='archive_published'` + `would_change_to='archived'` + `would_archive_count=N` + `no_writes=true`.
+- **MODIFIED** `core/services/pa_tool_schemas.py` — `dry_run` param description (line 4190) now enumerates all 3 supporting actions.
+- **NEW** `core/tests/test_s2943_bulk_archive_published_dry_run.py` (6 regression tests).
 
 **Post-merge live-dispatch (per PLAYBOOK-7.4.4):**
-- Recycled twice mid-session (post-schema-edit + post-allowlist-expansion).
-- Live-verified 3 mutation actions under dry_run in conversation `pa-07d6a1d43f6a4b42`.
-- Gap-map regen confirms Metric B 0 → 2 (see `per_execution_mode` + `per_mutation_safety` headline).
-- **Post-merge cascade:** `make recycle-all` after PR merges.
+- Recycled once mid-session (post-PR-B handler edit, before live-verify).
+- Recycled again after PR-B merge.
+- Live-verified `bulk_archive_published` under dry_run in conversation `pa-5e0a153475dd44f7` (21ms, 5/5 S2942 envelope fields present, 0 writes).
+- Gap-map regen confirms scoreboard Metric B 2 → 3.
 
-**Governance:** none. D6 moratorium unchanged. Two zoom-out fold candidates recorded record-only (see below §Ledger candidates).
+**Governance:** none. D6 moratorium unchanged. Two zoom-out ledger candidates recorded record-only (newsletter dry_run alignment + deliverable v1 template retrofit — see handoff §Ledger candidates).
 
-**Rigby Tool Gap Ledger:** #33 + #34 + #38 flipped to `mitigated`. No new formal entries this session. Two record-only candidates below.
+**Rigby Tool Gap Ledger:** no new formal entries. Ledger #38 gained a batch-2 mitigation reference in-doc (S2943 handoff pointer).
 
-Full session context: `docs/handoffs/SESSION_2942_S2942_CLOSURE_PLAN.md`.
+Full session context: `docs/handoffs/SESSION_2943_SLICE_6_LEDGER_38_BATCH_2.md`.
 
 ---
 
-## S2943 open sequence
+## S2944 open sequence
 
-**S2943 first-action is Chris-directed.** No pre-ratified plan carries forward from S2942 — the closure plan is fully discharged.
+**S2944 first-action is Chris-directed.** No pre-ratified plan carries forward from S2943.
 
 ### Universal open sequence
 
-1. **First-action lint pre-flight:** `python manage.py build_pa_tool_audit --gap-only --emit-gap-json --check` — confirm gap-map headline still reads `98 validated_full / 0 untested`, and `per_execution_mode.live` ≥ 2 (regression witness for S2942 ship).
-2. **Verify wrapper pin freshness:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2943 pin (retired at S2942 close cascade).
+1. **First-action lint pre-flight:** `python manage.py build_pa_tool_audit --gap-only --emit-gap-json --check` — confirm gap-map headline still reads `100 validated_full / 0 untested`, and `per_execution_mode.live` ≥ 3 (regression witness for S2943 ship).
+2. **Verify wrapper pin freshness:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2944 pin (retired at S2943 close cascade).
 3. **Chris directs first-action from the deferred queue below.**
 
-### Deferred queue (unchanged from S2942 close — Chris picks)
+### Deferred queue (updated at S2943 close — Chris picks)
 
 Engineering-first candidates (per `feedback_engineering_bias_over_audit`):
 
@@ -59,12 +56,14 @@ Engineering-first candidates (per `feedback_engineering_bias_over_audit`):
 - **(D) Docs restructuring arc** — unblocked at S2800, still queued.
 - **(B) Slice 5-hardening** — 3-4 executable invariants deferred at S2928 fork A.
 - **(E) Tier 2 lint promotion** — envelope-JSON top-level-key parse. Ledger #5 sub-substrate.
+- **(F) Ledger #38 batch 3 — `content_tool.generate_newsletter` dry_run alignment** — NEW at S2943 close. Native `dry_run=true` short-circuit already exists (td_handlers_content.py:4707-4721) but predates S2942 envelope contract. Adding `no_writes:true` + `would_action` + `would_dispatch_target` would make it the 4th action to earn `dry_run_supported`. ~30 min + live-verify + doc.
 - **Envelope enhancement (record-only S2942)** — Rigby zoom-out fold suggested `verify_hint` + `would_write_count` for dry_run envelopes. Needs 2nd-trigger corroboration before promoting.
 - **Close-ceremony ledger-flip checklist (meta-fix, record-only S2942)** — first trigger from S2942 reconciliation; watch for 2nd trigger.
+- **Deliverable v1 template retrofit (record-only S2943)** — protocol-variant docs (like `deliverable_tool_validation.md`) can't opt into `Template version: v1` without triggering sweep-variant section lints. Either extend lint to know protocol shape, or leave protocol docs as `warn`-flagged. Pattern gap, not defect.
 
 ---
 
-## What's forbidden at S2943 (D6 MORATORIUM still in force)
+## What's forbidden at S2944 (D6 MORATORIUM still in force)
 
 All prior forbidden entries carry forward. **S2943 new forbidden entries:** none. Clean session.
 
@@ -72,7 +71,12 @@ All prior forbidden entries carry forward. **S2943 new forbidden entries:** none
 
 ## What's queued but deferred (do NOT open unless Chris directs)
 
-S2942 additions to the deferred queue:
+S2943 additions to the deferred queue:
+
+- **Ledger #38 batch 3 candidate (`content_tool.generate_newsletter` dry_run alignment):** native `dry_run=true` short-circuit already exists (td_handlers_content.py:4707-4721) but envelope predates S2942 contract. Adding `no_writes:true` + `would_action` + `would_dispatch_target` = 4th `dry_run_supported` tool. ~30 min + live-verify + doc.
+- **Deliverable v1 template retrofit (record-only):** protocol-variant docs can't opt into `Template version: v1` without triggering sweep-variant section lints. Pattern gap, not defect.
+
+S2942 additions still deferred:
 
 - **Envelope enhancement candidates (S2942 Rigby zoom-out fold, record-only):** `verify_hint` (model + id + field expectations block) + `would_write_count` (multi-row summary). Requires 2nd-trigger corroboration.
 - **Close-ceremony ledger-flip checklist (S2942 meta-fix candidate, record-only):** first trigger from S2942 reconciliation of stale #33 + #34 rows. Requires 2nd trigger.
@@ -127,12 +131,13 @@ All S2941 deferred entries carry forward (S2942 didn't touch them):
 **Slice 3 — `td_handlers_core` (22 tools):** CLOSED at S2917 (22/22).
 **Slice 4 — `td_handlers_gateway` (17 tools):** CLOSED at S2924 (17/17).
 **Slice 5 — `tool_dispatcher` (14 tools):** CLOSED at S2928 (14/14). ✅
-**Slice 6 — `td_handlers_content` (6 tools):** CLOSED at S2936 (6/6, batch 1 + 2). ✅
+**Slice 6 — `td_handlers_content` (6 tools):** CLOSED at S2936 (6/6, batch 1 + 2). ✅ **S2943 addendum:** file-scope doc closure for `content_tool` + `deliverable_tool` heading + `bulk_archive_published` dry_run alignment.
 **Slice 7 — singleton bucket (9 tools across 8 handler files):** CLOSED at S2940 (9/9). ✅
 **Ledger #16 twin-mirror enforcement substrate:** CLOSED at S2941 (PR #3517). ✅
 **Ledger #38 dry_run MVP + Ledger #41 scoreboard promotion:** CLOSED at S2942. ✅
+**Ledger #38 batch 2 (bulk_archive_published):** CLOSED at S2943 (PR #3524). ✅
 
-**Substrate arcs CLOSED:** Ledger #5 Tier 1 MVP (S2938) + Ledger #16 (S2941) + Ledger #38 dry_run MVP (S2942) + Ledger #41 scoreboard (S2942).
+**Substrate arcs CLOSED:** Ledger #5 Tier 1 MVP (S2938) + Ledger #16 (S2941) + Ledger #38 dry_run MVP (S2942) + Ledger #41 scoreboard (S2942) + Ledger #38 batch 2 (S2943).
 
 **Total remaining tools to close: 0.** All ratified sweep scope discharged. Batch 2 mutation-dry_run expansion beyond blog_tool + feedback_tool remains deferred (needs per-tool semantics).
 
@@ -164,7 +169,8 @@ _(unchanged — see prior 00-START snapshots)_
 ## For fuller A1 W1 + W2 arc context (spans S2846 → S2942)
 
 See:
-- **S2942 handoff (current):** `docs/handoffs/SESSION_2942_S2942_CLOSURE_PLAN.md`
+- **S2943 handoff (current):** `docs/handoffs/SESSION_2943_SLICE_6_LEDGER_38_BATCH_2.md`
+- **S2942 handoff:** `docs/handoffs/SESSION_2942_S2942_CLOSURE_PLAN.md`
 - **S2941 handoff:** `docs/handoffs/SESSION_2941_LEDGER_16_TWIN_MIRROR.md`
 - **S2940 handoff:** `docs/handoffs/SESSION_2940_SLICE_7_CLOSE.md`
 - **S2939 handoff:** `docs/handoffs/SESSION_2939_SLICE_7_BATCH_2A.md`
