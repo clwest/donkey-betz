@@ -76,3 +76,6 @@ export { OutreachInboxTab } from './OutreachInboxTab'
 
 // S2831: RAG Intent-Gate Diagnostics — canary for S2830 pointer-intent registry
 export { RagDiagnosticsTab } from './RagDiagnosticsTab'
+
+// S2930: Agent Runs — persistent view of AgentExecution history
+export { AgentRunsTab } from './AgentRunsTab'
