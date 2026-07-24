@@ -31,19 +31,57 @@ Full session context: `docs/handoffs/SESSION_2934_SIGNAL_DISPATCH_OBSERVABILITY.
 
 ---
 
-## S2935 open sequence — CLEAN, no governance decision blocking
+## S2935 open sequence — CHRIS DIRECTIVE S2934 CLOSE: RESUME THE PA TOOLS SWEEP
 
-No R-verdict pending. Fresh arc-scope surface:
+**Ratified at S2934 close (2026-07-24):** After Claude surfaced the honest sweep-completeness fraction (13 tools completely untested / 21 of 117 total lack full coverage / 18% remaining), Chris directed: **"resume the sweep next session."** S2935 first action is Slice 6.
 
-- **(A) NET-NEW ENGINEERING** — several candidate leans:
-  - **(A8) Signal Dispatches tab "Manual dispatch" button** (Rigby S2934 zoom-out fold — deferred at close per Chris's directive; ~30 min): expose an authenticated in-tab button that calls the same `SignalDispatchService.execute_dispatch` path as the CLI, with the same idempotency/force guardrails. Removes the CLI-only control-plane fragility for verification and demos.
-  - **(A9) Fourth signal-dispatch rule:** if Chris wants to expand coverage further — `demand_spike` (250 clusters, 8 detecting) or `skill_demand` (131 clusters). Each is a one-line addition to `SIGNAL_DISPATCH_RULES` + a smoke test. Requires an `agent_introspection_tool` verification pass on the chosen target agent (mirror S2933/S2934 method).
-  - **(A6) SignalCluster promotion audit:** the S2934 verification confirmed the pipeline works — but only 5/862 clusters are `status='active'` (~0.58%). Investigate whether `SignalAggregationService` is under-promoting or whether the rarity is a natural signal-quality floor. This one is more of an audit than a build.
+### First action — Slice 6: `td_handlers_content.py` (6 untested tools)
+
+**Batch candidates (all currently `untested` per `docs/audits/PA_TOOLS_GAP_MAP.md`):**
+
+| Tool | File |
+|---|---|
+| `blog_tool` | `core/services/td_handlers_content.py` |
+| `execution_history_tool` | `core/services/td_handlers_content.py` |
+| `feedback_tool` | `core/services/td_handlers_content.py` |
+| `learning_patterns_tool` | `core/services/td_handlers_content.py` |
+| `recent_activity_tool` | `core/services/td_handlers_content.py` |
+| `surgical_moves_status_tool` | `core/services/td_handlers_content.py` |
+
+**Methodology anchors:**
+
+- **Path B ratified S2892** (`project_pa_tools_sweep_path_b_open`) — engineering-first sweep, code-defined shape, not DB config.
+- **Substrate arc thread order** (`project_row_161_substrate_arc_opened_s2900`) — T1c → T1a → T1b.
+- **T1b canonical template:** `docs/audits/pa_tools/substrate/_TEMPLATE_per_tool_validation.md`.
+- **Prior slice close artifacts** for pattern reference: Slice 5 = `docs/audits/pa_tools/substrate/slice_5_close_artifact.md`; Slice 4 CLOSED S2924; Slice 3 CLOSED S2917; Slice 2 CLOSED S2912.
+- **Batch shape:** S2907 T0 Fold E ratified 2026-07-23 (`project_s2908_batch_4_shape_break_commitment`) applied to Slice 5; for Slice 6, Rigby's zoom-out should pick the batch shape at S2935 T0 SIGN. Uniform READ_ONLY, mixed-scoped-to-READ_ONLY-subset, and gated-write-dry_run-only remain the three canonical shapes.
+
+**S2935 open sequence:**
+
+1. Read `docs/audits/pa_tools/substrate/_TEMPLATE_per_tool_validation.md` + the Slice 5 close artifact for shape reference.
+2. Route batch composition to Rigby (which 3-4 of the 6 tools to include in batch 1, batch shape decision per Fold E) — joint AGREE, then Chris yes/no per `feedback_claude_rigby_agree_first_chris_yes_no`.
+3. Execute the batch. Docs land in `docs/research/tools/validation/<tool_name>.md`; auto-generated summary updates in `docs/audits/PA_TOOLS_GAP_MAP.md` + `docs/PA_TOOL_AUDIT.md`.
+
+### Remaining untested tools beyond Slice 6 (7 tools across 7 handler files, for future slices)
+
+Singleton-per-file bucket — pick up as a bundled Slice 7 after Slice 6 closes:
+
+- `code_job_tool` (`td_handlers_codejobs.py`)
+- `employee_tool` + `mission_verdict` (`td_handlers_employee.py`)
+- `newsletter_tool` (`td_handlers_newsletter.py`)
+- `railway_tool` (`td_handlers_railway.py`)
+- `rigby_shift_brief_tool` (`td_handlers_rigby_shift_brief.py`)
+- `rigby_work_item` (`td_handlers_rigby_work_queue.py`)
+- `spider_data_aggregation_tool` (`spider_data_aggregation_tool.py`)
+- `zoom_out_tool` (`td_handlers_governance.py`)
+
+### Not blocked — still available if Chris redirects mid-open
+
+- **(A8) Signal Dispatches "Manual dispatch" button** (Rigby S2934 zoom-out fold — ~30 min).
+- **(A9) Fourth signal-dispatch rule** — `demand_spike` (250 clusters) or `skill_demand` (131 clusters). One-line rule + agent verification.
+- **(A6) SignalCluster promotion audit** — only 0.58% of clusters are active; investigate `SignalAggregationService`.
 - **(B) Slice 5-hardening** — 3-4 executable invariants deferred at S2928 fork A.
-- **(C) Slice 6 sweep continuation** — `td_handlers_content.py` (6 tools).
 - **(D) Docs restructuring arc** — unblocked at S2800, still queued.
-
-**Recommend:** open S2935 with either A8 (natural follow-on to S2934, ~30 min, ships user-visible surface) or A9 (broadens the reactive pipeline's real coverage). Both are net-new engineering, both build on the shipping momentum.
 
 ---
 
