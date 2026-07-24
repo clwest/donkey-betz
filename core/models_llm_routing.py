@@ -873,7 +873,8 @@ DEFAULT_AGENT_LLM_CONFIGS = [
     {'agent_name': 'SportsOddsAnalyst', 'agent_category': 'betting', 'primary': 'openai:gpt-5.1', 'fallback': 'openai:gpt-5-mini'},
 
     # Business/Strategy Agents → Claude (nuanced strategy)
-    {'agent_name': 'BusinessContentStrategyAgent', 'agent_category': 'business', 'primary': 'anthropic:claude-sonnet-4-20250514', 'fallback': 'openai:gpt-5.1'},
+    # Session 2932: BusinessContentStrategyAgent row removed — the class was a
+    # duplicate of strategy.ContentStrategyAgent and never AGENT_MAP-registered.
 
     # Technical Agents → Claude (careful prompt engineering)
     {'agent_name': 'PromptEngineeringAgent', 'agent_category': 'technical', 'primary': 'anthropic:claude-sonnet-4-20250514', 'fallback': 'openai:gpt-5.1'},

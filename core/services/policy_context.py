@@ -58,7 +58,8 @@ class PolicyContextService:
         'CustomerResearchAgent': ['product', 'research'],
         'BrandStrategyAgent': ['product', 'research'],
         'MarketingStrategyAgent': ['product', 'research'],
-        'BusinessContentStrategyAgent': ['product', 'research'],
+        # Session 2932: BusinessContentStrategyAgent removed — canonical class
+        # is strategy.ContentStrategyAgent (line 50 above).
 
         # Workflow agents
         'WorkflowOrchestrationAgent': ['workflow', 'agents'],
