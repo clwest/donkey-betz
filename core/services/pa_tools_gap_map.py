@@ -184,6 +184,26 @@ _EVIDENCE_SIGNATURES: Dict[str, re.Pattern] = {
 # T1b (S2904) template-compliance canon.
 TEMPLATE_VARIANTS: Set[str] = {'sweep', 'protocol'}
 
+# S2942 Ledger #41 — two-metric scoreboard classification.
+#
+# Frontmatter fields declared in per-tool validation docs to signal
+# execution posture + mutation dry_run readiness. Both fields are
+# opt-in per-tool; missing values normalize to ``'unknown'`` (no
+# silent defaults). Extends T1b frontmatter capture without changing
+# T1b compliance semantics.
+#
+# Enum values (verbatim, case-insensitive at parse time):
+#
+# * Execution mode:
+#   - ``live``       — action was invoked live and observed end-to-end.
+#   - ``analyzed``   — action was audited from code/schema only.
+# * Mutation safety:
+#   - ``dry_run_supported``  — handler exposes ``dry_run=true`` no-write path.
+#   - ``unsafe_no_dry_run``  — mutation lacks dry_run; can't safely live-verify.
+EXECUTION_MODES: Set[str] = {'live', 'analyzed'}
+MUTATION_SAFETY_VALUES: Set[str] = {'dry_run_supported', 'unsafe_no_dry_run'}
+UNKNOWN_LABEL: str = 'unknown'
+
 # Alias-tolerant required-field spec per variant. Each required field
 # is a tuple of alias patterns; presence of ANY alias satisfies the
 # check. Per Rigby SIGN B edit (presence-not-exact).
@@ -269,6 +289,9 @@ def index_validation_docs(docs_dir: Path) -> Dict[str, Any]:
     template_variant: Dict[str, Optional[str]] = {}
     frontmatter_fields: Dict[str, Set[str]] = {}
     heading_titles: Dict[str, List[str]] = {}
+    # S2942 Ledger #41 — two-metric scoreboard fields.
+    execution_mode: Dict[str, str] = {}
+    mutation_safety: Dict[str, str] = {}
 
     if not docs_dir.exists():
         return {
@@ -279,6 +302,8 @@ def index_validation_docs(docs_dir: Path) -> Dict[str, Any]:
             'template_variant_by_stem': template_variant,
             'frontmatter_fields_by_stem': frontmatter_fields,
             'heading_titles_by_stem': heading_titles,
+            'execution_mode_by_stem': execution_mode,
+            'mutation_safety_by_stem': mutation_safety,
             'total_docs': 0,
         }
 
@@ -304,6 +329,8 @@ def index_validation_docs(docs_dir: Path) -> Dict[str, Any]:
             template_variant[stem] = None
             frontmatter_fields[stem] = set()
             heading_titles[stem] = []
+            execution_mode[stem] = UNKNOWN_LABEL
+            mutation_safety[stem] = UNKNOWN_LABEL
             continue
 
         # Covered-actions extraction (S2795 F1 + T1b loosened regex).
@@ -329,6 +356,16 @@ def index_validation_docs(docs_dir: Path) -> Dict[str, Any]:
         template_version[stem] = fm_fields.get('Template version') or None
         template_variant[stem] = fm_fields.get('Template variant') or None
 
+        # S2942 Ledger #41 — two-metric scoreboard fields (opt-in per
+        # tool). Missing or out-of-enum values normalize to 'unknown'
+        # so there is no silent default (per plan §2.1 acceptance).
+        exec_raw = (fm_fields.get('Execution mode') or '').strip().lower()
+        execution_mode[stem] = exec_raw if exec_raw in EXECUTION_MODES else UNKNOWN_LABEL
+        safety_raw = (fm_fields.get('Mutation safety') or '').strip().lower()
+        mutation_safety[stem] = (
+            safety_raw if safety_raw in MUTATION_SAFETY_VALUES else UNKNOWN_LABEL
+        )
+
         # T1b heading titles — all ##-level and deeper for section-
         # presence checks. Case-sensitive so protocol/sweep title
         # variants remain distinguishable.
@@ -344,6 +381,8 @@ def index_validation_docs(docs_dir: Path) -> Dict[str, Any]:
         'template_variant_by_stem': template_variant,
         'frontmatter_fields_by_stem': frontmatter_fields,
         'heading_titles_by_stem': heading_titles,
+        'execution_mode_by_stem': execution_mode,
+        'mutation_safety_by_stem': mutation_safety,
         'total_docs': len(docs),
     }
 
@@ -737,6 +776,19 @@ def build_gap_map(
         row['template_variant'] = compliance['variant']
         row['template_missing'] = compliance['missing']
 
+        # S2942 Ledger #41 — two-metric scoreboard per row. Tools with
+        # no matched validation doc get 'unknown' (no silent default).
+        if matched_stem is not None:
+            row['execution_mode'] = (
+                docs_index.get('execution_mode_by_stem') or {}
+            ).get(matched_stem, UNKNOWN_LABEL)
+            row['mutation_safety'] = (
+                docs_index.get('mutation_safety_by_stem') or {}
+            ).get(matched_stem, UNKNOWN_LABEL)
+        else:
+            row['execution_mode'] = UNKNOWN_LABEL
+            row['mutation_safety'] = UNKNOWN_LABEL
+
     per_category = Counter(r['category'] for r in rows)
     per_lint: Counter = Counter()
     for r in rows:
@@ -749,6 +801,14 @@ def build_gap_map(
         r.get('template_compliance', 'warn') for r in rows
     )
 
+    # S2942 Ledger #41 — headline scoreboard aggregates.
+    per_execution_mode = Counter(
+        r.get('execution_mode', UNKNOWN_LABEL) for r in rows
+    )
+    per_mutation_safety = Counter(
+        r.get('mutation_safety', UNKNOWN_LABEL) for r in rows
+    )
+
     triage = build_triage_slices(rows)
 
     return {
@@ -757,6 +817,10 @@ def build_gap_map(
             'per_category': dict(per_category),
             'per_lint': dict(per_lint),
             'per_template_compliance': dict(per_template_compliance),
+            # S2942 Ledger #41 — Metric A (live read-only) + Metric B
+            # (mutation-under-dry_run) surfaced as per-value tallies.
+            'per_execution_mode': dict(per_execution_mode),
+            'per_mutation_safety': dict(per_mutation_safety),
         },
         'triage_slices': triage,
         'validation_doc_totals': {
@@ -772,6 +836,20 @@ def build_gap_map(
                     docs_index.get('template_version_by_stem') or {}
                 ).values()
                 if v is not None
+            ),
+            # S2942 Ledger #41 — count of per-tool docs that opted into
+            # each scoreboard field.
+            'per_tool_docs_with_execution_mode': sum(
+                1 for v in (
+                    docs_index.get('execution_mode_by_stem') or {}
+                ).values()
+                if v != UNKNOWN_LABEL
+            ),
+            'per_tool_docs_with_mutation_safety': sum(
+                1 for v in (
+                    docs_index.get('mutation_safety_by_stem') or {}
+                ).values()
+                if v != UNKNOWN_LABEL
             ),
         },
     }
@@ -878,6 +956,33 @@ def render_gap_map_markdown(
             for r in fail_rows:
                 missing_str = ', '.join(r.get('template_missing', [])) or '?'
                 lines.append(f'- `{r["name"]}` — {missing_str}')
+        lines.append('')
+
+    # S2942 Ledger #41 — two-metric scoreboard: Execution mode + Mutation safety.
+    per_em = headline.get('per_execution_mode') or {}
+    per_ms = headline.get('per_mutation_safety') or {}
+    if per_em or per_ms:
+        lines.append('## Two-metric scoreboard (S2942 Ledger #41)')
+        lines.append('')
+        lines.append(
+            'Opt-in per-tool frontmatter classification. Missing fields '
+            'land as `unknown` (no silent default per plan §2.1 acceptance).'
+        )
+        lines.append('')
+        em_with = v.get('per_tool_docs_with_execution_mode', 0)
+        ms_with = v.get('per_tool_docs_with_mutation_safety', 0)
+        lines.append(
+            f'- **Metric A — `Execution mode:` opt-ins:** {em_with} of '
+            f"{v['per_tool_docs']} per-tool docs."
+        )
+        for value, n in sorted(per_em.items(), key=lambda kv: -kv[1]):
+            lines.append(f'  - `{value}`: **{n}** tools')
+        lines.append(
+            f'- **Metric B — `Mutation safety:` opt-ins:** {ms_with} of '
+            f"{v['per_tool_docs']} per-tool docs."
+        )
+        for value, n in sorted(per_ms.items(), key=lambda kv: -kv[1]):
+            lines.append(f'  - `{value}`: **{n}** tools')
         lines.append('')
 
     if headline.get('per_lint'):

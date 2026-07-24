@@ -320,6 +320,10 @@ class ContentHandlersMixin:
         limit = payload.get('limit', 10)
         content_type = payload.get('type')  # blog, document, report, analysis, etc.
         category = payload.get('category')  # Marketing, Development, etc.
+        # S2942 Ledger #38 MVP — dry_run for publish/archive mutation branches.
+        # Default False preserves existing caller behavior. Flag flows via
+        # payload dict into _handle_blog_query as well when type='blog'.
+        dry_run = bool(payload.get('dry_run', False))
 
         # Session 958: If type is 'blog', query SelfBlog model instead of Deliverable
         # SelfBlog contains actual blog posts (773+ in production)
@@ -632,6 +636,20 @@ class ContentHandlersMixin:
             if not deliverable:
                 raise ValueError(f"Deliverable {deliverable_id} not found or not in ready status")
 
+            if dry_run:
+                return {
+                    'action': 'publish',
+                    'dry_run': True,
+                    'would_action': 'publish',
+                    'id': str(deliverable_id),
+                    'title': deliverable.title,
+                    'current_status': deliverable.status,
+                    'would_change_to': 'published',
+                    'would_record_feedback': True,
+                    'no_writes': True,
+                    'message': 'dry_run=true: Deliverable status unchanged, no feedback recorded.',
+                }
+
             deliverable.status = 'published'
             deliverable.save(update_fields=['status', 'updated_at'])
 
@@ -663,6 +681,21 @@ class ContentHandlersMixin:
             deliverable = base_qs.filter(id=deliverable_id).first()
             if not deliverable:
                 raise ValueError(f"Deliverable {deliverable_id} not found")
+
+            if dry_run:
+                return {
+                    'action': 'archive',
+                    'dry_run': True,
+                    'would_action': 'archive',
+                    'id': str(deliverable_id),
+                    'title': deliverable.title,
+                    'current_status': deliverable.status,
+                    'would_change_to': 'archived',
+                    'would_archive_reason': feedback,
+                    'would_record_feedback': True,
+                    'no_writes': True,
+                    'message': 'dry_run=true: Deliverable status/metadata unchanged, no feedback recorded.',
+                }
 
             deliverable.status = 'archived'
             if deliverable.metadata is None:
@@ -1394,6 +1427,8 @@ class ContentHandlersMixin:
             blog_id = payload.get('id') or payload.get('blog_id')
             if not blog_id:
                 raise ValueError("id is required for publish action")
+            # S2942 Ledger #38 MVP — dry_run for SelfBlog publish path.
+            dry_run = bool(payload.get('dry_run', False))
 
             # Session 998: Enforce PublishGate — only publish_ready blogs
             blog = base_qs.filter(id=blog_id, status__in=['approved', 'pending_review'], publish_ready=True).first()
@@ -1411,6 +1446,21 @@ class ContentHandlersMixin:
                         'status': unpublishable.status,
                     }
                 raise ValueError(f"Blog {blog_id} not found or not in approved/pending_review status")
+
+            if dry_run:
+                return {
+                    'action': 'publish',
+                    'dry_run': True,
+                    'would_action': 'publish',
+                    'id': str(blog.id),
+                    'title': blog.title,
+                    'current_status': blog.status,
+                    'would_change_to': 'published',
+                    'would_record_feedback': True,
+                    'source': 'SelfBlog',
+                    'no_writes': True,
+                    'message': 'dry_run=true: SelfBlog status unchanged, no feedback recorded.',
+                }
 
             blog.status = 'published'
             blog.save(update_fields=['status'])
@@ -1439,10 +1489,30 @@ class ContentHandlersMixin:
             feedback = payload.get('feedback', 'Archived via PA')
             if not blog_id:
                 raise ValueError("id is required for archive action")
+            # S2942 Ledger #38 MVP — dry_run for SelfBlog archive path.
+            dry_run = bool(payload.get('dry_run', False))
 
             blog = base_qs.filter(id=blog_id).first()
             if not blog:
                 raise ValueError(f"Blog {blog_id} not found")
+
+            if dry_run:
+                return {
+                    'action': 'archive',
+                    'dry_run': True,
+                    'would_action': 'archive',
+                    'id': str(blog.id),
+                    'title': blog.title,
+                    'current_status': blog.status,
+                    'current_publish_ready': blog.publish_ready,
+                    'would_change_to': 'draft',
+                    'would_clear_publish_ready': True,
+                    'would_archive_reason': feedback,
+                    'would_record_feedback': True,
+                    'source': 'SelfBlog',
+                    'no_writes': True,
+                    'message': 'dry_run=true: SelfBlog status/publish_ready unchanged, no feedback recorded.',
+                }
 
             blog.status = 'draft'
             blog.publish_ready = False
@@ -1556,8 +1626,23 @@ class ContentHandlersMixin:
         """
         topic = payload.get('topic')
         tone = payload.get('tone', 'enthusiastic')
+        # S2942 Ledger #38 MVP — dry_run for generate path.
+        # Under dry_run=true, validate inputs and return `would_dispatch`
+        # envelope without enqueueing the Celery task.
+        dry_run = bool(payload.get('dry_run', False))
 
         if topic:
+            if dry_run:
+                return {
+                    'action': 'generate_blog',
+                    'dry_run': True,
+                    'would_action': 'dispatch_celery',
+                    'would_task': 'generate_blog_with_topic_task',
+                    'topic': topic,
+                    'tone': tone,
+                    'no_writes': True,
+                    'message': 'dry_run=true: no Celery task enqueued for topic-specific generation.',
+                }
             # Session 1057: Dispatch topic-specific blog to Celery
             from core.tasks import generate_blog_with_topic_task
             task = generate_blog_with_topic_task.delay(topic=topic, tone=tone)  # type: ignore[union-attr]
@@ -1572,6 +1657,16 @@ class ContentHandlersMixin:
                            f'This typically takes 2-5 minutes. Use task_breakdown_tool to check progress.',
             }
         else:
+            if dry_run:
+                return {
+                    'action': 'generate_blog',
+                    'dry_run': True,
+                    'would_action': 'dispatch_celery',
+                    'would_task': 'generate_self_blog_deliberation_task',
+                    'tone': tone,
+                    'no_writes': True,
+                    'message': 'dry_run=true: no Celery task enqueued for open-topic generation.',
+                }
             # Async — dispatch to Celery for background generation
             from core.tasks import generate_self_blog_deliberation_task
             task = generate_self_blog_deliberation_task.delay(tone=tone)  # type: ignore[union-attr]
@@ -3606,6 +3701,9 @@ class ContentHandlersMixin:
         action = payload.get('action', 'list')
         status_filter = payload.get('status')
         limit = payload.get('limit', 20)
+        # S2942 Ledger #38 MVP — dry_run affordance for mutation actions.
+        # Default False preserves existing caller behavior; verifiers opt in.
+        dry_run = bool(payload.get('dry_run', False))
 
         if action == 'list':
             qs = UserFeedback.objects.all()
@@ -3656,14 +3754,34 @@ class ContentHandlersMixin:
             if not user:
                 user = User.objects.first()
 
+            resolved_feedback_type = target_type if target_type in (
+                'ui_ux_issue', 'bug', 'feature_request', 'feedback'
+            ) else 'feedback'
+            resolved_trace_id = trace_id if trace_id and not trace_id.startswith('pa-') else ''
+
+            if dry_run:
+                return {
+                    'action': 'submit',
+                    'dry_run': True,
+                    'would_action': 'create',
+                    'would_write': {
+                        'model': 'UserFeedback',
+                        'feedback_type': resolved_feedback_type,
+                        'message': comment,
+                        'status': 'open',
+                        'user_id': user.id if user else None,
+                        'trace_id': resolved_trace_id,
+                    },
+                    'no_writes': True,
+                    'message': 'dry_run=true: no UserFeedback row created.',
+                }
+
             feedback = UserFeedback.objects.create(
                 user=user,
-                feedback_type=target_type if target_type in (
-                    'ui_ux_issue', 'bug', 'feature_request', 'feedback'
-                ) else 'feedback',
+                feedback_type=resolved_feedback_type,
                 message=comment,
                 status='open',
-                trace_id=trace_id if trace_id and not trace_id.startswith('pa-') else '',
+                trace_id=resolved_trace_id,
             )
 
             return {
@@ -3683,6 +3801,20 @@ class ContentHandlersMixin:
 
             try:
                 feedback = UserFeedback.objects.get(id=feedback_id)
+
+                if dry_run:
+                    return {
+                        'action': 'update',
+                        'dry_run': True,
+                        'would_action': 'update',
+                        'id': str(feedback_id),
+                        'current_status': feedback.status,
+                        'would_change_to': new_status,
+                        'notes_would_be': notes if notes else None,
+                        'no_writes': True,
+                        'message': 'dry_run=true: UserFeedback row unchanged.',
+                    }
+
                 feedback.status = new_status
                 if notes:
                     feedback.resolution_notes = notes

@@ -6,11 +6,13 @@
 **Register site:** `core/services/tool_dispatcher.py:562`
 **Session:** S2936 (Slice 6 batch 2 — closing batch for `td_handlers_content.py`; paired with `feedback_tool`)
 **HEAD at validation:** `6540fb156` (2026-07-24)
-**Ship shape:** Doc-only (S2796 shape). Post-merge live-dispatch verify per PLAYBOOK-7.4.4. **Bifurcated verification scope** (per Rigby S2936 T0 SIGN F-BLOCKING #1): §6 covers 5 read actions LIVE-VERIFIED; §5a covers 3 mutation actions ANALYZED-NOT-EXECUTED with signal-chain evidence. Live mutation verification deferred pending handler-layer `dry_run` affordance (Ledger #38).
-**Category upgrade target:** `untested` → `validated_partial` (read actions live-verified; mutation actions analyzed-only)
-**Rigby SIGN:** S2936 T0 SIGN AGREE Option C with 2 F-BLOCKINGs — both addressed in-doc (bifurcated labeling + Ledger #36 for Deliverable/SelfBlog approve-path correctness trap). Chris "yes proceed" ratification at T1.
+**Ship shape:** Doc-only (S2796 shape). Post-merge live-dispatch verify per PLAYBOOK-7.4.4. **Bifurcated verification scope** (per Rigby S2936 T0 SIGN F-BLOCKING #1): §6 covers 5 read actions LIVE-VERIFIED; §5a covers 3 mutation actions ANALYZED-NOT-EXECUTED with signal-chain evidence. Live mutation verification deferred pending handler-layer `dry_run` affordance (Ledger #38). **S2942 update — Ledger #38 dry_run shipped:** mutation actions (approve/reject/generate) are now live-verifiable under `dry_run=true`. See §6.4 Rigby live-verify evidence.
+**Category upgrade target:** `untested` → `validated_full` (as of S2942 — all 8 actions live-verified: 5 read + 3 mutation-under-dry_run).
+**Rigby SIGN:** S2936 T0 SIGN AGREE Option C with 2 F-BLOCKINGs — both addressed in-doc (bifurcated labeling + Ledger #36 for Deliverable/SelfBlog approve-path correctness trap). Chris "yes proceed" ratification at T1. S2942 T0 SIGN AGREE Option A on plan reconciliation + Chris "Yes" ratify on revised scope + acceptance-gate live-verify SATISFIED (blog_tool.reject dry_run + blog_tool.generate dry_run + feedback_tool.submit dry_run all validated).
 **Template variant:** sweep
 **Template version:** v1
+**Execution mode:** live
+**Mutation safety:** dry_run_supported
 
 ---
 
@@ -201,6 +203,52 @@ Returned `{count:10, total:204, items:[...], period_days:7, by_status:{ready:10}
 ### 6.8 Mutation actions (NOT executed — §5a analysis only)
 
 Per Option C batch shape, `approve` / `reject` / `generate` were NOT dispatched live at this ship. §5a table above documents blast radius from signal-chain grep + handler code inspection. Live mutation verification is a follow-up batch pending handler-layer `dry_run` affordance (Ledger #38).
+
+### 6.9 S2942 — Ledger #38 dry_run live verification (acceptance-gate proof)
+
+Shipped 2026-07-24 via S2942 handler edits at `td_handlers_content.py` — Deliverable path (`_handle_content_review` publish/archive at :640-720), SelfBlog path (`_handle_blog_query` publish/archive at :1400-1490), generate path (`_handle_generate_blog` at :1550-1610) — plus schema opt-in at `pa_tool_schemas.py:4328-4340`. Live-verified via Rigby PA dispatch (conversation `pa-07d6a1d43f6a4b42`).
+
+**Pre-call baseline** — `orm_inspect_tool.filter model=Deliverable limit=1 order_by=-created_at`:
+```
+id=8353676e-f037-4998-91e7-0269f9e1bbca title="S2942 Closure Plan..." status=ready
+```
+(Meta-verification: the deliverable Rigby picked was the S2942 closure plan itself.)
+
+**Dry-run reject** — `blog_tool action=reject id=8353676e... feedback="S2942 acceptance gate #2..." dry_run=true`:
+```json
+{"action":"archive","dry_run":true,"would_action":"archive",
+ "id":"8353676e-f037-4998-91e7-0269f9e1bbca",
+ "current_status":"ready","would_change_to":"archived",
+ "would_archive_reason":"S2942 acceptance gate #2 — live-verify dry_run reject",
+ "would_record_feedback":true,"no_writes":true,
+ "message":"dry_run=true: Deliverable status/metadata unchanged, no feedback recorded.",
+ "gateway":"blog_tool"}
+```
+
+**Post-call verify** — `orm_inspect_tool.filter model=Deliverable filter_kwargs={id:8353676e...} limit=1`:
+```
+status=ready (UNCHANGED)
+```
+
+**Result:** Deliverable `status` remained `'ready'` → **NO Deliverable mutation under dry_run=true**. Acceptance gate satisfied for `blog_tool.reject`.
+
+**Dry-run generate** — `blog_tool action=generate topic="S2942 gate probe" tone=analytical dry_run=true`:
+```json
+{"action":"generate_blog","dry_run":true,"would_action":"dispatch_celery",
+ "would_task":"generate_blog_with_topic_task",
+ "topic":"S2942 gate probe","tone":"analytical",
+ "no_writes":true,
+ "message":"dry_run=true: no Celery task enqueued for topic-specific generation.",
+ "gateway":"blog_tool"}
+```
+
+**Result:** NO `task_id` field in response → **NO Celery task enqueued under dry_run=true**. Handler's `.delay()` call was skipped by the dry_run branch.
+
+**Coverage summary:** dry_run affordance covers all 3 mutation actions of blog_tool AND both handler paths (Deliverable via `_handle_content_review` + SelfBlog via `_handle_blog_query`) — the SelfBlog branch is tested via unit tests at `core/tests/test_s2942_dry_run_mvp.py::BlogToolSelfBlogDryRunTests`.
+
+**Allowlist expansion co-shipped:** `SelfBlog` added to `orm_inspect_tool` allowlist at `td_handlers_agents.py:764-768` (mirrors S2931 pattern for AgentExecution). Enables SelfBlog-path self-service verification.
+
+**Rigby zoom-out fold (PLAYBOOK-6.10.7, record-only):** future envelope enhancement candidates — add `verify_hint` block (model + id + field expectations) and `would_write_count` for multi-row actions. Not shipped this session; logged for a next-instance corroboration trigger. Allowlist boundary (UserFeedback + SelfBlog only) confirmed sensible; no LLMCallLog expansion.
 
 ## Related
 
