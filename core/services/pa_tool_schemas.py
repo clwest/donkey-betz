@@ -588,9 +588,13 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "learning_patterns_tool",
         "description": (
-            "View learning patterns: feedback loops, improvement trends, "
-            "agent learning metrics. Use when the user asks about learning, "
-            "patterns, feedback, improvement, or agent self-improvement."
+            "View mined LearningPattern telemetry (tool reliability, agent tool "
+            "effectiveness, spider data value, etc.). Use when the user asks about "
+            "what patterns the system has learned, best-performing tools, or "
+            "improvement trends. action=list returns active patterns above "
+            "min_confidence; action=by_type filters by pattern_type (or returns "
+            "available types if omitted); action=stats returns aggregate counts + "
+            "top patterns."
         ),
         "parameters": {
             "type": "object",
@@ -647,15 +651,24 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "recent_activity_tool",
         "description": (
-            "View recent platform activity: latest agent executions, Celery tasks, "
-            "spider runs, and system events. Use when the user asks 'what's happening', "
-            "'what just ran', 'recent activity', or 'what's going on'."
+            "View recent platform activity across 6 subsystems in one call: "
+            "Celery tasks, spider data, HiveMind conversations, blogs, initiatives, "
+            "and signal clusters. Use when the user asks about what is happening, "
+            "what just ran, recent activity, or what is going on. "
+            "action=summary returns compact per-section rollups (5 items each); "
+            "action=detailed returns the same shape with 15 items per section."
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "limit": {"type": "integer", "description": "Max items (default 20)"},
-                "minutes": {"type": "integer", "description": "Look back N minutes (default 60)"},
+                "action": {
+                    "type": "string",
+                    "enum": ["summary", "detailed"],
+                    "description": "summary: 5 items per section (default). detailed: 15 items per section.",
+                },
+                "hours": {"type": "integer", "description": "Lookback window in hours (default 2)"},
+                "limit": {"type": "integer", "description": "DEPRECATED S2935 - handler ignores this. Use action=detailed for larger lists."},
+                "minutes": {"type": "integer", "description": "DEPRECATED S2935 - handler ignores this. Use hours instead."},
             },
         },
     },
@@ -665,14 +678,25 @@ PA_TOOL_SCHEMAS = [
         "type": "function",
         "name": "surgical_moves_status_tool",
         "description": (
-            "Check status of deliberation pipeline and content verification. "
-            "Use when the user asks about deliberation status, surgical moves, "
-            "or content pipeline verification."
+            "Check status of the DeliberationSession pipeline (multi-agent surgical-moves "
+            "debates that decide publish/revise/kill on content). Returns per-session "
+            "status, turn counts, contract counts, evidence stats, and decision verdicts. "
+            "Use when the user asks about surgical moves status, deliberations, or whether "
+            "the deliberator finished. action=summary returns up to 5 sessions; "
+            "action=detailed returns up to 20. Pass session_id to inspect a specific "
+            "session (bypasses time window)."
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "verbose": {"type": "boolean", "description": "Include detailed breakdown"},
+                "action": {
+                    "type": "string",
+                    "enum": ["summary", "detailed"],
+                    "description": "summary: up to 5 sessions (default). detailed: up to 20 sessions.",
+                },
+                "hours": {"type": "integer", "description": "Lookback window in hours (default 24)"},
+                "session_id": {"type": "string", "description": "UUID of a specific DeliberationSession to inspect (bypasses time window)"},
+                "verbose": {"type": "boolean", "description": "DEPRECATED S2935 - handler ignores this. Use action=detailed instead."},
             },
         },
     },
