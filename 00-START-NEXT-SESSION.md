@@ -8,7 +8,9 @@
 
 **PRs shipped this session:**
 - u-d-b PR [#3517](https://github.com/clwest/donkey-betz-platform/pull/3517) — Ledger #16 twin-mirror enforcement (substrate). Merge SHA `c250b49b6`.
-- u-d-b PR `<TBD>` — S2941 close cascade (handoff + 00-START refresh + wrapper pin bump).
+- u-d-b PR [#3518](https://github.com/clwest/donkey-betz-platform/pull/3518) — S2941 close cascade (handoff + 00-START refresh + wrapper pin bump). Merge SHA `e8c693563`.
+- u-d-b PR [#3519](https://github.com/clwest/donkey-betz-platform/pull/3519) — `tools/pa_chat.py` MAX_CONTENT_LENGTH 5000 → 30000 (fixes silent truncation of Rigby SIGN responses).
+- u-d-b PR `<TBD>` — S2941 post-close addendum (00-START refresh referencing S2942 closure plan; Ledger #16b activation).
 
 **Twin mirrors shipped this session (dogfooding):**
 - Content mirror: `0fbbe1aa-44f5-425c-8788-936971cfbf41` (Architecture & Research workspace, category `initiative_phase_doc`).
@@ -34,21 +36,48 @@ Full session context: `docs/handoffs/SESSION_2941_LEDGER_16_TWIN_MIRROR.md`.
 
 ---
 
-## S2942 open sequence
+## S2942 open sequence — RATIFIED: execute the closure plan (Ledger #34 + #33 + #38 landmines + dry-run substrate)
 
-**No pre-ratified first-action carried forward from S2941.** Ledger #16 discharged the 3-trigger corroboration cleanly; no follow-up substrate shipped.
+**S2942 first-action is pre-ratified from S2941 post-close retrospective.** Chris + Claude + Rigby converged on a landmines-first plan drafted by Rigby, ratified by Chris.
 
-Chris directs at S2942 open. Suggested first-action candidates (all deferred from S2940/S2941 queues):
+**Plan deliverable:** `8353676e-f037-4998-91e7-0269f9e1bbca` — *"S2942 Closure Plan — Ledger #34 + #33 + #38 (Landmines + Dry-Run Substrate)"* in Architecture & Research workspace (`a9a16593-e0a4-44dc-8256-efc65d524b3c`). 10138 chars, 8 sections, diagnostic flags cleared.
+
+**Scope (executive intent):**
+1. **Ledger #34** — guard learning-bridge receiver against TESTING mode. Stops hidden OpenAI spend in tests (~77 calls per test suite touching AgentExecution). 15-45 min.
+2. **Ledger #33** — add AgentExecution + Agent to `orm_inspect_tool` allowlist. Restores verify-at-ORM loop without shell fallback. 30-60 min.
+3. **Ledger #38 MVP** — dry_run affordance on `blog_tool.approve/reject/generate` + `feedback_tool.submit/update` ONLY. Not Slice 7 batch 2a/2b (heterogeneous + high-risk; deserves per-tool semantics later). 2-4 hrs.
+4. **Ledger #41 promotion** — extend gap-map classifier with `Execution mode:` + `Mutation safety:` frontmatter fields (WIP-rule earned by closing 3 committed rows).
+5. **Validation-doc refresh** — update `blog_tool` + `feedback_tool` docs with dry_run §6 evidence.
+
+**Session shape:** single-session target with trip-wire — if #38 has consumed >4 hrs at halfway checkpoint, split into Session A (#34+#33+ORM) → Session B (#38+#41+docs). Full timing in plan §4.
+
+**Acceptance gate (anti-drift, VERBATIM):**
+> "If after shipping #38 we cannot produce at least TWO live-verified mutation validations (under dry_run), then #38 did not unlock closure and we halt substrate work until a direct tool-level closure happens."
+
+**WIP-limit rule (now in force):**
+> "No new COMMITTED ledger rows unless we close ≥1 existing committed row. Record-only candidates are free to log; promoting one to committed counts as a new committed row."
+
+Full plan: read deliverable `8353676e-f037-4998-91e7-0269f9e1bbca` at S2942 open before drafting T0 SIGN with Rigby.
+
+### S2942 open sequence steps
+
+1. **Read the closure plan** via ORM or `deliverable_tool.detail id=8353676e-f037-4998-91e7-0269f9e1bbca` — full 10138-char body has all 8 sections.
+2. **First-action lint pre-flight:** run `python manage.py build_pa_tool_audit --gap-only --emit-gap-json --check` and confirm gap-map headline still reads `98 validated_full / 0 untested`.
+3. **T0 SIGN with Rigby** — plan is already Rigby-authored, so T0 focuses on execution-order confirmation + fresh-context tool-grounded re-verification of the 3 ledger entries (per `feedback_verify_rigby_tool_runs_before_trusting_sign`).
+4. **Execute per plan order:** #34 → #33 → #38 → #41 promotion → doc refresh.
+5. **Post-ship: verify against §7 four litmus points.**
+6. **If acceptance gate passes:** close with twin mirrors (referencing this plan as content mirror ancestor).
+7. **If acceptance gate fails:** halt substrate work; open direct tool-level closure session.
+
+### Fallback if Chris redirects at S2942 open (deferred queue, unchanged from S2941)
 
 - **(A8) Signal Dispatches "Manual dispatch" button** (Rigby S2934 zoom-out fold — ~30 min UI, engineering).
-- **(A9) Fourth signal-dispatch rule** — `demand_spike` (250 clusters) or `skill_demand` (131 clusters). Engineering + observability.
-- **(A6) SignalCluster promotion audit** — only 0.58% of clusters are active. Audit-then-build; likely surfaces gaps.
-- **(F) Dry-run substrate design (Ledger #38)** — enables live mutation verification of Slice 7 batch 2a/2b mutations retroactively. ~1 session substrate.
-- **(H) Ledger #41 candidate** — teach gap-map classifier to distinguish live-verified vs analyzed-only actions. ~1 session substrate.
-- **(D) Docs restructuring arc** — unblocked at S2800, still queued. Large arc.
-- **(B) Slice 5-hardening** — 3-4 executable invariants deferred at S2928 fork A. ~1 session substrate.
-- **(E) Tier 2 lint promotion** — envelope-JSON top-level-key parse against schema description text. Ledger #5 sub-substrate. ~1 session.
-- **(NEW-1) Wire up A1 shipping** — engineering-net-new: build something user-facing. Per `feedback_engineering_bias_over_audit`, actively surface 1-3 net-new candidates.
+- **(A9) Fourth signal-dispatch rule** — `demand_spike` (250 clusters) or `skill_demand` (131 clusters).
+- **(A6) SignalCluster promotion audit** — only 0.58% of clusters are active.
+- **(D) Docs restructuring arc** — unblocked at S2800, still queued.
+- **(B) Slice 5-hardening** — 3-4 executable invariants deferred at S2928 fork A.
+- **(E) Tier 2 lint promotion** — envelope-JSON top-level-key parse. Ledger #5 sub-substrate.
+- **(NEW-1) Wire up A1 shipping** — engineering-net-new per `feedback_engineering_bias_over_audit`.
 - **(NEW-2) Ledger #16b if triggered** — see watch below.
 
 ### Ledger #16b watch (fold-candidate from S2941 T1 SIGN)
