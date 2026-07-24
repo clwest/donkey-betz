@@ -52,6 +52,34 @@ Rigby believes she has a single `deliverable_tool` with 16 actions that manages 
 - `window_days`: 7
 - `field`: `agent_name`
 
+## Covered actions
+
+Enumerates every action currently declared in `deliverable_tool`'s schema enum
+(`core/services/pa_tool_schemas.py:4231`, HEAD `adbae9074`). **18 actions total** —
+S2728 covered 16; `delete` was added S2860 and `clear_diagnostic` added S2868. All
+18 are exercised via the shared `_handle_deliverables` dispatch layer per §4;
+mutation actions have `dry_run` + `confirm` gates documented at §17 STOP-and-report
+failure modes.
+
+- `list` — **read** — browse deliverables by status/type/category/date/workspace filter. `has_initiative`/`orphans`/`saved` autofill-hardened per §6 hidden-filters inventory. Verified live at S2728.
+- `detail` — **read** — full content of a deliverable (default 8K char cap; `full=true` bypasses; `content_offset`/`content_limit` paginate). Verified live at S2728.
+- `create` — **mutation (contained)** — new Deliverable row. Defaults `status='completed'` per F-D-6. Verified live at S2728.
+- `update` — **mutation (contained)** — edit existing deliverable by id. Cannot set `status='completed'` — typed error redirects to `content_tool.content_complete` or `set_status` per F-D-7. Verified live at S2728.
+- `append` — **mutation (contained, append-only)** — never overwrites; concatenates text. Verified live at S2728.
+- `search` — **read** — title-keyword search. Verified live at S2728.
+- `save` — **mutation (contained, bookmark)** — bookmark a deliverable for the current user. Verified live at S2728.
+- `unsave` — **mutation (contained)** — remove bookmark. Verified live at S2728.
+- `stats` — **read** — aggregate counts by type/category/agent. `full_by_agent=true` bypasses top-10 truncation. Verified live at S2728.
+- `duplicates` — **read** — dedup audit; returns groups with count/first_created_at/last_created_at/window counts/agent-name distribution. Verified live at S2728.
+- `set_status` — **mutation (contained)** — surgical status flip supporting completed↔ready only. `reason` REQUIRED on completed→ready. Records actor + trace_id + reason in DeliverableEvent. Verified live at S2728.
+- `normalize` — **mutation (spreading)** — alias-map sweep on `agent_name` field (v1). `dry_run=TRUE` default; writes require `dry_run=false + confirm=true`. Verified live at S2728.
+- `export_pdf` — **mutation (contained, PDF row create)** — generate downloadable PDF; returns CDN URL. Verified live at S2728.
+- `bulk_archive` — **mutation (spreading)** — multi-row archive by filter (title_prefixes/agent_names/protected_categories/statuses). `dry_run=TRUE` default; writes require `dry_run=false + confirm=true` (S1228 PR-A belt-and-suspenders). Verified live at S2728. **Sibling S2943 PR-B candidate:** `content_tool.bulk_archive_published` inherits this same handler surface.
+- `delete` — **mutation (cascading — S2860)** — IRREVERSIBLE single-row delete. Cascades to DeliverableExport / DeliverableEvent / ContentPacketItem. `dry_run=TRUE` default; writes require `dry_run=false + confirm=true`. Rejects `status='published'` unless `allow_published=true + non-empty reason`. Pre-delete WARNING log records id + user_id + trace_id + reason + cascade counts. **Analyzed at S2860, not exercised live this batch** — deferred to future dry_run live-verify batch.
+- `link_initiative` — **mutation (contained)** — attach deliverable to initiative (pass `deliverable_id + initiative_id`). Verified live at S2728.
+- `unlink_initiative` — **mutation (contained)** — remove initiative link (pass `deliverable_id`). Verified live at S2728.
+- `clear_diagnostic` — **mutation (contained — S2868)** — manually clear a `missing_initiative_id` diagnostic. Sets `diagnostic_status='cleared'` (sticky sentinel). Requires `id + non-empty reason`. Rejects if row is not currently `diagnostic`. Only suppresses missing_initiative_id re-marks; workspace_mismatch still fires. **Analyzed at S2868 ratification, not exercised live this batch.**
+
 ## 4. Handler behavior (traced through code)
 
 ### 4.1 Dispatch layer 1 — `_handle_deliverable_direct` (td_handlers_content.py:84-116)
