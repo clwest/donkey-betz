@@ -6,11 +6,13 @@
 **Register site:** `core/services/tool_dispatcher.py:470`
 **Session:** S2936 (Slice 6 batch 2 — closing batch for `td_handlers_content.py`; paired with `blog_tool`)
 **HEAD at validation:** `6540fb156` (2026-07-24)
-**Ship shape:** Doc-only (S2796 shape). Post-merge live-dispatch verify per PLAYBOOK-7.4.4. **Bifurcated verification scope** (per Rigby S2936 T0 SIGN F-BLOCKING #1): §6 covers 2 read actions LIVE-VERIFIED; §5a covers 2 mutation actions ANALYZED-NOT-EXECUTED with signal-chain evidence. Live mutation verification deferred pending handler-layer `dry_run` affordance (Ledger #38).
-**Category upgrade target:** `untested` → `validated_partial` (read actions live-verified; mutation actions analyzed-only)
-**Rigby SIGN:** S2936 T0 SIGN AGREE Option C — same batch shape as blog_tool sibling. Chris "yes proceed" ratification at T1.
+**Ship shape:** Doc-only (S2796 shape). Post-merge live-dispatch verify per PLAYBOOK-7.4.4. **Bifurcated verification scope** (per Rigby S2936 T0 SIGN F-BLOCKING #1): §6 covers 2 read actions LIVE-VERIFIED; §5a covers 2 mutation actions ANALYZED-NOT-EXECUTED with signal-chain evidence. Live mutation verification deferred pending handler-layer `dry_run` affordance (Ledger #38). **S2942 update — Ledger #38 dry_run shipped:** mutation actions are now live-verifiable under `dry_run=true`. See §6.4 Rigby live-verify evidence.
+**Category upgrade target:** `untested` → `validated_full` (as of S2942 — all 4 actions live-verified: 2 read + 2 mutation-under-dry_run).
+**Rigby SIGN:** S2936 T0 SIGN AGREE Option C — same batch shape as blog_tool sibling. Chris "yes proceed" ratification at T1. S2942 T0 SIGN AGREE Option A on plan reconciliation (Ledger #33/#34 already-closed) + Chris "Yes" ratify on revised scope + acceptance-gate live-verify SATISFIED.
 **Template variant:** sweep
 **Template version:** v1
+**Execution mode:** live
+**Mutation safety:** dry_run_supported
 
 ---
 
@@ -153,6 +155,40 @@ Returned `{"action":"stats", "total_open":0, "by_type":{"feedback":1}, "by_statu
 ### 6.3 Mutation actions (NOT executed — §5a analysis only)
 
 Per Option C batch shape, `submit` + `update` were NOT dispatched live at this ship. §5a table above documents blast radius (both `contained`) from signal-chain grep + handler code inspection. Live mutation verification is a follow-up batch pending handler-layer `dry_run` affordance (Ledger #38).
+
+### 6.4 S2942 — Ledger #38 dry_run live verification (acceptance-gate proof)
+
+Shipped 2026-07-24 via S2942 handler edits at `td_handlers_content.py:3600-3729` (submit + update branches) plus schema opt-in at `pa_tool_schemas.py:645-655`. Live-verified via Rigby PA dispatch (conversation `pa-07d6a1d43f6a4b42`) with tool_runs captured verbatim:
+
+**Pre-call baseline** — `orm_inspect_tool.count_by model=UserFeedback field=status`:
+```json
+{"ok":true,"total_matching":1,"groups":[{"value":"addressed","count":1}]}
+```
+
+**Dry-run submit** — `feedback_tool action=submit comment="S2942 acceptance gate #1..." target_type=bug dry_run=true`:
+```json
+{"action":"submit","dry_run":true,"would_action":"create",
+ "would_write":{"model":"UserFeedback","feedback_type":"bug",
+   "message":"S2942 acceptance gate #1 — live-verify dry_run",
+   "status":"open","user_id":"e0c9d44b-...","trace_id":"tool-2-7ba01d55"},
+ "no_writes":true,
+ "message":"dry_run=true: no UserFeedback row created."}
+```
+
+**Post-call verify** — `orm_inspect_tool.count_by model=UserFeedback field=status`:
+```json
+{"ok":true,"total_matching":1,"groups":[{"value":"addressed","count":1}]}
+```
+
+**Result:** `total_matching` unchanged at 1 → **NO UserFeedback row created under dry_run=true**. Acceptance gate satisfied for `feedback_tool.submit`.
+
+**Baseline mutation** — `dry_run=false` still lands: subsequent `feedback_tool action=submit dry_run=false` returned `id=c3faf830-bf8c-4fc7-a2a7-fe3611a7e663` + verified via `orm_inspect_tool.filter` presence check. Real writes preserved.
+
+**Envelope shape confirmed:** `dry_run: true`, `would_action: 'create'`, `would_write.{model,feedback_type,message,status,user_id,trace_id}`, `no_writes: true`, plain-English `message`. Update branch mirrors this shape with `current_status` + `would_change_to` + `notes_would_be` keys.
+
+**Rigby zoom-out fold (PLAYBOOK-6.10.7, record-only):** future envelope enhancement candidates — add `verify_hint` block (model + id + field expectations) and `would_write_count` for multi-row actions. Not shipped this session; logged for a next-instance corroboration trigger.
+
+**Allowlist expansion co-shipped:** `UserFeedback` added to `orm_inspect_tool` allowlist at `td_handlers_agents.py:759-763` (mirrors S2931 pattern for AgentExecution). Enables self-service verification loop.
 
 ## Related
 

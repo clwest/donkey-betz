@@ -755,6 +755,26 @@ class AgentHandlersMixin:
                 'app_label': 'core', 'sensitive': False,
                 'expensive_text_fields': ('task', 'error_message'),
             },
+            # S2942 Ledger #38 gate satisfy — UserFeedback surfacing so
+            # dry_run acceptance-gate verification (pre/post count identical
+            # after dry_run=true submit) runs entirely on Rigby's tool
+            # surface. `message` + `resolution_notes` are TextFields
+            # (user-authored, can be lengthy) so both are blocked from
+            # contains lookups. Model is non-sensitive; content is user
+            # feedback, not credentials.
+            'UserFeedback': {
+                'app_label': 'core', 'sensitive': False,
+                'expensive_text_fields': ('message', 'resolution_notes'),
+            },
+            # S2942 Ledger #38 gate satisfy — SelfBlog surfacing so
+            # dry_run acceptance-gate verification of the SelfBlog path
+            # (blog_tool.approve/reject with type='blog') can confirm
+            # status/publish_ready unchanged after dry_run=true. `full_text`
+            # is a large TextField (article bodies), blocked from contains.
+            'SelfBlog': {
+                'app_label': 'core', 'sensitive': False,
+                'expensive_text_fields': ('full_text',),
+            },
             'AutopilotAction': {
                 'app_label': 'core', 'sensitive': True,
                 'expensive_text_fields': (),

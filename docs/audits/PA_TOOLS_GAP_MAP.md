@@ -30,6 +30,17 @@ Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without
 - `pass`: **95**
 - `warn`: **66**
 
+## Two-metric scoreboard (S2942 Ledger #41)
+
+Opt-in per-tool frontmatter classification. Missing fields land as `unknown` (no silent default per plan §2.1 acceptance).
+
+- **Metric A — `Execution mode:` opt-ins:** 2 of 115 per-tool docs.
+  - `unknown`: **159** tools
+  - `live`: **2** tools
+- **Metric B — `Mutation safety:` opt-ins:** 2 of 115 per-tool docs.
+  - `unknown`: **159** tools
+  - `dry_run_supported`: **2** tools
+
 ## Schema quality lints (F5 advisory column)
 
 - `actions_not_mentioned_in_description`: **22** tools
