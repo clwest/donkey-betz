@@ -10,26 +10,26 @@
 
 - **Total tool names:** 161
 - **Per-category breakdown:**
-  - `validated_full` (validated (full)): **92**
+  - `validated_full` (validated (full)): **95**
   - `agent_via_run_agent` (agent (via run_agent)): **44**
   - `validated_partial` (validated (partial)): **11**
   - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
-  - `untested` (untested): **6**
+  - `untested` (untested): **3**
   - `meta_no_handler` (meta (no handler by design)): **1**
 
 ## Validation-doc corpus
 
-- **Total `*_validation.md` files:** 119
+- **Total `*_validation.md` files:** 122
 - **Substrate (cross-cutting) docs:** 10 — reduce risk platform-wide but do NOT validate per-tool invariants (S2795 F2 rename).
-- **Per-tool docs:** 109 — of which 101 have an explicit 'Covered actions' section (F1 checklist).
-- **Per-tool docs with `Template version` marker:** 87 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
+- **Per-tool docs:** 112 — of which 104 have an explicit 'Covered actions' section (F1 checklist).
+- **Per-tool docs with `Template version` marker:** 90 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
 
 ## Template compliance (T1b)
 
 Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without `Template version:` marker); `pass` = v1-conformant; `fail` = v1 marker present but mandatory section/frontmatter missing.
 
-- `pass`: **89**
-- `warn`: **72**
+- `pass`: **92**
+- `warn`: **69**
 
 ## Schema quality lints (F5 advisory column)
 
@@ -127,11 +127,11 @@ _No untested-tool groups met the threshold._
 | `meeting_coordinator_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `memory_isolation_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `messaging_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_core.py` |
-| `mission_verdict` | ✓✓ | untested | warn | — | `core/services/td_handlers_employee.py` |
+| `mission_verdict` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_employee.py` |
 | `ml_analysis` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_agents.py` |
 | `mobile_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `narrative_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
-| `newsletter_tool` | ✓✓ | untested | warn | — | `core/services/td_handlers_newsletter.py` |
+| `newsletter_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_newsletter.py` |
 | `obs_tool` | ✓✓ | validated (partial) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `opportunity_manager_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `opportunity_pipeline_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
@@ -162,7 +162,7 @@ _No untested-tool groups met the threshold._
 | `resolve_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `revenue_tracker_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_agents.py` |
 | `rigby_shift_brief_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_rigby_shift_brief.py` |
-| `rigby_work_item` | ✓✓ | untested | warn | actions_not_mentioned_in_description, handler_drift_action_count, handler_drift_negative_claim_dispatch | `core/services/td_handlers_rigby_work_queue.py` |
+| `rigby_work_item` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description, handler_drift_action_count, handler_drift_negative_claim_dispatch | `core/services/td_handlers_rigby_work_queue.py` |
 | `run_agent` | schema | meta (no handler by design) | warn | — | `—` |
 | `schedule_followup` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_agents.py` |
 | `scheduled_tasks_tool` | ✓✓ | validated (full) | warn | no_required | `core/services/td_handlers_ops.py` |

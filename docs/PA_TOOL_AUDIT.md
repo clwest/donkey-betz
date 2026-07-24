@@ -21,11 +21,11 @@
 
 ## Validation coverage (S2795)
 
-- `validated_full` (validated (full)): **92**
+- `validated_full` (validated (full)): **95**
 - `agent_via_run_agent` (agent (via run_agent)): **44**
 - `validated_partial` (validated (partial)): **11**
 - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
-- `untested` (untested): **6**
+- `untested` (untested): **3**
 - `meta_no_handler` (meta (no handler by design)): **1**
 
 **Schema quality lints:**
@@ -120,11 +120,11 @@
 | `meeting_coordinator_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
 | `memory_isolation_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
 | `messaging_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Read-only access to in-app messaging threads |
-| `mission_verdict` | ✓ ✓ | 3 | 2 | untested | — | Rigby-only: certify, reject, or defer a MissionRun |
+| `mission_verdict` | ✓ ✓ | 3 | 2 | validated_full | — | Rigby-only: certify, reject, or defer a MissionRun |
 | `ml_analysis` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Run ML analysis on platform data: prediction models, feature importance, model accuracy |
 | `mobile_tool` | ✓ ✓ | 4 | 1 | validated_full | — | Inspect the React Native / Expo mobile app: project config, implemented screens, API modules, dependencies |
 | `narrative_tool` | ✓ ✓ | 5 | 1 | validated_full | — | Access narrative drift analysis, trend break detection, and cultural impact assessments |
-| `newsletter_tool` | ✓ ✓ | 7 | 1 | untested | — | Newsletter publishing pipeline — prepare issues for Substack/Beehiiv, generate outlines, validate against T… |
+| `newsletter_tool` | ✓ ✓ | 7 | 1 | validated_full | — | Newsletter publishing pipeline — prepare issues for Substack/Beehiiv, generate outlines, validate against T… |
 | `obs_tool` | ✓ ✓ | 6 | 1 | validated_partial | — | Control OBS Studio recording via the local bridge |
 | `opportunity_manager_tool` | ✓ ✓ | 6 | 1 | validated_full | — | Manage opportunities: list, view details, get stats, create, or update status |
 | `opportunity_pipeline_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
@@ -155,7 +155,7 @@
 | `resolve_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
 | `revenue_tracker_tool` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Track revenue metrics, income progress, and record new revenue |
 | `rigby_shift_brief_tool` | ✓ ✓ | 1 | 1 | validated_full | actions_not_mentioned_in_description | Rigby's operator shift brief — a one-minute pulse for Chris at the start of a session |
-| `rigby_work_item` | ✓ ✓ | 5 | 1 | untested | actions_not_mentioned_in_description, handler_drift_action_count, handler_drift_negative_claim_dispatch | Rigby's internal operational work queue |
+| `rigby_work_item` | ✓ ✓ | 5 | 1 | validated_full | actions_not_mentioned_in_description, handler_drift_action_count, handler_drift_negative_claim_dispatch | Rigby's internal operational work queue |
 | `run_agent` | schema only | — | 2 | meta_no_handler | — | Delegate a task to a specialized agent |
 | `schedule_followup` | ✓ ✓ | — | — | validated_full | no_required | Subscribe THIS conversation to a completion notification for a previously dispatched async agent task |
 | `scheduled_tasks_tool` | ✓ ✓ | 3 | — | validated_full | no_required | View and manage scheduled Celery tasks: list beat entries, enable/disable schedules |
