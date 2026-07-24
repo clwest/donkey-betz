@@ -11560,6 +11560,21 @@ def process_pending_auto_topics(self, max_topics: int = 3):
 def cleanup_expired_signals(self):
     from core.tasks_misc import _impl_cleanup_expired_signals
     return _impl_cleanup_expired_signals(self)
+
+
+# Session 2933 A3 v1 — signal-triggered agent auto-dispatch
+@shared_task(bind=True, name='scan_signal_dispatch_rules', queue='long_running')
+def scan_signal_dispatch_rules(self):
+    """Periodic scan of SignalDispatchRules — enqueues per-cluster dispatch tasks."""
+    from core.tasks_signal_dispatch import _impl_scan_signal_dispatch
+    return _impl_scan_signal_dispatch(self)
+
+
+@shared_task(bind=True, name='dispatch_agent_for_signal_cluster', queue='long_running')
+def dispatch_agent_for_signal_cluster(self, dispatch_id: str):
+    """Per-dispatch fan-out task — runs the mapped agent for one SignalDispatch row."""
+    from core.tasks_signal_dispatch import _impl_dispatch_agent_for_signal_cluster
+    return _impl_dispatch_agent_for_signal_cluster(self, dispatch_id)
 @shared_task(bind=True, queue='default')
 def extract_action_items_from_session(self, session_id: str):
     """
