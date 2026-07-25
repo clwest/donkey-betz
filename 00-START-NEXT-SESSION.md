@@ -2,64 +2,72 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2960 CLOSED. Golden Evals arc-slice 6 shipped: `evals/tier1/content_writer_agent.yaml` (PR #3561, HEAD `10b6b3ab1`). 950 lines, 13 prompts, all 5 fault-injection categories (5 happy + 2 each of tool_timeout / data_unavailable / ambiguous_input / bad_input). Sixth canon_version=1 file — substrate frozen at S2955 continues holding cleanly across six different agent shapes: SIA (closed-world platform-health, autonomous single-prompt), ResearchAgent (open-world LLM synthesis, human-diverse 26-prompt), DevOpsAgent (config-generation dual-path advisory-vs-config-gen), WorkflowOrchestrationAgent (no-LLM-tool-calls programmatic dispatch through 18 hardcoded workflow templates), LegalDocDrafterAgent (10-tool GPT-selection Standard Mode + Denied-Motion Routing Branch), and now ContentWriterAgent (5-routing-branch single-LLM-call agent with `tools=[]`, 7 content types + 14 aliases + 6 tone presets, largest routing-branch fan-out in arc). DB-grounded via direct ORM at authoring T0 (Rigby T2 SIGN reconfirmed) — verified 7 30d execs (6 completed / 0 failed / 1 cancelled via S2800) = 23 all-time (20 completed / 2 failed / 1 cancelled, earliest 2026-06-19) + 3 non-empty error_message rows (2× 60-min watchdog + 1× worker restart). This is 2nd-thickest arc traffic (Legal 5 / Workflow 9 / DevOps 13 / SIA 37 / Research 37) but STILL narrow — 5/7 30d prompts are fitness-wearable brand video variants and 4/5 routing branches are zero-30d-traffic (REWRITE/DIRECTED/DIAGNOSTIC/SELF-DESCRIPTION). All four coverage limits honestly called out in YAML header. **Content-domain hallucination invariants proportional per S2959 canon addition 9** — 5 domain-sensitivity predicates (fewer than Legal's 7, more than DevOps/Workflow's 2-3): `no_fabricated_facts_absent_research`, `honors_word_count_within_tolerance`, `honors_tone_directive`, `honors_content_type_structure`, `no_media_generation_when_planning_only`. Chris D-verdict `yes` via TERMINAL 2026-07-25 — Ledger #17 count unchanged at 4 (Chris used terminal path, not Chat UI relay — 4 consecutive terminal ratifications S2957→S2960). **S2961 first-action = author `evals/tier1/competitor_analysis_agent.yaml`** — 7th Tier-1 slice per arc plan.
+## READ THIS FIRST — SESSION 2961 CLOSED. Golden Evals arc-slice 7 shipped: `evals/tier1/competitor_analysis_agent.yaml` (PR #3563, HEAD `75f8da29a`). 1232 lines, 13 prompts, all 5 fault-injection categories (5 happy + 2 each of tool_timeout / data_unavailable / ambiguous_input / bad_input). Seventh canon_version=1 file — substrate frozen at S2955 continues holding cleanly across seven different agent shapes: SIA (closed-world platform-health, autonomous single-prompt), ResearchAgent (open-world LLM synthesis, human-diverse 26-prompt), DevOpsAgent (config-generation dual-path advisory-vs-config-gen), WorkflowOrchestrationAgent (no-LLM-tool-calls programmatic dispatch through 18 hardcoded workflow templates), LegalDocDrafterAgent (10-tool GPT-selection Standard Mode + Denied-Motion Routing Branch), ContentWriterAgent (5-routing-branch single-LLM-call agent with `tools=[]`), and now CompetitorAnalysisAgent (5-routing-branch multi-tool GPT-dispatch agent with 5 tools + web_search inheritance, THINNEST-TRAFFIC agent in the arc). DB-grounded via direct ORM at authoring T0 (Rigby T1-T3 SIGN tool-verified with `orm_inspect_tool.filter` + `orm_inspect_tool.get` + `orm_inspect_tool.count_by` + `repo_tool.read_file` + `repo_tool.search`) — verified 2 30d execs (2 completed / 0 failed / 0 cancelled) = 11 all-time (11 completed / 0 failed / 0 cancelled, earliest 2026-06-23) + **ZERO non-empty error_message rows ever** (only Tier-1 agent shipped with zero failure history). This is THINNEST-TRAFFIC in the arc — 2 30d / 11 all-time vs SIA 37 / Research 37 / DevOps 13 / Workflow 9 / Content 7 / Legal 5. Only 1 of 11 all-time prompts is a real competitor-analysis ask (2026-06-25 Donkey Betz identify-competitors, exec `3bc1df00-2288-4a9c-baef-c5ede3f1d502`, preserved verbatim as `competitor_happy_01` STANDARD-path anchor). 4/5 routing branches encoded on code-spec, not observed traffic (2nd trigger of S2960 Fold A). All coverage limits honestly called out in YAML header. **Competitive-intelligence buyer-facing risk invariants proportional per S2959 canon addition 9** — 5 domain-sensitivity predicates matching Content's 5 (fewer than Legal's 7): `no_fabricated_competitor_names`, `no_fabricated_pricing_financial_or_headcount_metrics`, `no_fabricated_executive_quotes_or_attributions`, `distinguishes_evidence_from_inference`, `honors_data_freshness_or_admits_gap`. Chris D-verdict `yes` via TERMINAL 2026-07-25 — **5 consecutive terminal ratifications** S2957→S2961 (Ledger #17 count unchanged at 4). **S2962 first-action = author `evals/tier1/personal_assistant_agent.yaml` (or Rigby-named equivalent) + arc-close canon-uniformity review** — 8th and FINAL Tier-1 slice per arc plan, followed by canon_v2 candidate ratification.
 
-**Arc-precedent substrate frozen at canon_version=1** (unchanged from S2955; must apply to all remaining Tier-1 YAMLs):
+**Arc-precedent substrate frozen at canon_version=1** (unchanged from S2955; must apply to slice 8):
 1. `schema_version: 1` + `canon_version: 1` at file top.
 2. `canonical_field_mapping` block declaring `mapping_source: native|derived` per canon field with named derivation rules — S2963 validators MUST consult, never invent mappings.
 3. `fault_injection` uses effect-based contract (`component` + `fault.{type, params}`) with `python.{...}` as backend-adapter appendix — portable beyond Python-mock. **S2957 fold**: prefer service-level selectors (`core.agents.*` / `core.services.*`) over library-internal Python paths (`openai.resources.*`) for portability across SDK upgrades.
 4. `one_of` acceptance-criteria capped at ≤2 branches with mandatory `why` string per branch.
 
-**S2958 additions to canon (informative, non-breaking — apply where relevant to remaining slices):**
-5. **Per-execution-shape evidence-tier requirements** — for agents where different execution shapes produce different evidence sets, `canonical_field_mapping.evidence_pointers` MAY carve per-shape rules rather than a single hard requirement. S2960 applied to STANDARD (with provenance/publishable/validation_status) vs REWRITE / DIRECTED / DIAGNOSTIC / SELF-DESCRIPTION (without those fields).
+**S2958 additions to canon (informative, non-breaking — apply where relevant to slice 8):**
+5. **Per-execution-shape evidence-tier requirements** — for agents where different execution shapes produce different evidence sets, `canonical_field_mapping.evidence_pointers` MAY carve per-shape rules rather than a single hard requirement.
 6. **INTEGRATION EVIDENCE tier distinction** — out-of-band DB row inspection is NOT in Tier-1 validator scope; belongs to a separate integration/side-effect verification suite. Keep Tier-1 validators pure on the AgentResult artifact.
 7. **TRANSITIONAL marking pattern** — when a YAML documents a fold requiring code follow-up, use the "TRANSITIONAL — code-fix PR expected" phrasing so it doesn't calcify. Include an explicit v1.1 removal clause.
-8. **Timeout-string brittleness avoidance** — do NOT couple timeout assertions to exact wording. Assert stable discriminator fields (`data.timeout=True` on wrapper-side FuturesTimeoutError; structured status fields when available) + broad substring patterns for message text.
+8. **Timeout-string brittleness avoidance** — do NOT couple timeout assertions to exact wording. Assert stable discriminator fields + broad substring patterns for message text.
 
-**S2959 additions to canon (informative, non-breaking — apply where relevant to remaining slices):**
-9. **Domain-sensitivity acceptance predicates** — for agents whose failure surface carries elevated buyer-facing cost (legal drafting, medical, financial advice, content writing), encode domain-specific predicates alongside the general `no_unsupported_claims`. S2960 applied 5 content-domain predicates (proportional harm class — content quality violations degrade UX but rarely trigger irreversible external consequences the way legal-drafting hallucinations can); LegalDocDrafterAgent example: 7 legal-specific predicates. Reserve for agents where hallucination cost is CATEGORICAL (not just quality-degrading).
-10. **Routing-branch framing (not "new shape")** — when an agent has an auto-detected alternate execution path that bypasses the primary tool-dispatch flow (e.g., LegalDocDrafterAgent's DENIED MOTION MODE, ContentWriterAgent's REWRITE/DIRECTED/DIAGNOSTIC/SELF-DESCRIPTION modes, forced-tool_choice paths, guardrail deflections), frame as "routing branch inside the same agent contract" — NOT as a "new shape". Keeps acceptance criteria unified and avoids inviting canon_version=2 creep before S2962. Same success + evidence + hallucination invariants apply across branches. **S2960 Fold A carry-forward**: Rigby flagged the risk of over-encoding low-evidence routing branches; canon-wide discussion at S2962.
-11. **Coverage-limits actionable conclusion** — the THIN/NARROW/ZERO-FAILURE/BUYER-RISK caveat pile should resolve to ONE actionable conclusion line (e.g., "treat as SCHEMA + HALLUCINATION-INVARIANT + BUYER-EXPECTATION validation, not performance assurance"). Prevents caveat stacking from making the artifact read as self-invalidating.
+**S2959 additions to canon (informative, non-breaking — apply where relevant to slice 8):**
+9. **Domain-sensitivity acceptance predicates** — for agents whose failure surface carries elevated buyer-facing cost, encode domain-specific predicates alongside the general `no_unsupported_claims`. S2961 applied 5 competitive-intelligence predicates (proportional harm class — same as Content).
+10. **Routing-branch framing (not "new shape")** — when an agent has an auto-detected alternate execution path, frame as "routing branch inside the same agent contract" — NOT as a "new shape". Same success + evidence + hallucination invariants apply across branches.
+11. **Coverage-limits actionable conclusion** — the THIN/NARROW/ZERO-FAILURE/BUYER-RISK caveat pile should resolve to ONE actionable conclusion line.
 
 Reference implementations (in order of canon fidelity):
 - `evals/tier1/system_intelligence_agent.yaml` — canon_version=1 original (463 lines, autonomous single-prompt shape, closed-world).
-- `evals/tier1/research_agent.yaml` — second reference (523 lines, 26-prompt human-diverse, open-world LLM synthesis, `error_message` empty-vs-null semantic verifier note).
+- `evals/tier1/research_agent.yaml` — second reference (523 lines, 26-prompt human-diverse, open-world LLM synthesis).
 - `evals/tier1/devops_agent.yaml` — third reference (612 lines, dual-path advisory-vs-config-gen shape, thin-traffic honesty pattern + service-level selector fold).
 - `evals/tier1/workflow_orchestration_agent.yaml` — fourth reference (801 lines, no-LLM-tool-calls programmatic-dispatch shape, per-workflow-shape evidence cascade + transitional wrapper-bug pattern + integration-evidence tier distinction).
-- `evals/tier1/legal_doc_drafter_agent.yaml` — fifth reference (794 lines, 10-tool GPT-selection Standard Mode + Denied-Motion Routing Branch, domain-sensitivity predicates + routing-branch framing + coverage-limits actionable conclusion).
-- `evals/tier1/content_writer_agent.yaml` — sixth reference (950 lines, 5-routing-branch single-LLM-call agent with `tools=[]`, proportional domain-sensitivity predicates + representative-not-verbatim failure-replay honesty pattern + softened diagnostic-mode contract language).
+- `evals/tier1/legal_doc_drafter_agent.yaml` — fifth reference (794 lines, 10-tool GPT-selection + routing-branch shape, domain-sensitivity predicates + coverage-limits actionable conclusion).
+- `evals/tier1/content_writer_agent.yaml` — sixth reference (950 lines, 5-routing-branch single-LLM-call `tools=[]`, proportional domain-sensitivity predicates + representative-not-verbatim failure-replay pattern + softened diagnostic-mode contract language).
+- `evals/tier1/competitor_analysis_agent.yaml` — **NEW seventh reference** (1232 lines, 5-routing-branch multi-tool GPT-dispatch, THINNEST-TRAFFIC honesty pattern + verbatim-single-real-prompt anchor + spider-first principal-contract predicate + boundary-condition evidence-gate disclaimer + inline Rigby-fold-disposition header section).
 
-**Refreshed 2026-07-25 (S2960 close).** Gap-map headline unchanged: `100 validated_full / 2 untested` — the 2 are `agent_capability_drift_tool` (S2953-shipped) + `agent_job_status` (S2952-shipped), both untested-by-design at ship time. This session shipped a spec file only, no PA tool changes.
+**Refreshed 2026-07-25 (S2961 close).** Gap-map headline unchanged: `100 validated_full / 2 untested` — the 2 are `agent_capability_drift_tool` (S2953-shipped) + `agent_job_status` (S2952-shipped), both untested-by-design at ship time. This session shipped a spec file only, no PA tool changes.
 
-**PRs shipped this session (S2960):**
-- u-d-b PR **#3561** — S2960 Golden Evals Tier-1 slice 6: ContentWriterAgent YAML (1 file, +950/-0, spec-only).
-- u-d-b PR **#TBD** — S2960 close cascade (handoff + this 00-START refresh + wrapper pin bump).
+**PRs shipped this session (S2961):**
+- u-d-b PR **#3563** — S2961 Golden Evals Tier-1 slice 7: CompetitorAnalysisAgent YAML (1 file, +1232/-0, spec-only).
+- u-d-b PR **#TBD** — S2961 close cascade (handoff + this 00-START refresh + wrapper pin bump).
 
-**Twin mirrors shipped this session (S2960 slice):**
-- S2960 slice 6 content mirror: `74436669-345c-4234-9e21-7b4d5aebc9a6` (Donkey Betz workspace, `initiative_phase_doc`, `category='governance'`, Ledger #16 re-hit **13th cumulative**, sticky-cleared via `deliverable_tool.clear_diagnostic`).
-- S2960 slice 6 ratification envelope: `c97d6dc8-3500-4bd1-9c4d-8947ea3b82cb` (Donkey Betz workspace, `ratification_record`, `category='governance'`, diagnostic clean on create).
+**Twin mirrors shipped this session (S2961 slice):**
+- S2961 slice 7 content mirror: `56664ff4-1da4-43a8-944b-d09c09a8a5a7` (Donkey Betz workspace, `initiative_phase_doc`, `category='governance'`, **Ledger #16 RE-HIT 14th cumulative** — flag `missing_initiative_id` set on create but not surfaced in Rigby's initial "no re-hit" report; `session_lifecycle close` caught via CommandError; cleared via `deliverable_tool.clear_diagnostic`).
+- S2961 slice 7 ratification envelope: `6815da1e-a991-43d3-a285-33561500df31` (Donkey Betz workspace, `ratification_record`, `category='governance'`, diagnostic clean on create).
 
-Full S2955 slice-1 + S2956 slice-2 + S2957 slice-3 + S2958 slice-4 + S2959 slice-5 mirror IDs preserved in prior handoffs.
+Full S2955 slice-1 + S2956 slice-2 + S2957 slice-3 + S2958 slice-4 + S2959 slice-5 + S2960 slice-6 mirror IDs preserved in prior handoffs.
 
-**Files shipped this session (S2960 slice):**
-- **NEW** `evals/tier1/content_writer_agent.yaml` — sixth Tier-1 canonical prompt suite (950 lines, 13 prompts).
+**Files shipped this session (S2961 slice):**
+- **NEW** `evals/tier1/competitor_analysis_agent.yaml` — seventh Tier-1 canonical prompt suite (1232 lines, 13 prompts).
 
-**Post-merge:** PR #3561 was spec-only (YAML config, no code), no worker impact → no `make celery-recycle` required (PLAYBOOK-7.4.4 applies to code-shipping PRs).
+**Post-merge:** PR #3563 was spec-only (YAML config, no code), no worker impact → no `make celery-recycle` required (PLAYBOOK-7.4.4 applies to code-shipping PRs).
 
-**Governance:** Rigby SIGN cycle T1→T3. T1 tool-grounded PASS on ORM volume via real `orm_inspect_tool.filter/count_by` (23 all-time / 7 30d / 3 non-empty error_message rows returned raw) + `repo_tool.read_file` on line refs a-j (line 207/257/707/776-785/796-801/824-851/853-868/934-938/944-950/1023-1030) + DISAGREE on 2 CLAIMS with honest reasons: (a) alias count 13 → 14 (in-PR fixed via source recount); (b) failure-replay overclaim ("REAL FAILURE REPLAY" vs actual reconstruction — in-PR softened per Option 2). T2 verified remaining line refs (k-p) + CONTENT_TYPES 7 entries + YAML canon adherence + failure-replay DISAGREE detail. T2 zoom-out surfaced 5 folds — 1 disposed in-PR (fold C verbatim overclaim → "raw task→body assignment, no LLM rewrite"); 3 FORWARD-CARRY to S2962 (fold A 5-branch encoding vs traffic reality, fold B 5-predicate count vs Tier-1 minimalism, fold D line-number anchoring brittleness — all canon-wide substrate questions); 1 record-only (fold E `_CONTENT_TYPE_ALIASES` inside `execute()`). T3 PASS after fixes. Chris D-verdict via terminal: `yes`.
+**Governance:** Rigby SIGN cycle T1→T3 tool-grounded. T1 surfaced 6 zoom-out folds with tool-verified volume + line-ref grounding (orm_inspect_tool.filter for 11 all-time / 2 30d / 0 failure rows raw; orm_inspect_tool.get for verbatim task-string byte-match on exec 3bc1df00; repo_tool.read_file for line refs at 128/147/187/636/660/712/890). T2 AGREE on all 4 in-PR fold-fix outcomes (γ harness-fixture removal, δ spider_query principal-contract predicate, ε evidence-gate realism disclaimer, forward-carry header documentation); 1 new zoom-out on inline fold-doc pattern (style drift from prior 6 slices — normalize at S2962). T3 AGREE on remaining line refs (940/1009/1060/1119/1129/1150/1153/1557/1558/1560/1588) + substrate-reference existence check + count_by CLOSED as not-a-bug. Chris D-verdict via terminal: `yes`.
 
 **Rigby Tool Gap Ledger:**
-- **Expected RE-HIT at close cascade (Ledger #16, 13th time cumulative)** — `deliverable_tool.create` diagnostic-flag bug on `initiative_phase_doc` fired when the S2960 content-mirror deliverable was created (as expected). Sticky-cleared cleanly via `deliverable_tool.clear_diagnostic`.
-- **NO CHANGE — Ledger #17 count remains 4** — Chris used terminal ratification path directly (`yes` typed in terminal), bypassing Chat UI relay entirely. Consistent with S2957 + S2958 + S2959 pattern (four consecutive terminal ratifications). Design task `f3f140f9-87bf-488b-8757-eab5d8058f45` remains valid for the Chat-UI-only path.
-- **Rigby T1 discipline HELD** — explicit DISAGREE on CLAIM 3 (alias count 13 → 14) and CLAIM 5 (verbatim-replay overclaim) is a POSITIVE signal per `feedback_verify_rigby_tool_runs_before_trusting_sign` (opposite of rubber-stamp). Both DISAGREEs prevented factual/framing errors from shipping.
+- **Ledger #16 RE-HIT — 14th cumulative** — the `deliverable_tool.create` diagnostic-flag bug fired on the `initiative_phase_doc` content mirror (as usual since S2955). Rigby's initial no-re-hit report was incomplete — the flag was set on the row but not visible in the `create` response detail block. `session_lifecycle close` caught the discrepancy via CommandError (`--content-mirror-id flagged diagnostic_status='diagnostic'`), forcing clear via `deliverable_tool.clear_diagnostic` before the close could complete. Second-order finding: Rigby's initial-report observability gap for this bug is distinct from the underlying create-bug — the recipe drift forward-carry (dual-route documentation) from S2956 should be prioritized higher at S2962 arc-close.
+- **NO CHANGE — Ledger #17 count remains 4** — Chris used terminal ratification path directly (`yes` typed in terminal), bypassing Chat UI relay entirely. Consistent with S2957 + S2958 + S2959 + S2960 pattern (**5 consecutive terminal ratifications S2957→S2961**). Design task `f3f140f9-87bf-488b-8757-eab5d8058f45` remains valid for the Chat-UI-only path.
+- **Ledger #18 candidate CLOSED as NOT-A-BUG** — T3 confirmed `orm_inspect_tool.count_by(field="status")` handles group-by cleanly. Prior S2959/S2960 "count_by group_by bug" was schema misuse (`group_by` vs `field` kwarg naming), not a code bug. Remove from Deferred Queue.
+- **Rigby T1/T2/T3 discipline HELD** — 6 substantive zoom-out folds surfaced, 3 in-PR fixes accepted, 3 forward-carries logged, 1 NOT-A-BUG finding, tool_runs verbose on every SIGN turn. Positive signal per `feedback_verify_rigby_tool_runs_before_trusting_sign` (opposite of rubber-stamp).
 
-Full session context: `docs/handoffs/SESSION_2960_GOLDEN_EVALS_SLICE_6_CONTENT_YAML.md`.
+Full session context: `docs/handoffs/SESSION_2961_GOLDEN_EVALS_SLICE_7_COMPETITOR_YAML.md`.
 
 ---
 
-## S2961 open sequence
+## S2962 open sequence
 
-**S2961 first-action = author `evals/tier1/competitor_analysis_agent.yaml`** — 7th Tier-1 slice. Locate agent source via `grep -r "class CompetitorAnalysisAgent" core/agents/` and open the file. Pull CompetitorAnalysisAgent 30d + all-time volume snapshot via direct ORM before authoring (mirror S2960 T0 shape — Rigby's `orm_inspect_tool.count_by` currently doesn't propagate the `group_by='status'` argument correctly, so use direct `python manage.py shell` for the volume snapshot and use Rigby for line-ref verification via `repo_tool.read_file` + `repo_tool.search`). If traffic is thin, call out honestly in header per S2957/S2958/S2959/S2960 precedent.
+**S2962 first-action = author `evals/tier1/personal_assistant_agent.yaml` (or Rigby-named equivalent) + arc-close canon-uniformity review** — 8th and FINAL Tier-1 slice per arc plan. This slice closes the Tier-1 spec-authoring phase; S2963 opens validator implementation.
+
+**Two-component slice-8 work:**
+
+**(A) Slice 8 YAML** — `evals/tier1/personal_assistant_agent.yaml` (verify agent class name via `grep -r "class.*Personal.*Agent\|class.*Rigby" core/agents/` before authoring). PersonalAssistant is the buyer-facing surface Rigby herself uses; largest tool surface (117 schemas + 160 handlers per PLATFORM_INVENTORY); most cross-cutting agent in the arc. Traffic will be THICK (probably highest 30d execution count of any Tier-1 slice — Rigby fires dozens of times per session, and the S2957-S2961 5-session terminal-ratification streak proves the load).
+
+**(B) Arc-close canon-uniformity review** — before ratifying slice 8, review all 8 shipped Tier-1 YAMLs against the accumulated fold-carry-forward queue (see Deferred queue below).
 
 ### Universal open sequence
 
@@ -67,50 +75,54 @@ Full session context: `docs/handoffs/SESSION_2960_GOLDEN_EVALS_SLICE_6_CONTENT_Y
    - `bash tools/pa_local.sh "run agent_capability_drift_tool action=summary"` — expect shape (83/92/59/1 → 77+2 or drifted numbers with same shape).
    - `python manage.py scan_agent_capability_drift --json | jq .totals` — same from CLI.
 2. **First-action lint pre-flight:** `python manage.py build_pa_tool_audit --gap-only --emit-gap-json --check` — confirm gap-map headline `100 validated_full / 2 untested`. The 2 untested (`agent_capability_drift_tool`, `agent_job_status`) are expected.
-3. **Verify wrapper pin freshness:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2961 pin (retired at S2960 close cascade).
-4. **Read the six arc-precedent substrate references BEFORE authoring** (any is sufficient; all six demonstrate different agent shapes):
+3. **Verify wrapper pin freshness:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2962 pin (retired at S2961 close cascade).
+4. **Read the seven arc-precedent substrate references BEFORE authoring** (any is sufficient; all seven demonstrate different agent shapes):
    - `evals/tier1/system_intelligence_agent.yaml` — canon_version=1 original (closed-world, autonomous).
    - `evals/tier1/research_agent.yaml` — human-diverse open-world (includes `error_message` semantic note).
    - `evals/tier1/devops_agent.yaml` — dual-path advisory-vs-config-gen (thin-traffic honesty pattern + service-level selector fold).
    - `evals/tier1/workflow_orchestration_agent.yaml` — no-LLM-tool-calls programmatic dispatch (per-workflow-shape cascade + transitional-fold pattern + integration-evidence tier distinction).
    - `evals/tier1/legal_doc_drafter_agent.yaml` — 10-tool GPT-selection + routing-branch shape + domain-sensitivity predicates + coverage-limits actionable conclusion.
    - `evals/tier1/content_writer_agent.yaml` — 5-routing-branch single-LLM-call (`tools=[]`) + proportional domain-sensitivity predicates + representative-not-verbatim failure-replay pattern + softened diagnostic-mode contract language.
-5. **Open S2961 slice** — see scope below.
+   - `evals/tier1/competitor_analysis_agent.yaml` — 5-routing-branch multi-tool GPT-dispatch (5 tools + web_search inheritance) + THINNEST-TRAFFIC honesty pattern + verbatim-single-real-prompt anchor + spider-first principal-contract predicate + boundary-condition evidence-gate disclaimer + inline Rigby-fold-disposition header section (S2961 innovation; canon-uniformity question for arc-close).
+5. **Open S2962 slice 8 + arc-close review** — see scope below.
 
-### S2961 arc-slice scope: CompetitorAnalysisAgent YAML
+### S2962 arc-slice scope: PersonalAssistant (Rigby) YAML + arc-close ratification
 
-**Target file:** `evals/tier1/competitor_analysis_agent.yaml`.
-**Agent source:** discover via `grep -r "class CompetitorAnalysisAgent" core/agents/`.
+**Target file:** `evals/tier1/personal_assistant_agent.yaml` (verify agent class name first).
+**Agent source:** discover via `grep -r "class.*Personal.*Agent\|class.*Rigby" core/agents/`.
 
-**Substrate-freeze reference:** any of the 6 shipped canon_version=1 YAMLs. Mirror all 4 core substrate patterns (schema_version + canon_version, canonical_field_mapping, effect-based fault_injection with service-level selectors, one_of ≤2 branches with mandatory why). Apply S2958 additions (per-shape evidence carving, integration-evidence tier separation, TRANSITIONAL marking if any code-follow-up folds surface, timeout brittle-string avoidance) AND S2959 additions (domain-sensitivity predicates IF applicable to competitor-analysis domain, routing-branch framing if agent has auto-detected alternate paths, coverage-limits actionable conclusion).
+**Substrate-freeze reference:** any of the 7 shipped canon_version=1 YAMLs. Mirror all 4 core substrate patterns (schema_version + canon_version, canonical_field_mapping, effect-based fault_injection with service-level selectors, one_of ≤2 branches with mandatory why). Apply S2958 additions (per-shape evidence carving, integration-evidence tier separation, TRANSITIONAL marking if any code-follow-up folds surface, timeout brittle-string avoidance) AND S2959 additions (domain-sensitivity predicates, routing-branch framing if agent has auto-detected alternate paths, coverage-limits actionable conclusion).
 
-**Coverage target:** 5–20 prompts across all 5 fault-injection categories. Pull all 30d prompts via direct ORM on `AgentExecution` where `owner_agent="CompetitorAnalysisAgent"`, `created_at__gte="2026-06-25T00:00:00Z"` and select the most representative 5 for happy-path coverage.
+**Coverage target:** 5–20 prompts across all 5 fault-injection categories. Pull all 30d prompts via direct ORM on `AgentExecution` where `owner_agent="<agent-class-name>"`, `created_at__gte="2026-06-25T00:00:00Z"` and select the most representative 5-8 for happy-path coverage. Given PA is thick-traffic, expect richer happy_path sampling than any prior slice.
 
-**Volume header hygiene (per S2957/S2958/S2959/S2960 refinements):**
+**Domain-sensitivity considerations for PersonalAssistant:** PA is the buyer surface — Rigby's outputs ARE the platform's voice to the user. Hallucination costs are HIGH but distributed differently than analytic agents: (a) fabricated tool-run receipts (claiming a tool ran when it didn't), (b) fabricated deliverable IDs (referencing UUIDs that don't exist), (c) fabricated workspace or user context (claiming knowledge of Chris's projects that isn't grounded), (d) tool_runs empty vs claimed (rubber-stamp signal from feedback_verify_rigby_tool_runs_before_trusting_sign). Consider 4-6 PA-specific predicates layered on the general `no_unsupported_claims`.
+
+**Volume header hygiene (per S2957/S2958/S2959/S2960/S2961 refinements):**
 - Use full-calendar-30d bound (`created_at >= 2026-06-25T00:00:00Z`), not `now - timedelta(days=30)`.
 - Distinguish non-null vs non-empty `error_message` explicitly in failure counts.
 - Honestly call out coverage limits (thin traffic / shape mismatch / small failure sample) — every Tier-1 YAML gets this treatment.
 - Prefer service-level fault_injection selectors over library-internal paths.
-- Competitor-analysis domain sensitivity: source attribution (which competitor / which source URL), factual grounding on public statements vs private inference, no fabricated headcount/revenue/product-shipment claims, no fabricated executive quotes, geopolitical/legal-adjacency care. Consider whether CompetitorAnalysisAgent output flows into buyer-facing intelligence briefs — if so, hallucination-cost is buyer-critical and warrants domain-specific predicates per S2959 canon addition 9.
-- **Failure-replay honesty (per S2960 Rigby T2 CLAIM 5 DISAGREE)**: if using a specific historical failure row as inspiration, either replay it verbatim (copy the DB task field exactly, including all embedded spec content) OR frame it as "REPRESENTATIVE OF REAL FAILURE PATTERN (not a verbatim replay)" with explicit description of the shape delta. Do NOT frame reconstructed inputs as "REAL FAILURE REPLAY".
+- **Failure-replay honesty (per S2960 Rigby T2 CLAIM 5 DISAGREE)**: if using a specific historical failure row as inspiration, either replay it verbatim OR frame it as "REPRESENTATIVE OF REAL FAILURE PATTERN (not a verbatim replay)".
 
-**Out of scope for S2961:** validator code (JSON Schema executors, Pydantic model runners) and `run_golden_evals` mgmt cmd. Those come after all 8 Tier-1 YAMLs are shipped.
+**Arc-close canon-uniformity review scope:** Before ratifying slice 8, walk the accumulated fold-carry-forward queue below. Ratify or reject each canon_v2 candidate; ratify or defer each canon-consistency question. This is a SEPARATE ratification decision from slice-8 shipping; can happen at slice-8 close cascade OR opened as an independent S2963-prep session.
 
-**Also out of scope for S2961:** the WorkflowOrchestrationAgent wrapper key-name mismatch code-fix PR (F1 from S2958). That's a separate follow-up that can happen any time before S2963 validators are written.
+**Out of scope for S2962:** validator code (JSON Schema executors, Pydantic model runners) and `run_golden_evals` mgmt cmd. Those come at S2963.
 
-**Estimated 1 session** for this slice.
+**Also out of scope for S2962:** the WorkflowOrchestrationAgent wrapper key-name mismatch code-fix PR (F1 from S2958). That's a separate follow-up that can happen any time before S2963 validators are written.
 
-### Golden Evals arc structure (updated at S2960 close)
+**Estimated 1-2 sessions** for slice 8 authoring + arc-close review. May split if arc-close review takes its own session.
 
-**Tier-1 YAMLs — 6 of 8 shipped:**
+### Golden Evals arc structure (updated at S2961 close)
+
+**Tier-1 YAMLs — 7 of 8 shipped:**
 - ✅ **S2955 slice 1 — SystemIntelligenceAgent** (PR #3551, HEAD `d2acf9c92`) — SHIPPED. canon_version=1 substrate frozen.
 - ✅ **S2956 slice 2 — ResearchAgent** (PR #3553, HEAD `c8815cd38`) — SHIPPED. Substrate validated on open-world/LLM-synthesis shape.
 - ✅ **S2957 slice 3 — DevOpsAgent** (PR #3555, HEAD `98ba0e06b`) — SHIPPED. Substrate validated on dual-path advisory-vs-config-gen shape; service-level selector fold codified.
 - ✅ **S2958 slice 4 — WorkflowOrchestrationAgent** (PR #3557, HEAD `e2b7e92c2`) — SHIPPED. Substrate validated on no-LLM-tool-calls programmatic-dispatch shape; transitional wrapper-bug pattern + per-workflow-shape evidence cascade + integration-evidence tier distinction codified.
 - ✅ **S2959 slice 5 — LegalDocDrafterAgent** (PR #3559, HEAD `8fa60421f`) — SHIPPED. Substrate validated on 10-tool GPT-selection + routing-branch shape; domain-sensitivity predicates + routing-branch framing + coverage-limits actionable conclusion codified.
 - ✅ **S2960 slice 6 — ContentWriterAgent** (PR #3561, HEAD `10b6b3ab1`) — SHIPPED. Substrate validated on 5-routing-branch single-LLM-call (`tools=[]`) shape; proportional domain-sensitivity predicates + representative-not-verbatim failure-replay pattern + softened diagnostic-mode contract language codified.
-- ⏭ **S2961 slice 7 — CompetitorAnalysisAgent** — NEXT.
-- **S2962 slice 8 — PersonalAssistant (Rigby)** + arc-close review (canon uniformity across all 8 YAMLs; canon_version=2 open discussion for `health_status` open-world + dual-path enum concerns + arc-substrate tool_runs rule + **S2959 fold 3: evidence-tier ladder mechanization** + **NEW S2960 fold A: routing-branch encoding vs traffic reality** + **NEW S2960 fold B: domain-sensitivity predicate count normalization** + **NEW S2960 fold D: line-number anchoring brittleness canon-wide substrate refactor**).
+- ✅ **S2961 slice 7 — CompetitorAnalysisAgent** (PR #3563, HEAD `75f8da29a`) — SHIPPED. Substrate validated on 5-routing-branch multi-tool GPT-dispatch shape; THINNEST-TRAFFIC honesty pattern + spider-first principal-contract predicate + boundary-condition evidence-gate disclaimer + inline fold-disposition header codified. First-miss on Ledger #16 diagnostic-flag bug.
+- ⏭ **S2962 slice 8 — PersonalAssistant (Rigby)** + arc-close review — NEXT.
 
 **After all 8 Tier-1 YAMLs shipped:**
 - **S2963** — Validators (JSON Schema execution + Pydantic model runners consuming `canonical_field_mapping` + `expected_output_shape` + `acceptance_criteria`).
@@ -133,32 +145,38 @@ Chris's 4 open questions from scoping deliverable `7870eca9` still gate Phase 1 
 3. Sell as **agent-system audit** (end-to-end) or **toolchain reliability audit** (tools/contracts) first?
 4. **Legal posture** for handling customer logs (retention window, deletion guarantee, allowed data types)?
 
-### Deferred queue (updated at S2960 close)
+### Deferred queue (updated at S2961 close)
 
-**S2960 additions:**
-- **Fold A — Routing-branch encoding vs traffic reality (canon-wide, all 6 slices)** — Rigby-flagged, Chris-ratified for S2962 arc-close as fourth canon_v2 candidate alongside S2956 + S2957 `health_status` variants + S2959 evidence-tier ladder. Question: should Tier-1 YAML routing-branch encoding be traffic-weighted (only branches with 30d execs)? S2959 canon addition 10 said "frame as routing branch inside same agent contract, NOT new shape" — this Fold A partially contradicts. Applies to all 6 shipped YAMLs; if canon needs upgrade, upgrade as batch not per-slice.
-- **Fold B — Domain-sensitivity predicate count normalization (canon-wide, all 6 slices)** — Rigby-flagged, forward-carry to S2962. Question: right count is 2-3 (Rigby's Tier-1-minimalism recommendation) or 5-7 (proportional to harm class per S2959 canon addition 9)? Legal has 7, Content has 5, DevOps/Workflow/Research/SIA have 2-3. Needs arc-close normalization.
-- **Fold D — Line-number anchoring brittleness (canon-wide, all 6 slices)** — Rigby-flagged, forward-carry to S2962. Question: replace exact line refs with function names + string literals as landmarks? Applies to all 6 shipped YAMLs; substrate refactor question.
-- **Fold E — `_CONTENT_TYPE_ALIASES` inside `execute()`** — record-only, no action. Code-quality observation about `core/agents/content_writer_agent.py` (aliases dict defined inside `execute()` at line 901-916; harder to test independently, easier to accidentally diverge across agents). Consider hoisting to module-level constant if a code-quality candidate is opened.
+**S2961 additions:**
+- **Fold α — Routing-branch encoding vs traffic reality (canon-wide, all 7 slices)** — 2nd trigger of S2960 Fold A. Rigby-flagged, Chris-ratified for S2962 arc-close as canon_v2 candidate. Question: should Tier-1 YAML routing-branch encoding be traffic-weighted? S2961's 4-of-5-zero-traffic branches is the sharpest example. Strengthened forward-carry from S2960.
+- **Fold β — Domain-sensitivity predicate epistemic-labeling rescoping (canon-wide, all 7 slices)** — Rigby-flagged, forward-carry to S2962. Extension of S2960 Fold B. Question: rescope `no_fabricated_X` from blanket prohibition to "if X not sourced, label as hypothesis + request validation"? Combines with predicate count normalization discussion.
+- **Fold ζ — Dedicated web_search fallback branch test** — Rigby-flagged, forward-carry to S2963. Requires deterministic harness/mocking; not YAML scope.
+- **S2961 T2 zoom-out — Inline fold-disposition header pattern** — S2961 introduced `── Rigby T1 folds applied (S2961) ──` section not present in prior 6 slices. Rigby non-blockingly recommended S2962 arc-close normalization (either add across all 8 OR move dispositions to ratification envelope + keep YAML lean).
+- **Ledger #16 miss investigation** — first miss in the arc's 7-slice streak (S2955-S2960 all re-hit). If S2962 close cascade re-hits, S2961 was anomalous; if it stays quiet, may be intermittent or root-cause-shifted. Not urgent.
+- **Ledger #18 CLOSED as not-a-bug** — remove from Deferred Queue (was carried from S2959/S2960).
+
+**Carry forward from S2960:**
+- **Fold B — Domain-sensitivity predicate count normalization (canon-wide, all 7 slices)** — Rigby-flagged, forward-carry to S2962. Question: right count is 2-3 (Rigby's Tier-1-minimalism recommendation) or 5-7 (proportional to harm class per S2959 canon addition 9)? Legal 7, Content 5, Competitor 5, DevOps/Workflow/Research/SIA 2-3. Combines with S2961 Fold β above.
+- **Fold D — Line-number anchoring brittleness (canon-wide, all 7 slices)** — Rigby-flagged, forward-carry to S2962. Question: replace exact line refs with function names + string literals as landmarks?
+- **Fold E — `_CONTENT_TYPE_ALIASES` inside `execute()`** — record-only, no action. Code-quality observation.
 
 **Carry forward from S2959:**
-- **Fold 3 — Evidence-tier ladder mechanization (canon-wide, all 5 slices)** — Rigby-flagged, Chris-ratified for S2962 arc-close as third canon_v2 candidate. Question: does S2963 validator implementation consume prose `derivation_spec` via text-parsing, or does canon need typed evidence-tier entries (selector + predicate + applicability)? Applies to all 6 shipped YAMLs (now including Content); if canon needs upgrade, upgrade as batch not per-slice.
-- **`orm_inspect_tool.count_by` group_by argument not propagating** — Rigby's tool call at S2959 T0 defaulted `group_key='id'` even when `group_by='status'` requested. Direct ORM verification bypassed cleanly (`python manage.py shell`), but this is a tool-surface bug worth ledger entry for the Rigby Tool Gap Ledger. Consider filing as Ledger #18 with reproducer. S2960 re-hit at authoring T0.
+- **Fold 3 — Evidence-tier ladder mechanization (canon-wide, all 7 slices)** — Rigby-flagged, Chris-ratified for S2962 arc-close as canon_v2 candidate. Question: does S2963 validator implementation consume prose `derivation_spec` via text-parsing, or does canon need typed evidence-tier entries?
 
 **Carry forward from S2958:**
-- **WorkflowOrchestrationAgent wrapper key-name mismatch code-fix PR** (F1 from S2958 T2) — canonicalize legacy `_compile_final_result` at services/workflow_orchestration_agent.py:5341 (emits `'steps'`) and wrapper at agents/workflow_orchestration_agent.py:315 (reads `'step_results'`) on ONE key. After fix, v1.1 revision of `evals/tier1/workflow_orchestration_agent.yaml` REMOVES the fallback mapping (per Rigby's F1 residual guidance). Can happen any time before S2963 validators are written.
-- **Fold A carry-forward (arc-substrate)** — Tier-1 must-have-tool_runs global rule vs orchestration agents. Rigby: "Tier 1 requires tool-grounded verification when tool_runs exist; otherwise require deterministic artifact fields + provenance pointers." Track for S2962 arc-close discussion.
-- **Fold C next-slice-fold** — ambiguous_input vs bad_input remediation posture separation. Ambiguous → clarifying question / request params; bad_input → reject with reason + example fix. Apply to remaining slices (S2961+) as authoring discipline.
+- **WorkflowOrchestrationAgent wrapper key-name mismatch code-fix PR** (F1 from S2958 T2) — canonicalize legacy `_compile_final_result` at services/workflow_orchestration_agent.py:5341 and wrapper at agents/workflow_orchestration_agent.py:315 on ONE key. After fix, v1.1 revision of `evals/tier1/workflow_orchestration_agent.yaml` REMOVES the fallback mapping.
+- **Fold A carry-forward (arc-substrate)** — Tier-1 must-have-tool_runs global rule vs orchestration agents.
+- **Fold C next-slice-fold** — ambiguous_input vs bad_input remediation posture separation.
 
 **Carry forward from S2957:**
-- **Fold #1 (S2957 T2) — `health_status` dual-path enum add for advisory-vs-config-gen agents** — DevOpsAgent's advisory path (no tool_calls, message-only) currently collapses into `healthy`. Rigby suggests `healthy_no_tools_expected`. Track for `canon_version=2` arc-close at S2962 alongside S2956 Fold #5 and S2959 Fold 3.
-- **Failure-mode lens documentation** — `devops_timeout_01` uses `SoftTimeLimitExceeded` (agent-side lens). Observable is external-cleanup-marked-failed (external lens). Both legitimate; document convention in S2963 validator design so validators handle both.
+- **Fold #1 (S2957 T2) — `health_status` dual-path enum add for advisory-vs-config-gen agents** — DevOpsAgent's advisory path currently collapses into `healthy`. Rigby suggests `healthy_no_tools_expected`. Track for `canon_version=2` arc-close at S2962.
+- **Failure-mode lens documentation** — `devops_timeout_01` uses `SoftTimeLimitExceeded` (agent-side lens). Observable is external-cleanup-marked-failed (external lens). Both legitimate; document convention in S2963 validator design.
 
 **Carry forward from S2956:**
 - **Ledger #16 recipe drift (dual-route)** — recipe should document both routes: (a) direct Claude ORM (set diagnostic_* fields to None), (b) via Rigby PA (`deliverable_tool.clear_diagnostic` sticky-cleared sentinel). Update `feedback_pa_deliverables_tool_flags_ratifications_as_diagnostic.md`.
-- **`orm_inspect_tool` distinct-count guardrail** — group-by on text fields rejected as "expensive/unbounded". Won't scale for agents with >200 30d executions. Consider `distinct_values_capped` action or `hash_distinct` shortcut.
+- **`orm_inspect_tool` distinct-count guardrail** — group-by on text fields rejected as "expensive/unbounded". Won't scale for agents with >200 30d executions.
 - **Fold #5 (S2956 T2) — `health_status` derivation over-degrade for open-world agents** — UNKNOWN→degraded may over-penalize research/analysis agents. Track for `canon_version=2` at S2962.
-- **Fold #6b (S2956 T2) — Tier-1 canon uniformity review** — comment-vs-usage mismatches across YAMLs. Track for arc-close review at S2962.
+- **Fold #6b (S2956 T2) — Tier-1 canon uniformity review** — comment-vs-usage mismatches across YAMLs.
 
 **S2955 additions (carry forward):**
 - **Bound-annotation discipline for volume claims in YAML headers** — consider making calendar-30d the canonical bound across all Tier-1 YAML volume snapshots + drift-scanner + audit tools.
@@ -193,29 +211,36 @@ Chris's 4 open questions from scoping deliverable `7870eca9` still gate Phase 1 
 
 ---
 
-## What's forbidden at S2960 (D6 MORATORIUM still in force)
+## What's forbidden at S2961 (D6 MORATORIUM still in force)
 
-All prior forbidden entries carry forward. **S2960 new forbidden entries:** none.
+All prior forbidden entries carry forward. **S2961 new forbidden entries:** none.
 
 ---
 
 ## What's queued but deferred (do NOT open unless Chris directs)
 
-**S2960 additions to the deferred queue:**
-- Routing-branch encoding vs traffic reality (canon-wide) — S2962 arc-close as canon_v2 candidate #4.
-- Domain-sensitivity predicate count normalization (canon-wide) — S2962 arc-close as canon uniformity question.
-- Line-number anchoring brittleness (canon-wide) — S2962 arc-close as substrate refactor question.
+**S2961 additions to the deferred queue:**
+- Routing-branch encoding vs traffic reality — S2962 arc-close as canon_v2 candidate (2nd trigger).
+- Epistemic-labeling predicate rescoping — S2962 arc-close (extension of S2960 Fold B).
+- Web_search fallback dedicated test — S2963 harness scope.
+- Inline fold-disposition header pattern — S2962 arc-close (normalize or lean).
+- Ledger #16 Rigby-observability gap — Rigby's `deliverable_tool.create` reply does not surface `diagnostic_status='diagnostic'` when the flag fires, so operators believe "no re-hit" when a re-hit occurred. Distinct from the underlying create-bug; caught by `session_lifecycle close` twin-mirror gate. Prioritize S2956 forward-carry (dual-route recipe documentation) at S2962 arc-close.
+
+**Carry forward from S2960:**
+- Routing-branch encoding vs traffic reality (canon-wide) — S2962 arc-close (now with S2961 as 2nd trigger).
+- Domain-sensitivity predicate count normalization (canon-wide) — S2962 arc-close.
+- Line-number anchoring brittleness (canon-wide) — S2962 arc-close.
 
 **Carry forward from S2959:**
-- Evidence-tier ladder mechanization (canon-wide) — S2962 arc-close as canon_v2 candidate #3.
-- `orm_inspect_tool.count_by` group_by not propagating — file as Ledger #18 with reproducer.
+- Evidence-tier ladder mechanization (canon-wide) — S2962 arc-close as canon_v2 candidate.
+- ~~`orm_inspect_tool.count_by` group_by not propagating~~ — CLOSED as not-a-bug at S2961 T3.
 
 **Carry forward from S2958:**
-- WorkflowOrchestrationAgent wrapper key-name mismatch code-fix PR (can happen pre-S2963; unblocks v1.1 tightening of `workflow_orchestration_agent.yaml`).
+- WorkflowOrchestrationAgent wrapper key-name mismatch code-fix PR (can happen pre-S2963; unblocks v1.1 tightening).
 - Fold A (arc-substrate tool_runs global rule) — S2962 arc-close discussion.
 
 **Carry forward from S2957:**
-- `health_status` dual-path enum add (canon_version=2 discussion at S2962, alongside S2956 Fold #5).
+- `health_status` dual-path enum add (canon_version=2 discussion at S2962).
 - Failure-mode lens documentation (S2963 validator design note).
 
 **Carry forward from S2956:**
@@ -260,7 +285,7 @@ All prior forbidden entries carry forward. **S2960 new forbidden entries:** none
 
 ## Sweep progress tracker (Path B ratified S2892)
 
-**All ratified sweep scope discharged as of S2940.** Signal-dispatch (S2946-S2950) + A1 infra (S2951) + pre-A1 capability triage (S2952) + capability substrate (S2953 Drift Scanner) + Golden Evals arc-open + slice work (S2954-S2960) are adjacent-domain net-new engineering + arc substrate, not sweep work.
+**All ratified sweep scope discharged as of S2940.** Signal-dispatch (S2946-S2950) + A1 infra (S2951) + pre-A1 capability triage (S2952) + capability substrate (S2953 Drift Scanner) + Golden Evals arc-open + slice work (S2954-S2961) are adjacent-domain net-new engineering + arc substrate, not sweep work.
 
 **Total remaining sweep tools: 0.**
 
@@ -289,10 +314,12 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## For fuller context (S2846 → S2960)
+## For fuller context (S2846 → S2961)
 
 See:
-- **S2960 handoff (current):** `docs/handoffs/SESSION_2960_GOLDEN_EVALS_SLICE_6_CONTENT_YAML.md`
+- **S2961 handoff (current):** `docs/handoffs/SESSION_2961_GOLDEN_EVALS_SLICE_7_COMPETITOR_YAML.md`
+- **S2961 shipped code:** `evals/tier1/competitor_analysis_agent.yaml` (1232 lines, 13 prompts, seventh canon_version=1 reference)
+- **S2960 handoff:** `docs/handoffs/SESSION_2960_GOLDEN_EVALS_SLICE_6_CONTENT_YAML.md`
 - **S2960 shipped code:** `evals/tier1/content_writer_agent.yaml` (950 lines, 13 prompts, sixth canon_version=1 reference)
 - **S2959 handoff:** `docs/handoffs/SESSION_2959_GOLDEN_EVALS_SLICE_5_LEGAL_YAML.md`
 - **S2959 shipped code:** `evals/tier1/legal_doc_drafter_agent.yaml` (794 lines, 13 prompts, fifth canon_version=1 reference)
