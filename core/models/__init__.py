@@ -155,6 +155,9 @@ from ..models_signal_intelligence import (
 # Session 2933 A3 v1 — signal-triggered agent dispatch audit
 from ..models_signal_dispatch import SignalDispatch  # noqa: F401
 
+# Session 2964 — Golden Evals validator harness (canon_v2 ratified S2963)
+from ..models_golden_evals import GoldenEvalRun  # noqa: F401
+
 # Import audio cache model (Session 926 - Universal Agent Voice System)
 from ..models_audio_cache import AudioCache
 
