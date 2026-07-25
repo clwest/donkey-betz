@@ -135,6 +135,7 @@ class AgentHandlersMixin:
             'stock_analyst_agent': 'StockAnalystAgent',
             'bear_case_agent': 'BearCaseAgent',
             'market_intelligence_coordinator': 'MarketIntelligenceCoordinator',
+            'market_intelligence_agent': 'MarketIntelligenceAgent',
             # ── Sports & Betting ──
             'prediction_market_analyst': 'PredictionMarketAnalyst',
             'game_predictor': 'GamePredictor',
@@ -160,7 +161,19 @@ class AgentHandlersMixin:
             # ── Legal ──
             'legal_doc_drafter_agent': 'LegalDocDrafterAgent',
         }
-        return mappings.get(tool_name, tool_name.replace('_agent', '').title() + 'Agent')
+        if tool_name in mappings:
+            return mappings[tool_name]
+        # Fallback: convert snake_case tool_name → CamelCase agent class name.
+        # Prior implementation used `.title()`, which leaves underscores intact
+        # (e.g. 'market_intelligence_agent' → 'Market_IntelligenceAgent'). That
+        # produced a name that matches no Agent row and no agent class, so
+        # dispatch silently no-op'd while Celery still returned SUCCESS — the
+        # exact reliability-embarrassment the A1 wedge would surface. The join
+        # form here strips underscores so 'market_intelligence_agent' resolves
+        # to 'MarketIntelligenceAgent'. Explicit mapping entries above still win
+        # for special cases (e.g. 'three_d_generation_agent' → 'ThreeDAgent').
+        stem = tool_name[:-len('_agent')] if tool_name.endswith('_agent') else tool_name
+        return ''.join(part.capitalize() for part in stem.split('_')) + 'Agent'
 
     def _get_agent_execution_output(self, celery_task_id: str, execution_id: str = None) -> Dict[str, Any]:
         """Enrich job_status with AgentExecution output data — full content, media URLs, deliverables.
@@ -6650,6 +6663,30 @@ class AgentHandlersMixin:
             lookup = f'task_id={task_id}'
 
         if not execution:
+            # Distinguish "queued but not yet materialized" from "unknown task_id".
+            # When Rigby dispatches via run_agent, the AgentExecution row is created
+            # once the worker picks up the Celery task and calls execute(). Between
+            # dispatch and that first ORM write, agent_job_status has no row to find
+            # — a valid transient state that we surface as 'pending', not an error.
+            # Falls back to 'unknown' only when Celery has no knowledge of the task_id.
+            if task_id:
+                try:
+                    from core.celery import app as celery_app
+                    async_result = celery_app.AsyncResult(task_id)
+                    celery_state = async_result.status  # PENDING/STARTED/SUCCESS/FAILURE/RETRY
+                    if celery_state in ('PENDING', 'RECEIVED', 'STARTED', 'RETRY'):
+                        return {
+                            'ok': True,
+                            'status': 'pending',
+                            'task_id': task_id,
+                            'celery_state': celery_state,
+                            'message': (
+                                'Celery task queued or running; AgentExecution row not yet '
+                                'created. Poll again in 5–15 seconds.'
+                            ),
+                        }
+                except Exception:
+                    pass
             return {
                 'ok': False,
                 'status': 'unknown',
