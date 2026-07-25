@@ -5580,6 +5580,29 @@ PA_TOOL_SCHEMAS = [
                         "verb heuristic would misclassify."
                     ),
                 },
+                "max_iterations": {
+                    "type": "integer",
+                    "description": (
+                        "Session 2967 Slice 7 PR-1. Hard cap on the engineer's "
+                        "LLM tool-use loop. Null / omitted uses the engine "
+                        "default (150). Bump for wide-scope arc dispatches; "
+                        "keep low for tight tasks. When the cap fires, the "
+                        "envelope returns status='budget_exceeded' with "
+                        "partial results — not an error."
+                    ),
+                },
+                "max_cost_usd": {
+                    "type": "number",
+                    "description": (
+                        "Session 2967 Slice 7 PR-1. Hard cap on cumulative "
+                        "Anthropic spend for this dispatch (input + output + "
+                        "cache-read + cache-write tokens, priced against "
+                        "sonnet-4-6 rates). Null / omitted uses the engine "
+                        "default ($5). Openai fallback path ignores this and "
+                        "uses iteration cap only. When the cap fires, envelope "
+                        "returns status='budget_exceeded' with partial results."
+                    ),
+                },
             },
             "required": ["task"],
         },

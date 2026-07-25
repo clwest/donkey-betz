@@ -11870,7 +11870,7 @@ def enforce_db_retention():
     max_retries=0,
     acks_late=False,
 )
-def claude_code_engineer_task(self, task_description, conversation_id=None, requested_by='rigby', request_mode='auto', workspace_root_path=None):
+def claude_code_engineer_task(self, task_description, conversation_id=None, requested_by='rigby', request_mode='auto', workspace_root_path=None, max_iterations=None, max_cost_usd=None):
     """Autonomous Claude Code engineering session — reads files, writes code, creates PRs.
 
     Session 1230 P4: ``request_mode`` ('answer' | 'change' | 'auto', default
@@ -11932,6 +11932,8 @@ def claude_code_engineer_task(self, task_description, conversation_id=None, requ
             request_mode=request_mode,
             agent_execution_id=agent_execution_id,
             workspace_root_path=workspace_root_path,
+            max_iterations=max_iterations,
+            max_cost_usd=max_cost_usd,
         )
     except Exception as exc:
         _persist_engineer_terminal_state(
