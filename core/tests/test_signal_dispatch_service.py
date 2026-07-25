@@ -81,11 +81,34 @@ class TestSignalDispatchRulesRegistry(TestCase):
         self.assertEqual(rule.min_confidence, 0.5)
         self.assertEqual(rule.max_per_day, 10)
 
-    def test_s2949_ships_four_rules_total(self):
+    def test_skill_demand_rule_maps_to_TrendAnalysisAgent(self):
+        # S2950 A10: fifth rule. Intentional agent reuse — TrendAnalysisAgent
+        # already handles trend_emergence; skill_demand is treated as a
+        # labor-market/skills subtype. See rule comment in
+        # signal_dispatch_service.py for the reuse-framing rationale.
+        rule = get_rule('skill_demand__trend_analysis')
+        self.assertIsNotNone(rule)
+        assert rule is not None
+        self.assertEqual(rule.pattern_type, 'skill_demand')
+        self.assertEqual(rule.agent_name, 'TrendAnalysisAgent')
+        self.assertEqual(rule.min_strength, 0.5)
+        self.assertEqual(rule.min_confidence, 0.5)
+        self.assertEqual(rule.max_per_day, 10)
+
+    def test_s2950_ships_five_rules_total(self):
         # Anchor: v1 shipped 2 rules (trend_emergence + content_gap); S2934
         # added a third (opportunity_window); S2949 added a fourth
-        # (demand_spike). Anti-regression on registry size.
-        self.assertEqual(len(SIGNAL_DISPATCH_RULES), 4)
+        # (demand_spike); S2950 added a fifth (skill_demand). Anti-regression
+        # on registry size.
+        self.assertEqual(len(SIGNAL_DISPATCH_RULES), 5)
+
+    def test_trend_analysis_agent_serves_two_rules(self):
+        # S2950 A10: intentional TrendAnalysisAgent reuse. Both
+        # trend_emergence and skill_demand map to it. Test locks this
+        # in so a future refactor doesn't silently un-map either.
+        rules_for_agent = [r for r in SIGNAL_DISPATCH_RULES if r.agent_name == 'TrendAnalysisAgent']
+        patterns = sorted(r.pattern_type for r in rules_for_agent)
+        self.assertEqual(patterns, ['skill_demand', 'trend_emergence'])
 
     def test_get_rule_returns_none_for_unknown(self):
         self.assertIsNone(get_rule('nonexistent__nowhere'))
@@ -215,6 +238,20 @@ class TestScanner(TestCase):
         self.assertEqual(d.pattern_type, 'demand_spike')
         self.assertEqual(d.outcome, 'queued')
 
+    def test_scan_dispatches_skill_demand_to_trend_analysis(self):
+        # S2950 A10: 5th rule live — skill_demand active cluster fans out
+        # to TrendAnalysisAgent (intentional reuse; see rule comment).
+        cluster = _make_cluster(pattern_type='skill_demand', strength=0.8, confidence=0.7)
+        service = SignalDispatchService()
+        summary = service.scan_and_dispatch()
+
+        self.assertEqual(summary['enqueued'], 1)
+        d = SignalDispatch.objects.get(signal_cluster=cluster)
+        self.assertEqual(d.rule_key, 'skill_demand__trend_analysis')
+        self.assertEqual(d.agent_name, 'TrendAnalysisAgent')
+        self.assertEqual(d.pattern_type, 'skill_demand')
+        self.assertEqual(d.outcome, 'queued')
+
     def test_scan_summary_includes_per_rule_diagnostics_for_all_rules(self):
         # S2949 A9 mitigation for Rigby zoom-out fold — per-rule counters
         # make starvation-by-ordering observable at 4-rule fan-out.
@@ -228,6 +265,7 @@ class TestScanner(TestCase):
             'content_gap__content_strategy',
             'opportunity_window__opportunity_scoring',
             'demand_spike__market_movement_monitor',
+            'skill_demand__trend_analysis',
         ):
             self.assertIn(key, diag, f"missing diagnostics for rule {key}")
             for counter in ('eligible_count', 'blocked_by_cap', 'blocked_by_dedupe', 'blocked_by_daily_cap'):
