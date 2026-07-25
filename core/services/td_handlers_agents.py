@@ -828,6 +828,42 @@ class AgentHandlersMixin:
                 'app_label': 'core', 'sensitive': False,
                 'expensive_text_fields': ('description',),
             },
+            # S2964 canon_v2 Item 1 (Fold P2, S2962 → ratified S2963 arc-close):
+            # Golden Evals slice 8 (rigby_agent.yaml) pivoted the eval substrate
+            # from AgentExecution to ChatConversation to capture buyer-facing
+            # Rigby PA turns (source IN ('web', 'pa') — 1,018 all-time / 508 30d).
+            # Without this allowlist entry, harness dogfood + operational
+            # verification for the ChatConversation substrate would require
+            # dropping to Django shell every run — accretes the same tool-gap
+            # ledger #19 pattern this canon_v2 item explicitly closes.
+            # user_message + assistant_response are TextFields that can each
+            # exceed 10KB per row (largest observed ~50KB analytic responses),
+            # so both are blocked from contains lookups. context_used /
+            # metadata / agent_results are JSONFields (handled by the JSON
+            # redaction path). Model is non-sensitive; content is user-authored
+            # Chris↔Rigby traffic, not credentials.
+            'ChatConversation': {
+                'app_label': 'core', 'sensitive': False,
+                'expensive_text_fields': ('user_message', 'assistant_response'),
+            },
+            # S2964 canon_v2 Item 1 (continued): ToolCallRecord is the primary
+            # evidence-pointer substrate declared in rigby_agent.yaml's
+            # canonical_field_mapping.evidence_pointers (per Rigby T1 Q1 REVISE
+            # at S2962). Harness validators join ToolCallRecord rows to
+            # ChatConversation rows by trace_id / created_at window; without
+            # this allowlist entry, harness dogfood cannot verify tool-run
+            # counts or dispatch outcomes via Rigby's tool surface.
+            # result_summary is capped at 4KB per row but authored as TextField
+            # (with '... [truncated]' suffix marker) so contains lookups would
+            # scan the truncated text; full_result is capped at 64KB
+            # (full_result_dropped=True when payload exceeds cap); error_message
+            # is unbounded TextField. All three blocked from contains lookups.
+            # parameters is JSONField (redaction path). task_summary is
+            # CharField(500) — safe for contains.
+            'ToolCallRecord': {
+                'app_label': 'core', 'sensitive': False,
+                'expensive_text_fields': ('result_summary', 'full_result', 'error_message'),
+            },
         }
 
         _MAX_LIMIT = 200
