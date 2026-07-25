@@ -851,8 +851,13 @@ class SignalAggregationService:
         # Normalize signal count (20 signals = 1.0)
         signal_factor = min(1.0, signal_count / 20)
 
-        # Normalize source diversity (5 sources = 1.0)
-        diversity_factor = min(1.0, source_count / 5)
+        # Normalize source diversity (3 sources = 1.0). S2946 A6: was /5;
+        # dropped to /3 to match MIN_CLUSTER_SIZE. Only 3-source-max
+        # signal types (skill_demand from job spiders, single-vertical
+        # demand_spike) can now clear the strength≥0.5 promotion bar.
+        # Confidence floor still requires 2+ sources so single-source
+        # noise stays unpromoted.
+        diversity_factor = min(1.0, source_count / 3)
 
         # Average relevance score
         avg_relevance = sum(s['relevance_score'] for s in signals) / signal_count if signals else 0
