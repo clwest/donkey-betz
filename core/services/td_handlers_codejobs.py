@@ -351,6 +351,43 @@ class CodeJobHandlersMixin:
         if not conversation_id and hasattr(self, '_conversation_id'):
             conversation_id = self._conversation_id
 
+        # Session 2967 Slice 7 — resolve workspace_id → root_path so the engineer
+        # runs against the caller's actual working tree, not the hardcoded
+        # Railway /app path (which is a nonexistent directory on local dev, cause
+        # of the S2967-open no-repo-detected regression). Response envelope
+        # echoes both `workspace_id_resolved` + `resolved_from` per Rigby's
+        # T1 SIGN REVISE ("no magic defaults — annotate loudly").
+        workspace_root_path = None
+        workspace_id_resolved = None
+        resolved_from = None
+        explicit_workspace_id = (payload.get('workspace_id') or '').strip()
+        try:
+            from core.models_skin_layer import ProjectWorkspace
+            if explicit_workspace_id:
+                ws = ProjectWorkspace.objects.filter(id=explicit_workspace_id).first()
+                if ws:
+                    workspace_root_path = ws.root_path
+                    workspace_id_resolved = str(ws.id)
+                    resolved_from = 'explicit'
+            if not workspace_root_path:
+                # Deterministic active-workspace resolution: newest last_operation_at
+                # (breaks ties if multiple workspaces have is_active=True, which
+                # can happen via drift). Rigby T1 SIGN watch-out #1.
+                active_qs = ProjectWorkspace.objects.filter(is_active=True).order_by('-last_operation_at')
+                if user_id:
+                    active_qs = active_qs.filter(user_id=user_id)
+                ws = active_qs.first()
+                if ws:
+                    workspace_root_path = ws.root_path
+                    workspace_id_resolved = str(ws.id)
+                    resolved_from = 'active_workspace'
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning(
+                f"[claude_code_tool] workspace resolution raised (non-fatal, "
+                f"falling back to engineer default): {type(exc).__name__}: {exc}"
+            )
+
         # Session 1230 P4 — request_mode plumbing. 'auto' default keeps prior
         # behavior (heuristic) when caller omits the kwarg; explicit
         # 'answer' / 'change' from Rigby overrides the verb heuristic. Any
@@ -364,6 +401,7 @@ class CodeJobHandlersMixin:
             conversation_id=conversation_id,
             requested_by='rigby',
             request_mode=request_mode,
+            workspace_root_path=workspace_root_path,
         )
 
         # Session 2728 F-CC-3 — surface whether the completion banner will fire.
@@ -395,10 +433,19 @@ class CodeJobHandlersMixin:
             'request_mode': request_mode,
             'conversation_id': conversation_id or None,
             'follow_up_will_fire': follow_up_will_fire,
+            # Session 2967 Slice 7 — surface the resolved working tree so
+            # Rigby (and Chris) can confirm the engineer will run against
+            # the intended repo. When resolved_from is None the engineer
+            # will fall back to Railway /tmp clone (or /app fallback), which
+            # is the 'no repo detected' path on local dev.
+            'workspace_id_resolved': workspace_id_resolved,
+            'workspace_root_path': workspace_root_path,
+            'resolved_from': resolved_from or 'fallback',
             'message': (
                 f'Claude Code engineering session started '
                 f'(request_mode={request_mode}). Task ID: {task.id}. '
-                f'{message_suffix}'
+                f'Working tree: {workspace_root_path or "engineer default (Railway /tmp clone or /app fallback)"} '
+                f'({resolved_from or "fallback"}). {message_suffix}'
             ),
         }
 

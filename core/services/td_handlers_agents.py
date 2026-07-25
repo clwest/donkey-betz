@@ -2418,6 +2418,92 @@ class AgentHandlersMixin:
                 'error': rollback_op.error_message if not rollback_op.success else None,
             }
 
+        elif action == 'update':
+            # Session 2967 Slice 7 — Ledger #22 discharge. Before this action
+            # existed, any workspace attribute drift (root_path after repo move,
+            # rename, description edit, business_status transition) required
+            # raw ORM. Rigby's tool surface IS the A1 SaaS product surface, so
+            # every gap she hits a customer hits. See feedback_rigby_tool_gap_ledger.
+            from core.models_skin_layer import ProjectWorkspace
+            import os as _os
+
+            ws_id = (payload.get('workspace_id') or payload.get('id') or '').strip()
+            if not ws_id:
+                return {'action': 'update', 'success': False, 'error': "'workspace_id' is required for update action"}
+
+            ws = ProjectWorkspace.objects.filter(user_id=user_id, id=ws_id).first()
+            if not ws:
+                return {'action': 'update', 'success': False, 'error': f'Workspace {ws_id} not found (or not owned by caller)'}
+
+            # Collect requested mutations. `new_name` maps to `name` on the model
+            # (the `name` payload key is reserved for lookup on other actions).
+            updatable = {
+                'root_path': payload.get('root_path'),
+                'name': payload.get('new_name'),
+                'description': payload.get('description'),
+                'workspace_type': payload.get('workspace_type'),
+            }
+            updates = {k: v for k, v in updatable.items() if v is not None and str(v).strip() != ''}
+
+            # business_status lives on the related WorkspaceConfig, not the workspace row itself.
+            # A2 SIGN bug catch: Rigby's PA function-calling layer serializes missing string
+            # params as "" (not None), so `if business_status is not None` incorrectly
+            # treated absent-in-payload as intentional-clear-to-empty. Require a truthy
+            # value; callers who genuinely want to blank the field can pass a whitespace
+            # sentinel or (better) use a future explicit `clear_business_status=true` flag.
+            business_status_raw = payload.get('business_status')
+            business_status = business_status_raw if (business_status_raw is not None and str(business_status_raw).strip() != '') else None
+            config_update_applied = False
+
+            if not updates and business_status is None:
+                return {
+                    'action': 'update',
+                    'success': False,
+                    'error': 'No update fields provided. Supported: root_path, new_name, description, workspace_type, business_status',
+                }
+
+            # Validate root_path exists on disk before persisting (prevents the
+            # exact regression that triggered Ledger #22 — pointing at a
+            # nonexistent directory silently breaks claude_code_tool + workspace
+            # read/write/scan).
+            if 'root_path' in updates:
+                new_root = str(updates['root_path']).strip()
+                if not new_root:
+                    return {'action': 'update', 'success': False, 'error': 'root_path cannot be empty'}
+                if not _os.path.isdir(new_root):
+                    return {'action': 'update', 'success': False, 'error': f'root_path does not exist on disk: {new_root}'}
+                updates['root_path'] = new_root
+
+            # Snapshot old values for the audit-trail envelope.
+            old_values = {field: getattr(ws, field, None) for field in updates.keys()}
+            for field, val in updates.items():
+                setattr(ws, field, val)
+            if updates:
+                ws.save(update_fields=list(updates.keys()))
+
+            # Apply business_status on the config row if present.
+            if business_status is not None:
+                config = getattr(ws, 'config', None)
+                if config is not None:
+                    old_values['business_status'] = config.status
+                    config.status = business_status
+                    config.save(update_fields=['status'])
+                    updates['business_status'] = business_status
+                    config_update_applied = True
+                else:
+                    updates['business_status_skipped'] = 'no WorkspaceConfig row exists for this workspace'
+
+            return {
+                'action': 'update',
+                'success': True,
+                'id': str(ws.id),
+                'name': ws.name,
+                'updates': updates,
+                'old_values': old_values,
+                'config_update_applied': config_update_applied,
+                'message': f"Updated workspace '{ws.name}' ({len(updates)} field(s))",
+            }
+
         elif action == 'delete':
             from core.models_skin_layer import ProjectWorkspace
 
@@ -2442,7 +2528,7 @@ class AgentHandlersMixin:
         else:
             raise ValueError(
                 f"Unknown action: {action}. Valid actions: "
-                "list, get, status, create, delete, scan, read, write, "
+                "list, get, status, create, update, delete, scan, read, write, "
                 "git_status, git_commit, git_branch, operations, rollback"
             )
 

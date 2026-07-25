@@ -11870,7 +11870,7 @@ def enforce_db_retention():
     max_retries=0,
     acks_late=False,
 )
-def claude_code_engineer_task(self, task_description, conversation_id=None, requested_by='rigby', request_mode='auto'):
+def claude_code_engineer_task(self, task_description, conversation_id=None, requested_by='rigby', request_mode='auto', workspace_root_path=None):
     """Autonomous Claude Code engineering session — reads files, writes code, creates PRs.
 
     Session 1230 P4: ``request_mode`` ('answer' | 'change' | 'auto', default
@@ -11896,6 +11896,14 @@ def claude_code_engineer_task(self, task_description, conversation_id=None, requ
     + zero AgentExecution + zero ChatConversation post-back across all
     5 recent dispatches) is closed by this wiring + the fail-loud
     ``_post_to_conversation`` changes.
+
+    Session 2967 Slice 7: ``workspace_root_path`` (optional) is the
+    resolved working tree for the engineer. When supplied by the
+    dispatcher (``td_handlers_codejobs._handle_claude_code``), the
+    engineer runs against that path instead of the module-level
+    ``REPO_ROOT`` fallback (which is Railway's ``/app`` — a
+    nonexistent directory on local dev). Closes Ledger #22-adjacent
+    'no repo detected' regression from S2967 open.
     """
     from core.services.claude_code_engineer import (
         _create_engineer_execution_record,
@@ -11923,6 +11931,7 @@ def claude_code_engineer_task(self, task_description, conversation_id=None, requ
             requested_by=requested_by,
             request_mode=request_mode,
             agent_execution_id=agent_execution_id,
+            workspace_root_path=workspace_root_path,
         )
     except Exception as exc:
         _persist_engineer_terminal_state(
