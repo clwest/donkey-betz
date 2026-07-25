@@ -124,6 +124,34 @@ class GoldenEvalRun(models.Model):
         ),
     )
 
+    evidence_source = models.CharField(
+        max_length=32,
+        default="agent_execution_native",
+        db_index=True,
+        help_text=(
+            "Where the adapter drew tool-call evidence from — one of "
+            "``core.services.golden_evals.context.KNOWN_EVIDENCE_SOURCES`` "
+            "('toolcallrecord_ledger' / 'metadata_cache' / "
+            "'agent_execution_native'). Introduced S2965 PR-2 after raw-ORM "
+            "discovery that ToolCallRecord PA writes silently regressed "
+            "2026-06-19 (35d). Rigby-specific fabrication predicates gate "
+            "on this + ledger_health before pass/fail."
+        ),
+    )
+    ledger_health = models.CharField(
+        max_length=16,
+        default="ok",
+        db_index=True,
+        help_text=(
+            "Signal to downstream predicates about ledger-evidence "
+            "trustworthiness for the observation window. One of "
+            "``core.services.golden_evals.context.KNOWN_LEDGER_HEALTH`` "
+            "('ok' / 'stale' / 'unavailable'). Rigby fabrication predicates "
+            "return INCONCLUSIVE_SUBSTRATE_BROKEN on non-'ok' health rather "
+            "than pass/fail against sand."
+        ),
+    )
+
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
