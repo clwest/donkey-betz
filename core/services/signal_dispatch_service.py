@@ -88,6 +88,20 @@ SIGNAL_DISPATCH_RULES: tuple[SignalDispatchRuleDef, ...] = (
         min_confidence=0.5,
         max_per_day=10,
     ),
+    # S2949 A9: MarketMovementMonitorAgent. Verified at S2949 open via
+    # agent_introspection_tool — 22 total executions, effectiveness 84,
+    # semantic isomorph to "demand spike" (momentum/velocity framing).
+    # Cluster volume verified via ORM — 251 demand_spike clusters exist
+    # (0 currently active, 9 detecting, 187 decayed, 55 archived —
+    # ~2× volume vs skill_demand=133; skill_demand queued for A10).
+    SignalDispatchRuleDef(
+        key='demand_spike__market_movement_monitor',
+        pattern_type='demand_spike',
+        agent_name='MarketMovementMonitorAgent',
+        min_strength=0.5,
+        min_confidence=0.5,
+        max_per_day=10,
+    ),
 )
 
 
@@ -130,10 +144,21 @@ class SignalDispatchService:
         ))
         enqueued = 0
         per_rule: dict[str, int] = {}
+        # S2949 A9: per-rule diagnostics for starvation-by-ordering visibility.
+        # Rigby zoom-out fold (S2949) flagged 4-rule fan-out risk under a
+        # shared global cap; these counters make starvation observable
+        # without changing the drain-in-order semantics.
+        per_rule_diagnostics: dict[str, dict[str, int]] = {}
         skipped_cap = 0
 
         for rule in self.rules:
             per_rule.setdefault(rule.key, 0)
+            per_rule_diagnostics.setdefault(rule.key, {
+                'eligible_count': 0,
+                'blocked_by_cap': 0,
+                'blocked_by_dedupe': 0,
+                'blocked_by_daily_cap': 0,
+            })
             if enqueued >= global_cap:
                 skipped_cap += 1
                 logger.info(
@@ -142,12 +167,16 @@ class SignalDispatchService:
                 )
                 break
 
-            eligible = self._eligible_clusters_for_rule(rule)
+            eligible, dedupe_excluded = self._eligible_clusters_for_rule(rule)
+            per_rule_diagnostics[rule.key]['eligible_count'] = len(eligible)
+            per_rule_diagnostics[rule.key]['blocked_by_dedupe'] = dedupe_excluded
             for cluster in eligible:
                 if enqueued >= global_cap:
                     skipped_cap += 1
+                    per_rule_diagnostics[rule.key]['blocked_by_cap'] += 1
                     break
                 if self._rule_daily_cap_reached(rule):
+                    per_rule_diagnostics[rule.key]['blocked_by_daily_cap'] += 1
                     logger.info(
                         "[SIGNAL_DISPATCH] rule %s reached max_per_day=%d",
                         rule.key, rule.max_per_day,
@@ -156,25 +185,42 @@ class SignalDispatchService:
 
                 dispatch = self._create_queued_dispatch(rule, cluster, run_id)
                 if dispatch is None:
-                    continue  # dedup — already queued/succeeded for this pair
+                    # Race-condition belt-and-suspenders: eligibility query
+                    # already excluded dedupes, so this only fires if a
+                    # concurrent scan created the dispatch between filter
+                    # and create. Tracked in blocked_by_dedupe alongside
+                    # the query-level count.
+                    per_rule_diagnostics[rule.key]['blocked_by_dedupe'] += 1
+                    continue
 
                 self._enqueue(dispatch.id)
                 enqueued += 1
                 per_rule[rule.key] += 1
 
         logger.info(
-            "[SIGNAL_DISPATCH] scan complete run_id=%s enqueued=%d skipped_cap=%d per_rule=%s",
-            run_id, enqueued, skipped_cap, per_rule,
+            "[SIGNAL_DISPATCH] scan complete run_id=%s enqueued=%d skipped_cap=%d "
+            "per_rule=%s per_rule_diagnostics=%s",
+            run_id, enqueued, skipped_cap, per_rule, per_rule_diagnostics,
         )
         return {
             'run_id': run_id,
             'enqueued': enqueued,
             'skipped_cap': skipped_cap,
             'per_rule': per_rule,
+            'per_rule_diagnostics': per_rule_diagnostics,
             'disabled': False,
         }
 
-    def _eligible_clusters_for_rule(self, rule: SignalDispatchRuleDef):
+    def _eligible_clusters_for_rule(
+        self,
+        rule: SignalDispatchRuleDef,
+    ) -> tuple[list, int]:
+        """Return ``(clusters, dedupe_excluded_count)`` for a rule.
+
+        S2949 A9: returns dedupe count as a diagnostic — how many
+        pattern-matching clusters were dropped by rule-key dedupe
+        (already have a non-failed dispatch for this rule).
+        """
         from core.models_signal_intelligence import SignalCluster
         from core.models_signal_dispatch import SignalDispatch
 
@@ -184,17 +230,17 @@ class SignalDispatchService:
             .exclude(outcome='failed')
             .values_list('signal_cluster_id', flat=True)
         )
-        qs = (
-            SignalCluster.objects.filter(
-                pattern_type=rule.pattern_type,
-                status='active',
-                strength__gte=rule.min_strength,
-                confidence__gte=rule.min_confidence,
-            )
-            .exclude(id__in=already)
-            .order_by('-strength', '-detected_at')
+        base = SignalCluster.objects.filter(
+            pattern_type=rule.pattern_type,
+            status='active',
+            strength__gte=rule.min_strength,
+            confidence__gte=rule.min_confidence,
         )
-        return list(qs)
+        clusters = list(
+            base.exclude(id__in=already).order_by('-strength', '-detected_at')
+        )
+        dedupe_excluded = base.filter(id__in=already).count()
+        return clusters, dedupe_excluded
 
     def _rule_daily_cap_reached(self, rule: SignalDispatchRuleDef) -> bool:
         from core.models_signal_dispatch import SignalDispatch
