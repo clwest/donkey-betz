@@ -302,6 +302,54 @@ WRITABLE_ROOT = '/tmp/engineer-workspace'  # Writable clone for git operations
 # SIGN pushback #2 ("global REPO_ROOT is a latent concurrency bomb") at
 # `docs/handoffs/SESSION_2967_*` for full context.
 
+# Session 2967 Slice 7 PR-1 — cost + iteration caps.
+#
+# Root incident: Rigby's Signal Insights UI dispatch (task c3e96d48-…)
+# burned $5 in 16 min at iteration 75 with zero write_file calls before
+# Chris killed it. Prior behavior: max_iterations=500 uncapped + no cost
+# accounting = arbitrary credit burn per dispatch. These constants + the
+# per-iteration accumulator + envelope echoes in execute_engineering_task
+# make runaways impossible without the caller explicitly bumping the cap.
+#
+# Defaults tuned to Rigby T1 SIGN recommendation: prevent $20+ runaways
+# while still allowing a legitimate small change-mode task to get traction.
+# Chris's likely near-term pattern is smaller-scoped dispatches — bump
+# per-dispatch via schema params when doing wide-scope arc work.
+#
+# Openai fallback path IGNORES max_cost_usd (usage shape differs; scope
+# discipline for PR-1). Iteration cap applies to both providers.
+#
+# Pricing centralization: single-call-site here for PR-1. If a second
+# call site needs the same numbers, centralize into core/services/
+# llm_pricing.py before adding the second reference (Rigby T1 SIGN
+# zoom-out answer #4).
+_ENGINE_PRICING_SONNET_46 = {
+    # USD per million tokens (Anthropic Sonnet 4.6 published rates)
+    'input_per_mtok': 3.00,
+    'output_per_mtok': 15.00,
+    'cache_read_per_mtok': 0.30,      # 10% of input
+    'cache_write_per_mtok': 3.75,      # 125% of input
+}
+DEFAULT_MAX_ITERATIONS = 150
+DEFAULT_MAX_COST_USD = 5.0
+
+
+def _cost_from_anthropic_usage(usage) -> float:
+    """Convert Anthropic response.usage into USD spend.
+
+    Anthropic's usage object exposes: input_tokens, output_tokens,
+    cache_read_input_tokens (optional), cache_creation_input_tokens
+    (optional). Missing cache fields default to 0 — safe for older SDK
+    responses that don't emit them.
+    """
+    p = _ENGINE_PRICING_SONNET_46
+    return (
+        (getattr(usage, 'input_tokens', 0) or 0) * p['input_per_mtok'] / 1_000_000
+        + (getattr(usage, 'output_tokens', 0) or 0) * p['output_per_mtok'] / 1_000_000
+        + (getattr(usage, 'cache_read_input_tokens', 0) or 0) * p['cache_read_per_mtok'] / 1_000_000
+        + (getattr(usage, 'cache_creation_input_tokens', 0) or 0) * p['cache_write_per_mtok'] / 1_000_000
+    )
+
 # Session 1230 P4 — Two-mode system prompts.
 #
 # Session 1229 Step 5 surfaced a behavioral delta on the OpenAI fallback path:
@@ -913,10 +961,11 @@ def execute_engineering_task(
     task_description: str,
     conversation_id: Optional[str] = None,
     requested_by: str = 'rigby',
-    max_iterations: int = 500,
+    max_iterations: Optional[int] = None,
     request_mode: str = 'auto',
     agent_execution_id: Optional[str] = None,
     workspace_root_path: Optional[str] = None,
+    max_cost_usd: Optional[float] = None,
 ) -> Dict[str, Any]:
     """
     Execute an engineering task using Claude with codebase tools.
@@ -979,13 +1028,25 @@ def execute_engineering_task(
     # to the provider path. Threaded to _execute_tool via `repo_root` param.
     repo_root = _resolve_repo_root(workspace_root_path)
 
+    # Session 2967 Slice 7 PR-1 — resolve budget caps. Null / omitted from
+    # caller = use engine defaults (150 iter / $5). Caps are enforced per
+    # iteration in the Anthropic loop below (see _cost_from_anthropic_usage
+    # accumulator). OpenAI fallback path uses iteration cap only — its
+    # response.usage shape differs and cost accounting is scope-cut for PR-1.
+    effective_max_iterations = max_iterations if max_iterations is not None else DEFAULT_MAX_ITERATIONS
+    effective_max_cost_usd = max_cost_usd if max_cost_usd is not None else DEFAULT_MAX_COST_USD
+    logger.info(
+        "[ClaudeEngineer] budget caps resolved: max_iterations=%d max_cost_usd=$%.2f",
+        effective_max_iterations, effective_max_cost_usd,
+    )
+
     # Session 1226 P4 — OpenAI fallback path
     provider = os.environ.get('CLAUDE_CODE_ENGINE_PROVIDER', 'anthropic').strip().lower()
     if provider == 'openai':
         try:
             result = _execute_engineering_task_openai(
                 task_description=task_description,
-                max_iterations=max_iterations,
+                max_iterations=effective_max_iterations,
                 system_prompt=system_prompt,
                 repo_root=repo_root,
             )
@@ -1013,7 +1074,7 @@ def execute_engineering_task(
                 )
                 retry = _execute_engineering_task_openai(
                     task_description=hardened_task,
-                    max_iterations=max_iterations,
+                    max_iterations=effective_max_iterations,
                     system_prompt=ANSWER_SYSTEM_PROMPT,
                     repo_root=repo_root,
                 )
@@ -1047,6 +1108,12 @@ def execute_engineering_task(
                 'provider': 'openai',
                 'mode': resolved_mode,
                 'repo_root': repo_root,
+                # Session 2967 Slice 7 PR-1 — openai path uses iteration cap only.
+                # cost_usd is not tracked for openai (usage shape differs; PR-1 scope).
+                'cost_usd': None,
+                'effective_max_iterations': effective_max_iterations,
+                'effective_max_cost_usd': None,
+                'budget_exceeded': False,
             }
         except Exception as e:
             logger.error(f"[ClaudeEngineer:openai] Task failed: {e}")
@@ -1061,6 +1128,10 @@ def execute_engineering_task(
                 'provider': 'openai',
                 'mode': resolved_mode,
                 'repo_root': repo_root,
+                'cost_usd': None,
+                'effective_max_iterations': effective_max_iterations,
+                'effective_max_cost_usd': None,
+                'budget_exceeded': False,
             }
 
     # Default Anthropic path (unchanged from prior behavior)
@@ -1082,8 +1153,12 @@ def execute_engineering_task(
         messages = [{"role": "user", "content": task_description}]
         files_changed = []
         pr_url = None
+        # Session 2967 Slice 7 PR-1 — cost + iteration cap enforcement.
+        cost_accumulated_usd = 0.0
+        budget_exceeded = False
+        iteration = 0
 
-        for iteration in range(max_iterations):
+        for iteration in range(effective_max_iterations):
             # Rate limit retry loop
             for retry in range(3):
                 try:
@@ -1108,6 +1183,27 @@ def execute_engineering_task(
                     _time.sleep(wait)
                     if retry == 2:
                         raise rle  # Give up after 3 retries
+
+            # Session 2967 Slice 7 PR-1 — accumulate cost per iteration + guard.
+            # Anthropic response.usage exposes input_tokens + output_tokens +
+            # optional cache_* fields. Convert to USD via sonnet-4-6 pricing,
+            # add to running total, kill loop if we've blown the cap.
+            iter_cost = _cost_from_anthropic_usage(getattr(response, 'usage', None) or type('U', (), {})())
+            cost_accumulated_usd += iter_cost
+            if cost_accumulated_usd >= effective_max_cost_usd:
+                budget_exceeded = True
+                logger.warning(
+                    "[ClaudeEngineer] BUDGET_EXCEEDED at iteration %d: "
+                    "cost=$%.4f >= cap=$%.2f. Aborting loop with partial results.",
+                    iteration + 1, cost_accumulated_usd, effective_max_cost_usd,
+                )
+                final_text = (
+                    f"[BUDGET_EXCEEDED] Stopped at iteration {iteration + 1}. "
+                    f"Cost accumulated: ${cost_accumulated_usd:.4f} exceeded cap ${effective_max_cost_usd:.2f}. "
+                    f"Partial results: {len(files_changed)} file(s) changed"
+                    + (f", PR opened: {pr_url}" if pr_url else " (no PR opened).")
+                )
+                break
 
             # Check if we're done (no more tool calls)
             if response.stop_reason == "end_turn":
@@ -1146,7 +1242,17 @@ def execute_engineering_task(
                 messages = [messages[0]] + messages[-20:]
 
         else:
-            final_text = f"Reached max iterations ({max_iterations}). Task may be incomplete."
+            # Session 2967 Slice 7 PR-1 — max_iterations exhausted without
+            # end_turn AND without budget-exceeded exit. Report the iteration
+            # cap hit distinctly so operators can distinguish "engineer ran
+            # out of turns" from "engineer ran out of dollars."
+            final_text = (
+                f"[ITERATION_CAP] Reached max iterations ({effective_max_iterations}) "
+                f"without end_turn. Cost accumulated: ${cost_accumulated_usd:.4f}. "
+                f"Files changed: {len(files_changed)}. "
+                + (f"PR: {pr_url}" if pr_url else "No PR opened.")
+                + " Task may be incomplete."
+            )
 
         # Post result to conversation. Session 1262: _post_to_conversation
         # is now fail-loud — it ERROR-logs when conversation_id is None and
@@ -1159,13 +1265,23 @@ def execute_engineering_task(
             agent_execution_id=agent_execution_id,
         )
 
+        # Session 2967 Slice 7 PR-1 — envelope status reflects budget-exceeded
+        # as a distinct-visible non-error state (Rigby T1 SIGN zoom-out answer #3:
+        # "treat as completed-with-warning, not exception"). Cost + iteration
+        # metadata always echoed so operators can verify what governed the run.
+        envelope_status = 'budget_exceeded' if budget_exceeded else 'success'
         return {
-            'status': 'success',
+            'status': envelope_status,
             'summary': final_text[:2000],
             'files_changed': files_changed,
             'pr_url': pr_url,
-            'iterations': iteration + 1 if 'iteration' in dir() else 0,
+            'iterations': iteration + 1,
+            'iterations_used': iteration + 1,
             'repo_root': repo_root,
+            'cost_usd': round(cost_accumulated_usd, 4),
+            'effective_max_iterations': effective_max_iterations,
+            'effective_max_cost_usd': effective_max_cost_usd,
+            'budget_exceeded': budget_exceeded,
         }
 
     except Exception as e:
@@ -1177,7 +1293,15 @@ def execute_engineering_task(
             agent_execution_id=agent_execution_id,
         )
 
-        return {'status': 'error', 'error': str(e), 'repo_root': repo_root}
+        return {
+            'status': 'error',
+            'error': str(e),
+            'repo_root': repo_root,
+            'cost_usd': round(cost_accumulated_usd, 4) if 'cost_accumulated_usd' in dir() else 0.0,
+            'effective_max_iterations': effective_max_iterations,
+            'effective_max_cost_usd': effective_max_cost_usd,
+            'budget_exceeded': False,
+        }
 
 
 def _post_to_conversation(
