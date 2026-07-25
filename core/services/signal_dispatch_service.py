@@ -102,6 +102,28 @@ SIGNAL_DISPATCH_RULES: tuple[SignalDispatchRuleDef, ...] = (
         min_confidence=0.5,
         max_per_day=10,
     ),
+    # S2950 A10: TrendAnalysisAgent (REUSE — already mapped to
+    # trend_emergence at rule 1). Verified at S2950 open via
+    # agent_introspection_tool + ops_tool.execution_search — 15
+    # completed executions in past 30d, strongest "signal → brief"
+    # reliability of the shortlist (MarketIntelligenceAgent had
+    # cleaner attribution but only 5 lifetime execs; net-new-rule
+    # risk favored proven reliability over untested distinctness).
+    # Reuse-framing: skill_demand is treated as a labor-market/skills
+    # subtype of trend_emergence; TrendAnalysisAgent produces a
+    # consistent brief format for both. Per-pattern effectiveness
+    # attribution is deferred until per-pattern dashboards exist —
+    # brief output can include pattern_type header when that lands.
+    # Cluster volume verified via ORM — 133 skill_demand clusters
+    # (0 active, 4 detecting, 98 decayed, 31 archived).
+    SignalDispatchRuleDef(
+        key='skill_demand__trend_analysis',
+        pattern_type='skill_demand',
+        agent_name='TrendAnalysisAgent',
+        min_strength=0.5,
+        min_confidence=0.5,
+        max_per_day=10,
+    ),
 )
 
 
