@@ -13,7 +13,7 @@ operator-level overrides.
 import logging
 
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
@@ -99,9 +99,14 @@ _ERROR_CODE_STATUS = {
 
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def signal_dispatches_manual(request):
     """Manually create a SignalDispatch for a specific cluster.
+
+    Belt-and-suspenders auth: the site-wide auth middleware gates
+    unauthenticated requests, and this DRF permission enforces it a
+    second time at the view layer — appropriate for a mutation that
+    fans out to Celery + LLM spend.
 
     Body:
         cluster_id (str, required) — SignalCluster UUID
