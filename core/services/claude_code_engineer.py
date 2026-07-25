@@ -965,133 +965,6 @@ def _execute_engineering_task_openai(
     }
 
 
-def _build_repo_context(repo_root: str, context_files: Optional[List[str]] = None) -> str:
-    """
-    Session 2968 PR-2 — build a `<repo_context>` block for injection as the
-    engineer's first-message preamble.
-
-    Args:
-      repo_root: absolute path to the working tree (resolved by
-        _resolve_repo_root at execute_engineering_task entry).
-      context_files: caller-supplied workspace-relative paths.
-        - None → engine defaults (tree + CLAUDE.md excerpt + PLATFORM_INVENTORY excerpt).
-        - []   → explicit opt-out (returns '').
-        - list → inject only those files (skips defaults).
-
-    Returns the formatted `<repo_context>...</repo_context>` string (empty
-    if opt-out or if none of the requested files exist).
-
-    Caps per Rigby T1 SIGN (2 REVISEs accepted):
-      - Repo tree: top-level entries only, dot-files filtered, 60 lines
-        max (~1.5KB).
-      - CLAUDE.md excerpt: first 300 lines (~7KB) — stable operator-
-        contract sections only. Prevents session-history bloat from
-        drifting into the prompt.
-      - PLATFORM_INVENTORY excerpt: first 100 lines (Executive Summary +
-        TOC, ~3KB). Engineer can `read_file` deeper sections as needed.
-      - Explicit context_files entries: each capped 20KB.
-
-    Fixed default cost ~$0.03/dispatch. Expected exploration savings
-    $0.70-$2/dispatch based on S2967 killed Signal Insights dispatch
-    (75 iters × $0.067/iter = $5, mostly cold-start read_file + search_code).
-    """
-    # Explicit opt-out: caller passed empty list.
-    if context_files is not None and len(context_files) == 0:
-        return ''
-
-    parts: List[str] = [
-        '<repo_context>',
-        'Use this context as ground truth. Cite exact file paths in your responses. '
-        'Do not assume facts beyond what is shown here — use read_file / search_code to verify.',
-        '',
-    ]
-
-    # Explicit list: skip defaults, inject only requested files.
-    if context_files:
-        parts.append('## Explicit Context Files')
-        parts.append('')
-        for rel_path in context_files:
-            _append_context_file(parts, repo_root, rel_path, cap_bytes=20 * 1024)
-        parts.append('</repo_context>')
-        return '\n'.join(parts)
-
-    # Default engine-injected context (context_files is None).
-
-    # 1) Repo tree (top-level entries, dot-files filtered)
-    parts.append('## Repo tree (top-level, capped)')
-    parts.append('```')
-    try:
-        entries = sorted(os.listdir(repo_root))
-        visible = [e for e in entries if not e.startswith('.')][:60]
-        for entry in visible:
-            full = os.path.join(repo_root, entry)
-            marker = '/' if os.path.isdir(full) else ''
-            parts.append(f'{entry}{marker}')
-    except Exception as exc:
-        parts.append(f'(tree listing failed: {type(exc).__name__}: {exc})')
-    parts.append('```')
-    parts.append('')
-
-    # 2) CLAUDE.md excerpt — first 300 lines only, stable operator contract
-    parts.append('## CLAUDE.md excerpt (first 300 lines — stable operator contract)')
-    parts.append('```markdown')
-    _append_file_lines(parts, os.path.join(repo_root, 'CLAUDE.md'), max_lines=300)
-    parts.append('```')
-    parts.append('')
-
-    # 3) PLATFORM_INVENTORY.md excerpt — first 100 lines (exec summary + TOC)
-    parts.append('## PLATFORM_INVENTORY.md excerpt (first 100 lines — executive summary + TOC)')
-    parts.append('```markdown')
-    _append_file_lines(parts, os.path.join(repo_root, 'docs', 'PLATFORM_INVENTORY.md'), max_lines=100)
-    parts.append('```')
-    parts.append('')
-
-    parts.append('</repo_context>')
-    return '\n'.join(parts)
-
-
-def _append_context_file(parts: List[str], repo_root: str, rel_path: str, cap_bytes: int) -> None:
-    """Read a workspace-relative file (byte-capped) into the context parts list."""
-    parts.append(f'### {rel_path}')
-    parts.append('```')
-    full_path = os.path.join(repo_root, rel_path)
-    if not os.path.isfile(full_path):
-        parts.append(f'(file not found: {rel_path})')
-    else:
-        try:
-            with open(full_path, 'r', errors='replace') as fh:
-                content = fh.read(cap_bytes)
-            parts.append(content)
-            if os.path.getsize(full_path) > cap_bytes:
-                parts.append(f'... (truncated at {cap_bytes} bytes)')
-        except Exception as exc:
-            parts.append(f'(read failed: {type(exc).__name__}: {exc})')
-    parts.append('```')
-    parts.append('')
-
-
-def _append_file_lines(parts: List[str], full_path: str, max_lines: int) -> None:
-    """Read a file line-capped into the context parts list."""
-    if not os.path.isfile(full_path):
-        parts.append(f'(file not found: {full_path})')
-        return
-    try:
-        with open(full_path, 'r', errors='replace') as fh:
-            lines = []
-            for i, line in enumerate(fh):
-                if i >= max_lines:
-                    break
-                lines.append(line.rstrip('\n'))
-        parts.extend(lines)
-        # Check if there were more lines
-        with open(full_path, 'r', errors='replace') as fh2:
-            total = sum(1 for _ in fh2)
-        if total > max_lines:
-            parts.append(f'... (truncated at {max_lines} lines; full file is {total} lines)')
-    except Exception as exc:
-        parts.append(f'(read failed: {type(exc).__name__}: {exc})')
-
-
 def execute_engineering_task(
     task_description: str,
     conversation_id: Optional[str] = None,
@@ -1101,7 +974,6 @@ def execute_engineering_task(
     agent_execution_id: Optional[str] = None,
     workspace_root_path: Optional[str] = None,
     max_cost_usd: Optional[float] = None,
-    context_files: Optional[List[str]] = None,
 ) -> Dict[str, Any]:
     """
     Execute an engineering task using Claude with codebase tools.
@@ -1176,35 +1048,12 @@ def execute_engineering_task(
         effective_max_iterations, effective_max_cost_usd,
     )
 
-    # Session 2968 PR-2 — build the context preamble ONCE and prepend to the
-    # engineer's first user message. Reduces cold-start exploration burn by
-    # giving the engineer the same information a human operator starts with
-    # (repo tree + CLAUDE.md operator contract + PLATFORM_INVENTORY exec
-    # summary). Fixed cost ~$0.03/dispatch; observed savings ~$0.70-$2/dispatch
-    # (see S2967 killed Signal Insights dispatch: 75 iters × $0.067 = $5, mostly
-    # cold-start read_file + search_code on the same domain models a
-    # PLATFORM_INVENTORY-armed engineer wouldn't need to discover).
-    repo_context = _build_repo_context(repo_root, context_files=context_files)
-    if repo_context:
-        engineer_input = f"{repo_context}\n\n## Your Task\n\n{task_description}"
-        logger.info(
-            "[ClaudeEngineer] context injection: %d chars prepended (%s)",
-            len(repo_context),
-            'defaults' if context_files is None else f'explicit {len(context_files)} files',
-        )
-    else:
-        engineer_input = task_description
-        logger.info("[ClaudeEngineer] context injection: opted out (empty context_files list)")
-
     # Session 1226 P4 — OpenAI fallback path
     provider = os.environ.get('CLAUDE_CODE_ENGINE_PROVIDER', 'anthropic').strip().lower()
     if provider == 'openai':
         try:
-            # Session 2968 PR-2 — pass engineer_input (context-prepended
-            # task_description) instead of raw task_description, so the
-            # OpenAI path also benefits from cold-start context injection.
             result = _execute_engineering_task_openai(
-                task_description=engineer_input,
+                task_description=task_description,
                 max_iterations=effective_max_iterations,
                 system_prompt=system_prompt,
                 repo_root=repo_root,
@@ -1309,10 +1158,7 @@ def execute_engineering_task(
         import time as _time
         client = get_anthropic_client(api_key=api_key)
 
-        # Session 2968 PR-2 — engineer_input already contains the <repo_context>
-        # preamble (built at function top) prepended to the caller's task text.
-        # If context_files=[] was passed, engineer_input == task_description.
-        messages = [{"role": "user", "content": engineer_input}]
+        messages = [{"role": "user", "content": task_description}]
         files_changed = []
         pr_url = None
         # Session 2967 Slice 7 PR-1 — cost + iteration cap enforcement.
