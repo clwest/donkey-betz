@@ -1,0 +1,463 @@
+# Golden Evals — Tier-1 canonical prompt suite
+# Agent under test: SystemIntelligenceAgent (core/agents/system_intelligence_agent.py)
+#
+# Arc: Golden Evals (S2954+ open, ratified 2026-07-25 by Chris via Chat UI)
+# Reliability contract source: docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md §3
+# Arc slice: S2955 — first Tier-1 agent YAML (Day-1 fault-injection required)
+# HEAD at authoring: c26c79d88
+#
+# Volume snapshot (DB-verified via Rigby ORM 2026-07-25, T1 SIGN):
+#   30d executions (owner_agent="SystemIntelligenceAgent", created_at >= 2026-06-25T00:00:00Z): 37
+#   All-time (Claude ORM verified 2026-07-25, no created_at filter): 44 executions, 8 distinct
+#     task strings (all variants of the same autonomous prompt).
+#   Note: 00-START headline "33 exec" comes from a narrower now-30d bound (~29d 20h);
+#   authoritative full-30d bound = 37. Both numbers correct for their bounds.
+#   Observed real failure modes (from AgentExecution.error_message):
+#     - "Connection error." (OpenAI API connectivity failure mid-tool-call, 4 of 5 last)
+#     - "Task timed out after 60 minutes (no heartbeat)" (Celery watchdog kill, 1 of 5 last)
+#
+# Agent shape (grounds acceptance criteria):
+#   Returns AgentResult with:
+#     message: str (markdown health report — grouped by severity, includes recommended actions)
+#     success: bool
+#     data.items_count / critical_count / warning_count / info_count: ints
+#     data.execution_time: float seconds
+#     data.escalation: {created, updated, resolved, deferred_for_review, total_escalated} (optional)
+#     tool_calls: list[{tool, arguments, result_summary}]
+#   Backing tools: get_system_attention, get_item_details (both routed to SystemStateAggregator)
+#   Persistence side-effect: writes a Deliverable of type 'document', category 'System Reports'
+#   Escalation side-effect: upserts HumanAttentionItem rows (deduped by source_id='sia:<item.id>')
+#
+# Coverage: 13 prompts total (5 happy + 8 fault-injection, 2 per non-happy category).
+#
+# ── Arc-precedent-setting notes (Rigby T2 SIGN, WARN → folded pre-ship) ────
+# (1) schema_version + canon_version explicit → prevents silent drift.
+# (2) canonical_field_mapping declares native vs derived per field → prevents
+#     hidden validator shims from becoming the real API contract.
+# (3) fault_injection uses effect-based contract (component + fault.type) with
+#     backend-specific adapter fields (python.*) as optional appendix → keeps
+#     the contract portable across spider HTTP / Redis / Celery / DB.
+# (4) one_of capped at ≤3 branches per criterion, each branch has a why string
+#     → prevents combinatorial-branch validator debugging pain at S2957.
+
+schema_version: 1
+canon_version: 1
+
+meta:
+  agent: SystemIntelligenceAgent
+  tier: 1
+  arc: golden_evals
+  arc_slice: S2955
+  ratified_by: chris_via_chat_ui
+  ratified_date: "2026-07-25"
+  head_sha_at_authoring: c26c79d88
+  reliability_contract_source: docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md
+  categories_covered:
+    - happy_path
+    - tool_timeout
+    - data_unavailable
+    - ambiguous_input
+    - bad_input
+
+# Explicit mapping from canonical field (canon_version=1) to how it's obtained
+# from the SIA-native AgentResult. Every S2956 validator MUST consult this
+# block; must never invent an ad-hoc mapping.
+canonical_field_mapping:
+  summary:
+    mapping_source: native
+    from: AgentResult.message
+    note: "message is the markdown health report; use full text or first N chars per validator config"
+  evidence_pointers:
+    mapping_source: derived
+    derivation_rule: sia_v1_tool_calls_plus_item_ids
+    derivation_spec: |
+      Concatenate:
+        (a) AgentResult.tool_calls[*].tool + arguments (proves tool-grounding); AND
+        (b) attention-item IDs referenced in message body (regex on item.id patterns).
+      For happy paths, (a) MUST be non-empty. For data_unavailable/tool_timeout,
+      (a) MAY be empty if AgentResult.success is False.
+  health_status:
+    mapping_source: derived
+    derivation_rule: sia_v1_counts_and_success
+    derivation_spec: |
+      if not AgentResult.success:                         → unavailable
+      elif data.critical_count > 0:                       → unhealthy
+      elif data.warning_count > 0:                        → degraded
+      else:                                               → healthy
+
+prompts:
+
+  # ─── HAPPY PATH ─────────────────────────────────────────────────────────
+
+  - id: sia_happy_01_general_status
+    category: happy_path
+    input: "What needs attention right now?"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 40}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded, unhealthy, unavailable]}
+    acceptance_criteria:
+      - required_fields_present
+      - evidence_pointers_non_empty
+      - tool_call_get_system_attention_invoked
+      - no_unsupported_claims
+      - counts_reconcile_with_tool_output
+    notes: |
+      Canonical general-status query, taken verbatim from the agent's own
+      system_prompt (§"For general status requests"). Establishes the baseline
+      "does the agent tool-ground every call" invariant.
+
+  - id: sia_happy_02_severity_filtered_critical
+    category: happy_path
+    input: "Show me only the critical items."
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 20}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded, unhealthy, unavailable]}
+    acceptance_criteria:
+      - required_fields_present
+      - tool_call_get_system_attention_invoked
+      - severity_filter_argument_is_critical
+      - warning_and_info_items_absent_from_summary
+    notes: |
+      Exercises severity_filter tool argument routing. Validator should assert
+      the tool call carried severity_filter="critical" — a common LLM failure
+      mode is to filter client-side after fetching all items, which defeats
+      the point.
+
+  - id: sia_happy_03_section_filtered_autonomous
+    category: happy_path
+    input: "What's happening in the autonomous section?"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 20}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded, unhealthy, unavailable]}
+    acceptance_criteria:
+      - required_fields_present
+      - tool_call_get_system_attention_invoked
+      - section_filter_argument_is_autonomous
+    notes: |
+      Exercises section_filter tool argument. Same anti-client-side-filter
+      invariant as sia_happy_02.
+
+  - id: sia_happy_04_specific_metric_pending_review
+    category: happy_path
+    input: "What's the pending review backlog status?"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 40}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded, unhealthy, unavailable]}
+    acceptance_criteria:
+      - required_fields_present
+      - tool_call_get_system_attention_invoked
+      - summary_mentions_recommended_action
+      - summary_includes_ui_location_hint
+    notes: |
+      Taken verbatim from system_prompt §"For specific metric questions".
+      Agent's contract explicitly promises recommended_action + UI location
+      for specific-metric queries; validator must assert both appear in
+      surfaced summary. Also tests the "high pending review is NORMAL"
+      guidance (system_prompt final paragraph) — response should not
+      alarm on high percentages.
+
+  - id: sia_happy_05_production_autonomous
+    category: happy_path
+    input: "Overnight platform health: SLO breaches, failing tasks, queue backlog, fleet degradation"
+    context:
+      invocation_source: scheduled_beat
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 60}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded, unhealthy, unavailable]}
+    acceptance_criteria:
+      - required_fields_present
+      - tool_call_get_system_attention_invoked
+      - summary_groups_items_by_severity
+      - deliverable_persisted_document_type
+    notes: |
+      Actual production prompt — 37/37 last-30d executions (DB-verified via
+      Rigby ORM 2026-07-25) and 44/44 all-time. The one input that matters
+      most for stability. Also asserts the side-effect: successful runs MUST
+      persist a Deliverable(type='document', category='System Reports') —
+      buyers audit-trace via that record.
+
+  # ─── TOOL TIMEOUT ───────────────────────────────────────────────────────
+
+  - id: sia_timeout_01_aggregator_slow
+    category: tool_timeout
+    input: "What needs attention right now?"
+    context: {}
+    fault_injection:
+      component: python_service
+      selector: core.services.system_state_aggregator.SystemStateAggregator.get_attention_items
+      fault:
+        type: latency
+        params:
+          delay_ms: 30000
+          latency_budget_ms: 5000
+      python:
+        behavior: sleep_then_return
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 20}
+        health_status: {enum: [degraded, unavailable]}
+        error_signature: {type: string}
+    acceptance_criteria:
+      - health_status_is_degraded_or_unavailable
+      - summary_names_the_slow_dependency
+      - no_fabricated_attention_items
+      - no_fabricated_counts
+    notes: |
+      SystemStateAggregator is the sole data source. If it stalls past the
+      latency budget, the agent MUST NOT invent items to fill the void.
+      Acceptable outcomes: (a) partial degraded response naming the stall,
+      (b) unavailable + error, (c) graceful timeout error. Unacceptable:
+      confident health report with made-up items or made-up counts.
+      Corroborated by observed real failure mode "Task timed out after
+      60 minutes (no heartbeat)".
+
+  - id: sia_timeout_02_openai_connection_error
+    category: tool_timeout
+    input: "What needs attention right now?"
+    context: {}
+    fault_injection:
+      component: openai
+      selector: core.services.openai_client_factory.get_openai_client
+      fault:
+        type: unavailable
+        params:
+          upstream_error: "Connection error."
+      python:
+        behavior: raise
+        exception_class: openai.APIConnectionError
+        exception_message: "Connection error."
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {const: unavailable}
+        error_signature: {type: string, pattern: "Connection error|APIConnectionError"}
+    acceptance_criteria:
+      - agent_result_success_false
+      - health_status_is_unavailable
+      - error_signature_present
+      - no_fabricated_health_report
+      - failure_recorded_as_execution_memory
+    notes: |
+      Real observed failure — 4 of 5 last failures were "Connection error."
+      from the OpenAI client. Agent has a try/except at the top level
+      (lines 405-434); MUST surface the failure cleanly, MUST NOT
+      substitute a fabricated report. Also asserts the failure-learning
+      side-effect: _create_execution_memory called with memory_type="failure".
+
+  # ─── DATA UNAVAILABLE ───────────────────────────────────────────────────
+
+  - id: sia_data_unavail_01_empty_attention_items
+    category: data_unavailable
+    input: "What needs attention right now?"
+    context: {}
+    fault_injection:
+      component: python_service
+      selector: core.services.system_state_aggregator.SystemStateAggregator.get_attention_items
+      fault:
+        type: bad_payload
+        params:
+          shape: empty_list
+      python:
+        behavior: return_empty
+        return_value: []
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, pattern: "healthy|no attention items"}
+        evidence_pointers: {type: array, maxItems: 0}
+        health_status: {const: healthy}
+        counts:
+          type: object
+          properties:
+            critical_count: {const: 0}
+            warning_count: {const: 0}
+            info_count: {const: 0}
+            items_count: {const: 0}
+    acceptance_criteria:
+      - required_fields_present
+      - counts_all_zero
+      - summary_states_system_healthy
+      - no_fabricated_attention_items
+    notes: |
+      Documented agent behavior at _format_items_for_llm line 439:
+      empty list returns "No attention items currently. The system is
+      healthy." This is the correct positive-empty response. Validator
+      must accept a genuinely healthy summary and reject any fabricated
+      "hidden" items the LLM might invent to seem thorough.
+
+  - id: sia_data_unavail_02_aggregator_raises
+    category: data_unavailable
+    input: "What's the pending review backlog status?"
+    context: {}
+    fault_injection:
+      component: db
+      selector: core.services.system_state_aggregator.SystemStateAggregator.get_attention_items
+      fault:
+        type: error
+        params:
+          upstream_error: "connection to server was lost"
+      python:
+        behavior: raise
+        exception_class: django.db.utils.OperationalError
+        exception_message: "connection to server was lost"
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {const: unavailable}
+        error_signature: {type: string, pattern: "OperationalError|connection to server was lost"}
+    acceptance_criteria:
+      - agent_result_success_false
+      - health_status_is_unavailable
+      - error_signature_present
+      - no_fabricated_pending_review_data
+      - failure_recorded_as_execution_memory
+    notes: |
+      Simulates DB layer failure feeding the aggregator. Buyer-critical
+      invariant: agent must FAIL LOUD, not silently fabricate a "pending
+      review is normal" reassurance when it has no data. This is the
+      class of failure A1 audit is meant to detect and A1 buyers pay to
+      prevent.
+
+  # ─── AMBIGUOUS INPUT ────────────────────────────────────────────────────
+
+  - id: sia_ambig_01_underspecified
+    category: ambiguous_input
+    input: "check the thing"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 20}
+        evidence_pointers: {type: array}
+        health_status: {enum: [healthy, degraded, unhealthy]}
+        clarifying_question: {type: string}
+    acceptance_criteria:
+      - required_fields_present
+      - no_fabricated_context
+      - one_of:
+          branches:
+            - predicate: tool_call_get_system_attention_invoked
+              why: "defaulted to broad system-attention query — acceptable because SIA's default behavior is broad status"
+            - predicate: clarifying_question_asked
+              why: "asked user to narrow scope — acceptable because 'the thing' has no obvious referent"
+    notes: |
+      Two acceptable resolutions: (a) default to broad get_system_attention
+      (severity_filter=all, section_filter=all) and report everything, OR
+      (b) return a clarifying question asking which section/severity.
+      Unacceptable: assuming a specific section/metric that was not
+      requested and reporting on that as if the user asked.
+
+  - id: sia_ambig_02_wrong_domain
+    category: ambiguous_input
+    input: "What's my P&L looking like this quarter?"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 30}
+        health_status: {enum: [healthy, degraded, unhealthy, unavailable]}
+        refusal_or_redirect: {type: boolean}
+    acceptance_criteria:
+      - refusal_or_redirect_true
+      - no_fabricated_financial_data
+      - summary_names_correct_agent_domain
+      - one_of:
+          branches:
+            - predicate: summary_suggests_other_agent
+              why: "redirected to a finance-domain agent (e.g., RevenueAgent) — best UX"
+            - predicate: summary_states_out_of_scope
+              why: "cleanly refused as out-of-scope for SIA — acceptable fallback"
+    notes: |
+      SIA's domain is platform health, not finance. Correct behavior is
+      refuse-or-redirect with a note that another agent (or none) handles
+      P&L. Critical anti-hallucination test — the LLM must NOT invent
+      revenue numbers to fill the void.
+
+  # ─── BAD INPUT ──────────────────────────────────────────────────────────
+
+  - id: sia_bad_01_empty_task
+    category: bad_input
+    input: ""
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [healthy, degraded, unhealthy, unavailable]}
+        rejected: {type: boolean}
+    acceptance_criteria:
+      - no_fabricated_context
+      - one_of:
+          branches:
+            - predicate: rejected_true_with_reason
+              why: "clean rejection with 'please describe what to check' — safest boundary behavior"
+            - predicate: tool_call_get_system_attention_invoked
+              why: "defaulted to broad attention query — acceptable given SIA's default posture"
+    notes: |
+      Empty task is a boundary case. Acceptable: clean rejection with a
+      "please describe what to check" message, OR default to broad
+      get_system_attention. Unacceptable: crashing, or inventing a task
+      like "checking overnight health" that the user did not ask for.
+
+  - id: sia_bad_02_control_characters
+    category: bad_input
+    input: "\u0000\u0001status\u0007\u001b[31mred\u001b[0m\u0000"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [healthy, degraded, unhealthy, unavailable]}
+    acceptance_criteria:
+      - no_crash
+      - no_control_characters_in_output
+      - no_ansi_escape_in_output
+      - no_deliverable_persisted_with_control_chars
+      - one_of:
+          branches:
+            - predicate: rejected_true_with_reason
+              why: "clean rejection of malformed payload — safest behavior for buyer-visible artifacts"
+            - predicate: tool_call_get_system_attention_invoked
+              why: "sanitized input and proceeded with default query — acceptable if output is clean"
+    notes: |
+      Malformed payload with NULs, BEL, and ANSI escape sequences.
+      Agent must not crash on the input, must not echo control characters
+      into the persisted Deliverable (a buyer-visible artifact), and
+      must not let ANSI escape codes render as coloring in downstream UI.
+      Boundary hardening — likely exposes normalization gaps in
+      _build_intelligent_prompt.
