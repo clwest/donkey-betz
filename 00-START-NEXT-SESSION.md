@@ -2,88 +2,98 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2954 CLOSED. Golden Evals arc OPENED (PR #3549, HEAD `9f25abdb1`) as the third capability-substrate leg between S2953 Drift Scanner and A1 Reliability Audit Phase 1. Chris ratified Tier-1 8-agent list + Day-1 fault-injection scope via Chat UI 2026-07-25 after joint Claude+Rigby recommendation (Rigby T2 verdict WARN on "sunny-day theatre" concern → folded into Day-1 fault-injection commitment). Tier-1 list: `SystemIntelligenceAgent` / `ResearchAgent` / `DevOpsAgent` / `WorkflowOrchestrationAgent` / `LegalDocDrafterAgent` / `ContentWriterAgent` / `CompetitorAnalysisAgent` / `PersonalAssistant`. Explicitly EXCLUDED despite top-4 30d volume: PredictionMarketAnalyst (342), SportsOddsAnalyst (332), ArbitrageDetector-cluster (307), Rigby-as-agent-row (227 — already Tier-1 as PersonalAssistant). Reason: sports-vertical for A1 Platform/ML/SRE+compliance buyer. Day-1 fault-injection ratified as arc scope (5 scenario categories: happy path / tool timeout / data unavailable / ambiguous input / bad-malformed input) + reliability contract required (output fields, citations, uncertainty markers, refusal behavior). This terminal session shipped **4 PRs** total (#3545 + #3546 + #3547 + #3549) and executed **3 full close cascades**. **S2955 first-action = author `evals/tier1/system_intelligence_agent.yaml`** — highest 30d volume among Tier-1 (33 exec).
+## READ THIS FIRST — SESSION 2955 CLOSED. Golden Evals arc-slice 1 shipped: `evals/tier1/system_intelligence_agent.yaml` (PR #3551, HEAD `d2acf9c92`). 463 lines, 13 prompts, all 5 fault-injection categories covered (5 happy + 2 each of tool_timeout / data_unavailable / ambiguous_input / bad_input). DB-grounded on real production data — Rigby ORM T1 verified 37 30d executions matching `owner_agent="SystemIntelligenceAgent"` at `created_at >= 2026-06-25T00:00:00Z`; two observed real failure modes (OpenAI `"Connection error."` + 60-min Celery timeout) each get a dedicated test. Establishes `evals/` tree at repo root. Chris D-verdict `yes` on TWO decisions via Chat UI 2026-07-25: (1) ship YAML as PR #3551, (2) freeze substrate precedent at `canon_version=1` for the remaining 7 Tier-1 YAMLs. **S2956 first-action = author `evals/tier1/research_agent.yaml`** — 2nd Tier-1 slice per arc plan; ResearchAgent has 37 30d exec / 121 all-time / 26 distinct prompts (much richer human traffic than SIA's single autonomous prompt).
 
-**Refreshed 2026-07-25 (S2954 close).** Gap-map headline: `100 validated_full / 2 untested` — the 2 are `agent_capability_drift_tool` (S2953-shipped) + `agent_job_status` (S2952-shipped), both untested-by-design at ship time. **S2953 handoff drift correction:** prior 00-START asserted `100/0`; actual is `100/2` (not S2954-introduced, correction folded here at S2954 close).
+**Arc-precedent substrate frozen at canon_version=1** (must apply to all remaining Tier-1 YAMLs):
+1. `schema_version: 1` + `canon_version: 1` at file top.
+2. `canonical_field_mapping` block declaring `mapping_source: native|derived` per canon field with named derivation rules — S2956 validators MUST consult, never invent mappings.
+3. `fault_injection` uses effect-based contract (`component` + `fault.{type, params}`) with `python.{...}` as backend-adapter appendix — portable beyond Python-mock.
+4. `one_of` acceptance-criteria capped at ≤2 branches with mandatory `why` string per branch.
 
-**PRs shipped this session (in-terminal, S2952 close + S2953 open+close + S2954 open+close):**
-- u-d-b PR **#3545** — S2952 pre-A1 capability triage (3 files, +129/-8).
-- u-d-b PR **#3546** — S2952 close cascade (3 files, +163/-56).
-- u-d-b PR **#3547** — S2953 agent capability drift scanner (8 files, +927/-3, 9 tests).
-- u-d-b PR **#3549** — S2954 Golden Evals arc-open scoping doc (1 file, +95/-0, doc-only).
-- u-d-b PR **#TBD** — S2954 close cascade (handoff + this 00-START refresh + wrapper pin bump).
+Reference implementation: `evals/tier1/system_intelligence_agent.yaml` — every subsequent Tier-1 YAML mirrors this shape.
 
-**Twin mirrors shipped this session (S2954 slice):**
-- S2954 Golden Evals arc-open content mirror: `1f79856a-9f9a-4c84-be17-d8884b72e65f` (Donkey Betz workspace, `initiative_phase_doc`, `category='governance'`, diagnostic ORM-cleared per Ledger #16 re-hit)
-- S2954 Golden Evals arc-open ratification envelope: `b38ba743-9050-476f-8f70-175cf8aafed6` (Donkey Betz workspace, `ratification_record`, `category='governance'`, diagnostic already null on create)
+**Refreshed 2026-07-25 (S2955 close).** Gap-map headline: `100 validated_full / 2 untested` — the 2 are `agent_capability_drift_tool` (S2953-shipped) + `agent_job_status` (S2952-shipped), both untested-by-design at ship time. Unchanged from S2954 close (this session shipped a spec file only, no PA tool changes).
 
-Full S2953 mirror IDs preserved in `docs/handoffs/SESSION_2953_DRIFT_SCANNER.md`.
+**PRs shipped this session (S2955):**
+- u-d-b PR **#3551** — S2955 Golden Evals Tier-1 slice 1: SystemIntelligenceAgent YAML (1 file, +463/-0, spec-only).
+- u-d-b PR **#TBD** — S2955 close cascade (handoff + this 00-START refresh + wrapper pin bump).
 
-**Files shipped this session (S2954 slice):**
-- **NEW** `docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md` — arc-open scoping doc (95 lines, 7 sections).
+**Twin mirrors shipped this session (S2955 slice):**
+- S2955 slice 1 content mirror: `1f90340e-8001-4632-ba1a-ead249074721` (Donkey Betz workspace, `initiative_phase_doc`, `category='governance'`, diagnostic ORM-cleared per Ledger #16 re-hit — 8th cumulative).
+- S2955 slice 1 ratification envelope: `0c73707c-6a05-43f8-a33d-abca3f000d20` (Donkey Betz workspace, `ratification_record`, `category='governance'`, diagnostic clean on create).
 
-**Post-merge:** PR #3549 was doc-only, no worker impact → no `make celery-recycle` required (PLAYBOOK-7.4.4 applies to code-shipping PRs).
+Full S2954 arc-open mirror IDs preserved in `docs/handoffs/SESSION_2954_GOLDEN_EVALS_ARC_OPEN.md`.
 
-**Governance:** Golden Evals arc opened with Tier-1 list + Day-1 fault-injection scope ratified. Rigby SIGN turn 1 tool-grounded (real ORM query, tool_runs populated — not rubber-stamping). Rigby SIGN turn 2 verdict WARN on sunny-day-theatre concern → reconciled via Day-1 commitment.
+**Files shipped this session (S2955 slice):**
+- **NEW** `evals/tier1/system_intelligence_agent.yaml` — first Tier-1 canonical prompt suite (463 lines, 13 prompts).
+
+**Post-merge:** PR #3551 was spec-only (YAML config, no code), no worker impact → no `make celery-recycle` required (PLAYBOOK-7.4.4 applies to code-shipping PRs).
+
+**Governance:** Rigby SIGN cycle T1→T3. T1 tool-grounded (`orm_inspect_tool.count_by` + `filter` on AgentExecution) — F-BLOCKING on volume-count mismatch (33 vs 37; reconciled to 37 as authoritative full-30d bound). T2 zoom-out WARN on 4 arc-precedent risks — all 4 folded pre-ship. T3 PASS.
 
 **Rigby Tool Gap Ledger:**
-- **RE-HIT (Ledger #16, 7th time cumulative)** — `deliverable_tool.create` diagnostic-flag bug on `initiative_phase_doc`. S2954 content mirror flagged; ORM-cleared.
-- **NEW — Ledger #17 candidate** — Rigby Chat UI does NOT relay Chris's ratification responses back to Claude terminal even when explicit "route back verbatim" instruction is present in the dispatch. Observed twice this session (Chris `yes` on Tier-1; Chris `close` on next-move A/B). Chris relayed manually via terminal both times. Design task; no CLI workaround needed.
+- **RE-HIT (Ledger #16, 8th time cumulative)** — `deliverable_tool.create` diagnostic-flag bug on `initiative_phase_doc`. S2955 content mirror flagged; ORM-cleared.
+- **Ledger #16 sub-observation** — ORM-clear recipe attempts 5 fields (status/code/notes/detected_at/resolved_at), but only 2 (`diagnostic_status`, `diagnostic_code`) exist on current `Deliverable` model; recipe should be updated to reflect current model shape.
+- **Ledger #17 candidate — SECOND observation** (was 1st at S2954). Rigby Chat UI does NOT relay Chris's ratification responses back to Claude terminal. Chris relayed manually again. Second consistent observation; promote from candidate to full ledger row at next opportunity.
 
-Full session context: `docs/handoffs/SESSION_2954_GOLDEN_EVALS_ARC_OPEN.md`.
+Full session context: `docs/handoffs/SESSION_2955_GOLDEN_EVALS_SLICE_1_SIA_YAML.md`.
 
 ---
 
-## S2955 open sequence
+## S2956 open sequence
 
-**S2955 first-action = author `evals/tier1/system_intelligence_agent.yaml`** — first Tier-1 agent's canonical prompt suite. Highest 30d execution volume among Tier-1 (33 exec).
+**S2956 first-action = author `evals/tier1/research_agent.yaml`** — 2nd Tier-1 slice. ResearchAgent volume snapshot: 37 30d exec, 121 all-time, **26 distinct prompts in 30d** (much richer human-input diversity than SIA's single autonomous prompt — allows real sampling of ambiguous/bad inputs from production traffic).
 
 ### Universal open sequence
 
-1. **Live-verify S2953 drift scanner still healthy** (unchanged from S2954 open):
+1. **Live-verify S2953 drift scanner still healthy:**
    - `bash tools/pa_local.sh "run agent_capability_drift_tool action=summary"` — expect shape (83/92/59/1 → 77+2 or drifted numbers with same shape).
    - `python manage.py scan_agent_capability_drift --json | jq .totals` — same from CLI.
 2. **First-action lint pre-flight:** `python manage.py build_pa_tool_audit --gap-only --emit-gap-json --check` — confirm gap-map headline `100 validated_full / 2 untested`. The 2 untested (`agent_capability_drift_tool`, `agent_job_status`) are expected.
-3. **Verify wrapper pin freshness:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2955 pin (retired at S2954 close cascade).
-4. **Open S2955 slice** — see scope below.
+3. **Verify wrapper pin freshness:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2956 pin (retired at S2955 close cascade).
+4. **Read the arc-precedent substrate** at `evals/tier1/system_intelligence_agent.yaml` (canon_version=1 reference implementation) BEFORE authoring the new file — every subsequent Tier-1 YAML mirrors this shape (schema_version + canon_version + canonical_field_mapping + effect-based fault_injection + one_of ≤2-with-why).
+5. **Open S2956 slice** — see scope below.
 
-### S2955 arc-slice scope: SystemIntelligenceAgent YAML
+### S2956 arc-slice scope: ResearchAgent YAML
 
-**Target file:** `evals/tier1/system_intelligence_agent.yaml` (new `evals/` tree at repo root).
+**Target file:** `evals/tier1/research_agent.yaml`.
 
-**YAML shape (per prompt):**
-```yaml
-- id: sia_happy_path_01
-  category: happy_path            # or: tool_timeout / data_unavailable / ambiguous_input / bad_input
-  input: "<the actual prompt to send to SystemIntelligenceAgent>"
-  expected_output_shape:          # JSON Schema fragment
-    type: object
-    required: [summary, evidence_pointers, health_status]
-    properties:
-      summary: {type: string, minLength: 20}
-      evidence_pointers: {type: array, minItems: 1}
-      health_status: {enum: [healthy, degraded, unavailable]}
-  acceptance_criteria:            # reliability-contract checks
-    - required_fields_present
-    - evidence_pointers_non_empty
-    - no_unsupported_claims
-```
+**Substrate-freeze reference:** `evals/tier1/system_intelligence_agent.yaml` at HEAD `d2acf9c92` is the canon_version=1 reference implementation. Mirror all 4 substrate patterns:
+1. `schema_version: 1` + `canon_version: 1`.
+2. `canonical_field_mapping` with per-field `mapping_source: native|derived` + named derivation rules. ResearchAgent output shape differs from SIA — derivation rules will be `research_v1_*` prefixed.
+3. `fault_injection` effect-based (`component` + `fault.{type, params}` + `python.{...}` adapter).
+4. `one_of` acceptance-criteria capped at ≤2 branches with mandatory `why` strings.
 
-**Coverage target:** 5–20 prompts total, at least 1 per scenario category. SystemIntelligenceAgent-specific happy-path candidates: "current celery worker health", "which agents have failed in last hour", "PostgreSQL connection pool status", "spider queue depth" — pull these from actual agent invocation patterns in production traffic.
+**Coverage target:** 5–20 prompts across all 5 fault-injection categories. ResearchAgent's 30d distinct-prompt diversity (26) is rich enough to sample real happy-path and ambiguous inputs directly — pull them via `orm_inspect_tool.filter` on `AgentExecution` where `owner_agent="ResearchAgent"`, `created_at__gte="2026-06-25T00:00:00Z"`.
 
-**Out of scope for S2955:** validator code (JSON Schema executors, Pydantic model runners) and `run_golden_evals` mgmt cmd. Those are S2956 and S2957.
+**Sample ResearchAgent 30d prompts observed at S2955 close:**
+- "Research the latest AI trends" (bare, general)
+- "Research trends and audience preferences for a 3-episode educational series on..." (initiative-scoped, verbose)
+- "Initiative <uuid> stage 1 (Research Brief) external deliverable receipt" (initiative-bound, structured)
+- Directive-bound prompts with "BINDING DIRECTIVE" preamble
+
+**Out of scope for S2956:** validator code (JSON Schema executors, Pydantic model runners) and `run_golden_evals` mgmt cmd. Those come after all 8 Tier-1 YAMLs are shipped.
 
 **Estimated 1 session** for this slice.
 
-### Golden Evals arc structure (unchanged from S2954 open)
+### Golden Evals arc structure (updated at S2955 close)
 
-- **S2955** — SystemIntelligenceAgent YAML (this slice).
-- **S2955+ 2nd** — ResearchAgent YAML.
-- **S2955+ 3rd** — DevOpsAgent YAML.
-- **... through 8th Tier-1 agent** — Content/Competitor/Legal/WorkflowOrch/Rigby YAMLs.
-- **S2956** — Validators (JSON Schema execution + Pydantic model runners).
-- **S2957** — Harness (`run_golden_evals` mgmt cmd + `GoldenEvalRun` table + nightly beat task).
+**Tier-1 YAMLs — 1 of 8 shipped:**
+- ✅ **S2955 slice 1 — SystemIntelligenceAgent** (PR #3551, HEAD `d2acf9c92`) — SHIPPED. canon_version=1 substrate frozen.
+- ⏭ **S2956 slice 2 — ResearchAgent** — NEXT.
+- **S2957 slice 3 — DevOpsAgent.**
+- **S2958 slice 4 — WorkflowOrchestrationAgent.**
+- **S2959 slice 5 — LegalDocDrafterAgent.**
+- **S2960 slice 6 — ContentWriterAgent.**
+- **S2961 slice 7 — CompetitorAnalysisAgent.**
+- **S2962 slice 8 — PersonalAssistant (Rigby).**
+
+**After all 8 Tier-1 YAMLs shipped:**
+- **S2963** — Validators (JSON Schema execution + Pydantic model runners consuming `canonical_field_mapping` + `expected_output_shape` + `acceptance_criteria`).
+- **S2964** — Harness (`run_golden_evals` mgmt cmd + `GoldenEvalRun` table + nightly beat task).
 - **After arc close** — A1 Phase 1 first-slice opens (Chris's 4 gating questions still block; see below).
+
+_Note: session numbers above are ESTIMATED linear progression assuming 1 slice per session. Actual session numbers may drift if a slice takes >1 session or if a non-arc session interleaves._
 
 ### Capability Manifest — build spec (parallel-track from A1 Phase 1 start)
 
@@ -98,11 +108,16 @@ Chris's 4 open questions from scoping deliverable `7870eca9` still gate Phase 1 
 3. Sell as **agent-system audit** (end-to-end) or **toolchain reliability audit** (tools/contracts) first?
 4. **Legal posture** for handling customer logs (retention window, deletion guarantee, allowed data types)?
 
-### Deferred queue (updated at S2954 close)
+### Deferred queue (updated at S2955 close)
 
-**S2954 additions:**
-- **Rigby Chat UI response-relay gap** (Ledger #17 candidate) — Chris's Chat UI responses aren't routed back to Claude terminal even when explicit instruction present. Design task.
-- **00-START validated-full gap-map lint sync** — confirmed drift of 2 (S2953-untested-by-design). Consider CI check that the 00-START headline pulls from `build_pa_tool_audit` live rather than manual editing.
+**S2955 additions:**
+- **Ledger #17 promotion from candidate to full row** — Chat UI relay gap now has 2 consistent observations (S2954 + S2955). Next hit promotes to full ledger row + design task for Rigby response-relay wiring.
+- **Ledger #16 ORM-clear recipe drift** — established recipe attempts to clear 5 diagnostic_* fields on `Deliverable`, but only 2 exist on the current model (`diagnostic_status`, `diagnostic_code`). Update recipe (in `feedback_pa_deliverables_tool_flags_ratifications_as_diagnostic.md`) to match current model shape.
+- **Bound-annotation discipline for volume claims in YAML headers** — S2955 T1 F-BLOCK arose from `now - timedelta(days=30)` bound producing 33 vs full-30d producing 37. Consider making calendar-30d the canonical bound across all Tier-1 YAML volume snapshots + drift-scanner + audit tools.
+
+**S2954 additions (carry forward):**
+- **Rigby Chat UI response-relay gap** (Ledger #17 candidate → now 2 observations, see promotion above).
+- **00-START validated-full gap-map lint sync** — consider CI check that the 00-START headline pulls from `build_pa_tool_audit` live rather than manual editing.
 
 **S2953 additions (carry forward):**
 - Drift scanner invariant 4 (rerouted-must-be-labeled) — requires `AgentRerouteEntry`-style queryable model.
@@ -205,11 +220,13 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## For fuller context (S2846 → S2954)
+## For fuller context (S2846 → S2955)
 
 See:
-- **S2954 handoff (current):** `docs/handoffs/SESSION_2954_GOLDEN_EVALS_ARC_OPEN.md`
-- **S2954 shipped code:** `docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md` (arc-open scoping doc, 95 lines)
+- **S2955 handoff (current):** `docs/handoffs/SESSION_2955_GOLDEN_EVALS_SLICE_1_SIA_YAML.md`
+- **S2955 shipped code:** `evals/tier1/system_intelligence_agent.yaml` (canon_version=1 reference implementation for Tier-1 YAMLs, 463 lines, 13 prompts)
+- **S2954 arc-open handoff:** `docs/handoffs/SESSION_2954_GOLDEN_EVALS_ARC_OPEN.md`
+- **S2954 arc-open scoping doc:** `docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md` (95 lines)
 - **S2953 handoff:** `docs/handoffs/SESSION_2953_DRIFT_SCANNER.md`
 - **S2953 shipped code:**
   - `core/services/agent_capability_drift.py` — scanner service
