@@ -1,0 +1,523 @@
+# Golden Evals — Tier-1 canonical prompt suite
+# Agent under test: ResearchAgent (core/agents/research_agent.py)
+#
+# Arc: Golden Evals (S2954+ open, ratified 2026-07-25 by Chris via Chat UI)
+# Reliability contract source: docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md §3
+# Arc slice: S2956 — second Tier-1 agent YAML (mirrors canon_version=1 substrate
+#   frozen at S2955 in evals/tier1/system_intelligence_agent.yaml at HEAD d2acf9c92)
+# HEAD at authoring: d9f030bb5
+#
+# Volume snapshot (DB-verified via Django ORM 2026-07-25):
+#   30d executions (owner_agent="ResearchAgent", created_at >= 2026-06-25T00:00:00Z): 37
+#     (36 completed, 1 failed — much healthier than SIA's 60% failure rate at S2955)
+#   All-time (no created_at filter): 121 executions
+#   30d distinct task strings: 26 (rich human-input diversity vs SIA's 1 autonomous prompt)
+#   Task-string distribution (30d): "Research market trends and industry landscape" = 12 hits
+#     (highest volume, autonomous); remaining 25 prompts singleton each.
+#   Observed real failure modes (from AgentExecution.error_message, all-time):
+#     - "Task timed out after 60 minutes (no heartbeat) - marked as failed by cleanup"
+#       (1 of 1 observed all-time; same Celery watchdog kill class as SIA sia_timeout_01)
+#   Verifier note (S2956 Rigby T2 fold): AgentExecution.error_message stores
+#     empty-string ("") for successful runs, NOT NULL. Django's error_message__isnull=False
+#     filter returns 121 rows (all executions); use error_message__gt='' or
+#     .exclude(error_message='') to get the 1 real failure. The "1 of 1" count
+#     above uses the non-empty semantic. Future S2963 validators MUST filter
+#     on non-empty, not non-null, when reasoning about failures.
+#   Note: 1 real failure mode is thin evidence — most fault-injection cases below
+#   are constructed from ResearchAgent's known dependency graph (SearchStrategyService,
+#   SpiderIntelligenceService, LLM provider registry, intelligence gateway) rather
+#   than replayed from production traces. Called out per fault-injection convention.
+#
+# Agent shape (grounds acceptance criteria):
+#   Returns AgentResult with:
+#     message: str (GPT synthesis text if >200 chars, else structured summary
+#                   "Research on: <task>. Status: <status>. Confidence: <pct>%. ...")
+#     success: bool
+#     error: str (on failure)
+#     execution_time_ms: int
+#     tool_calls: list[{tool, arguments, result}]
+#     knowledge_attribution: dict (Session 401 provenance)
+#     data:
+#       results: list[{source, data, [partial]}] — one entry per tool contribution
+#       query: str (the task string)
+#       sources_count: int
+#       contract: {status: RESOLVED|BLOCKED|UNKNOWN, confidence: float, confidence_reason: str, blocked_on?: str}
+#       attempts: list[{round, strategy, queries, results_count, [strategies_used]}]  — iterative search log
+#       evidence_claims: list[{...}] — ClaimsPack-compatible citation cards
+#       content: str — GPT-5.2 synthesis text (raw)
+#       key_insights: list[str] (max 5)
+#       ml_analysis?: {models_used, confidence, topics_detected, sentiment, ml_insights}
+#       topics?: list[str] (surfaced if ML ran)
+#       sentiment?: str (surfaced if ML ran)
+#   Backing tools (agent-level): intelligence_tool (web via Serper), spider_query,
+#     analyze_trends, reddit_search, query_internal_data, read_file, list_files,
+#     search_in_files, delegate_to_specialist
+#   Persistence side-effect: writes Deliverable(deliverable_type='research',
+#     category='Research', tags=['research'] + topics_detected[:3], content_format='markdown')
+#     via _save_to_deliverable — WITH 60-min dedup guard: if a Deliverable with the
+#     same semantic title exists within 60min in the same workspace, the save is
+#     SKIPPED and logged as [RESEARCH_DUP_SKIPPED]. Validator must accept BOTH
+#     save-happened and dup-skipped outcomes on happy paths.
+#   Failure-learning side-effect: _create_execution_memory(memory_type="failure",
+#     importance=0.7) on the no-results branch and on any top-level exception.
+#
+# Coverage: 13 prompts total (5 happy + 8 fault-injection, 2 per non-happy category).
+#
+# ── Arc-precedent adherence (canon_version=1, S2955-frozen) ──────────────
+# (1) schema_version + canon_version explicit at file top.
+# (2) canonical_field_mapping declares native vs derived per field with named
+#     derivation rules prefixed research_v1_*.
+# (3) fault_injection uses effect-based contract (component + fault.type + params)
+#     with python.{...} adapter as optional appendix; portable beyond Python-mock.
+# (4) one_of acceptance-criteria capped at ≤2 branches with mandatory why strings.
+
+schema_version: 1
+canon_version: 1
+
+meta:
+  agent: ResearchAgent
+  tier: 1
+  arc: golden_evals
+  arc_slice: S2956
+  ratified_by: chris_via_chat_ui
+  ratified_date: "2026-07-25"
+  head_sha_at_authoring: d9f030bb5
+  reliability_contract_source: docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md
+  substrate_reference: evals/tier1/system_intelligence_agent.yaml
+  categories_covered:
+    - happy_path
+    - tool_timeout
+    - data_unavailable
+    - ambiguous_input
+    - bad_input
+
+# Explicit mapping from canonical field (canon_version=1) to how it's obtained
+# from the ResearchAgent-native AgentResult. Every S2963 validator MUST consult
+# this block; must never invent an ad-hoc mapping.
+canonical_field_mapping:
+  summary:
+    mapping_source: native
+    from: AgentResult.message
+    note: |
+      message is either (a) GPT-5.2 synthesis text when len>200 (research_agent.py:1082),
+      or (b) constructed summary "Research on: <task>. Status: <status>. Confidence: <pct>%. ..."
+      (research_agent.py:1069-1078). Validators should accept either shape and inspect
+      AgentResult.data.contract.status if they need to distinguish.
+  evidence_pointers:
+    mapping_source: derived
+    derivation_rule: research_v1_evidence_claims_plus_tool_calls
+    derivation_spec: |
+      Preferred: AgentResult.data.evidence_claims (ClaimsPack-compatible citation cards
+      built at research_agent.py:975 from iterative_results). Each card carries source URL.
+      Fallback (when evidence_claims is empty): AgentResult.tool_calls[*].tool + arguments
+      — proves tool-grounding even when synthesis lacked evidence to cite.
+      For happy paths, at least one MUST be non-empty (evidence_claims OR tool_calls).
+      For data_unavailable/tool_timeout branches with AgentResult.success=False,
+      both MAY be empty.
+  health_status:
+    mapping_source: derived
+    derivation_rule: research_v1_success_and_contract_status
+    derivation_spec: |
+      if not AgentResult.success:                                       → unavailable
+      elif AgentResult.data.contract.status == 'RESOLVED':              → healthy
+      elif AgentResult.data.contract.status == 'BLOCKED':               → degraded
+      elif AgentResult.data.contract.status in (None, 'UNKNOWN'):       → degraded
+      else:                                                             → healthy
+      Note: ResearchAgent's "health" is not platform-health (SIA's domain) — here it
+      represents whether the research call itself produced actionable output.
+
+prompts:
+
+  # ─── HAPPY PATH ─────────────────────────────────────────────────────────
+
+  - id: research_happy_01_bare_general
+    category: happy_path
+    input: "Research the latest AI trends"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 200}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - evidence_pointers_non_empty
+      - at_least_one_tool_call_present
+      - contract_present_with_status_and_confidence
+      - no_unsupported_claims
+      - synthesis_cites_evidence_card_ids
+    notes: |
+      Real 30d prompt (singleton in observed traffic, but the canonical shape
+      for bare general queries). Baseline "does the agent tool-ground every
+      call + emit a research contract" invariant. synthesis_cites_evidence_card_ids
+      asserts the [E1]/[E2] pattern from research_agent.py:869-883 synthesis
+      instructions — a common LLM failure is to drop the [E<N>] citations.
+
+  - id: research_happy_02_market_trends_autonomous
+    category: happy_path
+    input: "Research market trends and industry landscape"
+    context:
+      invocation_source: scheduled_beat
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 200}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - at_least_one_tool_call_present
+      - contract_present_with_status_and_confidence
+      - deliverable_persisted_or_dup_skipped
+      - no_unsupported_claims
+    notes: |
+      Highest-volume observed prompt (12 of 37 30d executions — 32.4%). Autonomous
+      (scheduled beat). Also asserts the side-effect: on happy path, EITHER
+      a Deliverable(type='research', category='Research') is persisted OR the
+      [RESEARCH_DUP_SKIPPED] guard fires because a semantically-titled duplicate
+      exists within 60min (research_agent.py:1174-1189). Both are correct outcomes.
+
+  - id: research_happy_03_initiative_scoped_binding_directive
+    category: happy_path
+    input: |
+      Research this topic to advance the initiative.
+
+      BINDING DIRECTIVE: Your output must directly advance THIS initiative: "Research the latest AI agent orchestration patterns for small teams".
+      Do NOT drift to adjacent topics. Cite sources for every claim.
+    context:
+      initiative_id: "test-initiative-uuid-placeholder"
+      workspace_brief:
+        topic: "AI agent orchestration patterns for small teams"
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 200}
+        evidence_pointers: {type: array, minItems: 3}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - evidence_pointers_min_three
+      - synthesis_stays_on_topic
+      - synthesis_cites_evidence_card_ids
+      - contract_present_with_status_and_confidence
+      - iterative_search_used_brief_topic_as_seed
+    notes: |
+      Real production shape — initiative-bound research with BINDING DIRECTIVE
+      preamble (2 of 26 distinct 30d prompts follow this shape). Exercises the
+      workspace_brief seeding path at research_agent.py:428-433 (brief.topic
+      becomes the search seed instead of the raw task string). Also asserts
+      minItems:3 evidence pointers — the synthesis prompt at research_agent.py:876
+      requires "at least 3 evidence cards" cited.
+
+  - id: research_happy_04_specific_target_competitive_intel
+    category: happy_path
+    input: "Pull current web/spider intel on Donkey Betz and likely competitors (AI agent platforms, autonomous ops). Capture citations."
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 200}
+        evidence_pointers: {type: array, minItems: 2}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - evidence_pointers_non_empty
+      - summary_mentions_at_least_one_competitor_name
+      - synthesis_cites_evidence_card_ids
+      - source_urls_present_in_synthesis
+    notes: |
+      Real 30d prompt. User explicitly asked for citations — validator asserts
+      URLs surface in the synthesis output (research_agent.py:879 "Include source
+      URLs for your top 3 citations"). Also asserts the LLM actually names at
+      least one competitor rather than dodging with a generic "the AI agent space
+      is competitive" summary.
+
+  - id: research_happy_05_internal_data_query
+    category: happy_path
+    input: "Query internal DonkeyBetz for the last 7 days of failed agent executions and summarize the failure themes."
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 200}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - tool_call_query_internal_data_invoked
+      - tool_call_arg_data_type_is_agent_executions
+      - tool_call_arg_filter_is_failed
+      - no_fabricated_execution_ids
+    notes: |
+      Exercises the query_internal_data tool routing (research_agent.py:236-285)
+      — the "don't ask for BigQuery/CSV exports" invariant from system_prompt
+      line 92. Common failure mode: LLM defaults to intelligence_tool (web search)
+      for internal-system questions. Validator asserts the correct tool +
+      correct arguments (data_type='agent_executions', filter='failed'), and
+      asserts no fabricated execution IDs appear in the summary.
+
+  # ─── TOOL TIMEOUT ───────────────────────────────────────────────────────
+
+  - id: research_timeout_01_watchdog_kill
+    category: tool_timeout
+    input: "Research market trends and industry landscape"
+    context:
+      invocation_source: scheduled_beat
+    fault_injection:
+      component: celery_worker
+      selector: core.tasks.execute_agent_task
+      fault:
+        type: watchdog_kill
+        params:
+          simulated_reason: "Task timed out after 60 minutes (no heartbeat) - marked as failed by cleanup"
+      python:
+        behavior: raise
+        exception_class: celery.exceptions.SoftTimeLimitExceeded
+        exception_message: "Task timed out after 60 minutes (no heartbeat) - marked as failed by cleanup"
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {const: unavailable}
+        error_signature: {type: string, pattern: "timed out|SoftTimeLimitExceeded|no heartbeat"}
+    acceptance_criteria:
+      - agent_result_success_false
+      - health_status_is_unavailable
+      - error_signature_present
+      - no_fabricated_research_content
+      - failure_recorded_as_execution_memory
+    notes: |
+      Real observed failure mode — 1 of 1 all-time failures for ResearchAgent
+      is the 60-min Celery watchdog kill (2026-07-25 DB snapshot). ResearchAgent's
+      llm_timeout is 180s (research_agent.py:61) but the outer Celery watchdog
+      is a separate ceiling. Buyer-critical invariant: watchdog kill must NOT
+      persist a partial Deliverable with fabricated content — the failure path
+      at research_agent.py:1258-1265 (top-level exception) MUST fire cleanly.
+
+  - id: research_timeout_02_search_strategy_slow
+    category: tool_timeout
+    input: "Research the latest AI trends"
+    context: {}
+    fault_injection:
+      component: python_service
+      selector: core.services.search_strategy_service.generate_query_plan
+      fault:
+        type: latency
+        params:
+          delay_ms: 30000
+          latency_budget_ms: 5000
+      python:
+        behavior: sleep_then_return
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [degraded, unavailable]}
+        error_signature: {type: string}
+    acceptance_criteria:
+      - health_status_is_degraded_or_unavailable
+      - no_fabricated_research_content
+      - summary_or_error_names_slow_dependency
+    notes: |
+      Constructed (not observed) — SearchStrategyService.generate_query_plan is
+      the first call in _iterative_search (research_agent.py:436). If it stalls,
+      the agent has a fallback at research_agent.py:437-439 that uses the task
+      itself as a single query. Validator asserts EITHER graceful fallback with
+      degraded output OR clean unavailable — unacceptable: silent hang or
+      fabricated results.
+
+  # ─── DATA UNAVAILABLE ───────────────────────────────────────────────────
+
+  - id: research_data_unavail_01_empty_iterative_results
+    category: data_unavailable
+    input: "Research the latest quantum-photonic-neuromorphic-metamaterial trends"
+    context: {}
+    fault_injection:
+      component: python_service
+      selector: core.services.search_strategy_service.evaluate_search_results
+      fault:
+        type: bad_payload
+        params:
+          shape: no_results_across_all_rounds
+      python:
+        behavior: return_value
+        return_value:
+          sufficient: false
+          quality_score: 0
+          next_queries: []
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [degraded, unavailable]}
+        error_signature: {type: string}
+    acceptance_criteria:
+      - agent_result_success_false
+      - error_message_names_no_results
+      - no_fabricated_research_content
+      - failure_recorded_as_execution_memory
+    notes: |
+      Exercises the no-results failure path at research_agent.py:1208-1240.
+      All 3 iterative-search rounds return zero results; the agent MUST return
+      success=False with error message including "no results" (research_agent.py:1218
+      "Research returned no results (<detail>)") and MUST NOT fabricate content
+      to fill the void. Critical anti-hallucination test — this is the class of
+      failure A1 audit is meant to detect.
+
+  - id: research_data_unavail_02_spider_db_raises
+    category: data_unavailable
+    input: "Research market trends and industry landscape"
+    context: {}
+    fault_injection:
+      component: db
+      selector: core.services.spider_intelligence.SpiderIntelligenceService.query
+      fault:
+        type: error
+        params:
+          upstream_error: "connection to server was lost"
+      python:
+        behavior: raise
+        exception_class: django.db.utils.OperationalError
+        exception_message: "connection to server was lost"
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [degraded, unavailable]}
+        error_signature: {type: string, pattern: "OperationalError|connection to server was lost"}
+    acceptance_criteria:
+      - health_status_is_degraded_or_unavailable
+      - no_fabricated_spider_results
+      - one_of:
+          branches:
+            - predicate: agent_result_success_false_with_error_signature
+              why: "hard-fail acceptable — DB layer collapsed, no way to get spider data"
+            - predicate: agent_result_success_true_with_web_only_fallback
+              why: "web search succeeded independently and produced sufficient results — degraded but usable"
+    notes: |
+      Constructed — spider_query is one of several parallel tools; web search
+      via intelligence_tool is independent of spider DB. Two acceptable
+      outcomes: (a) hard fail if spider was the only queried source, (b)
+      degraded web-only synthesis with the failure noted. Unacceptable:
+      fabricating spider results to fill the gap.
+
+  # ─── AMBIGUOUS INPUT ────────────────────────────────────────────────────
+
+  - id: research_ambig_01_underspecified
+    category: ambiguous_input
+    input: "research the thing"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 20}
+        evidence_pointers: {type: array}
+        health_status: {enum: [healthy, degraded]}
+        clarifying_question: {type: string}
+    acceptance_criteria:
+      - no_fabricated_context
+      - one_of:
+          branches:
+            - predicate: clarifying_question_asked_with_scope_options
+              why: "asked user to narrow scope — best UX given zero-referent input"
+            - predicate: default_broad_search_executed_with_low_confidence_contract
+              why: "defaulted to broad interpretation (e.g., 'the thing' → generic trending topics) with contract.confidence < 0.5 flagging the ambiguity — acceptable if the summary explicitly names the ambiguity"
+    notes: |
+      Two acceptable resolutions: (a) return a clarifying question asking what
+      topic/domain "the thing" refers to, OR (b) default to a broad interpretation
+      BUT surface the ambiguity in the contract (low confidence + confidence_reason
+      naming the underspecification). Unacceptable: silently picking a specific
+      topic (e.g., "AI trends") and reporting on that as if the user asked —
+      this is the "confident hallucination on ambiguous input" failure A1
+      buyers pay to prevent.
+
+  - id: research_ambig_02_delegation_intent
+    category: ambiguous_input
+    input: "Write a blog post about the AI agent orchestration trends you researched last week"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 30}
+        health_status: {enum: [healthy, degraded]}
+        delegation_attempted: {type: boolean}
+    acceptance_criteria:
+      - no_fabricated_prior_research_reference
+      - one_of:
+          branches:
+            - predicate: delegation_attempted_true_to_content_writer_agent
+              why: "correctly recognized write-intent as out-of-scope + used delegate_to_specialist to ContentWriterAgent — matches system_prompt §DELEGATION guidance"
+            - predicate: summary_states_research_only_scope_with_redirect
+              why: "cleanly refused with a note that ResearchAgent researches but does not write, suggesting ContentWriterAgent — acceptable if delegation tool was unavailable"
+    notes: |
+      ResearchAgent's system_prompt (line 117) explicitly instructs delegation
+      via delegate_to_specialist for content/writing requests. This test
+      exercises that boundary: user asks for writing (out-of-scope) referencing
+      hypothetical prior research. Unacceptable: writing the blog post anyway,
+      OR fabricating a summary of prior research that doesn't exist.
+
+  # ─── BAD INPUT ──────────────────────────────────────────────────────────
+
+  - id: research_bad_01_empty_task
+    category: bad_input
+    input: ""
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [unavailable, degraded]}
+        rejected: {type: boolean}
+    acceptance_criteria:
+      - agent_result_success_false
+      - error_message_names_invalid_or_empty_task
+      - no_fabricated_context
+      - no_tool_calls_made
+    notes: |
+      Empty task hits _validate_task at research_agent.py:836 which returns
+      AgentResult(success=False, error="Invalid or empty task") — a hard rejection
+      before any tool call. Validator asserts no tool calls fired (unlike SIA
+      where empty task acceptably defaults to broad query; ResearchAgent's
+      explicit validation makes rejection the ONLY correct outcome).
+
+  - id: research_bad_02_control_characters
+    category: bad_input
+    input: "\u0000\u0001research\u0007\u001b[31mred\u001b[0m\u0000AI trends"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [healthy, degraded, unavailable]}
+    acceptance_criteria:
+      - no_crash
+      - no_control_characters_in_output
+      - no_ansi_escape_in_output
+      - no_deliverable_persisted_with_control_chars
+      - one_of:
+          branches:
+            - predicate: rejected_true_with_reason
+              why: "clean rejection of malformed payload — safest for buyer-visible deliverables"
+            - predicate: sanitized_and_researched_ai_trends
+              why: "stripped control chars, recognized the 'AI trends' substring, proceeded — acceptable if output + persisted Deliverable are clean"
+    notes: |
+      Malformed payload with NULs, BEL, ANSI escape sequences, and a real
+      research signal ('AI trends') embedded. Agent must not crash, must not
+      echo control characters into the persisted Deliverable (buyer-visible),
+      must not let ANSI escapes render as coloring downstream. Exposes
+      normalization gaps in _build_intelligent_prompt (research_agent.py:832)
+      and _save_to_deliverable (research_agent.py:1191).
