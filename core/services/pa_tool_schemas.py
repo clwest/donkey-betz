@@ -5603,6 +5603,22 @@ PA_TOOL_SCHEMAS = [
                         "returns status='budget_exceeded' with partial results."
                     ),
                 },
+                "context_files": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "Session 2968 PR-2. Optional workspace-relative paths "
+                        "to prepend as a <repo_context> block to the engineer's "
+                        "first user message — reduces cold-start exploration "
+                        "burn. NULL / omitted = engine defaults (repo tree + "
+                        "CLAUDE.md excerpt + PLATFORM_INVENTORY exec summary). "
+                        "EMPTY list = explicit opt-out (no context block). "
+                        "EXPLICIT list = inject only those files (skips "
+                        "defaults). Per-file cap 20KB. Fixed default cost "
+                        "~$0.03/dispatch; expected exploration savings "
+                        "$0.70-$2/dispatch."
+                    ),
+                },
             },
             "required": ["task"],
         },

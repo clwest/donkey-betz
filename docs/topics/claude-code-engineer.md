@@ -171,7 +171,7 @@ Completion envelope (from `execute_engineering_task`, persisted on `AgentExecuti
 | # | Gap | Severity | Status |
 |---|---|---|---|
 | 1 | **No per-dispatch cost cap.** `max_iterations=500` uncapped; no USD budget guard. Runaway dispatches can burn arbitrary credit. Observed S2967: $5 in 16 min at iter 75 with zero writes. | HIGH — customer-facing on A1 | **CLOSED S2967 PR-1** (`max_cost_usd` schema param + per-iteration accumulator + `status='budget_exceeded'` envelope; default $5) |
-| 2 | **No context pre-injection.** Every dispatch is a cold start; engineer re-discovers the whole codebase from scratch. Directly amplifies gap #1. | HIGH — cost lever | **OPEN — S2968 PR-2 target** |
+| 2 | **No context pre-injection.** Every dispatch is a cold start; engineer re-discovers the whole codebase from scratch. Directly amplifies gap #1. | HIGH — cost lever | **CLOSED S2968 PR-2** (`context_files` schema param + `_build_repo_context()` engine helper; defaults inject repo tree + CLAUDE.md excerpt [300 lines] + PLATFORM_INVENTORY excerpt [100 lines]; fixed cost ~$0.03/dispatch) |
 | 3 | **No `max_iterations` schema param.** Callers can't request tighter budget per-dispatch. | MEDIUM | **CLOSED S2967 PR-1** (bundled — `max_iterations` schema param; default 150) |
 | 4 | **Primitive tool surface.** No jump-to-definition, run-tests, run-linter, install-dependency. Engineer spends iterations on tasks a mature agent would resolve with one tool call. | MEDIUM | OPEN — separate arc; `run_tests` = next-best-ROI addition per Rigby T1 SIGN |
 | 5 | **No persistent workspace between dispatches.** Each dispatch re-uses the /tmp clone (on Railway) or the workspace root_path (on local). No caching of prior exploration. | LOW | OPEN — defer |
