@@ -141,7 +141,7 @@ def generate_response(conversation_id: str, trigger_message: str, trigger_source
         client = get_anthropic_client(api_key=api_key)
 
         response = client.messages.create(
-            model="claude-sonnet-4-20250514",
+            model="claude-sonnet-4-6",
             max_tokens=1024,
             system=SYSTEM_PROMPT,
             messages=messages,

@@ -594,7 +594,7 @@ Guidelines:
                                     from core.services.anthropic_client_factory import get_anthropic_client
                                     anthropic_client = get_anthropic_client()
                                     claude_response = anthropic_client.messages.create(
-                                        model="claude-sonnet-4-20250514",
+                                        model="claude-sonnet-4-6",
                                         max_tokens=1000,
                                         system=system_prompt,
                                         messages=[{"role": "user", "content": user_content}]
@@ -775,7 +775,7 @@ OUTPUT THE SYNTHESIS AND DECISION SUMMARY NOW:"""
                                     from core.services.anthropic_client_factory import get_anthropic_client
                                     anthropic_client = get_anthropic_client()
                                     claude_response = anthropic_client.messages.create(
-                                        model="claude-sonnet-4-20250514",
+                                        model="claude-sonnet-4-6",
                                         max_tokens=1200,
                                         system=conclusion_system,
                                         messages=[{"role": "user", "content": conclusion_prompt}]
@@ -1600,7 +1600,7 @@ VOICE RULES (Session 781):
                                         from core.services.anthropic_client_factory import get_anthropic_client
                                         anthropic_client = get_anthropic_client()
                                         claude_response = anthropic_client.messages.create(
-                                            model="claude-sonnet-4-20250514",
+                                            model="claude-sonnet-4-6",
                                             max_tokens=2000,
                                             system=system_prompt,
                                             messages=[{"role": "user", "content": user_prompt}]
