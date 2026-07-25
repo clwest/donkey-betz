@@ -1,0 +1,38 @@
+# Agent Capability Drift — Exceptions Allowlist
+#
+# Ratified at S2953 (plan pivot). Rigby SIGN-refined shape:
+#   soft-warn CI by default; entries here SUPPRESS specific findings with
+#   explicit reason + optional TTL. Graduate to hard-fail for Tier-1
+#   (sellable-in-A1-audit) agents only, once Chris defines that list.
+#
+# Format
+# ------
+#   version: 1
+#   exceptions:
+#     <AgentClassName>:
+#       tier: supported | internal-only | legacy | rerouted | experimental
+#       reason: "short human-readable explanation"
+#       ttl_expires: null | "YYYY-MM-DD"   # optional; scanner warns once expired
+#
+# Tier semantics
+# --------------
+#   supported     — default; enforces all invariants (map→DB, exposure, recent-exec)
+#   internal-only — NOT user-callable via run_agent (suppresses exposure invariant)
+#   legacy        — kept for backwards-compat; exposure + recent-exec suppressed
+#   rerouted      — router prefers a different specialist; same suppressions as legacy
+#   experimental  — not yet ready to sell; suppressions same as legacy
+#
+# Loaded by core/services/agent_capability_drift.py::load_exceptions().
+# Regenerate the drift report with:
+#   python manage.py scan_agent_capability_drift --json | jq
+
+version: 1
+
+exceptions:
+  # Seed entry — explicitly-blocked agent per AgentControlEntry table (Session 1031).
+  # CodeGeneratorAgent was disabled on Railway; kept in AGENT_MAP for router
+  # completeness but not user-callable and never expected to execute.
+  CodeGeneratorAgent:
+    tier: internal-only
+    reason: "Blocked via AgentControlEntry since Session 1031 (Railway environment can't run useful codegen)"
+    ttl_expires: null

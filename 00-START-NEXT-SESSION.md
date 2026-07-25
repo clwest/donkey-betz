@@ -10,8 +10,10 @@
 - u-d-b PR **#3545** — S2952 pre-A1 capability triage: brainstorm honesty + MarketIntel routing + agent_job_status pending UX (3 files, +129/-8, 4 new regression tests).
 
 **Twin mirrors shipped this session:**
-- Content mirror: `24b5e6c1-f6d6-4b11-b470-117f3a14182a` (Donkey Betz workspace, `initiative_phase_doc`, diagnostic cleared via ORM — Ledger #16 re-hit 4th time this session)
-- Ratification envelope: `e625e0f5-a3a8-4f7d-9cdf-1484b802f679` (Architecture & Research workspace, `ratification_record`, `category='governance'`, diagnostic already null)
+- Content mirror (S2952 fixes): `24b5e6c1-f6d6-4b11-b470-117f3a14182a` (Donkey Betz workspace, `initiative_phase_doc`, diagnostic cleared via ORM — Ledger #16 re-hit 4th time)
+- Ratification envelope (S2952 fixes): `e625e0f5-a3a8-4f7d-9cdf-1484b802f679` (Architecture & Research workspace, `ratification_record`, `category='governance'`, diagnostic already null)
+- Content mirror (S2953 plan pivot): `7d795c28-c053-492f-ad05-00b27d335c82` (Donkey Betz workspace, `initiative_phase_doc`, diagnostic cleared via ORM — Ledger #16 re-hit 5th time)
+- Ratification envelope (S2953 plan pivot): `cf20e3e4-b45e-40e2-b551-c7def5db7056` (Architecture & Research workspace, `ratification_record`, `category='governance'`, diagnostic already null)
 
 **Files shipped this session:**
 - **MODIFIED** `core/services/pa_tool_schemas.py` (+30/-7) — brainstorm_tool schema rescoped.
@@ -39,7 +41,59 @@ Full session context: `docs/handoffs/SESSION_2952_PRE_A1_CAPABILITY_FIXES.md`.
 
 ## S2953 open sequence
 
-**S2953 first-action = A1 Reliability Audit Phase 1 first-slice implementation.** No more scoping (deliverable `7870eca9` has the concrete methodology). Chris's 4 open questions still gate Phase 1 code — route to Rigby SIGN before opening code.
+**S2953 first-action = ship Agent Capability Drift Scanner (1 session est).**
+
+Chris ratified new sequencing at S2952 close (turn ~35 in-terminal), after asking *"Do we know exactly what Agents we have and what Rigby can do with them?"* Honest answer surfaced significant gaps: 83 in AGENT_MAP, 92 Agent DB rows, 59 in `run_agent` enum, only **31 agents with any execution evidence in last 7d**, **zero machine-readable capability manifest**, **zero coverage test** asserting AGENT_MAP ↔ enum ↔ mapping ↔ Agent row ↔ recent-execution invariants (exactly why S2952 MarketIntel silent-no-op wasn't caught).
+
+**Ratified new sequence (S2953 → beyond):**
+1. **S2953 — Drift Scanner** (1 session) — Rigby-refined shape below.
+2. **S2954+ — Golden Evals arc** (3-5 sessions min) — scenario coverage per Tier-1 agent. Rigby zoom-out Q4 elevate: *"inventory is necessary, but the product you're actually selling is auditable reliability, which ultimately requires scenario-based evidence, not only structural mapping."*
+3. **After Golden Evals — A1 Phase 1 first-slice** — with Capability Manifest as parallel-track deliverable.
+
+### S2953 Drift Scanner — build spec (Rigby SIGN-refined)
+
+**Single codepath, three surfaces:**
+- Management command (produces JSON report + nonzero exit on failures)
+- Django test wrapper for CI
+- Rigby-callable read-only audit tool (so Chris can ask "run the drift scan now" from PA chat)
+
+**Invariants to check:**
+1. **AGENT_MAP entry → DB Agent row exists** (canonicalized name match)
+2. **User-callable tool exposure path complete:** if intended for `run_agent`, then enum contains it AND `_tool_to_agent_name` maps it AND dispatcher registers it. If NOT intended user-callable, must be tagged `internal-only`.
+3. **Recent execution evidence:** for `supported` tier — ≥1 successful execution in last 30d. For `internal-only` — evidence optional but must not silently claim `supported`.
+4. **Truth-in-advertising:** if agent is `rerouted` (router prefers a different specialist), that must be labeled in manifest/UI. No silent rerouting.
+
+**CI posture:**
+- Start as **soft-warn** in CI (avoids bricking merges while cleaning legacy).
+- Exception allowlist file (`capabilities_exceptions.yaml` or similar) with explicit reasons + TTLs.
+- Graduate to **hard-fail for Tier-1 agents only** (the ones we'd sell in A1 audits).
+
+### Capability Manifest — build spec (Rigby SIGN-refined; parallel track from S2954+)
+
+**Substrate:** single canonical JSON "capabilities index" that renders to (a) internal operator UI, (b) customer-facing audit report sections, (c) CI policy inputs. NOT a doc-per-agent — one JSON, multiple views.
+
+**Fields per agent:**
+- description
+- tools called
+- data dependencies (DB tables, spider sources, external APIs)
+- typical latency
+- last-30d success rate
+- output-shape sample
+- **invocation contract** — required inputs (what happens if omitted) + optional inputs + happy-path example call
+- **evidence pointers** — last_success_at, last_failure_at + top failure signatures, sanitized sample outputs with execution IDs
+- **cost + budget posture** — p50/p95 tokens; workspace freeze/downgrade behavior + fallback model
+- **reliability tier + support status** — `supported` / `legacy` / `rerouted` / `experimental`; SLO target (crude is fine: `p95 < X`, `timeout < Y%`)
+- **safety / data-handling class** — data sensitivity (public/internal/confidential/restricted), outbound network usage, can-mutate-DB / can-send-messages / can-publish
+- **Key distinction across ALL agents:** "exists in code" vs "callable by users" vs "has recent evidence of working"
+
+### A1 Phase 1 still ahead (after Drift Scanner + Golden Evals arc)
+
+When we return to A1 Phase 1 first-slice implementation, Chris's 4 open questions from scoping deliverable `7870eca9` still gate opening code:
+
+1. **Minimum evidence standard** we promise? (run IDs + failure signature samples vs metrics only)
+2. **Default turnaround SLA** we can consistently hit without heroics?
+3. Sell as **agent-system audit** (end-to-end) or **toolchain reliability audit** (tools/contracts) first?
+4. **Legal posture** for handling customer logs (retention window, deletion guarantee, allowed data types)?
 
 ### Universal open sequence
 
