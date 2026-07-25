@@ -120,6 +120,11 @@ export const agentsApi = {
     outcome?: string
     rule_key?: string
   }) => api.get('/v1/agents/signal-dispatches/', { params }),
+  // S2947 A8: manual-dispatch button endpoints.
+  signalDispatchesManual: (body: { cluster_id: string; rule_key?: string }) =>
+    api.post('/v1/agents/signal-dispatches/manual/', body),
+  signalDispatchResolveCluster: (clusterId: string) =>
+    api.get(`/v1/agents/signal-dispatches/resolve-cluster/${clusterId}/`),
 }
 
 // Session 734: Agent Channels API - "Slack for AI Agents"

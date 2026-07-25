@@ -92,6 +92,8 @@ SIGNAL_DISPATCH_RULES: tuple[SignalDispatchRuleDef, ...] = (
 
 
 DEFAULT_MAX_DISPATCHES_PER_SCAN = 10
+MANUAL_SCAN_RUN_ID = 'manual'
+DEFAULT_MANUAL_GUARD_WINDOW_MINUTES = 5
 
 
 def _rules_by_key() -> dict[str, SignalDispatchRuleDef]:
@@ -237,6 +239,130 @@ class SignalDispatchService:
             'keywords': list(cluster.keywords or []),
             'detected_at': cluster.detected_at.isoformat() if cluster.detected_at else None,
         }
+
+    # ── On-demand manual dispatch (S2947 A8) ───────────────────────────
+
+    def create_manual_dispatch(
+        self,
+        cluster_id: str,
+        rule_key: Optional[str] = None,
+        force: bool = False,
+        guard_window_minutes: int = DEFAULT_MANUAL_GUARD_WINDOW_MINUTES,
+        sync: bool = False,
+    ) -> dict:
+        """Create a manually-triggered SignalDispatch for a specific cluster.
+
+        Shared logic between the ``dispatch_signal`` mgmt command and the
+        ``POST /api/v1/agents/signal-dispatches/manual/`` endpoint.
+
+        Returns a dict shape usable by both callers:
+            success: {'success': True, 'dispatch_id', 'cluster_id',
+                      'cluster_name', 'rule_key', 'agent_name',
+                      'sync_result'?}
+            error:   {'success': False, 'error_code', 'error',
+                      'existing_dispatch_id'?}
+
+        Error codes:
+            cluster_not_found | unknown_rule_key | rule_pattern_mismatch |
+            no_matching_rule | multiple_matching_rules | guard_blocked
+        """
+        from core.models_signal_dispatch import SignalDispatch
+        from core.models_signal_intelligence import SignalCluster
+
+        try:
+            cluster = SignalCluster.objects.get(id=cluster_id)
+        except SignalCluster.DoesNotExist:
+            return {
+                'success': False,
+                'error_code': 'cluster_not_found',
+                'error': f"SignalCluster {cluster_id} not found",
+            }
+
+        if rule_key:
+            rule = get_rule(rule_key)
+            if rule is None:
+                return {
+                    'success': False,
+                    'error_code': 'unknown_rule_key',
+                    'error': f"Rule '{rule_key}' not in SIGNAL_DISPATCH_RULES",
+                }
+            if rule.pattern_type != cluster.pattern_type:
+                return {
+                    'success': False,
+                    'error_code': 'rule_pattern_mismatch',
+                    'error': (
+                        f"Rule '{rule_key}' targets pattern_type='{rule.pattern_type}' "
+                        f"but cluster has pattern_type='{cluster.pattern_type}'"
+                    ),
+                }
+        else:
+            matches = [r for r in self.rules if r.pattern_type == cluster.pattern_type]
+            if not matches:
+                return {
+                    'success': False,
+                    'error_code': 'no_matching_rule',
+                    'error': (
+                        f"No rule in SIGNAL_DISPATCH_RULES matches pattern_type="
+                        f"'{cluster.pattern_type}'. Pass rule_key explicitly or add a rule."
+                    ),
+                }
+            if len(matches) > 1:
+                keys = ', '.join(r.key for r in matches)
+                return {
+                    'success': False,
+                    'error_code': 'multiple_matching_rules',
+                    'error': (
+                        f"Multiple rules match pattern_type='{cluster.pattern_type}': "
+                        f"{keys}. Pass rule_key explicitly."
+                    ),
+                }
+            rule = matches[0]
+
+        if not force:
+            since = timezone.now() - timedelta(minutes=guard_window_minutes)
+            blocker = SignalDispatch.objects.filter(
+                signal_cluster=cluster,
+                rule_key=rule.key,
+                dispatched_at__gte=since,
+            ).exclude(outcome='failed').first()
+            if blocker is not None:
+                return {
+                    'success': False,
+                    'error_code': 'guard_blocked',
+                    'error': (
+                        f"Idempotent guard: dispatch {blocker.id} for "
+                        f"(cluster={cluster_id}, rule={rule.key}) exists within "
+                        f"{guard_window_minutes}min window (outcome={blocker.outcome})."
+                    ),
+                    'existing_dispatch_id': str(blocker.id),
+                }
+
+        new_dispatch = SignalDispatch.objects.create(
+            rule_key=rule.key,
+            pattern_type=cluster.pattern_type,
+            agent_name=rule.agent_name,
+            signal_cluster=cluster,
+            outcome='queued',
+            input_payload=self._build_payload(rule, cluster),
+            scan_run_id=MANUAL_SCAN_RUN_ID,
+        )
+
+        result = {
+            'success': True,
+            'dispatch_id': str(new_dispatch.id),
+            'cluster_id': str(cluster.id),
+            'cluster_name': cluster.name,
+            'rule_key': rule.key,
+            'agent_name': rule.agent_name,
+        }
+
+        if sync:
+            result['sync_result'] = self.execute_dispatch(str(new_dispatch.id))
+        else:
+            from core.tasks import dispatch_agent_for_signal_cluster
+            dispatch_agent_for_signal_cluster.delay(str(new_dispatch.id))
+
+        return result
 
     # ── Per-dispatch executor (called by the fan-out Celery task) ──────
 
