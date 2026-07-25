@@ -115,88 +115,76 @@ function JsonBlock({ value }: { value: unknown }) {
   )
 }
 
-// S2947 A8: manual-dispatch modal — paste cluster UUID, inline preview, submit.
+// S2947 A8 + S2948 NEW-4: manual-dispatch modal.
+// v1 (S2947): paste cluster UUID → inline resolve → rule pick → submit.
+// v2 (S2948): searchable cluster picker (Shape B) — no paste needed.
 
-interface ResolvedCluster {
+interface EligibleCluster {
   id: string
   name: string
   pattern_type: string
   strength: number
   confidence: number
   status: string
-  is_actionable: boolean
+  detected_at: string | null
   matching_rules: { key: string; agent_name: string }[]
+  guard_blocked_rules: string[]
 }
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
 function ManualDispatchModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
-  const [clusterId, setClusterId] = useState('')
-  const [resolved, setResolved] = useState<ResolvedCluster | null>(null)
-  const [resolveError, setResolveError] = useState<string | null>(null)
-  const [resolving, setResolving] = useState(false)
+  const [search, setSearch] = useState('')
+  const [selected, setSelected] = useState<EligibleCluster | null>(null)
   const [ruleKey, setRuleKey] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
-  const trimmedId = clusterId.trim()
-  const idIsUuid = UUID_RE.test(trimmedId)
+  const { data, isLoading, error, refetch } = useQuery<{ success: boolean; data: { eligible: EligibleCluster[] } }>({
+    queryKey: ['signal-dispatches-eligible'],
+    queryFn: async () => {
+      const r = await agentsApi.signalDispatchesEligible({ limit: 100 })
+      return r.data
+    },
+    staleTime: 30_000,
+  })
 
-  // Auto-resolve when input becomes a valid UUID.
+  const eligible = data?.data?.eligible || []
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return eligible
+    return eligible.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        c.pattern_type.toLowerCase().includes(q) ||
+        c.id.toLowerCase().includes(q),
+    )
+  }, [eligible, search])
+
+  // When a cluster is picked, auto-select rule if there's exactly one.
   useEffect(() => {
-    if (!idIsUuid) {
-      setResolved(null)
-      setResolveError(null)
+    if (!selected) {
+      setRuleKey('')
       return
     }
-    let cancelled = false
-    setResolving(true)
-    setResolveError(null)
-    agentsApi
-      .signalDispatchResolveCluster(trimmedId)
-      .then((r) => {
-        if (cancelled) return
-        const data = r.data
-        if (data?.success) {
-          setResolved(data.data)
-          // Auto-select rule if there's exactly one match.
-          if (data.data.matching_rules.length === 1) {
-            setRuleKey(data.data.matching_rules[0].key)
-          } else {
-            setRuleKey('')
-          }
-        } else {
-          setResolved(null)
-          setResolveError(data?.error || 'Failed to resolve cluster')
-        }
-      })
-      .catch((err) => {
-        if (cancelled) return
-        setResolved(null)
-        const detail = err?.response?.data?.error
-        setResolveError(detail || 'Cluster not found')
-      })
-      .finally(() => {
-        if (!cancelled) setResolving(false)
-      })
-    return () => {
-      cancelled = true
+    if (selected.matching_rules.length === 1) {
+      setRuleKey(selected.matching_rules[0].key)
+    } else {
+      setRuleKey('')
     }
-  }, [trimmedId, idIsUuid])
+  }, [selected])
 
   const canSubmit =
-    resolved !== null &&
-    resolved.matching_rules.length > 0 &&
+    selected !== null &&
+    selected.matching_rules.length > 0 &&
     ruleKey !== '' &&
     !submitting
 
   const handleSubmit = async () => {
-    if (!canSubmit || !resolved) return
+    if (!canSubmit || !selected) return
     setSubmitting(true)
     setSubmitError(null)
     try {
       await agentsApi.signalDispatchesManual({
-        cluster_id: resolved.id,
+        cluster_id: selected.id,
         rule_key: ruleKey,
       })
       onCreated()
@@ -213,127 +201,170 @@ function ManualDispatchModal({ onClose, onCreated }: { onClose: () => void; onCr
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-lg rounded-lg border border-slate-700 bg-slate-900 shadow-2xl">
+      <div className="w-full max-w-2xl rounded-lg border border-slate-700 bg-slate-900 shadow-2xl">
         <header className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
           <div className="flex items-center gap-2">
             <Send size={16} className="text-amber-400" />
             <h3 className="text-sm font-semibold text-slate-100">Manual dispatch</h3>
+            <span className="text-xs text-slate-500">
+              · {eligible.length} eligible cluster{eligible.length === 1 ? '' : 's'}
+            </span>
           </div>
-          <button
-            onClick={onClose}
-            className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-            aria-label="Close"
-          >
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => refetch()}
+              disabled={isLoading}
+              className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+              aria-label="Refresh cluster list"
+              title="Refresh"
+            >
+              <RefreshCw size={14} className={cn(isLoading && 'animate-spin')} />
+            </button>
+            <button
+              onClick={onClose}
+              className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
         </header>
 
-        <div className="space-y-4 p-4">
-          <div>
-            <label htmlFor="cluster-id-input" className="mb-1 block text-xs font-medium text-slate-400">
-              SignalCluster UUID
-            </label>
-            <input
-              id="cluster-id-input"
-              type="text"
-              value={clusterId}
-              onChange={(e) => setClusterId(e.target.value)}
-              placeholder="00000000-0000-0000-0000-000000000000"
-              className="w-full rounded border border-slate-700 bg-slate-950 px-3 py-1.5 font-mono text-sm text-slate-100 placeholder:text-slate-600 focus:border-blue-500 focus:outline-none"
-              autoFocus
-            />
-            {trimmedId && !idIsUuid && (
-              <div className="mt-1 text-xs text-amber-400">Not a valid UUID.</div>
-            )}
+        <div className="grid grid-cols-2 divide-x divide-slate-800">
+          {/* Left: searchable cluster list */}
+          <div className="flex max-h-[26rem] flex-col">
+            <div className="border-b border-slate-800 p-3">
+              <div className="relative">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Filter by name, pattern, or ID…"
+                  className="w-full rounded border border-slate-700 bg-slate-950 pl-8 pr-3 py-1.5 text-sm text-slate-100 placeholder:text-slate-500 focus:border-blue-500 focus:outline-none"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-auto">
+              {isLoading && (
+                <div className="flex items-center justify-center py-8 text-slate-400">
+                  <Loader2 size={16} className="animate-spin" />
+                </div>
+              )}
+              {!!error && (
+                <div className="m-3 rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
+                  Failed to load eligible clusters.
+                </div>
+              )}
+              {!isLoading && !error && filtered.length === 0 && (
+                <div className="p-4 text-center text-xs text-slate-500">
+                  {eligible.length === 0
+                    ? 'No active clusters have a matching dispatch rule right now.'
+                    : 'No clusters match your filter.'}
+                </div>
+              )}
+              {!isLoading && filtered.length > 0 && (
+                <ul className="divide-y divide-slate-800/60">
+                  {filtered.map((c) => (
+                    <li key={c.id}>
+                      <button
+                        onClick={() => setSelected(c)}
+                        className={cn(
+                          'block w-full px-3 py-2 text-left hover:bg-slate-800/40',
+                          selected?.id === c.id && 'bg-slate-800/60',
+                        )}
+                      >
+                        <div className="truncate text-sm text-slate-100">{c.name || '(no name)'}</div>
+                        <div className="mt-0.5 flex items-center gap-2 text-xs text-slate-500">
+                          <span className="font-mono">{c.pattern_type}</span>
+                          <span>·</span>
+                          <span>str {c.strength.toFixed(2)}</span>
+                          <span>·</span>
+                          <span>conf {c.confidence.toFixed(2)}</span>
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
 
-          {resolving && (
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              <Loader2 size={12} className="animate-spin" /> Resolving cluster…
-            </div>
-          )}
-
-          {resolveError && (
-            <div className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
-              {resolveError}
-            </div>
-          )}
-
-          {resolved && (
-            <>
-              <div className="rounded border border-slate-800 bg-slate-950/60 p-3">
-                <div className="text-sm font-medium text-slate-100">{resolved.name || '(no name)'}</div>
-                <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
-                  <div>
-                    <span className="text-slate-500">Pattern:</span>{' '}
-                    <span className="font-mono text-slate-200">{resolved.pattern_type}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Status:</span>{' '}
-                    <span
-                      className={cn(
-                        'font-mono',
-                        resolved.status === 'active' ? 'text-green-400' : 'text-slate-300',
-                      )}
-                    >
-                      {resolved.status}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Strength:</span>{' '}
-                    <span className="font-mono text-slate-200">{resolved.strength.toFixed(2)}</span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500">Confidence:</span>{' '}
-                    <span className="font-mono text-slate-200">{resolved.confidence.toFixed(2)}</span>
-                  </div>
-                </div>
-                {!resolved.is_actionable && (
-                  <div className="mt-2 flex items-start gap-1 text-xs text-amber-400">
-                    <AlertCircle size={12} className="mt-0.5 flex-shrink-0" />
-                    <span>
-                      Cluster is not actionable (needs status=active + strength≥0.5 + confidence≥0.5).
-                      Dispatch will still fire, but the target agent may reject the input.
-                    </span>
-                  </div>
-                )}
+          {/* Right: selected cluster preview + rule + submit */}
+          <div className="max-h-[26rem] space-y-4 overflow-auto p-4">
+            {!selected && (
+              <div className="flex h-full flex-col items-center justify-center text-center text-xs text-slate-500">
+                <Radio size={24} className="mb-2 opacity-40" />
+                Pick a cluster on the left to preview + dispatch.
               </div>
+            )}
 
-              <div>
-                <label htmlFor="rule-select" className="mb-1 block text-xs font-medium text-slate-400">
-                  Rule
-                </label>
-                {resolved.matching_rules.length === 0 ? (
-                  <div className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-300">
-                    No SIGNAL_DISPATCH_RULES match pattern_type="{resolved.pattern_type}".
-                    Add a rule in signal_dispatch_service.py or pick a different cluster.
+            {selected && (
+              <>
+                <div className="rounded border border-slate-800 bg-slate-950/60 p-3">
+                  <div className="text-sm font-medium text-slate-100">{selected.name || '(no name)'}</div>
+                  <div className="mt-0.5 truncate font-mono text-[10px] text-slate-600">{selected.id}</div>
+                  <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
+                    <div>
+                      <span className="text-slate-500">Pattern:</span>{' '}
+                      <span className="font-mono text-slate-200">{selected.pattern_type}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Status:</span>{' '}
+                      <span className="font-mono text-green-400">{selected.status}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Strength:</span>{' '}
+                      <span className="font-mono text-slate-200">{selected.strength.toFixed(2)}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500">Confidence:</span>{' '}
+                      <span className="font-mono text-slate-200">{selected.confidence.toFixed(2)}</span>
+                    </div>
                   </div>
-                ) : (
+                  {selected.guard_blocked_rules.length > 0 && (
+                    <div className="mt-2 flex items-start gap-1 text-xs text-amber-400">
+                      <AlertCircle size={12} className="mt-0.5 flex-shrink-0" />
+                      <span>
+                        {selected.guard_blocked_rules.length === selected.matching_rules.length
+                          ? 'All matching rules guard-blocked (5-min window). Wait or pick another cluster.'
+                          : `${selected.guard_blocked_rules.length} of ${selected.matching_rules.length} rules guard-blocked.`}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="rule-select" className="mb-1 block text-xs font-medium text-slate-400">
+                    Rule
+                  </label>
                   <select
                     id="rule-select"
                     value={ruleKey}
                     onChange={(e) => setRuleKey(e.target.value)}
                     className="w-full rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
                   >
-                    {resolved.matching_rules.length > 1 && (
+                    {selected.matching_rules.length > 1 && (
                       <option value="">Select rule…</option>
                     )}
-                    {resolved.matching_rules.map((r) => (
+                    {selected.matching_rules.map((r) => (
                       <option key={r.key} value={r.key}>
                         {r.key} → {r.agent_name}
                       </option>
                     ))}
                   </select>
-                )}
-              </div>
-            </>
-          )}
+                </div>
 
-          {submitError && (
-            <div className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
-              {submitError}
-            </div>
-          )}
+                {submitError && (
+                  <div className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
+                    {submitError}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
 
         <footer className="flex items-center justify-end gap-2 border-t border-slate-800 px-4 py-3">
