@@ -403,6 +403,8 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         # Session 1174 PR-2b-1: agent-follow-up wake subscription tool.
         self.register("schedule_followup", self._handle_schedule_followup)
         self.register("agent_job_status", self._handle_agent_job_status)
+        # S2953: Rigby-callable read-only capability drift audit surface.
+        self.register("agent_capability_drift_tool", self._handle_agent_capability_drift)
         self.register("workspace_tool", self._handle_workspace)
         self.register("media_tool", self._handle_media)
         self.register("voice_clone_tool", self._handle_voice_clone)
