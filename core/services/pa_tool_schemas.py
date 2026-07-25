@@ -5981,6 +5981,45 @@ PA_TOOL_SCHEMAS = [
             "required": ["action", "mission_id"],
         },
     },
+    # ── S2953: agent_capability_drift_tool — Rigby-callable audit surface ──
+    {
+        "type": "function",
+        "name": "agent_capability_drift_tool",
+        "description": (
+            "Run the agent capability drift scanner (read-only). Checks four invariants: "
+            "(1) every AGENT_MAP entry has a matching Agent DB row; (2) every non-internal "
+            "agent has enum + mapping + dispatcher-handler coverage; (3) every 'supported'-tier "
+            "agent has ≥1 successful execution in the recent window (default 30 days). "
+            "Exceptions allowlist (capabilities_exceptions.yaml) can suppress findings per "
+            "tier: internal-only / legacy / rerouted / experimental. Same codepath as the "
+            "`scan_agent_capability_drift` management command — one source of truth. Use to "
+            "answer 'do we know what agents we have and whether they still work?' before "
+            "answering a customer question."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["scan", "summary"],
+                    "description": (
+                        "scan → full report (all findings + suppressed). "
+                        "summary → totals only (agent_map_entries, active_findings, suppressed_findings, has_active_failures)."
+                    ),
+                },
+                "recent_window_days": {
+                    "type": "integer",
+                    "description": "Days back to check recent-execution invariant (default 30).",
+                },
+                "invariant": {
+                    "type": "string",
+                    "enum": ["all", "agent_map_to_db", "exposure_completeness", "recent_execution"],
+                    "description": "Filter findings to one invariant. Default 'all'.",
+                },
+            },
+            "required": ["action"],
+        },
+    },
 ]
 
 # ── Startup validation: every tool must have name, description, parameters ──

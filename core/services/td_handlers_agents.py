@@ -6710,3 +6710,47 @@ class AgentHandlersMixin:
             'error_message': (execution.error_message or '')[:500] or None,
             'output_preview': output_preview,
         }
+
+    def _handle_agent_capability_drift(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str,
+    ) -> Dict[str, Any]:
+        """S2953: Rigby-callable read-only agent-capability drift audit.
+
+        Same codepath as ``scan_agent_capability_drift`` management command
+        (Rigby SIGN-refined single-codepath rule).
+        """
+        from core.services.agent_capability_drift import (
+            DEFAULT_RECENT_WINDOW_DAYS,
+            AgentCapabilityDriftScanner,
+        )
+
+        action = (payload.get('action') or 'summary').strip()
+        window = payload.get('recent_window_days') or DEFAULT_RECENT_WINDOW_DAYS
+        invariant_filter = (payload.get('invariant') or 'all').strip()
+
+        scanner = AgentCapabilityDriftScanner(recent_window_days=int(window))
+        report = scanner.run_all()
+        result = report.to_dict()
+
+        if invariant_filter != 'all':
+            result['findings'] = [
+                f for f in result['findings'] if f.get('invariant') == invariant_filter
+            ]
+            result['suppressed_findings'] = [
+                f for f in result['suppressed_findings'] if f.get('invariant') == invariant_filter
+            ]
+
+        if action == 'summary':
+            return {
+                'ok': True,
+                'action': 'summary',
+                'scanned_at': result['scanned_at'],
+                'totals': result['totals'],
+                'has_active_failures': result['has_active_failures'],
+                'has_active_warnings': result['has_active_warnings'],
+            }
+        return {'ok': True, 'action': 'scan', **result}
