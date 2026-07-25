@@ -15,18 +15,17 @@ Rigby SIGN safety conditions (S2934 open):
       never contaminate reactive-pipeline analytics
     * No background scanning — this fires exactly one cluster
 
+S2947 A8: shared logic lives in
+``SignalDispatchService.create_manual_dispatch``; this CLI is a thin
+wrapper so it stays behavior-identical to the manual-dispatch button
+in the Workspace Signal Dispatches tab.
+
 Examples:
     python manage.py dispatch_signal --cluster-id <uuid>
     python manage.py dispatch_signal --cluster-id <uuid> --rule-key opportunity_window__opportunity_scoring
     python manage.py dispatch_signal --cluster-id <uuid> --force --sync
 """
-from datetime import timedelta
-
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
-
-MANUAL_SCAN_RUN_ID = 'manual'
-DEFAULT_GUARD_WINDOW_MINUTES = 5
 
 
 class Command(BaseCommand):
@@ -37,6 +36,10 @@ class Command(BaseCommand):
     )
 
     def add_arguments(self, parser):
+        from core.services.signal_dispatch_service import (
+            DEFAULT_MANUAL_GUARD_WINDOW_MINUTES,
+        )
+
         parser.add_argument(
             '--cluster-id',
             required=True,
@@ -67,92 +70,35 @@ class Command(BaseCommand):
         parser.add_argument(
             '--guard-window-minutes',
             type=int,
-            default=DEFAULT_GUARD_WINDOW_MINUTES,
+            default=DEFAULT_MANUAL_GUARD_WINDOW_MINUTES,
             help=(
-                f'Idempotent guard window (default {DEFAULT_GUARD_WINDOW_MINUTES}min). '
+                f'Idempotent guard window (default {DEFAULT_MANUAL_GUARD_WINDOW_MINUTES}min). '
                 'A prior non-failed dispatch for (cluster, rule_key) within this '
                 'window blocks re-dispatch unless --force.'
             ),
         )
 
     def handle(self, *args, **opts):
-        from core.models_signal_dispatch import SignalDispatch
-        from core.models_signal_intelligence import SignalCluster
-        from core.services.signal_dispatch_service import (
-            SIGNAL_DISPATCH_RULES,
-            SignalDispatchService,
-            get_rule,
-        )
-
-        cluster_id = opts['cluster_id']
-        rule_key = opts.get('rule_key')
-        force = opts['force']
-        sync = opts['sync']
-        guard_minutes = opts['guard_window_minutes']
-
-        try:
-            cluster = SignalCluster.objects.get(id=cluster_id)
-        except SignalCluster.DoesNotExist as e:
-            raise CommandError(f"SignalCluster {cluster_id} not found") from e
-
-        if rule_key:
-            rule = get_rule(rule_key)
-            if rule is None:
-                raise CommandError(f"Rule '{rule_key}' not in SIGNAL_DISPATCH_RULES")
-            if rule.pattern_type != cluster.pattern_type:
-                raise CommandError(
-                    f"Rule '{rule_key}' targets pattern_type='{rule.pattern_type}' "
-                    f"but cluster has pattern_type='{cluster.pattern_type}'"
-                )
-        else:
-            matches = [r for r in SIGNAL_DISPATCH_RULES if r.pattern_type == cluster.pattern_type]
-            if not matches:
-                raise CommandError(
-                    f"No rule in SIGNAL_DISPATCH_RULES matches pattern_type="
-                    f"'{cluster.pattern_type}'. Pass --rule-key explicitly or add a rule."
-                )
-            if len(matches) > 1:
-                keys = ', '.join(r.key for r in matches)
-                raise CommandError(
-                    f"Multiple rules match pattern_type='{cluster.pattern_type}': "
-                    f"{keys}. Pass --rule-key explicitly."
-                )
-            rule = matches[0]
-
-        if not force:
-            since = timezone.now() - timedelta(minutes=guard_minutes)
-            blocker = SignalDispatch.objects.filter(
-                signal_cluster=cluster,
-                rule_key=rule.key,
-                dispatched_at__gte=since,
-            ).exclude(outcome='failed').first()
-            if blocker is not None:
-                raise CommandError(
-                    f"Idempotent guard: dispatch {blocker.id} for "
-                    f"(cluster={cluster_id}, rule={rule.key}) exists within "
-                    f"{guard_minutes}min window (outcome={blocker.outcome}). "
-                    f"Pass --force to override."
-                )
+        from core.services.signal_dispatch_service import SignalDispatchService
 
         service = SignalDispatchService()
-        new_dispatch = SignalDispatch.objects.create(
-            rule_key=rule.key,
-            pattern_type=cluster.pattern_type,
-            agent_name=rule.agent_name,
-            signal_cluster=cluster,
-            outcome='queued',
-            input_payload=service._build_payload(rule, cluster),
-            scan_run_id=MANUAL_SCAN_RUN_ID,
-        )
-        self.stdout.write(
-            f"Created manual dispatch {new_dispatch.id} "
-            f"(cluster={cluster_id}, rule={rule.key}, agent={rule.agent_name})"
+        result = service.create_manual_dispatch(
+            cluster_id=opts['cluster_id'],
+            rule_key=opts.get('rule_key'),
+            force=opts['force'],
+            guard_window_minutes=opts['guard_window_minutes'],
+            sync=opts['sync'],
         )
 
-        if sync:
-            result = service.execute_dispatch(str(new_dispatch.id))
-            self.stdout.write(f"Sync result: {result}")
+        if not result.get('success'):
+            raise CommandError(result.get('error') or 'manual dispatch failed')
+
+        self.stdout.write(
+            f"Created manual dispatch {result['dispatch_id']} "
+            f"(cluster={result['cluster_id']}, rule={result['rule_key']}, "
+            f"agent={result['agent_name']})"
+        )
+        if 'sync_result' in result:
+            self.stdout.write(f"Sync result: {result['sync_result']}")
         else:
-            from core.tasks import dispatch_agent_for_signal_cluster
-            dispatch_agent_for_signal_cluster.delay(str(new_dispatch.id))
             self.stdout.write("Enqueued to Celery (long_running queue)")

@@ -3,8 +3,8 @@
 // Shows recent SignalDispatch rows so operators can see what fired,
 // against which cluster, and whether the target agent succeeded.
 
-import { useState, useMemo } from 'react'
-import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import { useState, useMemo, useEffect } from 'react'
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import {
   Radio,
   Loader2,
@@ -19,6 +19,7 @@ import {
   Clock,
   Ban,
   Zap,
+  Send,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { agentsApi } from '@/lib/api'
@@ -114,6 +115,248 @@ function JsonBlock({ value }: { value: unknown }) {
   )
 }
 
+// S2947 A8: manual-dispatch modal — paste cluster UUID, inline preview, submit.
+
+interface ResolvedCluster {
+  id: string
+  name: string
+  pattern_type: string
+  strength: number
+  confidence: number
+  status: string
+  is_actionable: boolean
+  matching_rules: { key: string; agent_name: string }[]
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function ManualDispatchModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
+  const [clusterId, setClusterId] = useState('')
+  const [resolved, setResolved] = useState<ResolvedCluster | null>(null)
+  const [resolveError, setResolveError] = useState<string | null>(null)
+  const [resolving, setResolving] = useState(false)
+  const [ruleKey, setRuleKey] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+
+  const trimmedId = clusterId.trim()
+  const idIsUuid = UUID_RE.test(trimmedId)
+
+  // Auto-resolve when input becomes a valid UUID.
+  useEffect(() => {
+    if (!idIsUuid) {
+      setResolved(null)
+      setResolveError(null)
+      return
+    }
+    let cancelled = false
+    setResolving(true)
+    setResolveError(null)
+    agentsApi
+      .signalDispatchResolveCluster(trimmedId)
+      .then((r) => {
+        if (cancelled) return
+        const data = r.data
+        if (data?.success) {
+          setResolved(data.data)
+          // Auto-select rule if there's exactly one match.
+          if (data.data.matching_rules.length === 1) {
+            setRuleKey(data.data.matching_rules[0].key)
+          } else {
+            setRuleKey('')
+          }
+        } else {
+          setResolved(null)
+          setResolveError(data?.error || 'Failed to resolve cluster')
+        }
+      })
+      .catch((err) => {
+        if (cancelled) return
+        setResolved(null)
+        const detail = err?.response?.data?.error
+        setResolveError(detail || 'Cluster not found')
+      })
+      .finally(() => {
+        if (!cancelled) setResolving(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [trimmedId, idIsUuid])
+
+  const canSubmit =
+    resolved !== null &&
+    resolved.matching_rules.length > 0 &&
+    ruleKey !== '' &&
+    !submitting
+
+  const handleSubmit = async () => {
+    if (!canSubmit || !resolved) return
+    setSubmitting(true)
+    setSubmitError(null)
+    try {
+      await agentsApi.signalDispatchesManual({
+        cluster_id: resolved.id,
+        rule_key: ruleKey,
+      })
+      onCreated()
+      onClose()
+    } catch (err: unknown) {
+      const errObj = err as { response?: { data?: { error?: string; error_code?: string } } }
+      const detail = errObj?.response?.data?.error
+      const code = errObj?.response?.data?.error_code
+      setSubmitError(detail || `Failed (${code || 'unknown'})`)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-lg rounded-lg border border-slate-700 bg-slate-900 shadow-2xl">
+        <header className="flex items-center justify-between border-b border-slate-800 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Send size={16} className="text-amber-400" />
+            <h3 className="text-sm font-semibold text-slate-100">Manual dispatch</h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded p-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+            aria-label="Close"
+          >
+            <X size={18} />
+          </button>
+        </header>
+
+        <div className="space-y-4 p-4">
+          <div>
+            <label htmlFor="cluster-id-input" className="mb-1 block text-xs font-medium text-slate-400">
+              SignalCluster UUID
+            </label>
+            <input
+              id="cluster-id-input"
+              type="text"
+              value={clusterId}
+              onChange={(e) => setClusterId(e.target.value)}
+              placeholder="00000000-0000-0000-0000-000000000000"
+              className="w-full rounded border border-slate-700 bg-slate-950 px-3 py-1.5 font-mono text-sm text-slate-100 placeholder:text-slate-600 focus:border-blue-500 focus:outline-none"
+              autoFocus
+            />
+            {trimmedId && !idIsUuid && (
+              <div className="mt-1 text-xs text-amber-400">Not a valid UUID.</div>
+            )}
+          </div>
+
+          {resolving && (
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              <Loader2 size={12} className="animate-spin" /> Resolving cluster…
+            </div>
+          )}
+
+          {resolveError && (
+            <div className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
+              {resolveError}
+            </div>
+          )}
+
+          {resolved && (
+            <>
+              <div className="rounded border border-slate-800 bg-slate-950/60 p-3">
+                <div className="text-sm font-medium text-slate-100">{resolved.name || '(no name)'}</div>
+                <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-400">
+                  <div>
+                    <span className="text-slate-500">Pattern:</span>{' '}
+                    <span className="font-mono text-slate-200">{resolved.pattern_type}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Status:</span>{' '}
+                    <span
+                      className={cn(
+                        'font-mono',
+                        resolved.status === 'active' ? 'text-green-400' : 'text-slate-300',
+                      )}
+                    >
+                      {resolved.status}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Strength:</span>{' '}
+                    <span className="font-mono text-slate-200">{resolved.strength.toFixed(2)}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500">Confidence:</span>{' '}
+                    <span className="font-mono text-slate-200">{resolved.confidence.toFixed(2)}</span>
+                  </div>
+                </div>
+                {!resolved.is_actionable && (
+                  <div className="mt-2 flex items-start gap-1 text-xs text-amber-400">
+                    <AlertCircle size={12} className="mt-0.5 flex-shrink-0" />
+                    <span>
+                      Cluster is not actionable (needs status=active + strength≥0.5 + confidence≥0.5).
+                      Dispatch will still fire, but the target agent may reject the input.
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label htmlFor="rule-select" className="mb-1 block text-xs font-medium text-slate-400">
+                  Rule
+                </label>
+                {resolved.matching_rules.length === 0 ? (
+                  <div className="rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-300">
+                    No SIGNAL_DISPATCH_RULES match pattern_type="{resolved.pattern_type}".
+                    Add a rule in signal_dispatch_service.py or pick a different cluster.
+                  </div>
+                ) : (
+                  <select
+                    id="rule-select"
+                    value={ruleKey}
+                    onChange={(e) => setRuleKey(e.target.value)}
+                    className="w-full rounded border border-slate-700 bg-slate-950 px-3 py-1.5 text-sm text-slate-100 focus:border-blue-500 focus:outline-none"
+                  >
+                    {resolved.matching_rules.length > 1 && (
+                      <option value="">Select rule…</option>
+                    )}
+                    {resolved.matching_rules.map((r) => (
+                      <option key={r.key} value={r.key}>
+                        {r.key} → {r.agent_name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </>
+          )}
+
+          {submitError && (
+            <div className="rounded border border-red-500/40 bg-red-500/10 p-2 text-xs text-red-300">
+              {submitError}
+            </div>
+          )}
+        </div>
+
+        <footer className="flex items-center justify-end gap-2 border-t border-slate-800 px-4 py-3">
+          <button
+            onClick={onClose}
+            className="rounded border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            className="inline-flex items-center gap-1.5 rounded border border-amber-500/60 bg-amber-500/20 px-3 py-1.5 text-xs font-medium text-amber-200 hover:bg-amber-500/30 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {submitting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+            Dispatch
+          </button>
+        </footer>
+      </div>
+    </div>
+  )
+}
+
 function DetailPanel({ row, onClose }: { row: SignalDispatchRow; onClose: () => void }) {
   return (
     <aside className="flex h-full w-full max-w-2xl flex-col border-l border-slate-800 bg-slate-900/95">
@@ -206,6 +449,8 @@ export function SignalDispatchesTab() {
   const [patternFilterDraft, setPatternFilterDraft] = useState('')
   const [outcomeFilter, setOutcomeFilter] = useState('')
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [manualOpen, setManualOpen] = useState(false)
+  const queryClient = useQueryClient()
 
   const params = useMemo(
     () => ({
@@ -260,14 +505,24 @@ export function SignalDispatchesTab() {
               Signal-triggered agent auto-dispatch history (S2933 A3 pipeline) · click any row for cluster + payload detail
             </p>
           </div>
-          <button
-            onClick={() => refetch()}
-            disabled={isFetching}
-            className="rounded border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1.5"
-          >
-            <RefreshCw size={12} className={cn(isFetching && 'animate-spin')} />
-            Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setManualOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded border border-amber-500/60 bg-amber-500/15 px-3 py-1.5 text-xs font-medium text-amber-200 hover:bg-amber-500/25"
+              title="Manually dispatch a specific cluster (paste UUID)"
+            >
+              <Send size={12} />
+              Dispatch now
+            </button>
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="rounded border border-slate-700 bg-slate-800/50 px-3 py-1.5 text-xs text-slate-200 hover:bg-slate-800 disabled:opacity-50 flex items-center gap-1.5"
+            >
+              <RefreshCw size={12} className={cn(isFetching && 'animate-spin')} />
+              Refresh
+            </button>
+          </div>
         </div>
 
         {/* Filters */}
@@ -428,6 +683,13 @@ export function SignalDispatchesTab() {
 
       {selectedRow && (
         <DetailPanel row={selectedRow} onClose={() => setSelectedId(null)} />
+      )}
+
+      {manualOpen && (
+        <ManualDispatchModal
+          onClose={() => setManualOpen(false)}
+          onCreated={() => queryClient.invalidateQueries({ queryKey: ['signal-dispatches'] })}
+        />
       )}
     </div>
   )
