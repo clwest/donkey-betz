@@ -2,77 +2,77 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2952 CLOSED. Three capability fixes ratified + shipped in PR #3545 (HEAD `9a0aceba6`) before opening A1 Phase 1 code: (1) `brainstorm_tool` schema honest about single-agent reality (no more panel/debate claim on `create`); (2) `market_intelligence_agent` silent-no-op fixed (missing `_tool_to_agent_name` mapping + broken `.title()` fallback that produced bogus `Market_IntelligenceAgent` name — Celery task was returning SUCCESS in ~50ms while creating zero `AgentExecution` rows); (3) `agent_job_status` pending-state UX (Celery `AsyncResult` fallback surfaces `pending` instead of `legacy_error/unknown`). 4 regression tests green (`ToolToAgentNameResolutionTest`). E2E live-verified post-merge — MarketIntelligenceAgent completed a real 25.5s substantive output (`f10b35c9`), closing the loop on the S2951 finding. **A1 Phase 1 audit template must exclude competitive-intel** until CompetitorAnalysisAgent spider sources are added.
+## READ THIS FIRST — SESSION 2953 CLOSED. Agent Capability Drift Scanner SHIPPED (PR #3547, HEAD `5b5e4a283`) as ratified S2953 first-slice. Single-codepath per Rigby SIGN spec: (a) `python manage.py scan_agent_capability_drift` mgmt cmd, (b) 9-test Django wrapper, (c) Rigby-callable `agent_capability_drift_tool` (actions: scan/summary). Three invariants: AGENT_MAP↔Agent DB row, user-callable exposure completeness (enum+mapping+dispatcher), recent-execution evidence for `supported` tier (default 30d). Exception allowlist `capabilities_exceptions.yaml` at repo root with tier semantics (`supported`/`internal-only`/`legacy`/`rerouted`/`experimental`) + TTL. Live-verified post-merge via Rigby: 83 AGENT_MAP / 92 Agent DB / 59 enum / 1 exception loaded → 77 active findings, 2 suppressed (CodeGeneratorAgent seed). This terminal session shipped **3 PRs** total (#3545 pre-A1 fixes + #3546 S2952 close + #3547 drift scanner) and executed **2 full close cascades**. **S2954 first-action = open Golden Evals arc** — Rigby zoom-out Q4 elevated this as the third capability-substrate leg before A1 Phase 1 code opens.
 
-**Refreshed 2026-07-25 (S2952 close).** Gap-map headline: `100 validated_full / 0 untested` (unchanged — capability fixes, not PA-tools sweep).
+**Refreshed 2026-07-25 (S2953 close).** Gap-map headline: `100 validated_full / 0 untested` (unchanged — capability substrate work, not PA-tools sweep).
 
-**PRs shipped this session:**
-- u-d-b PR **#3545** — S2952 pre-A1 capability triage: brainstorm honesty + MarketIntel routing + agent_job_status pending UX (3 files, +129/-8, 4 new regression tests).
+**PRs shipped this session (in-terminal, both S2952 close-out + S2953 open+close):**
+- u-d-b PR **#3545** — S2952 pre-A1 capability triage: brainstorm honesty + MarketIntel routing + agent_job_status pending UX (3 files, +129/-8).
+- u-d-b PR **#3546** — S2952 close cascade — handoff + 00-START refresh + wrapper pin bump (3 files, +163/-56).
+- u-d-b PR **#3547** — S2953 agent capability drift scanner (8 files, +927/-3, 9 new regression tests).
 
-**Twin mirrors shipped this session:**
-- Content mirror (S2952 fixes): `24b5e6c1-f6d6-4b11-b470-117f3a14182a` (Donkey Betz workspace, `initiative_phase_doc`, diagnostic cleared via ORM — Ledger #16 re-hit 4th time)
-- Ratification envelope (S2952 fixes): `e625e0f5-a3a8-4f7d-9cdf-1484b802f679` (Architecture & Research workspace, `ratification_record`, `category='governance'`, diagnostic already null)
-- Content mirror (S2953 plan pivot): `7d795c28-c053-492f-ad05-00b27d335c82` (Donkey Betz workspace, `initiative_phase_doc`, diagnostic cleared via ORM — Ledger #16 re-hit 5th time)
-- Ratification envelope (S2953 plan pivot): `cf20e3e4-b45e-40e2-b551-c7def5db7056` (Architecture & Research workspace, `ratification_record`, `category='governance'`, diagnostic already null)
+**Twin mirrors shipped this session (six total):**
+- S2952 fixes content mirror: `24b5e6c1-f6d6-4b11-b470-117f3a14182a`
+- S2952 fixes ratification envelope: `e625e0f5-a3a8-4f7d-9cdf-1484b802f679`
+- S2953 plan-pivot content mirror: `7d795c28-c053-492f-ad05-00b27d335c82`
+- S2953 plan-pivot ratification envelope: `cf20e3e4-b45e-40e2-b551-c7def5db7056`
+- S2953 drift scanner ship content mirror: `65b5552b-a449-43d2-bb5e-55a7487a094d`
+- S2953 drift scanner ship ratification envelope: `bd206890-8e52-4337-a4c3-9ad02a2a9bcb`
 
-**Files shipped this session:**
-- **MODIFIED** `core/services/pa_tool_schemas.py` (+30/-7) — brainstorm_tool schema rescoped.
-- **MODIFIED** `core/services/td_handlers_agents.py` (+38/-1) — `_tool_to_agent_name` mapping + fallback fix + `agent_job_status` Celery pending-state UX.
-- **MODIFIED** `core/tests/test_agent_introspection_run_agent_validation_2728.py` (+61) — `ToolToAgentNameResolutionTest` (4 cases).
+**Files shipped this session (S2953 slice):**
+- **NEW** `core/services/agent_capability_drift.py` — shared audit service (3 invariants + classifier).
+- **NEW** `capabilities_exceptions.yaml` — YAML allowlist at repo root.
+- **NEW** `core/management/commands/scan_agent_capability_drift.py` — CLI wrapper.
+- **NEW** `core/tests/test_agent_capability_drift.py` — 9 tests (all green).
+- **MODIFIED** `core/services/pa_tool_schemas.py` — `agent_capability_drift_tool` schema.
+- **MODIFIED** `core/services/tool_dispatcher.py` — handler registration (162→163).
+- **MODIFIED** `core/services/td_handlers_agents.py` — `_handle_agent_capability_drift` method.
 
 **Post-merge live-dispatch (per PLAYBOOK-7.4.4):**
-- Recycled after PR #3545 merge (`make celery-recycle`).
-- Fix 1 verified: brainstorm_tool description no longer claims panel/debate on `create`.
-- Fix 2 verified: dispatch returned `agent='MarketIntelligenceAgent'` (correct); by_agent count=2 with prior E2E `f10b35c9` completed 25.5s substantive.
-- Fix 3 verified: `agent_job_status` returned `ok=True, status='in_progress'` — no more `legacy_error/unknown`.
+- Recycled after PR #3547 merge (`make celery-recycle`).
+- Rigby `agent_capability_drift_tool` returned: 83 AGENT_MAP / 92 DB / 59 enum / 1 exception → 77 active findings, 2 suppressed. `has_active_failures: false, has_active_warnings: true` — soft-warn posture verified.
 
-**Governance:** three capability fixes ratified by Chris; scope expansion (Task 5 MarketIntel silent no-op fix) ratified inline when investigation surfaced the bug.
+**Governance:** plan pivot ratified `yes+A`; Drift Scanner ship ratified "Path A". Golden Evals arc opens at S2954 first-action (Chris ratified option a: 'after Scanner + before Phase 1').
 
 **Rigby Tool Gap Ledger:**
-- **RESOLVED** `brainstorm_tool.create` naming lie (S2951 candidate).
-- **RESOLVED** `market_intelligence_agent` silent no-op / MarketIntelligenceCoordinator misrouting (S2951 candidate).
-- **REMAINS OPEN** CompetitorAnalysisAgent spider coverage gap.
-- **NEW** `agent_job_status` design gap (partial fix shipped; harder fix: reserve `AgentExecution` row synchronously at dispatch).
-- **NEW** schema/handler drift scanner candidate (9 tools already have uncovered actions at HEAD; Rigby zoom-out elevate).
+- **NEW** — Router-level rerouting has no queryable structure; blocks drift scanner invariant 4 ("rerouted must be labeled"). Design task.
+- **NEW** — Capability Manifest not yet built; Rigby's field spec captured in this doc under "Capability Manifest — build spec". Parallel-track deliverable during A1 Phase 1.
+- **RE-HIT (6th time this terminal session)** — `deliverable_tool.create` diagnostic-flag bug on `initiative_phase_doc` (S2909 Ledger #16). All content mirrors ORM-cleared this session.
 
-Full session context: `docs/handoffs/SESSION_2952_PRE_A1_CAPABILITY_FIXES.md`.
+Full session context: `docs/handoffs/SESSION_2953_DRIFT_SCANNER.md`.
 
 ---
 
-## S2953 open sequence
+## S2954 open sequence
 
-**S2953 first-action = ship Agent Capability Drift Scanner (1 session est).**
+**S2954 first-action = open Golden Evals arc** (Rigby zoom-out Q4 elevate, Chris ratified `yes+A`).
 
-Chris ratified new sequencing at S2952 close (turn ~35 in-terminal), after asking *"Do we know exactly what Agents we have and what Rigby can do with them?"* Honest answer surfaced significant gaps: 83 in AGENT_MAP, 92 Agent DB rows, 59 in `run_agent` enum, only **31 agents with any execution evidence in last 7d**, **zero machine-readable capability manifest**, **zero coverage test** asserting AGENT_MAP ↔ enum ↔ mapping ↔ Agent row ↔ recent-execution invariants (exactly why S2952 MarketIntel silent-no-op wasn't caught).
+### Universal open sequence
 
-**Ratified new sequence (S2953 → beyond):**
-1. **S2953 — Drift Scanner** (1 session) — Rigby-refined shape below.
-2. **S2954+ — Golden Evals arc** (3-5 sessions min) — scenario coverage per Tier-1 agent. Rigby zoom-out Q4 elevate: *"inventory is necessary, but the product you're actually selling is auditable reliability, which ultimately requires scenario-based evidence, not only structural mapping."*
-3. **After Golden Evals — A1 Phase 1 first-slice** — with Capability Manifest as parallel-track deliverable.
+1. **Live-verify S2953 drift scanner still healthy:**
+   - `bash tools/pa_local.sh "run agent_capability_drift_tool action=summary"` — expect same totals shape (83/92/59/1 → 77+2). Numbers drift as agents run/get added; only the SHAPE matters.
+   - `python manage.py scan_agent_capability_drift --json | jq .totals` — same numbers from CLI path.
+2. **First-action lint pre-flight:** `python manage.py build_pa_tool_audit --gap-only --emit-gap-json --check` — confirm gap-map headline `100 validated_full / 0 untested`.
+3. **Verify wrapper pin freshness:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2954 pin (retired at S2953 close cascade).
+4. **Open Golden Evals arc** — see arc-open scope below.
 
-### S2953 Drift Scanner — build spec (Rigby SIGN-refined)
+### Golden Evals arc — S2954 open scope
 
-**Single codepath, three surfaces:**
-- Management command (produces JSON report + nonzero exit on failures)
-- Django test wrapper for CI
-- Rigby-callable read-only audit tool (so Chris can ask "run the drift scan now" from PA chat)
+**Motivation (Rigby zoom-out Q4):** *"the product you're actually selling is auditable reliability, which ultimately requires scenario-based evidence, not only structural mapping."* Drift Scanner tells you agents exist + are exposed + have executed. It does NOT tell you they work on real customer inputs. Golden Evals closes that gap.
 
-**Invariants to check:**
-1. **AGENT_MAP entry → DB Agent row exists** (canonicalized name match)
-2. **User-callable tool exposure path complete:** if intended for `run_agent`, then enum contains it AND `_tool_to_agent_name` maps it AND dispatcher registers it. If NOT intended user-callable, must be tagged `internal-only`.
-3. **Recent execution evidence:** for `supported` tier — ≥1 successful execution in last 30d. For `internal-only` — evidence optional but must not silently claim `supported`.
-4. **Truth-in-advertising:** if agent is `rerouted` (router prefers a different specialist), that must be labeled in manifest/UI. No silent rerouting.
+**Arc structure (estimated 3-5 sessions minimum):**
 
-**CI posture:**
-- Start as **soft-warn** in CI (avoids bricking merges while cleaning legacy).
-- Exception allowlist file (`capabilities_exceptions.yaml` or similar) with explicit reasons + TTLs.
-- Graduate to **hard-fail for Tier-1 agents only** (the ones we'd sell in A1 audits).
+1. **S2954 — Tier-1 agent list ratification** — Chris + Rigby define the smallest set of agents whose reliability we'd stake a paying customer engagement on. Candidates from execution-history: SportsOddsAnalyst (408 exec), ArbitrageDetector (379), PredictionMarketAnalyst (376), Rigby (285), ResearchAgent (159), COOAgent (67), etc. But Tier-1 for A1 Reliability Audit wedge may differ from usage volume — target buyer is Platform/ML/SRE + Security/compliance, which suggests: Rigby (dogfooding proof), ResearchAgent, ContentWriterAgent, TrendAnalysisAgent, MarketIntelligenceAgent, ThinkingAgent. Ratify at S2954 open.
+2. **S2955+ — Canonical prompt authoring** — 5-20 prompts per Tier-1 agent covering happy path + typical failure modes (data unavailable, tool timeout, bad input, ambiguous request). Store as YAML at `evals/tier1/<agent>.yaml`.
+3. **S2956+ — Expected output validators** — JSON Schema or Pydantic model per prompt. Accept/reject criteria explicit.
+4. **S2957 — Regression harness** — `python manage.py run_golden_evals` runs the suite on demand; nightly beat task runs it on schedule; results stored in a `GoldenEvalRun` table with pass/fail + drift-over-time.
+5. **After arc close — A1 Phase 1 first-slice** opens with Capability Manifest parallel-track.
 
-### Capability Manifest — build spec (Rigby SIGN-refined; parallel track from S2954+)
+### Capability Manifest — build spec (parallel-track from A1 Phase 1 start)
 
-**Substrate:** single canonical JSON "capabilities index" that renders to (a) internal operator UI, (b) customer-facing audit report sections, (c) CI policy inputs. NOT a doc-per-agent — one JSON, multiple views.
+Substrate: single canonical JSON "capabilities index" that renders to (a) internal operator UI, (b) customer-facing audit report sections, (c) CI policy inputs. NOT a doc-per-agent — one JSON, multiple views.
 
-**Fields per agent:**
+**Fields per agent** (Rigby SIGN-refined):
 - description
 - tools called
 - data dependencies (DB tables, spider sources, external APIs)
@@ -82,68 +82,29 @@ Chris ratified new sequencing at S2952 close (turn ~35 in-terminal), after askin
 - **invocation contract** — required inputs (what happens if omitted) + optional inputs + happy-path example call
 - **evidence pointers** — last_success_at, last_failure_at + top failure signatures, sanitized sample outputs with execution IDs
 - **cost + budget posture** — p50/p95 tokens; workspace freeze/downgrade behavior + fallback model
-- **reliability tier + support status** — `supported` / `legacy` / `rerouted` / `experimental`; SLO target (crude is fine: `p95 < X`, `timeout < Y%`)
-- **safety / data-handling class** — data sensitivity (public/internal/confidential/restricted), outbound network usage, can-mutate-DB / can-send-messages / can-publish
+- **reliability tier + support status** — `supported` / `legacy` / `rerouted` / `experimental`; SLO target
+- **safety / data-handling class** — data sensitivity, outbound network usage, mutation capability
 - **Key distinction across ALL agents:** "exists in code" vs "callable by users" vs "has recent evidence of working"
 
-### A1 Phase 1 still ahead (after Drift Scanner + Golden Evals arc)
+### A1 Phase 1 still ahead (after Golden Evals arc closes)
 
-When we return to A1 Phase 1 first-slice implementation, Chris's 4 open questions from scoping deliverable `7870eca9` still gate opening code:
+Chris's 4 open questions from scoping deliverable `7870eca9` still gate opening Phase 1 code:
 
 1. **Minimum evidence standard** we promise? (run IDs + failure signature samples vs metrics only)
 2. **Default turnaround SLA** we can consistently hit without heroics?
 3. Sell as **agent-system audit** (end-to-end) or **toolchain reliability audit** (tools/contracts) first?
 4. **Legal posture** for handling customer logs (retention window, deletion guarantee, allowed data types)?
 
-### Universal open sequence
+### Deferred queue (updated at S2953 close)
 
-1. **Live-verify S2952 fixes still healthy:**
-   - `bash tools/pa_local.sh "dispatch run_agent market_intelligence_agent with task='S2953 open smoke' — return dispatch response agent field + immediate agent_job_status result"` — expect `agent='MarketIntelligenceAgent'` + `ok=True/pending` (never `legacy_error/unknown`).
-   - Signal-dispatch pipeline still healthy: `SignalCluster.objects.filter(status='active').count()` ≥ 9.
-2. **First-action lint pre-flight:** `python manage.py build_pa_tool_audit --gap-only --emit-gap-json --check` — confirm gap-map headline `100 validated_full / 0 untested`.
-3. **Verify wrapper pin freshness:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2953 pin (retired at S2952 close cascade).
-4. **Route Chris's 4 open questions from scoping deliverable `7870eca9` to Rigby SIGN.** Then start Phase 1 gate implementation with S2952-refined scope (competitive-intel EXCLUDED).
+**S2953 additions:**
+- **Drift scanner invariant 4 (rerouted-must-be-labeled)** — requires `AgentRerouteEntry`-style queryable model. Small design task.
+- **Curate `capabilities_exceptions.yaml`** — 77 active findings at HEAD `5b5e4a283`. Walk through each; either tier-classify or fix (add missing enum entry / exercise the agent). Good candidate for parallel work during Golden Evals arc authoring.
+- **Fix run_agent dispatch-response agent-name echo** — dispatch response echoes the resolved agent name; ensure it always echoes the mapping-canonical CamelCase, not the input string. Minor cleanup, from S2952 handoff.
 
-### Chris's 4 open questions (from scoping deliverable `7870eca9`, still outstanding)
-
-Answer these BEFORE opening Phase 1 code:
-
-1. **Minimum evidence standard** we promise? (e.g., "includes run IDs + failure signature samples" vs "metrics only")
-2. **Default turnaround SLA** we can consistently hit without heroics?
-3. Sell as **agent-system audit** (end-to-end) or **toolchain reliability audit** (tools/contracts) first?
-4. **Legal posture** for handling customer logs (retention window, deletion guarantee, allowed data types)?
-
-### A1 Phase 1 first-slice (per scoping deliverable, S2952-refined)
-
-**Wedge-critical gates for first paying stranger:**
-- **Access** — customer shares access via read-only dashboard OR exported logs OR screen-share
-- **Isolation** — workspace ownership boundaries enforce tenant separation
-- **Value-moment** — deliver "top 3 failure modes + concrete fixes" within 48-72 hours
-- **Onboarding** — 1-page scope intake form + 30-min kickoff script
-- **Legal-Trust** — lightweight agreement (confidentiality, data handling, liability limits, permission-to-analyze)
-
-**Deferrable for first N customers (concierge):**
-- **Payment** — invoice/manual payment link
-- **Cost-cap** — internal cap, no per-workspace enforcement yet
-- **Support** — async email + 1 call
-- **Rigby-tool-subset** — curated manual checklist
-
-**Phase 1 methodology (6 steps, per scoping doc, S2952-refined):**
-1. Scope card — 1 page, define audit boundary (**EXCLUDE competitor landscape section** until CompetitorAnalysisAgent spider gap closed)
-2. Snapshot metrics — current-state ops telemetry
-3. Failure signatures + root causes
-4. Tool reliability matrix (tool → success rate → top errors → mitigation)
-5. Governance posture (guardrails, kill switches, budget caps, access boundaries)
-6. Ratified remediation plan (PLAYBOOK-style)
-
-**Phase 1 estimated:** 1 kickoff (30-60m) + 1 delivery walkthrough (30m) + async revision.
-
-### Deferred queue (updated at S2952 close)
-
-**S2952 additions:**
-- **Schema/handler drift scanner** — small tool contract test suite. 9 tools already have uncovered actions at HEAD `9a0aceba6` (`db_health_tool`, `deliverable_tool.clear_diagnostic`, `mission_verdict`, `obs_tool`, `recent_activity_tool`, `rigby_shift_brief_tool`, `scheduled_tasks_tool`, `surgical_moves_status_tool`, `work_tool`). Rigby zoom-out elevate. Small standalone session.
-- **`agent_job_status` design gap harder fix** — reserve `AgentExecution` row synchronously at dispatch time (before Celery hand-off) so polling always finds it, no pending-state gap. Candidate for A1 Phase 1 "coverage assertions" rulebook.
-- **Fix dispatch-response agent-name echo** — dispatch response echoes the resolved agent name; when resolution goes through the broken fallback (pre-fix) the response echoed the broken name. Now that the fallback is fixed the immediate bug is gone, but the response should echo the ACTUAL CamelCase class name from the mapping, not the input string reformatted. Minor Ledger cleanup.
+**S2952 carry-forward:**
+- Schema/handler drift scanner (Rigby zoom-out elevate — separate from S2953's agent-drift scanner; this one is for PA tool schema↔handler contract).
+- `agent_job_status` design gap harder fix (reserve `AgentExecution` row synchronously at dispatch).
 
 **Signal-dispatch queue (from S2951 close, carry forward):**
 - **(A11)** 6th signal-dispatch rule (`sentiment_shift` or `market_movement`) — no volume evidence gathered yet.
@@ -163,23 +124,27 @@ Answer these BEFORE opening Phase 1 code:
 
 ---
 
-## What's forbidden at S2953 (D6 MORATORIUM still in force)
+## What's forbidden at S2954 (D6 MORATORIUM still in force)
 
-All prior forbidden entries carry forward. **S2952 new forbidden entries:** none.
+All prior forbidden entries carry forward. **S2953 new forbidden entries:** none.
 
 ---
 
 ## What's queued but deferred (do NOT open unless Chris directs)
 
-**S2952 additions to the deferred queue:**
-- **Schema/handler drift scanner** (see above).
-- **`agent_job_status` design gap harder fix** (see above).
-- **Dispatch-response agent-name echo cleanup** (see above).
+**S2953 additions to the deferred queue:**
+- Drift scanner invariant 4 (rerouted-must-be-labeled) — see above.
+- `capabilities_exceptions.yaml` curation — see above.
+
+**S2952 additions (carry forward):**
+- Schema/handler drift scanner (PA tool contract) — separate from S2953's agent-drift scanner.
+- `agent_job_status` design gap harder fix.
+- Dispatch-response agent-name echo cleanup.
 
 **S2951 additions (carry forward):**
-- **MarketIntelligenceCoordinator rename to `StockMarketIntelligenceCoordinator`** — deferred; S2952 fix routes `market_intelligence_agent` correctly to `MarketIntelligenceAgent`, so the stock coordinator no longer captures general market queries by mistake. Rename is cosmetic/clarity work now.
-- **`brainstorm_tool.create` refactor to actual multi-participant panel** — real re-implementation. Session-scope work. (S2952 shipped honest naming; the real-panel implementation stays deferred until a customer asks.)
-- **CompetitorAnalysisAgent spider sources** — LangSmith/Langfuse/Helicone/Arize spider adapters. **Blocks re-inclusion of competitive-intel section in Phase 1 audit template.**
+- `MarketIntelligenceCoordinator` rename — cosmetic only after S2952 routing fix.
+- `brainstorm_tool.create` real panel implementation.
+- CompetitorAnalysisAgent spider sources (LangSmith/Langfuse/Helicone/Arize).
 
 **Long-standing (carry forward from S2951):**
 - Fair-share round-robin scanning.
@@ -200,7 +165,7 @@ All prior forbidden entries carry forward. **S2952 new forbidden entries:** none
 
 ## Sweep progress tracker (Path B ratified S2892)
 
-**All ratified sweep scope discharged as of S2940.** Signal-dispatch (S2946-S2950) + A1 infra (S2951) + pre-A1 capability triage (S2952) are adjacent-domain net-new engineering, not sweep work.
+**All ratified sweep scope discharged as of S2940.** Signal-dispatch (S2946-S2950) + A1 infra (S2951) + pre-A1 capability triage (S2952) + capability substrate (S2953 Drift Scanner) are adjacent-domain net-new engineering, not sweep work.
 
 **Total remaining sweep tools: 0.**
 
@@ -229,17 +194,19 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## For fuller context (S2846 → S2952)
+## For fuller context (S2846 → S2953)
 
 See:
-- **S2952 handoff (current):** `docs/handoffs/SESSION_2952_PRE_A1_CAPABILITY_FIXES.md`
-- **S2952 shipped code:**
-  - `core/services/pa_tool_schemas.py:53-108` — brainstorm_tool schema rescoped (READ vs CREATE separation)
-  - `core/services/td_handlers_agents.py:137-138` — market_intelligence_agent explicit mapping added
-  - `core/services/td_handlers_agents.py:163-176` — fallback formatter rewritten (split+capitalize)
-  - `core/services/td_handlers_agents.py:6652-6681` — agent_job_status Celery AsyncResult pending-state fallback
-  - `core/tests/test_agent_introspection_run_agent_validation_2728.py:301-364` — ToolToAgentNameResolutionTest
-- **S2951 handoff:** `docs/handoffs/SESSION_2951_A1_INFRA_AND_WEDGE_RATIFIED.md`
+- **S2953 handoff (current):** `docs/handoffs/SESSION_2953_DRIFT_SCANNER.md`
+- **S2953 shipped code:**
+  - `core/services/agent_capability_drift.py` — scanner service
+  - `capabilities_exceptions.yaml` — allowlist
+  - `core/management/commands/scan_agent_capability_drift.py` — CLI
+  - `core/services/pa_tool_schemas.py` — `agent_capability_drift_tool` schema (end of PA_TOOL_SCHEMAS)
+  - `core/services/td_handlers_agents.py:6713-6764` — `_handle_agent_capability_drift`
+  - `core/services/tool_dispatcher.py:406-408` — handler registration
+  - `core/tests/test_agent_capability_drift.py` — 9 tests
+- **S2952 handoff:** `docs/handoffs/SESSION_2952_PRE_A1_CAPABILITY_FIXES.md`
 - **A1 Wedge scoping deliverable (unchanged, S2951):** `7870eca9-2bcc-4cb4-a7e1-6c2de7697ec6`
 - **A1 Wedge ratification envelope (unchanged, S2951):** `3ad93ef9-48ef-4a3f-ac55-7678a9f5f28b`
 - **Rigby Tool Gap Ledger:** `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` (Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50`)
