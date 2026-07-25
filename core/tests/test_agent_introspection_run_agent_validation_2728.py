@@ -299,3 +299,64 @@ class FAI2ListLimitCap(TestCase):
         self.assertNotIn('limit', result)
         self.assertNotIn('limit_capped', result)
         self.assertNotIn('agents', result)
+
+
+# ─── S2952: _tool_to_agent_name snake_case → CamelCase resolution ──────
+#
+# Regression guard for the silent-no-op bug found at S2952 open:
+#   `market_intelligence_agent` was in the run_agent enum + registered as a
+#   handler, but missing from the `_tool_to_agent_name` mapping. The prior
+#   fallback (`tool_name.replace('_agent', '').title() + 'Agent'`) produced
+#   `Market_IntelligenceAgent` — a name matching no class and no Agent row.
+#   `Agent.objects.filter(name=...).first()` returned None, so no
+#   AgentExecution row was created, but the Celery task still returned
+#   SUCCESS in ~50ms doing nothing. Two guards below:
+#     (1) explicit mapping entry for market_intelligence_agent
+#     (2) fallback strips underscores so any future 2+ word tool_name
+#         resolves to a real CamelCase class name
+
+
+class ToolToAgentNameResolutionTest(TestCase):
+    """S2952 — snake_case tool_name → CamelCase agent class name resolution."""
+
+    def setUp(self):
+        self.dispatcher = ToolDispatcher()
+
+    def test_explicit_mapping_market_intelligence_agent(self):
+        # Guard against removal of the S2952 mapping entry.
+        self.assertEqual(
+            self.dispatcher._tool_to_agent_name('market_intelligence_agent'),
+            'MarketIntelligenceAgent',
+        )
+
+    def test_fallback_strips_underscores_for_multiword(self):
+        # An unmapped snake_case tool_name must resolve to a CamelCase name
+        # with no underscores (prior title() bug left them intact). Uses a
+        # deliberately fictional tool name so this test doesn't couple to the
+        # explicit mapping table.
+        self.assertEqual(
+            self.dispatcher._tool_to_agent_name('foo_bar_baz_agent'),
+            'FooBarBazAgent',
+        )
+
+    def test_fallback_single_word_still_works(self):
+        # thinking_agent stays in the mapping, so use a fictional single-word
+        # tool_name to prove the fallback path.
+        self.assertEqual(
+            self.dispatcher._tool_to_agent_name('foo_agent'),
+            'FooAgent',
+        )
+
+    def test_no_fallback_result_contains_underscore(self):
+        # Broader invariant: no fallback resolution should ever emit a class
+        # name with an embedded underscore (that was the exact bug shape).
+        for tool_name in [
+            'alpha_beta_agent',
+            'x_y_z_agent',
+            'trend_analysis_v2_agent',
+        ]:
+            result = self.dispatcher._tool_to_agent_name(tool_name)
+            self.assertNotIn(
+                '_', result,
+                f'{tool_name} resolved to {result!r} — must not contain underscore',
+            )
