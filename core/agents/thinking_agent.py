@@ -1151,15 +1151,49 @@ If you cite ANY number that doesn't match the MANDATORY DATA REFERENCE table, yo
         This is called by the Celery task to run a thinking cycle.
         Also compatible with AgentRouter.route() calls.
 
-        Note: Decision execution is handled by the Celery task (run_autonomous_reasoning)
-        using AutonomousActionExecutor (Session 544). This method focuses on thinking only.
+        When invoked from an async context (e.g., brainstorm coordinator via
+        `execute_agent_task` on the long_running/broadcast worker), the body
+        runs in a fresh thread so sync Django ORM calls (gather_context,
+        record_decision, _save_to_deliverable, think) don't hit
+        SynchronousOnlyOperation from the outer running event loop.
         """
+        import asyncio
+
+        try:
+            asyncio.get_running_loop()
+            import concurrent.futures
+            import os
+
+            def _run_in_thread():
+                # Django-blessed opt-out for the async-context ORM check
+                # (docs.djangoproject.com/en/5.0/topics/async/#async-safety).
+                # We know this thread only does sync ORM — the outer loop is
+                # in the caller's context, not this pool's thread.
+                os.environ['DJANGO_ALLOW_ASYNC_UNSAFE'] = 'true'
+                try:
+                    return self._execute_sync(task, context, scifi_context, spider_context, kwargs)
+                finally:
+                    os.environ.pop('DJANGO_ALLOW_ASYNC_UNSAFE', None)
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(_run_in_thread).result()
+        except RuntimeError:
+            return self._execute_sync(task, context, scifi_context, spider_context, kwargs)
+
+    def _execute_sync(
+        self,
+        task: str,
+        context: Dict[str, Any],
+        scifi_context: Dict[str, Any],
+        spider_context: Dict[str, Any],
+        kwargs: Dict[str, Any],
+    ) -> 'AgentResult':
+        """Sync body of execute() — guaranteed to run outside any event loop."""
         import asyncio
         import time
 
         start_time = time.time()
 
-        # Session 750: Time Travel integration
         with self.time_travel_session("autonomous_thinking", task or "thinking_cycle", input_data=context):
             self.record_decision(
                 decision_type="analysis",
@@ -1169,17 +1203,27 @@ If you cite ANY number that doesn't match the MANDATORY DATA REFERENCE table, yo
                 confidence=0.8
             )
 
-            # Gather context
             lookback_hours = kwargs.get('lookback_hours', 24)
             gathered_context = self.gather_context(lookback_hours)
 
-        # Run the async thinking process
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # asyncio.run creates a fresh event loop for think() (async). The sync
+        # ORM calls inside think() → _format_context_for_thinking →
+        # _build_intelligent_prompt → _get_relevant_knowledge_for_task →
+        # semantic_search_with_db_embeddings would otherwise raise
+        # SynchronousOnlyOperation. DJANGO_ALLOW_ASYNC_UNSAFE is the
+        # Django-blessed opt-out (docs.djangoproject.com/en/5.0/topics/async/#async-safety):
+        # we know this is safe because ThinkingAgent runs single-threaded per
+        # execution, no concurrent ORM callers share the connection.
+        import os
+        prior_flag = os.environ.get('DJANGO_ALLOW_ASYNC_UNSAFE')
+        os.environ['DJANGO_ALLOW_ASYNC_UNSAFE'] = 'true'
         try:
-            thinking_result = loop.run_until_complete(self.think(gathered_context))
+            thinking_result = asyncio.run(self.think(gathered_context))
         finally:
-            loop.close()
+            if prior_flag is None:
+                os.environ.pop('DJANGO_ALLOW_ASYNC_UNSAFE', None)
+            else:
+                os.environ['DJANGO_ALLOW_ASYNC_UNSAFE'] = prior_flag
 
         execution_time = int((time.time() - start_time) * 1000)
 
