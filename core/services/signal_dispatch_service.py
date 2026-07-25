@@ -170,13 +170,16 @@ class SignalDispatchService:
             eligible, dedupe_excluded = self._eligible_clusters_for_rule(rule)
             per_rule_diagnostics[rule.key]['eligible_count'] = len(eligible)
             per_rule_diagnostics[rule.key]['blocked_by_dedupe'] = dedupe_excluded
-            for cluster in eligible:
+            for i, cluster in enumerate(eligible):
                 if enqueued >= global_cap:
                     skipped_cap += 1
-                    per_rule_diagnostics[rule.key]['blocked_by_cap'] += 1
+                    # S2949 A9 amendment: record magnitude (remaining
+                    # eligible), not just cap-hit indicator. Rigby fold
+                    # classified same_pr_mitigatable; Chris ratified fix.
+                    per_rule_diagnostics[rule.key]['blocked_by_cap'] += (len(eligible) - i)
                     break
                 if self._rule_daily_cap_reached(rule):
-                    per_rule_diagnostics[rule.key]['blocked_by_daily_cap'] += 1
+                    per_rule_diagnostics[rule.key]['blocked_by_daily_cap'] += (len(eligible) - i)
                     logger.info(
                         "[SIGNAL_DISPATCH] rule %s reached max_per_day=%d",
                         rule.key, rule.max_per_day,
