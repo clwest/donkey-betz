@@ -125,6 +125,9 @@ export const agentsApi = {
     api.post('/v1/agents/signal-dispatches/manual/', body),
   signalDispatchResolveCluster: (clusterId: string) =>
     api.get(`/v1/agents/signal-dispatches/resolve-cluster/${clusterId}/`),
+  // S2948 NEW-4: eligible-cluster picker feed.
+  signalDispatchesEligible: (params?: { pattern_type?: string; include_blocked?: boolean; limit?: number }) =>
+    api.get('/v1/agents/signal-dispatches/eligible/', { params }),
 }
 
 // Session 734: Agent Channels API - "Slack for AI Agents"

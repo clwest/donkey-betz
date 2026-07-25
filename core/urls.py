@@ -2606,6 +2606,8 @@ urlpatterns = [
     # S2947 A8: manual-dispatch button backend (POST) + inline cluster resolve.
     path('api/v1/agents/signal-dispatches/manual/', views_signal_dispatch.signal_dispatches_manual, name='signal-dispatches-manual'),
     path('api/v1/agents/signal-dispatches/resolve-cluster/<uuid:cluster_id>/', views_signal_dispatch.signal_dispatch_resolve_cluster, name='signal-dispatch-resolve-cluster'),
+    # S2948 NEW-4: eligible-cluster picker feed for the Shape B dropdown.
+    path('api/v1/agents/signal-dispatches/eligible/', views_signal_dispatch.signal_dispatches_eligible, name='signal-dispatches-eligible'),
     path('api/v1/agents/batch-execute/', views_agent_execution.execute_agent_batch, name='agent-batch-execute'),
 
     # Session 761: Agent Monitoring API Endpoints
