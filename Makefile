@@ -351,20 +351,18 @@ celery: ## Start Celery workers + beat (background) with multi-queue architectur
 	@# known issue (see CLAUDE.md macOS Celery SIGSEGV note). Local uses
 	@# --pool=solo to match the same pattern the default/pa workers use.
 	@#
-	@# CLAUDE_CODE_ENGINE_PROVIDER=openai is the Session 1226 PR #2556
-	@# fallback. Anthropic credits exhausted Session 1226 carryover —
-	@# without this env var the engineer defaults to Anthropic and every
-	@# dispatch returns "credit balance too low" error 400 (verified
-	@# Session 1229 — code_jobs worker bounce via `make celery` lost the
-	@# fallback because shell env wasn't passed through). REMOVE THIS LINE
-	@# (and the `\` continuation) once Anthropic credits are refilled +
-	@# `unset CLAUDE_CODE_ENGINE_PROVIDER` is the one-liner revert path.
+	@# Session 2967: `CLAUDE_CODE_ENGINE_PROVIDER=openai` fallback removed
+	@# per its own Session 1229 revert contract (Anthropic credits refilled
+	@# 2026-07-25, verified via .env ANTHROPIC_API_KEY). Engineer now defaults
+	@# to claude-sonnet-4 which does NOT exhibit the gpt-5-mini
+	@# clarification-stall pattern on change-mode tasks. If Anthropic credits
+	@# exhaust again, re-add `CLAUDE_CODE_ENGINE_PROVIDER=openai \` on the
+	@# env-prefix line below (Session 1226 PR #2556 fallback pattern).
 	@if pgrep -f "hostname=code_jobs" >/dev/null 2>&1; then \
 		echo "-> Celery code_jobs worker already running"; \
 	else \
 		echo "-> Starting Celery code_jobs worker (solo, queues=code_jobs)..."; \
 		PG_APPLICATION_NAME=dbz:celery-code-jobs SKIP_NLP_MODELS=1 OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES TOKENIZERS_PARALLELISM=false PA_USE_FUNCTION_CALLING=true \
-		CLAUDE_CODE_ENGINE_PROVIDER=openai \
 		nohup .venv/bin/celery -A core worker --loglevel=info --pool=solo \
 			--queues=code_jobs \
 			--hostname=code_jobs@%h > $(CELERY_CODE_JOBS_LOG) 2>&1 & echo $$! > $(CELERY_CODE_JOBS_PIDFILE); \
