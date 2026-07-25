@@ -2,7 +2,7 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2964 CLOSED. Golden Evals validator harness **PR-1 (foundation) shipped**. PR #3569 merged at HEAD `137410e86` (+921 lines / 12 files). Canon_v2 Item 1 landed as code (`_MODEL_POLICIES` 14 → 16 with `ChatConversation` + `ToolCallRecord`; **Ledger #19 discharged**); `EvalRunContext` dataclass + `KNOWN_SUBSTRATES` constants (canon_v2 Item 6 + Rigby's S2964 T1 Q5 zoom-out guardrail); two-substrate adapter abstraction proven end-to-end (slice 8 → `ChatConversationAdapter`, slices 1-7 → `AgentExecutionAdapter`, 91+18=109 prompts persist into new `GoldenEvalRun` model via `run_golden_evals` mgmt cmd); canon_v2 Items 2 + 4 shipped as named canon-documented helpers (`filter_to_buyer_facing_sources()` + `exclude_synthesized_pa_receipts()`). Rigby T1 pre-code SIGN 5 tool_runs joint-agreed on package location + model app + allowlist + skeleton-only scope; Q5 REVISE folded (`KNOWN_SUBSTRATES` constants + receipt filter as named function). Post-merge dogfood verified allowlist live (Probe 1 returned real ChatConversation rows; Probe 2 count_by returned 5,426 ToolCallRecord rows across 21 distinct agent_names — **surprise: Rigby PA turns record as `agent_name='PersonalAssistant'` not `'Rigby'`**; PR-2 `ChatConversationAdapter.build_context()` must join `agent_name IN ('Rigby', 'PersonalAssistant')`). Chris D-verdict via Rigby-relayed terminal path 2026-07-25 — **8 consecutive terminal ratifications** S2957→S2964. **S2965 first-action = PR-2 (executors + Pydantic acceptance runners + fault-injection parser + full adapter build-out + `--execute` flag).**
+## READ THIS FIRST — SESSION 2965 CLOSED. Golden Evals validator harness **PR-2a (executors + runners + --execute + SIA dogfood) shipped**. PR #3571 merged at HEAD `38ee09602` (+1,550 / -66 across 10 files). JSON Schema executor + fault-injection selector parser (canon_v2 Item 5) + universal acceptance-criteria runners (`required_fields_present` + `assistant_response_length_gte_N`) + SIA canonicalizer + `AgentExecutionAdapter.build_context()` full + `ChatConversationAdapter.build_context()` full with evidence-source labeling + `--execute` mgmt cmd flag + `EvalRunContext.evidence_source` / `ledger_health` extension all landed. End-to-end dogfood — `python manage.py run_golden_evals --execute --slice system_intelligence_agent --prompt sia_happy_02_severity_filtered_critical` returns `[PASS]` with 3 correctly-INCONCLUSIVE unknown predicates; `GoldenEvalRun` row persistence verified. **S2965 T1 SIGN raw-ORM verification surfaced two platform-integrity findings — Rigby Tool Gap Ledger #20 (`ToolCallRecord.trace_id` NULL on 100% of 5,430 rows) + #21 (PA→ToolCallRecord write silent regression 2026-06-19, 35d)**. Chris D-verdict via terminal ratified Option A (split into PR-2a this session / PR-2b next / separate fix arc for #20+#21) — **9 consecutive terminal ratifications S2957→S2965**. **S2966 first-action = PR-2b (Rigby-specific `no_fabricated_*` acceptance runners + slice 8 dogfood + Celery-dispatch path for full substrate-row round-trip + per-agent canonicalizers for slices 2-7).**
 
 **Golden Evals arc status:**
 
@@ -11,79 +11,77 @@
 | S2954 | arc open | Tier-1 list + Day-1 scope | (arc-open doc) |
 | S2955-S2962 | Tier-1 spec-authoring (8/8) | 8 canon_v1 YAMLs | `6bf8d9a81` (S2962) |
 | S2963 | arc close | canon_v2 ratification (6 items) | `882626d8f` |
-| **S2964** | **harness PR-1 (foundation)** | **allowlist + EvalRunContext scaffold + skeleton adapters + mgmt cmd + `GoldenEvalRun` model** | **`137410e86`** |
-| S2965 (next) | harness PR-2 | executors + acceptance runners + fault-injection parser + `--execute` | TBD |
-| S2966+ | nightly beat + drift dashboard | scheduled runs + pass-rate telemetry | TBD |
+| S2964 | harness PR-1 (foundation) | allowlist + EvalRunContext scaffold + skeleton adapters + mgmt cmd + `GoldenEvalRun` model | `137410e86` |
+| **S2965** | **harness PR-2a (executors + runners + --execute)** | **JSON Schema executor + fault-injection parser + universal runners + SIA canonicalizer + full adapter build-out + `--execute` flag + SIA end-to-end dogfood** | **`38ee09602`** |
+| S2966 (next) | harness PR-2b | Rigby-specific runners + slice 8 dogfood + Celery-dispatch path + canonicalizers slices 2-7 | TBD |
+| S2967+ | nightly beat + drift dashboard | scheduled runs + pass-rate telemetry | TBD |
 
 **Canon_v2 items — code landing status:**
 
-| Item | Ratified S2963 | Shipped as code at S2964 PR-1 | Deferred to S2965 PR-2 |
-|------|----------------|--------------------------------|-------------------------|
-| 1 — `orm_inspect_tool` allowlist | ✅ | ✅ (14→16 models, live-verified) | — |
-| 2 — source stratification | ✅ | ✅ (`filter_to_buyer_facing_sources()` helper) | — |
-| 3 — opt-in `latency_ms` evidence class | ✅ | ✅ (`EvalRunContext.latency_ms: int \| None`) | — |
-| 4 — receipt-contamination predicate | ✅ | ✅ (`exclude_synthesized_pa_receipts()` helper) | — |
-| 5 — fault-injection selector convention | ✅ | ⏭ | Parser at PR-2 |
-| 6 — `EvalRunContext` shape | ✅ | ✅ (dataclass + `__post_init__` validation) | Adapters get full `build_context()` at PR-2 |
+| Item | Ratified S2963 | Shipped as code at S2964 PR-1 | Shipped as code at S2965 PR-2a | Deferred to S2966 PR-2b |
+|------|----------------|--------------------------------|--------------------------------|-------------------------|
+| 1 — `orm_inspect_tool` allowlist | ✅ | ✅ | — | — |
+| 2 — source stratification | ✅ | ✅ (helper) | ✅ (adapter enforcement + safety net) | — |
+| 3 — opt-in `latency_ms` evidence class | ✅ | ✅ (dataclass field) | ✅ (adapter opt-in path exercised) | — |
+| 4 — receipt-contamination predicate | ✅ | ✅ (helper) | ✅ (adapter enforcement + safety net) | — |
+| 5 — fault-injection selector convention | ✅ | ⏭ | ✅ (parser rejects handler-registry keys) | Runtime injection loop |
+| 6 — `EvalRunContext` shape | ✅ | ✅ (dataclass + validation) | ✅ (extended with `evidence_source` + `ledger_health`; both adapters full build-out) | — |
 
-**PRs shipped this session (S2964):**
-- u-d-b PR **#3569** — S2964 PR-1 Golden Evals harness foundation (+921 lines / 12 files).
-- u-d-b PR **#TBD** — S2964 close cascade (handoff + this 00-START refresh + wrapper pin bump).
+**PRs shipped this session (S2965):**
+- u-d-b PR **#3571** — S2965 PR-2a Golden Evals harness executors + runners + --execute + SIA dogfood (+1,550 / -66).
+- u-d-b PR **#TBD** — S2965 close cascade (handoff + this 00-START refresh + wrapper pin bump).
 
-**Post-merge:** `make recycle-all` executed per PLAYBOOK-7.4.4 (workers advanced to sha=137410e8612e).
+**Post-merge:** `make recycle-all` executed per PLAYBOOK-7.4.4 (workers advanced to sha=`38ee09602420`).
 
-**Governance:** Rigby SIGN discipline held. T1 pre-code SIGN = 5 tool_runs joint-agreement on 5 questions (Q1/Q2/Q4 AGREE; Q3 REVISE minor; Q5 REVISE structural). T2 post-code = 3 live dogfood tool_runs (probe 1/2/3) + one surprise finding (`PersonalAssistant` vs `Rigby` agent_name in `ToolCallRecord`). Chris D-verdict via Rigby proxy after joint agreement — proceed with close + include Probe 3 caveat in handoff (both done).
+**Governance:** Rigby T1 pre-code SIGN = 5 tool_run verifications + 5 questions (Q1 REVISE semantic / Q2 REVISE F-BLOCKING extended by raw-ORM to Ledger #20+#21 / Q3 REVISE finalized_at rule / Q4 AGREE adapters-first / Q5 REVISE scope split). Claude fold-back turn with raw-ORM verification. Rigby A2 REVISE → `evidence_source` + `ledger_health` fields shipped. Rigby A3 pushback → framed Ledger #20+#21 as platform integrity incident. Chris D-verdict via terminal after plain-English framing (per `feedback_plain_english_decision_framing_for_chris`).
 
 **Rigby Tool Gap Ledger:**
-- **Ledger #19 DISCHARGED** — canon_v2 Item 1 code landed in PR #3569 (`ChatConversation` + `ToolCallRecord` in `_MODEL_POLICIES` at `td_handlers_agents.py:820-870`). Live-verified via Rigby probes.
-- **Ledger #16 — no change this session** (no deliverable-create ratification path exercised).
-- **Ledger #17 — no change** (Chris used Rigby-relayed terminal path; **8 consecutive terminal ratifications S2957→S2964**).
-- **Candidate — `claude_code_tool` stdout/duration_ms capture gap** (Probe 3 caveat; may promote to Ledger #NN if PR-2 wants `claude_code_tool` as the harness dispatch surface at S2965).
+- **Ledger #20 NEW** — `ToolCallRecord.trace_id` NULL on 100% of 5,430 rows. Canonical join key in `rigby_agent.yaml canonical_field_mapping` §evidence_pointers unusable. Blocks PR-2b Rigby fabrication predicates. Fix in separate arc.
+- **Ledger #21 NEW** — PA→ToolCallRecord write silent regression 2026-06-19 → present (35d). All-time PA rows = 907, last-30d = 0. Root cause: WARNING-swallow at `tool_dispatcher.py:1043` + likely `conversation_id` UUID field-type mismatch. Fix in separate arc.
+- **Ledger #17 — no change** (Chris used Rigby-relayed terminal path; **9 consecutive terminal ratifications S2957→S2965**).
+- **Ledger #19 — no change** (allowlist landed at S2964; still discharged).
+- **New candidate — Rigby outbound-messaging gap:** Rigby has no PA tool to post proactively into a Chris-visible Chat UI thread; only responds in the thread she was called from. This is the *reverse* of Ledger #17 (Chat UI response-relay). Surfaced S2965 T2 when Claude asked her to relay D-verdict framing. One trigger; watch for second.
 
-Full session context: `docs/handoffs/SESSION_2964_GOLDEN_EVALS_HARNESS_PR1.md`.
+Full session context: `docs/handoffs/SESSION_2965_GOLDEN_EVALS_HARNESS_PR2A.md`.
 
 ---
 
-## S2965 open sequence
+## S2966 open sequence
 
-**S2965 first-action = PR-2 (executors + acceptance runners + fault-injection parser + full adapter build-out).**
+**S2966 first-action = PR-2b (Rigby-specific acceptance runners + slice 8 dogfood + Celery-dispatch path + canonicalizers slices 2-7).**
 
-### PR-2 scope
+### PR-2b scope
 
-1. **JSON Schema executor** — validate agent responses against `expected_output_shape` blocks in each YAML slice. Reject with structured failure_reasons on shape mismatch. Depends on `jsonschema` library (verify present in `requirements.txt`).
+1. **Celery-dispatch mode for `--execute`** — solve the S2965 known limitation (direct `.execute()` bypasses AgentExecution row write). Options: (a) route dispatch through `dispatch_agent.delay(...)` Celery task + poll for completion, (b) two-phase: instantiate `AgentExecution` row explicitly with `parent_execution_id=None + trigger_source='golden_evals_harness'`, then invoke `.execute()` inside its `time_travel_session` context. Pick whichever preserves canonical write-side behavior.
 
-2. **Pydantic acceptance-criteria runners** — starter set covering the 8 shipped slices:
-   - **Universal:** `required_fields_present`, `no_unsupported_claims`, `assistant_response_length_gte_N` (parametric).
-   - **Rigby-specific** (per `rigby_agent.yaml:252-266`): `no_fabricated_tool_runs`, `no_fabricated_deliverable_ids`, `no_fabricated_workspace_or_user_context`, `no_fabricated_conversation_history`, `detects_and_surfaces_tool_runs_empty_vs_claimed`.
-   - **Domain-sensitivity predicates** per Content/Competitor/Legal slices (5-7 predicates each).
-   - **`one_of` branch dispatcher** — evaluates ≤2 branches with per-branch `why` strings.
+2. **Rigby-specific `no_fabricated_*` acceptance runners** (per `rigby_agent.yaml:252-266`):
+   - `no_fabricated_tool_runs` — gated on `ledger_health=OK` else INCONCLUSIVE.
+   - `no_fabricated_deliverable_ids` — regex-validate UUID format + existence-check when ToolCallRecord for `deliverable_tool` present in context.
+   - `no_fabricated_workspace_or_user_context` — gated on workspace membership check.
+   - `no_fabricated_conversation_history` — gated on same-conversation_id turn history.
+   - `detects_and_surfaces_tool_runs_empty_vs_claimed` — combines evidence-gate + rubber-stamp detection.
+   - All must return INCONCLUSIVE when `ledger_health != OK` (Rigby A2 REVISE gating convention).
 
-3. **Fault-injection selector parser (canon_v2 Item 5)** — deterministic resolver for `module.Class.method` + `module.function`. Errors loudly on handler-registry keys per canon Item 5 forbid.
+3. **Per-agent canonicalizers for slices 2-7** — Research / DevOps / Workflow / Legal / Content / Competitor. Each slice's `canonical_field_mapping` block defines the derivation rule; write one canonicalizer per named rule.
 
-4. **`AgentExecutionAdapter` + `ChatConversationAdapter` full `build_context()` build-out:**
-   - **AgentExecution:** read row by PK, apply `exclude_synthesized_pa_receipts()` at query time (per canon_v2 Item 4), join `ToolCallRecord` + `LLMCallLog` via `trace_id`, derive `finalized_at` from `completed_at` + `status`, populate opt-in `latency_ms` from `execution_time_ms`.
-   - **ChatConversation:** read row by PK, apply `filter_to_buyer_facing_sources()` at query time (per canon_v2 Item 2), join `ToolCallRecord` via `trace_id` + `created_at` window with **`agent_name IN ('Rigby', 'PersonalAssistant')`** (per S2964 dogfood surprise §4), derive `finalized_at` from `response_time_ms` populated + `assistant_response` non-empty, populate opt-in `latency_ms` from `response_time_ms` (canon_v2 Item 3 opt-in — YAML must declare).
+4. **Slice 8 (Rigby) dogfood** — first `ChatConversation`-substrate real dispatch. Route through `UnifiedPAEntrypoint.process_message(message)` async. Because Ledger #20+#21 aren't fixed, expect widespread INCONCLUSIVE verdicts on Rigby-specific predicates — the harness should print INCONCLUSIVE counts prominently in the summary so the substrate gap is visible.
 
-5. **`--execute` flag** — remove `--dry-run` default; add explicit `--execute` that actually invokes the agent-under-test and evaluates acceptance criteria. Skeleton `--dry-run` remains available for infra debug.
-
-6. **Substrate row execution** — Golden Evals harness needs a way to dispatch each YAML prompt through the actual agent path. For AgentExecution slices: call `dispatch_agent(agent_name, task, context)`. For ChatConversation (Rigby): call `UnifiedPAEntrypoint.process_message(message)`. Both must populate the substrate row the adapter later observes.
+5. **`one_of` branch dispatcher** — evaluates `≤2` branches with per-branch `why` strings per S2963 canon_v2. Ships as a runner-registry entry.
 
 ### Universal open sequence (unchanged)
 
 1. **Live-verify S2953 drift scanner:** `bash tools/pa_local.sh "run agent_capability_drift_tool action=summary"` — expect shape (83/92/59/1 → 77 active).
 2. **First-action lint pre-flight:** `python manage.py build_pa_tool_audit --gap-only --check` — confirm gap-map headline (`100 full / 2 untested` last observed at S2963).
-3. **Verify wrapper pin freshness:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2965 pin (retired at S2964 close cascade).
-4. **Read canon_v2 doc if not already loaded:** `docs/research/platform/S2963_GOLDEN_EVALS_ARC_CLOSE.md` (190 lines) + S2964 handoff `docs/handoffs/SESSION_2964_GOLDEN_EVALS_HARNESS_PR1.md`.
-5. **Read the harness foundation:** `core/services/golden_evals/` package (context.py + adapters/ + loader.py) + `core/models_golden_evals.py` + `core/management/commands/run_golden_evals.py`.
-6. **Read agent dispatch reference:** `core/agent_router.py` (for AgentExecution slice dispatch) + `core/services/unified_pa_entrypoint.py` (for ChatConversation slice dispatch).
+3. **Verify wrapper pin freshness:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2966 pin (retired at S2965 close cascade).
+4. **Read S2965 handoff + PR-2a shipped code:** `docs/handoffs/SESSION_2965_GOLDEN_EVALS_HARNESS_PR2A.md` + `core/services/golden_evals/` (executors + fault_injection + runners + canonicalizers + adapters full build-out) + `core/management/commands/run_golden_evals.py`.
+5. **Read canon_v2 doc if not already loaded:** `docs/research/platform/S2963_GOLDEN_EVALS_ARC_CLOSE.md` (190 lines).
+6. **Verify Rigby Tool Gap Ledger:** deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` — Ledger #20 + #21 entries appended at S2965 close.
 
-### S2965 scope note
+### S2966 scope note
 
-**In scope for S2965 PR-2:** executor + acceptance runners + fault-injection parser + full adapter build-out + `--execute` flag + first real dispatch of one slice end-to-end (dogfood slice 8 first per S2964 recommendation carried forward).
+**In scope for S2966 PR-2b:** Celery-dispatch mode + Rigby-specific runners + canonicalizers 2-7 + slice 8 dogfood + one_of branch dispatcher. **Estimated 1-2 sessions** (same size as PR-2a).
 
-**Out of scope for S2965:** nightly beat task + pass-rate drift dashboard (S2966+). WorkflowOrchestrationAgent wrapper key-name mismatch code-fix PR (F1 from S2958). Latent migration drift remediation (surfaced at S2964 §5 — Narrative* / HAIDispatchLog).
-
-**Estimated 1-2 sessions for PR-2 close.**
+**Out of scope for S2966:** Ledger #20 + #21 code fixes (separate arc). Nightly beat task + pass-rate drift dashboard (S2967+). WorkflowOrchestrationAgent wrapper key-name mismatch (F1 from S2958). Latent migration drift remediation.
 
 ### Capability Manifest — build spec (parallel-track from A1 Phase 1 start)
 
@@ -98,20 +96,21 @@ Chris's 4 open questions from scoping deliverable `7870eca9` still gate Phase 1 
 3. Sell as **agent-system audit** (end-to-end) or **toolchain reliability audit** (tools/contracts) first?
 4. **Legal posture** for handling customer logs (retention window, deletion guarantee, allowed data types)?
 
-### Deferred queue (updated at S2964 close)
+### Deferred queue (updated at S2965 close)
 
-**S2964 additions:**
-- **Latent migration drift** (Narrative*, `HAIDispatchLog` AlterField pile) surfaced at S2964 makemigrations. Bounded 0395 to `GoldenEvalRun` only; drift remediation belongs to its own PR. Any session.
-- **`claude_code_tool` stdout / duration_ms capture gap** (Probe 3 caveat). Ledger candidate; promote if PR-2 depends on `claude_code_tool` as harness dispatch surface.
-- **`ChatConversationAdapter` agent_name filter must include `'PersonalAssistant'`** (dogfood §4 surprise). Actionable at PR-2 build-out.
-- **Complex-boolean-in-canon-doc misread pattern** (Rigby T2 De Morgan slip at S2963 T2) — one trigger observed. Watch for second occurrence at S2965+ before codifying as canon guidance.
+**S2965 additions:**
+- **PR-2b (next session):** Rigby-specific fabrication runners + slice 8 dogfood + Celery-dispatch mode + slices 2-7 canonicalizers + one_of dispatcher.
+- **Separate arc (later):** Ledger #20 + #21 code fixes — populate `trace_id` at ToolCallRecord write sites, investigate + fix silent PA write regression, migrate `ToolCallRecord.conversation_id` field type or add UUID coerce helper.
+- **PR-2a limitation:** direct `.execute()` bypasses Celery AgentExecution row write — adapter falls back to in-memory context. PR-2b solves.
+- **Rigby outbound-messaging gap** — new ledger candidate (one trigger, watching for second).
+
+**Carry forward from S2964:**
+- Latent migration drift (Narrative* / HAIDispatchLog AlterField pile).
+- `claude_code_tool` stdout / duration_ms capture gap (Probe 3 caveat from S2964).
+- Complex-boolean-in-canon-doc misread pattern (one trigger observed).
 
 **Carry forward from S2963:**
 - Fold P2 / S1 / U1 / P1 / V1 / U2 — all DISCHARGED as canon_v2 Items 1/2/3/4/5/6 at S2963 arc-close.
-- Content-append-vs-final content discrepancy (Ledger candidate, carried from S2962).
-
-**Carry forward from S2961/S2960/S2959/S2958/S2957/S2956/S2955/S2954/S2953/S2952/S2951:**
-_(unchanged — see S2963 close snapshot)_
 
 **Long-standing (carry forward):**
 - Docs restructuring arc (Chris-ratified S2800).
@@ -130,17 +129,17 @@ _(unchanged — see S2963 close snapshot)_
 
 ---
 
-## What's forbidden at S2964 (D6 MORATORIUM still in force)
+## What's forbidden at S2965 (D6 MORATORIUM still in force)
 
-All prior forbidden entries carry forward. **S2964 new forbidden entries:** none.
+All prior forbidden entries carry forward. **S2965 new forbidden entries:** none.
 
-Canon_v2 adds one new forbid ratified at S2963 (fault-injection selectors MUST NOT use handler-registry keys as canonical without adapter layer, per canon_v2 Item 5). **S2965 PR-2 fault-injection parser must enforce this at load time.**
+Canon_v2 forbid (fault-injection selectors) is now **actively enforced in code** at `core/services/golden_evals/fault_injection.py:parse_selector` — bare identifiers or non-importable dotted paths raise `FaultInjectionSelectorError` at load time.
 
 ---
 
 ## What's queued but deferred (do NOT open unless Chris directs)
 
-**S2964 additions to the deferred queue:** (see above §Deferred queue).
+**S2965 additions to the deferred queue:** (see above §Deferred queue).
 
 **Long-standing:**
 - Docs restructuring arc (Chris-ratified S2800).
@@ -161,7 +160,7 @@ Canon_v2 adds one new forbid ratified at S2963 (fault-injection selectors MUST N
 
 ## Sweep progress tracker (Path B ratified S2892)
 
-**All ratified sweep scope discharged as of S2940.** Signal-dispatch (S2946-S2950) + A1 infra (S2951) + pre-A1 capability triage (S2952) + capability substrate (S2953) + Golden Evals arc (S2954-**S2964**) are adjacent-domain net-new engineering + arc substrate, not sweep work.
+**All ratified sweep scope discharged as of S2940.** Signal-dispatch (S2946-S2950) + A1 infra (S2951) + pre-A1 capability triage (S2952) + capability substrate (S2953) + Golden Evals arc (S2954-**S2965**) are adjacent-domain net-new engineering + arc substrate, not sweep work.
 
 **Total remaining sweep tools: 0.**
 
@@ -190,14 +189,20 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## For fuller context (S2846 → S2964)
+## For fuller context (S2846 → S2965)
 
 See:
-- **S2964 handoff (current):** `docs/handoffs/SESSION_2964_GOLDEN_EVALS_HARNESS_PR1.md`
+- **S2965 handoff (current):** `docs/handoffs/SESSION_2965_GOLDEN_EVALS_HARNESS_PR2A.md`
+- **S2965 shipped code:**
+  - `core/services/golden_evals/` — canonicalizers.py + executors.py + fault_injection.py + runners.py + context.py (extended) + adapters/{agent_execution,chat_conversation}.py (extended)
+  - `core/management/commands/run_golden_evals.py` (extended with `--execute` mode)
+  - `core/models_golden_evals.py` (extended with `evidence_source` + `ledger_health`)
+  - `core/migrations/0396_s2965_golden_eval_evidence_source_ledger_health.py`
+- **S2964 handoff:** `docs/handoffs/SESSION_2964_GOLDEN_EVALS_HARNESS_PR1.md`
 - **S2964 shipped code:**
   - `core/models_golden_evals.py` (GoldenEvalRun)
-  - `core/services/golden_evals/` (package: context + adapters + loader)
-  - `core/management/commands/run_golden_evals.py`
+  - `core/services/golden_evals/` (package: context + adapters + loader — extended at S2965)
+  - `core/management/commands/run_golden_evals.py` — extended at S2965
   - `core/services/td_handlers_agents.py:820-870` (canon_v2 Item 1 allowlist additions)
 - **S2963 handoff:** `docs/handoffs/SESSION_2963_GOLDEN_EVALS_ARC_CLOSE_CANON_V2.md`
 - **S2963 canon_v2 ratification doc:** `docs/research/platform/S2963_GOLDEN_EVALS_ARC_CLOSE.md` (190 lines)
@@ -219,11 +224,9 @@ See:
 - **S2955 shipped code:** `evals/tier1/system_intelligence_agent.yaml` (canon_version=1 original reference, 463 lines)
 - **S2954 arc-open handoff:** `docs/handoffs/SESSION_2954_GOLDEN_EVALS_ARC_OPEN.md`
 - **S2954 arc-open scoping doc:** `docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md` (95 lines)
-- **S2953 handoff:** `docs/handoffs/SESSION_2953_DRIFT_SCANNER.md`
-- **S2952 handoff:** `docs/handoffs/SESSION_2952_PRE_A1_CAPABILITY_FIXES.md`
 - **A1 Wedge scoping deliverable (unchanged, S2951):** `7870eca9-2bcc-4cb4-a7e1-6c2de7697ec6`
 - **A1 Wedge ratification envelope (unchanged, S2951):** `3ad93ef9-48ef-4a3f-ac55-7678a9f5f28b`
-- **Rigby Tool Gap Ledger:** `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` (Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50`)
+- **Rigby Tool Gap Ledger:** `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` (Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50`) — updated at S2965 with #20 + #21.
 - **Ledger #17 (S2957):** `db316865-d08c-4cc1-9d8e-cfac249e8c89` — Chat UI response-relay gap (unchanged this session)
 - **Chat UI relay design task (S2957):** `f3f140f9-87bf-488b-8757-eab5d8058f45`
 - **Parent-workspace multi-Claude rulebook:** `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`
