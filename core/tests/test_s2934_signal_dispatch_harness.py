@@ -255,3 +255,156 @@ class TestSignalDispatchesListEndpoint(TestCase):
         resp = self.client.get(url, {'limit': 9999})
         body = resp.json()
         self.assertEqual(body['data']['limit'], 200)
+
+
+class TestSignalDispatchResolveClusterEndpoint(TestCase):
+    """S2947 A8 — GET /api/v1/agents/signal-dispatches/resolve-cluster/<uuid>/"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='sd-resolve', password='x')
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_returns_cluster_metadata_and_matching_rules(self):
+        cluster = _make_cluster(pattern_type='trend_emergence', strength=0.75, confidence=0.6)
+        url = reverse('signal-dispatch-resolve-cluster', args=[str(cluster.id)])
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertTrue(body['success'])
+        data = body['data']
+        self.assertEqual(data['id'], str(cluster.id))
+        self.assertEqual(data['pattern_type'], 'trend_emergence')
+        self.assertEqual(data['strength'], 0.75)
+        self.assertEqual(data['confidence'], 0.6)
+        self.assertEqual(data['status'], 'active')
+        self.assertTrue(data['is_actionable'])
+        rule_keys = {r['key'] for r in data['matching_rules']}
+        self.assertIn('trend_emergence__trend_analysis', rule_keys)
+
+    def test_returns_empty_matching_rules_for_unmapped_pattern(self):
+        cluster = _make_cluster(pattern_type='sentiment_shift')
+        url = reverse('signal-dispatch-resolve-cluster', args=[str(cluster.id)])
+        resp = self.client.get(url)
+        body = resp.json()
+        self.assertTrue(body['success'])
+        self.assertEqual(body['data']['matching_rules'], [])
+
+    def test_returns_404_for_unknown_cluster(self):
+        url = reverse('signal-dispatch-resolve-cluster', args=['00000000-0000-0000-0000-000000000000'])
+        resp = self.client.get(url)
+        self.assertEqual(resp.status_code, 404)
+        body = resp.json()
+        self.assertFalse(body['success'])
+        self.assertEqual(body['error_code'], 'cluster_not_found')
+
+
+class TestSignalDispatchesManualEndpoint(TestCase):
+    """S2947 A8 — POST /api/v1/agents/signal-dispatches/manual/"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='sd-manual', password='x')
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+        self.url = reverse('signal-dispatches-manual')
+
+    def test_missing_cluster_id_returns_400(self):
+        resp = self.client.post(self.url, {}, format='json')
+        self.assertEqual(resp.status_code, 400)
+        body = resp.json()
+        self.assertEqual(body['error_code'], 'missing_cluster_id')
+
+    def test_auto_picks_rule_and_enqueues(self):
+        cluster = _make_cluster(pattern_type='trend_emergence')
+        with patch('core.tasks.dispatch_agent_for_signal_cluster.delay') as mock_delay:
+            resp = self.client.post(self.url, {'cluster_id': str(cluster.id)}, format='json')
+        self.assertEqual(resp.status_code, 201)
+        body = resp.json()
+        self.assertTrue(body['success'])
+        self.assertEqual(body['rule_key'], 'trend_emergence__trend_analysis')
+        self.assertEqual(body['agent_name'], 'TrendAnalysisAgent')
+        self.assertEqual(body['cluster_id'], str(cluster.id))
+        mock_delay.assert_called_once_with(body['dispatch_id'])
+        row = SignalDispatch.objects.get(id=body['dispatch_id'])
+        self.assertEqual(row.scan_run_id, 'manual')
+        self.assertEqual(row.outcome, 'queued')
+
+    def test_explicit_rule_key_pattern_mismatch_returns_400(self):
+        cluster = _make_cluster(pattern_type='trend_emergence')
+        resp = self.client.post(
+            self.url,
+            {'cluster_id': str(cluster.id), 'rule_key': 'content_gap__content_strategy'},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, 400)
+        body = resp.json()
+        self.assertEqual(body['error_code'], 'rule_pattern_mismatch')
+
+    def test_unknown_rule_key_returns_400(self):
+        cluster = _make_cluster(pattern_type='trend_emergence')
+        resp = self.client.post(
+            self.url,
+            {'cluster_id': str(cluster.id), 'rule_key': 'nope__nope'},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.json()['error_code'], 'unknown_rule_key')
+
+    def test_no_matching_rule_returns_400(self):
+        cluster = _make_cluster(pattern_type='sentiment_shift')
+        resp = self.client.post(self.url, {'cluster_id': str(cluster.id)}, format='json')
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.json()['error_code'], 'no_matching_rule')
+
+    def test_unknown_cluster_returns_404(self):
+        resp = self.client.post(
+            self.url,
+            {'cluster_id': '00000000-0000-0000-0000-000000000000'},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, 404)
+        self.assertEqual(resp.json()['error_code'], 'cluster_not_found')
+
+    def test_idempotent_guard_returns_409(self):
+        cluster = _make_cluster(pattern_type='trend_emergence')
+        rule = get_rule('trend_emergence__trend_analysis')
+        assert rule is not None
+        existing = SignalDispatch.objects.create(
+            rule_key=rule.key,
+            pattern_type=cluster.pattern_type,
+            agent_name=rule.agent_name,
+            signal_cluster=cluster,
+            outcome='succeeded',
+            scan_run_id='previous_scan',
+        )
+        resp = self.client.post(self.url, {'cluster_id': str(cluster.id)}, format='json')
+        self.assertEqual(resp.status_code, 409)
+        body = resp.json()
+        self.assertEqual(body['error_code'], 'guard_blocked')
+        self.assertEqual(body['existing_dispatch_id'], str(existing.id))
+        # No new row created.
+        self.assertEqual(
+            SignalDispatch.objects.filter(signal_cluster=cluster).count(), 1,
+        )
+
+    def test_api_does_not_expose_force_param(self):
+        """v1 policy: force must NOT be honorable via the API."""
+        cluster = _make_cluster(pattern_type='trend_emergence')
+        rule = get_rule('trend_emergence__trend_analysis')
+        assert rule is not None
+        SignalDispatch.objects.create(
+            rule_key=rule.key,
+            pattern_type=cluster.pattern_type,
+            agent_name=rule.agent_name,
+            signal_cluster=cluster,
+            outcome='succeeded',
+            scan_run_id='previous_scan',
+        )
+        # Even with force=True in the body, guard must still block.
+        resp = self.client.post(
+            self.url,
+            {'cluster_id': str(cluster.id), 'force': True},
+            format='json',
+        )
+        self.assertEqual(resp.status_code, 409)
+        self.assertEqual(resp.json()['error_code'], 'guard_blocked')
