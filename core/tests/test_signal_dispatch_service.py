@@ -70,10 +70,22 @@ class TestSignalDispatchRulesRegistry(TestCase):
         self.assertEqual(rule.pattern_type, 'opportunity_window')
         self.assertEqual(rule.agent_name, 'OpportunityScoringAgent')
 
-    def test_s2934_ships_three_rules_total(self):
+    def test_demand_spike_rule_maps_to_MarketMovementMonitorAgent(self):
+        # S2949 A9: fourth rule shipped this session.
+        rule = get_rule('demand_spike__market_movement_monitor')
+        self.assertIsNotNone(rule)
+        assert rule is not None
+        self.assertEqual(rule.pattern_type, 'demand_spike')
+        self.assertEqual(rule.agent_name, 'MarketMovementMonitorAgent')
+        self.assertEqual(rule.min_strength, 0.5)
+        self.assertEqual(rule.min_confidence, 0.5)
+        self.assertEqual(rule.max_per_day, 10)
+
+    def test_s2949_ships_four_rules_total(self):
         # Anchor: v1 shipped 2 rules (trend_emergence + content_gap); S2934
-        # added a third (opportunity_window). Anti-regression on registry size.
-        self.assertEqual(len(SIGNAL_DISPATCH_RULES), 3)
+        # added a third (opportunity_window); S2949 added a fourth
+        # (demand_spike). Anti-regression on registry size.
+        self.assertEqual(len(SIGNAL_DISPATCH_RULES), 4)
 
     def test_get_rule_returns_none_for_unknown(self):
         self.assertIsNone(get_rule('nonexistent__nowhere'))
@@ -188,6 +200,51 @@ class TestScanner(TestCase):
     def test_scan_default_global_cap_matches_documented(self):
         # Sanity: DEFAULT_MAX_DISPATCHES_PER_SCAN is what code documents to Chris.
         self.assertEqual(DEFAULT_MAX_DISPATCHES_PER_SCAN, 10)
+
+    def test_scan_dispatches_demand_spike_to_market_movement_monitor(self):
+        # S2949 A9: 4th rule live — demand_spike active cluster fans out
+        # to MarketMovementMonitorAgent via signal_dispatch_v1.
+        cluster = _make_cluster(pattern_type='demand_spike', strength=0.8, confidence=0.7)
+        service = SignalDispatchService()
+        summary = service.scan_and_dispatch()
+
+        self.assertEqual(summary['enqueued'], 1)
+        d = SignalDispatch.objects.get(signal_cluster=cluster)
+        self.assertEqual(d.rule_key, 'demand_spike__market_movement_monitor')
+        self.assertEqual(d.agent_name, 'MarketMovementMonitorAgent')
+        self.assertEqual(d.pattern_type, 'demand_spike')
+        self.assertEqual(d.outcome, 'queued')
+
+    def test_scan_summary_includes_per_rule_diagnostics_for_all_rules(self):
+        # S2949 A9 mitigation for Rigby zoom-out fold — per-rule counters
+        # make starvation-by-ordering observable at 4-rule fan-out.
+        service = SignalDispatchService()
+        summary = service.scan_and_dispatch()
+
+        self.assertIn('per_rule_diagnostics', summary)
+        diag = summary['per_rule_diagnostics']
+        for key in (
+            'trend_emergence__trend_analysis',
+            'content_gap__content_strategy',
+            'opportunity_window__opportunity_scoring',
+            'demand_spike__market_movement_monitor',
+        ):
+            self.assertIn(key, diag, f"missing diagnostics for rule {key}")
+            for counter in ('eligible_count', 'blocked_by_cap', 'blocked_by_dedupe', 'blocked_by_daily_cap'):
+                self.assertIn(counter, diag[key], f"missing counter {counter} for {key}")
+                self.assertIsInstance(diag[key][counter], int)
+
+    def test_scan_diagnostics_records_dedupe_block(self):
+        # S2949 A9: second scan of same cluster increments blocked_by_dedupe.
+        # Dedupe happens at the eligibility query level, so on scan 2 the
+        # cluster shows up as blocked_by_dedupe=1 with eligible_count=0.
+        _make_cluster(pattern_type='trend_emergence', strength=0.8, confidence=0.7)
+        service = SignalDispatchService()
+        service.scan_and_dispatch()
+        summary = service.scan_and_dispatch()
+        diag = summary['per_rule_diagnostics']['trend_emergence__trend_analysis']
+        self.assertEqual(diag['eligible_count'], 0)
+        self.assertEqual(diag['blocked_by_dedupe'], 1)
 
 
 class TestExecuteDispatch(TestCase):
