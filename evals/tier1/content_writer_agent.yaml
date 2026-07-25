@@ -1,0 +1,950 @@
+# Golden Evals — Tier-1 canonical prompt suite
+# Agent under test: ContentWriterAgent (core/agents/content_writer_agent.py:207)
+#
+# Arc: Golden Evals (S2954+ open, ratified 2026-07-25 by Chris via Chat UI)
+# Reliability contract source: docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md §3
+# Arc slice: S2960 — sixth Tier-1 agent YAML (mirrors canon_version=1 substrate
+#   frozen at S2955 in evals/tier1/system_intelligence_agent.yaml and validated
+#   through S2956 research_agent.yaml, S2957 devops_agent.yaml, S2958
+#   workflow_orchestration_agent.yaml, and S2959 legal_doc_drafter_agent.yaml)
+# HEAD at authoring: db5f60fa4
+#
+# Volume snapshot (DB-verified via direct ORM 2026-07-25 T0):
+#   30d executions (owner_agent="ContentWriterAgent",
+#                   created_at >= 2026-06-25T00:00:00Z):        7
+#     (6 completed, 0 failed, 1 cancelled — 0% real 30d failure rate;
+#      the 1 cancellation was worker-restart-attributed with
+#      error_message="Worker restart — execution interrupted (S2800)",
+#      not an agent-side failure)
+#   All-time (no created_at filter):                           23
+#     (20 completed, 2 failed, 1 cancelled — earliest 2026-06-19,
+#      latest 2026-07-24)
+#   30d distinct task-shape distribution (exact from ORM sample):
+#     - "Draft/produce brand-video script for 2026 fitness wearable" (30-45s
+#       or 60-75s variants, VO + on-screen text + CTA, planning-only):  5 rows
+#     - "test dispatch — receipt-shape verify, <200 words":              1 row
+#     - "Run WORKFLOWS['morning_brief'] end-to-end smoke test":          1 row
+#   Observed real failure modes (from AgentExecution.error_message, all-time):
+#     1. "Task timed out after 60 minutes (no heartbeat) - marked as failed
+#        by cleanup" — 2 occurrences (2026-06-23 SMOKE_TEST, 2026-06-19 Operator
+#        Edge weekly newsletter) — same 60-min Celery watchdog pattern observed
+#        in SIA / ResearchAgent / DevOpsAgent / WorkflowOrchestrationAgent /
+#        LegalDocDrafterAgent failure samples.
+#     2. "Worker restart — execution interrupted (S2800)" — 1 occurrence
+#        (2026-07-24 brand video workflow doc cancellation) — platform-generic,
+#        not agent-side.
+#   Verifier note (inherited from S2956 ResearchAgent YAML): AgentExecution.error_message
+#     stores empty-string ("") for successful runs, NOT NULL. Django's
+#     error_message__isnull=False filter returns all rows; use error_message__gt=''
+#     or .exclude(error_message='') for real failures. 3 all-time rows have
+#     non-empty error_message; 20 have '' (empty string, not null); confirmed
+#     directly via ORM at authoring T0. Rigby's orm_inspect_tool.count_by
+#     group_by='status' argument-propagation gap (S2959 Deferred Queue entry) meant
+#     status breakdown was pulled via direct `python manage.py shell` this
+#     session — one more trigger for that ledger candidate.
+#
+#   HONEST COVERAGE LIMITS:
+#   1. THIN TRAFFIC — 7 30d executions is thin but 2nd-thickest in the arc
+#      (SIA 37 / Research 37 / DevOps 13 / Workflow 9 / Legal 5). All-time (23)
+#      is the median across shipped Tier-1 YAMLs.
+#   2. NARROW DOMAIN CONCENTRATION — 5 of 7 30d prompts are variants of the
+#      same fitness-wearable brand-video-script ask (video_script content_type,
+#      planning-only, professional/entertaining tone, VO + on-screen text +
+#      CTA). Zero 30d traffic against blog_post, article, podcast_script,
+#      social_thread, newsletter, or internal_document — 6 of 7 declared
+#      content_type paths are unexercised in the observed window (5 all-time
+#      newsletter runs are >30d ago per the 2026-06-19 sample). Rewrite mode,
+#      Directed mode, and Diagnostic mode are all zero-traffic in the 30d
+#      sample.
+#   3. ZERO 30d AGENT-SIDE FAILURES — the 1 cancellation was worker-restart-
+#      attributed (S2800), not agent-side. All 3 all-time non-empty error_message
+#      rows have platform-generic causes (2x 60-min watchdog kill, 1x worker
+#      restart). Zero LLM-generation failures, zero content-type-validation
+#      failures, zero empty-content failures in the observed sample. All
+#      fault-injection prompts below simulate paths that exist in the code
+#      (line 934/946/1025/1206 guards + platform-wide watchdog pattern) but
+#      aren't in the traffic history.
+#   4. CONTENT-DOMAIN BUYER-FACING RISK — content-writing hallucinations carry
+#      buyer risk (fabricated facts / stats / quotes / sources when research is
+#      empty, word-count violations against declared spec, tone drift, media
+#      generation when "planning only" was specified). This YAML encodes those
+#      as domain-sensitivity acceptance criteria per S2959 canon addition 9:
+#      no_fabricated_facts_absent_research, honors_word_count_within_tolerance,
+#      honors_tone_directive, honors_content_type_structure, and
+#      no_media_generation_when_planning_only. Fewer domain predicates than
+#      LegalDocDrafterAgent (5 vs 7) reflects proportional harm class — content
+#      quality violations degrade UX but rarely trigger irreversible external
+#      consequences the way legal-drafting hallucinations can.
+#
+#   ACTIONABLE CONCLUSION FROM COVERAGE LIMITS (per S2959 Rigby T2 fold 4):
+#     Treat this YAML as SCHEMA + HALLUCINATION-INVARIANT + BUYER-EXPECTATION
+#     VALIDATION, not as a performance/reliability assurance. Volume is thin
+#     (7 30d / 23 all-time), 30d traffic is heavily concentrated on one content
+#     type (video_script fitness-wearable brand videos), and 4 of 5 execution
+#     routing branches are zero-traffic. The domain predicates around
+#     fabrication + word_count + tone + structure + planning-only are the
+#     primary value; passing them prevents buyer-facing quality violations
+#     even when we can't statistically claim the agent is "reliable at
+#     content generation across all 7 content types". Re-baseline volume claims
+#     at S2962 arc-close if production traffic grows past 50 30d executions
+#     spanning ≥3 content types.
+#
+# Agent shape (grounds acceptance criteria):
+#   FIVE routing branches inside execute() at content_writer_agent.py:707–1213
+#   (all inside the same agent contract — deliberately framed as routing
+#   branches, not "new shapes", per S2959 canon addition 10):
+#     (A) SELF-DESCRIPTION shortcut — keyword-triggered at line 776–785 on
+#         ("state your name" / "who are you" / "your capability" / "what can
+#          you do" / "introduce yourself"). Returns AgentResult with
+#         data.type='self_description'. No LLM call.
+#     (B) DIAGNOSTIC mode — triggered when context.diagnostic_mode=true at
+#         line 796–801. Dispatches to _execute_diagnostic at line 1649.
+#         Renders task spec verbatim as deliverable body. NO LLM call.
+#         Returns AgentResult with data.content_type='diagnostic',
+#         data.diagnostic_mode=True (Session 1185 F1 — raw task→body assignment,
+#         no LLM rewrite, for forensic validation flows).
+#     (C) REWRITE mode — triggered when context has review_feedback AND
+#         original_draft at line 824–851. Dispatches to _execute_rewrite at
+#         line 1463. Single LLM call to gpt-5.2 (no tool_calls). Returns
+#         AgentResult with data.metadata.rewrite_mode=True + data.content_type
+#         forced to 'blog_post' + no provenance block. Session 1098 canary
+#         may append output to an existing Deliverable if append_to_deliverable_id
+#         is set.
+#     (D) DIRECTED mode — triggered when context has research_summary AND
+#         (editor_feedback OR required_checks) at line 853–868. Dispatches to
+#         _execute_directed at line 1722. Single LLM call to gpt-5.2 (no
+#         tool_calls). Returns AgentResult with data.metadata.directed_mode=True
+#         + data.content_type forced to 'blog_post' + no provenance block.
+#     (E) STANDARD mode — default path at line 870+ when none of A/B/C/D
+#         triggered. Uses context.content_type (7 declared types +
+#         14 aliases + fall-through to error at line 934), context.research,
+#         tone/audience/word_count. Calls _generate_content (single LLM call to
+#         gpt-5.2 via _call_openai; no tool_calls dispatch — the tools list is
+#         empty at line 257 by design). Returns AgentResult with FULL data
+#         payload (provenance + publishable + validation_status + quality_tier +
+#         confidence + truncated fields set).
+#   All five paths return the same AgentResult shape at the top level:
+#     message: str
+#     success: bool
+#     error: str|None (on failure)
+#     execution_time_ms: int
+#     data: dict (routing-branch-specific keys; see canonical_field_mapping)
+#   agent.tools = [] at line 257 — content generation is DIRECT LLM call, not
+#   tool-mediated. Validators MUST NOT require tool_calls in the AgentResult
+#   for this agent; the evidence tier lives in data.content + data.metadata +
+#   data.provenance (STANDARD only) instead.
+#   Persistence side-effect: _save_to_deliverable called on STANDARD (line
+#     1195), REWRITE-with-append-target (line 1614), and DIAGNOSTIC (line 1695).
+#     Directed mode does NOT auto-persist (caller/pipeline handles persistence
+#     per rewrite-mode docstring line 1483). Tier-1 validators MUST NOT out-of-
+#     band inspect Deliverable DB rows (INTEGRATION EVIDENCE tier per S2958
+#     canon addition 6); validators consult AgentResult.data.content.full_text
+#     length as a native pointer that generation succeeded.
+#
+# Coverage: 13 prompts total (5 happy + 8 fault-injection, 2 per non-happy category).
+#
+# ── Arc-precedent adherence (canon_version=1, S2955-frozen) ──────────────
+# (1) schema_version + canon_version explicit at file top.
+# (2) canonical_field_mapping declares native vs derived per field with named
+#     derivation rules prefixed content_v1_*.
+# (3) fault_injection uses effect-based contract (component + fault.type + params)
+#     with python.{...} adapter as optional appendix; portable beyond Python-mock.
+#     Selectors prefer service-level paths (core.agents.content_writer_agent.* /
+#     core.services.*) over library-internal openai paths per S2957 fold.
+# (4) one_of acceptance-criteria capped at ≤2 branches with mandatory why strings.
+#
+# ── S2958 additions applied (informative, non-breaking) ──────────────────
+# (5) Per-execution-shape evidence-tier requirements in evidence_pointers
+#     derivation_spec — STANDARD mode carries provenance/publishable/validation_status
+#     while REWRITE / DIRECTED / DIAGNOSTIC modes DO NOT; validators consult
+#     data.content.full_text length + data.metadata.actual_word_count instead
+#     for those branches.
+# (6) INTEGRATION EVIDENCE tier distinction — Deliverable row inspection is
+#     out of Tier-1 validator scope; only data.content.full_text on the returned
+#     AgentResult is Tier-1 admissible.
+# (7) TRANSITIONAL marking: N/A this slice (no code-follow-up folds surfaced
+#     during authoring).
+# (8) Timeout-string brittleness avoidance — content_timeout_01 asserts stable
+#     discriminator fields (error_signature pattern, agent_result_success_false)
+#     rather than exact error-message text match.
+#
+# ── S2959 additions applied (informative, non-breaking) ──────────────────
+# (9) Domain-sensitivity acceptance predicates — 5 content-domain predicates
+#     layered on top of the general no_unsupported_claims:
+#       - no_fabricated_facts_absent_research
+#       - honors_word_count_within_tolerance
+#       - honors_tone_directive
+#       - honors_content_type_structure
+#       - no_media_generation_when_planning_only
+#     Fewer than LegalDocDrafterAgent's 7 (proportional harm class — content
+#     quality violations degrade UX but rarely trigger irreversible external
+#     consequences).
+# (10) Routing-branch framing — the 5 execution paths (SELF-DESCRIPTION /
+#      DIAGNOSTIC / REWRITE / DIRECTED / STANDARD) are framed as routing
+#      branches inside the same agent contract, NOT as new shapes. Same
+#      AgentResult top-level structure + hallucination invariants apply across
+#      branches (though evidence-tier requirements carve per-branch differences
+#      per canon addition 5).
+# (11) Coverage-limits actionable conclusion — the THIN / NARROW / ZERO-30d-
+#      FAILURE / BUYER-RISK caveat pile resolves to ONE actionable conclusion
+#      line above: "treat as SCHEMA + HALLUCINATION-INVARIANT + BUYER-EXPECTATION
+#      validation, not performance assurance."
+
+schema_version: 1
+canon_version: 1
+
+meta:
+  agent: ContentWriterAgent
+  tier: 1
+  arc: golden_evals
+  arc_slice: S2960
+  ratified_by: chris_via_chat_ui
+  ratified_date: "2026-07-25"
+  head_sha_at_authoring: db5f60fa4
+  reliability_contract_source: docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md
+  substrate_reference: evals/tier1/legal_doc_drafter_agent.yaml
+  categories_covered:
+    - happy_path
+    - tool_timeout
+    - data_unavailable
+    - ambiguous_input
+    - bad_input
+
+# Explicit mapping from canonical field (canon_version=1) to how it's obtained
+# from the ContentWriterAgent-native AgentResult. Every S2963 validator MUST
+# consult this block; must never invent an ad-hoc mapping.
+canonical_field_mapping:
+  summary:
+    mapping_source: native
+    from: AgentResult.message
+    note: |
+      STANDARD mode message is descriptive: "{ContentType}: '{title}' | {N}
+      words | {tone} tone | for {audience} | [{QUALITY_TIER}]" (line 1104-1116).
+      REWRITE mode message: "{title} | {N} words | rewrite" (line 1578).
+      DIRECTED mode message: "{title} | {N} words | directed mode" (line 1842).
+      DIAGNOSTIC mode message: "Diagnostic dispatch ({N} words, verbatim)" (line 1710).
+      SELF-DESCRIPTION mode message: full canned self-description string (line 781).
+      Validators must accept all five message shapes; content pipeline consumers
+      typically parse title from data.title rather than message.
+  evidence_pointers:
+    mapping_source: derived
+    derivation_rule: content_v1_content_payload_plus_provenance
+    derivation_spec: |
+      STANDARD mode (execute() line 870+, default single-LLM-call path):
+        Preferred (Tier-1 admissible):
+          AgentResult.data.content.full_text length >= 200 (proves generation
+            produced substantive content).
+          + AgentResult.data.provenance (dict) present with non-empty sources
+            list (proves provenance tracking fired at line 1094-1099).
+          + AgentResult.data.publishable=true (proves provenance validation
+            passed at line 1140-1142).
+          + AgentResult.data.metadata.actual_word_count present.
+        Fallback A (content pipeline consumer path): AgentResult.data.content
+          dict has content-type-specific structure keys ('title' / 'meta_description'
+          / 'sections' for blog_post; 'segments' for podcast_script; 'scenes' for
+          video_script; etc. per CONTENT_TYPES[content_type]['structure'] at
+          line 156). Structure presence proves the LLM produced schema-conformant
+          output beyond raw text.
+      REWRITE mode (execute() branch at line 837 → _execute_rewrite at line 1463):
+        Preferred: AgentResult.data.content.full_text length >= 500 (rewrite
+          spec at line 1525 targets 700-1200 words; 500 is minimum acceptable
+          bound for post-truncation safety).
+        + AgentResult.data.metadata.rewrite_mode=true (proves rewrite path was
+          taken).
+        NOTE: rewrite mode does NOT populate data.provenance /
+        data.publishable / data.validation_status; validators must not
+        require them on this branch (per S2958 canon addition 5).
+      DIRECTED mode (execute() branch at line 861 → _execute_directed at line 1722):
+        Preferred: AgentResult.data.content.full_text length >= 500.
+        + AgentResult.data.metadata.directed_mode=true.
+        NOTE: directed mode also lacks provenance/publishable/validation_status
+        (same carve as rewrite).
+      DIAGNOSTIC mode (execute() branch at line 796 → _execute_diagnostic at line 1649):
+        Preferred: AgentResult.data.content.full_text length == len(task)
+          (raw task→body assignment per Session 1185 F1 AC1 at line 1665).
+        + AgentResult.data.diagnostic_mode=true.
+        + AgentResult.data.content_type='diagnostic'.
+        Validators MUST NOT apply word-count-vs-spec or content-structure
+        predicates on this branch — verbatim rendering IS the contract.
+      SELF-DESCRIPTION mode (execute() line 776-785 keyword shortcut):
+        Preferred: AgentResult.data.type='self_description'.
+        + AgentResult.data.capabilities list present.
+        + AgentResult.message contains self-description string.
+        Validators MUST NOT require content generation predicates on this
+        branch — the response IS the self-description.
+      For tool_timeout / data_unavailable / bad_input with success=False,
+      all evidence tiers MAY be empty; validators must accept empty
+      data on failure paths.
+      INTEGRATION EVIDENCE (per S2958 canon addition 6): out-of-band Deliverable
+      row inspection is NOT in Tier-1 validator scope; data.content.full_text
+      length + data.metadata.actual_word_count on the returned AgentResult
+      are the Tier-1 admissible signals.
+  health_status:
+    mapping_source: derived
+    derivation_rule: content_v1_success_and_content_completeness
+    derivation_spec: |
+      if not AgentResult.success:                                       → unavailable
+      elif data.diagnostic_mode is true:                                → healthy
+        (diagnostic mode is verbatim-preservation; if success=True the
+         contract was honored, no further derivation)
+      elif data.type == 'self_description':                             → healthy
+        (self-description mode; if success=True the shortcut returned
+         cleanly, no further derivation)
+      elif data.content.full_text length >= max(200, 0.7 * data.metadata.word_count_target):
+        AND data.metadata.truncated is not true:                        → healthy
+      elif data.content.full_text length >= 200 AND data.metadata.truncated is true:
+                                                                        → degraded
+        (LLM was cut off but produced substantive partial content)
+      elif data.content.full_text length < 200:                         → degraded
+        (thin content; below buyer-usable threshold even if success=True)
+      else:                                                             → healthy
+      Note: ContentWriterAgent's data.output_category and data.confidence
+      derive from _calculate_quality_tier at line 1055; they contribute to
+      the health signal (quality_tier='bronze' + confidence < 0.5 may warrant
+      degraded even at full word count) but are NOT the primary derivation
+      inputs — success + content_length + truncation are. Validators may
+      layer quality_tier / confidence as secondary signals in future canon
+      versions but must not depend on them at canon_version=1.
+
+prompts:
+
+  # ─── HAPPY PATH ─────────────────────────────────────────────────────────
+
+  - id: content_happy_01_video_script_brand_video
+    category: happy_path
+    input: "Create a 30–45s brand video script package for a fitness wearable: concept, logline, beat sheet, full VO script, on-screen text, CTA, plus 6s cutdown. Keep it modern 2026, motion-led, benefits-first. No media generation."
+    context:
+      content_type: video_script
+      tone: professional
+      target_audience: "fitness-tech buyers"
+      word_count: 500
+      research: "The 2026 fitness wearable market has shifted toward AI-driven recovery insights and continuous-glucose adjacent metrics. Buyers care about actionable coaching, not raw data. Competing brands emphasize community and streak mechanics; premium tier emphasizes accuracy and coach-in-your-ear features."
+      no_media_generation: true
+      deliverable_format: "video script package"
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 40}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - data_content_type_is_video_script
+      - data_metadata_actual_word_count_present
+      - data_content_full_text_length_gte_200
+      - honors_word_count_within_tolerance
+      - honors_tone_directive
+      - honors_content_type_structure
+      - no_fabricated_facts_absent_research
+      - no_media_generation_when_planning_only
+      - one_of:
+          branches:
+            - predicate: data_provenance_present_with_sources
+              why: "canonical STANDARD-mode happy path — provenance tracking fired at line 1094-1099 with ResearchContext source (line 1067-1073). buyer-critical for content compliance workflows"
+            - predicate: data_content_has_video_script_structure_keys
+              why: "acceptable when provenance dict is present but sources array is empty — the video_script structure ('title', 'hook', 'scenes', 'narration', 'b_roll_suggestions', 'outro' per CONTENT_TYPES at line 164-169) proves schema-conformant generation even without source-tracking coverage"
+    notes: |
+      Represents the dominant 30d prompt shape (5 of 7 30d executions are
+      fitness-wearable brand video variants — this exact task is one of them,
+      execution id f9c61c43-0162-421d-a24e-78f39c9f0f0e completed 2026-07-24).
+      Critical domain-sensitivity invariants:
+        - no_media_generation_when_planning_only: the prompt explicitly says
+          "No media generation" and context.no_media_generation=true. LLM
+          must NOT produce fabricated image URLs, video-file references, or
+          promise generated assets. This is buyer-critical for creative-ops
+          pipelines where the writer's role is planning, not asset production.
+        - honors_word_count_within_tolerance: word_count=500 target; ±30%
+          tolerance (350-650) acceptable; anything beyond is a spec violation.
+        - honors_tone_directive: professional tone for buyer audience; slang
+          / casual voice / marketing-hype would be off-spec.
+        - no_fabricated_facts_absent_research: only claim things supported by
+          the research block or general common knowledge; fabricating specific
+          product features, competitor names, or stats not in research is
+          the primary hallucination class this predicate catches.
+
+  - id: content_happy_02_blog_post_from_research
+    category: happy_path
+    input: "Write a 1500-word blog post about the state of AI-powered developer tooling in 2026, drawing from the research below. Tone should be professional but approachable — the audience is senior engineers and tech leads at scale-ups. Include a strong hook, 3-4 body sections with headers, a conclusion, and SEO metadata (meta description, tags)."
+    context:
+      content_type: blog_post
+      tone: professional
+      target_audience: "senior engineers and tech leads at scale-ups"
+      word_count: 1500
+      research: "The 2026 AI dev tooling landscape has consolidated around three axes: (1) IDE-native agents (Copilot, Cursor, Zed AI) that operate inside the editor with full workspace context; (2) autonomous coding platforms (Devin, SWE-agent, OpenDevin) that run tasks asynchronously; (3) code-review + security-review agents (Greptile, CodeRabbit, Semgrep AI). Enterprise adoption metrics: 78% of Fortune 500 engineering orgs run at least one AI coding tool in production per JetBrains 2026 developer survey. Cost efficiency has emerged as the primary differentiator over raw capability — teams increasingly self-host smaller models via Ollama or vLLM for read-heavy workflows and reserve frontier models for generation-heavy tasks."
+      keywords: ["AI developer tools", "AI coding assistants", "IDE agents", "autonomous coding"]
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 60}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - data_content_type_is_blog_post
+      - data_content_full_text_length_gte_1000
+      - honors_word_count_within_tolerance
+      - honors_tone_directive
+      - honors_content_type_structure
+      - no_fabricated_facts_absent_research
+      - data_content_has_blog_post_structure_keys
+      - data_provenance_present_with_sources
+      - one_of:
+          branches:
+            - predicate: data_publishable_true
+              why: "canonical STANDARD-mode happy path — provenance validation passed at line 1140-1142; content is ready for buyer-facing consumption without additional review gates"
+            - predicate: data_validation_status_present_and_not_failed
+              why: "acceptable when publishable is false or absent — some source-freshness thresholds (stale_threshold_hours=72.0 at line 1098) may downgrade publishable while validation_status still records the check ran cleanly"
+    notes: |
+      Canonical STANDARD-mode blog_post path — the most common content_type
+      per CONTENT_TYPES declaration order (blog_post is first at line 152).
+      Zero 30d traffic against blog_post but line 1055 quality-tier calculation
+      and line 1094-1099 provenance construction are exercised on every
+      STANDARD-mode run regardless of content_type. Key invariant:
+      no_fabricated_facts_absent_research — the research block cites
+      specific stats ("78% of Fortune 500", "JetBrains 2026 developer
+      survey") and tool names ("Copilot, Cursor, Zed AI"); LLM must
+      confine its factual claims to what's in the research or clearly
+      generic background. Fabricating additional stats (e.g., "GitHub
+      Copilot has 45M subscribers") — even if true elsewhere — is a
+      grounding-discipline violation.
+
+  - id: content_happy_03_rewrite_mode_from_editor_feedback
+    category: happy_path
+    input: "Rewrite the draft below to address every issue the editor flagged. Preserve the hook, tighten the middle, cut the redundant section on 'why AI matters', and add a specific 3-step CTA at the end."
+    context:
+      content_type: blog_post
+      review_feedback: |
+        Editor issues:
+        1. Section 3 ("Why AI Matters") is redundant given Section 1 covers the same ground — CUT IT.
+        2. Middle section (Section 4) rambles for 400 words on tooling categories without a takeaway — TIGHTEN to 200 words with a concrete example.
+        3. No CTA. Add a specific 3-step next-action ladder ("try X → measure Y → decide Z").
+        4. Hook is strong (opening paragraph works) — PRESERVE verbatim.
+        Fact-check issues:
+        1. Claim "89% of teams saw productivity gains" has no citation — either add source or remove.
+      original_draft: |
+        # AI Developer Tools in 2026: The New Baseline
+
+        Every engineer I've talked to in the last six months has stopped asking whether AI coding tools are worth adopting. That question is dead. The real question is which layer of the stack to invest in first, and how to measure whether it's working.
+
+        ## Section 1: Where We Are
+
+        The 2026 AI dev tooling landscape has consolidated around three axes: IDE-native agents, autonomous coding platforms, and code-review agents. 78% of Fortune 500 engineering orgs run at least one AI coding tool in production. Cost efficiency has emerged as the primary differentiator.
+
+        ## Section 3: Why AI Matters
+
+        AI matters because software engineering is the highest-leverage economic activity of the current decade. When engineers ship faster with fewer defects, entire product surfaces get built that weren't feasible before. This applies at every scale of company from two-person startups to hyperscalers.
+
+        ## Section 4: The Tooling Categories
+
+        Let me walk through each category. IDE-native agents operate inside the editor with full workspace context. Copilot is the incumbent; Cursor grew fast in 2025 by leaning into agent mode; Zed AI is the newest entrant with a Rust-native architecture. Autonomous coding platforms are still maturing — Devin was the pioneer, then SWE-agent showed the pattern was reproducible, then OpenDevin proved you could build a solid open-source version in months. Code-review agents like Greptile and CodeRabbit are the sleeper hit — they don't get the same headline attention but the ROI is often the clearest because they catch specific classes of bugs in PRs. 89% of teams saw productivity gains after adopting at least two of the three layers.
+
+        ## Conclusion
+
+        The tooling has consolidated, cost efficiency is winning, and the adoption metrics are undeniable.
+      workspace_brief:
+        topic: "AI developer tools in 2026"
+        tone: professional
+        audience: "senior engineers"
+        distribution_hook: "Every engineer I've talked to in the last six months has stopped asking whether AI coding tools are worth adopting."
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 60}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - data_metadata_rewrite_mode_true
+      - data_content_full_text_length_gte_500
+      - hook_preserved_verbatim_in_opening
+      - section_3_why_ai_matters_removed
+      - section_4_tightened_below_250_words
+      - cta_ladder_present_with_three_steps
+      - unsupported_89_percent_claim_removed_or_cited
+      - honors_tone_directive
+      - no_fabricated_facts_absent_research
+      - one_of:
+          branches:
+            - predicate: data_content_type_is_blog_post
+              why: "canonical REWRITE-mode output — line 1586 hardcodes content_type='blog_post' regardless of input content_type. Validators should accept blog_post on any rewrite input"
+            - predicate: data_metadata_actual_word_count_between_500_and_1500
+              why: "acceptable word range for rewrite spec (line 1525 targets 700-1200 words; ±30% band gives 500-1500). Below 500 = under-baked rewrite; above 1500 = failure to tighten"
+    notes: |
+      ROUTING BRANCH — REWRITE MODE (execute() branch at line 829 →
+      _execute_rewrite at line 1463). Deliberately framed as a routing branch
+      inside the same agent contract, not a "new shape" (per S2959 canon
+      addition 10). Zero 30d traffic against this path. Rewrite spec at line
+      1525 explicitly targets 700-1200 words. Key predicates:
+        - hook_preserved_verbatim_in_opening: workspace_brief.distribution_hook
+          must open the article (system_prompt at line 1505: "The hook MUST
+          open the article"). Anything else = brief violation.
+        - section_3_why_ai_matters_removed: editor said CUT IT; rewrite
+          system_prompt lines 1501-1503 mandate structural changes not
+          polish.
+        - unsupported_89_percent_claim_removed_or_cited: fact-checker
+          flagged; rewrite must either add source or remove claim (system
+          prompt line 1504).
+        - no_fabricated_facts_absent_research: still binding even in rewrite
+          mode; LLM must not invent new stats to fill the tightened section.
+
+  - id: content_happy_04_directed_mode_from_research_summary
+    category: happy_path
+    input: "Write a 900-word LinkedIn thought-leadership post based on the research summary and editor checklist below. Position the author as a pragmatic operator, not a hype merchant. Include a concrete before/after mini-case-study in the middle."
+    context:
+      content_type: blog_post
+      research_summary: |
+        Recent enterprise data (JetBrains 2026 developer survey; Stack Overflow 2026 developer survey Wave 2) shows AI coding tool adoption in production has crossed 78% at Fortune 500 engineering orgs and 62% at Series B+ startups. The story is no longer adoption — it's ROI attribution. Teams that report the strongest productivity gains have three practices in common: (1) explicit measurement of PR review cycle time before/after adoption; (2) a policy for when to accept AI-generated suggestions verbatim vs treat as first-draft; (3) a periodic (quarterly) tools audit that removes AI features nobody uses.
+      editor_feedback:
+        - "Lead with the framing shift — 'the question is no longer adoption, it's ROI'."
+        - "Include a concrete before/after case study in the middle third — real numbers, real practice."
+        - "Close with a specific action the reader can take Monday morning."
+        - "Do NOT use 'game-changer', 'revolutionize', or 'unleash'."
+        - "Cite the two surveys by name; don't just say 'research shows'."
+      required_checks: ["cites both surveys by name", "includes before/after mini-case"]
+      workspace_brief:
+        topic: "AI coding tools in 2026 — from adoption to ROI"
+        tone: professional
+        audience: "engineering leaders and CTOs"
+        distribution_hook: "The question about AI coding tools isn't 'should we adopt' anymore. It's 'are we measuring the ROI honestly?'"
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 60}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - data_metadata_directed_mode_true
+      - data_content_full_text_length_gte_500
+      - hook_preserved_verbatim_in_opening
+      - jetbrains_survey_cited_by_name
+      - stack_overflow_survey_cited_by_name
+      - before_after_case_study_present
+      - closing_specific_action_present
+      - no_forbidden_hype_words_present
+      - honors_tone_directive
+      - no_fabricated_facts_absent_research
+    notes: |
+      ROUTING BRANCH — DIRECTED MODE (execute() branch at line 859 →
+      _execute_directed at line 1722). Same agent contract; deliberately
+      framed as routing branch not new shape. Zero 30d traffic against this
+      path. Key discriminators from REWRITE mode:
+        - triggered by research_summary + (editor_feedback OR required_checks),
+          NOT by review_feedback + original_draft (that's rewrite).
+        - hardcodes content_type='blog_post' at line 1847 (same as rewrite).
+        - sets data.metadata.directed_mode=true at line 1852.
+        - lacks provenance/publishable/validation_status (same carve as
+          rewrite; validators must not require them per canon_field_mapping
+          derivation_spec).
+      Domain-sensitivity invariants:
+        - jetbrains_survey_cited_by_name + stack_overflow_survey_cited_by_name:
+          research_summary names both sources; editor_feedback explicitly
+          requires named citations ("don't just say 'research shows'").
+          LLM must honor.
+        - no_forbidden_hype_words_present: editor_feedback lists three
+          forbidden words. LLM must comply — this is a direct instruction-
+          following test with a small closed word list.
+        - closing_specific_action_present: editor_feedback item 3 requires
+          "a specific action the reader can take Monday morning". Generic
+          "consider adopting AI tools" would fail.
+
+  - id: content_happy_05_diagnostic_mode_verbatim_render
+    category: happy_path
+    input: |
+      SMOKE_TEST mode: Return a minimal JSON receipt with keys: agent_name, run_status, runtime_ms_estimate, deliverable_id (null), warnings (array). Do not create any deliverables.
+    context:
+      diagnostic_mode: true
+      diagnostic_title: "Content Writer Smoke Test"
+      diagnostic_category: "Platform Diagnostics"
+      diagnostic_tags: ["diagnostic", "forensic", "smoke_test"]
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy]}
+    acceptance_criteria:
+      - required_fields_present
+      - data_diagnostic_mode_true
+      - data_content_type_is_diagnostic
+      - data_content_full_text_equals_task_verbatim
+      - data_word_count_equals_task_word_count
+      - no_llm_rewrite_of_task_content
+      - no_llm_added_preamble_or_postamble
+    notes: |
+      ROUTING BRANCH — DIAGNOSTIC MODE (execute() branch at line 796 →
+      _execute_diagnostic at line 1649). Session 1185 F1 requirement (per
+      docstring line 1655-1668): raw task→body assignment for forensic
+      validation flows. Zero 30d traffic against this path.
+      CRITICAL invariants (raw-string equality — not full-fidelity byte
+      "verbatim" since upstream template/whitespace transforms may exist):
+        - data_content_full_text_equals_task_verbatim: line 1685 (body = task
+          or '') then line 1697 saves body as content directly. Any LLM
+          rewrite, formatting, expansion, or interpretation VIOLATES the
+          raw-string-equality contract (Session 1185 F1 AC1 at line 1665).
+        - no_llm_rewrite: this branch has NO LLM call at all — line 1685-1699
+          just captures + saves. Validators must accept the exact input as
+          the exact output.
+        - no_llm_added_preamble_or_postamble: no "Here is your diagnostic
+          receipt:" wrappers, no "As requested," prefixes.
+      Health status is always 'healthy' when success=true per
+      derivation_spec: diagnostic mode is verbatim-preservation contract; if
+      success=True the contract was honored.
+
+  # ─── TOOL TIMEOUT ───────────────────────────────────────────────────────
+
+  - id: content_timeout_01_watchdog_kill
+    category: tool_timeout
+    input: "Write the Operator Edge weekly newsletter for the week of June 12–June 19, 2026. Use ONLY the evidence provided below. Do NOT invent sources. Include: subject line, preview text, greeting, 3 sections (AI/ML news, infra + observability news, dev-productivity news), CTA, and sign-off. Target 800 words."
+    context:
+      content_type: newsletter
+      tone: professional
+      target_audience: "operator-tier engineering leaders"
+      word_count: 800
+      research: "[large evidence bundle would go here in production — this smoke-test prompt intentionally leaves it empty to test evidence-only enforcement under time pressure]"
+    fault_injection:
+      component: celery_worker
+      selector: core.tasks.execute_agent_task
+      fault:
+        type: watchdog_kill
+        params:
+          simulated_reason: "Task timed out after 60 minutes (no heartbeat) - marked as failed by cleanup"
+      python:
+        behavior: raise
+        exception_class: celery.exceptions.SoftTimeLimitExceeded
+        exception_message: "Task timed out after 60 minutes (no heartbeat) - marked as failed by cleanup"
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {const: unavailable}
+        error_signature: {type: string, pattern: "timed out|SoftTimeLimitExceeded|no heartbeat"}
+    acceptance_criteria:
+      - agent_result_success_false
+      - health_status_is_unavailable
+      - error_signature_present
+      - no_fabricated_newsletter_content
+      - no_partial_deliverable_persisted_with_fabricated_facts
+    notes: |
+      REPRESENTATIVE OF REAL FAILURE PATTERN (not a verbatim replay) — the
+      actual 2026-06-19 failure row (AgentExecution id 5c103be3-92ff-49b0-9ef5-
+      bcf6cc39fea3, verified via ORM at authoring T0 + T2 SIGN) begins with
+      the same "Write the Operator Edge weekly newsletter for the week of
+      June 12 – June 19, 2026. Use ONLY the evidence provided below. Do NOT
+      invent sources." opening line but continues with a different embedded
+      spec (# Operator Edge — Weekly Intelligence Briefing structure, 900-1200
+      word target, TL;DR + numbered signal sections). This YAML variant
+      reconstructs the shape (evidence-only-enforcement newsletter under
+      watchdog time pressure) for eval reproducibility rather than replaying
+      the exact 500+-char task string, which would couple the Tier-1 eval
+      to a specific historical smoke-test spec. AgentExecution.error_message
+      on the DB row: "Task timed out after 60 minutes (no heartbeat) - marked
+      as failed by cleanup" — same 60-min Celery watchdog kill pattern
+      observed in SIA / ResearchAgent / DevOpsAgent / WorkflowOrchestrationAgent /
+      LegalDocDrafterAgent failure samples. Buyer-critical invariant for content
+      domain:
+        - no_fabricated_newsletter_content: watchdog kill must NOT persist a
+          partial newsletter Deliverable with hallucinated news items.
+        - no_partial_deliverable_persisted_with_fabricated_facts: the top-
+          level try/except at content_writer_agent.py:1206-1213 MUST fire
+          cleanly and return AgentResult(success=False, error=...). The
+          _save_to_deliverable call at line 1195 lives BEFORE the exception
+          boundary; if generation was interrupted the save should not have
+          fired because full_text would be empty/partial.
+      Per S2958 canon addition 8, error_signature pattern is BROAD (regex-alt)
+      not exact string match — validators must accept any of the three
+      discriminator substrings.
+
+  - id: content_timeout_02_openai_client_slow_during_generation
+    category: tool_timeout
+    input: "Write a 1200-word article about a new fintech regulation that just passed. Include background, key provisions, and impact analysis. Tone: professional, journalistic. Research is provided below."
+    context:
+      content_type: article
+      tone: professional
+      target_audience: "fintech executives"
+      word_count: 1200
+      research: "The Financial Services Innovation Act of 2026 (FSIA) passed final Senate cloture on 2026-07-15 by a 68-32 margin. Key provisions: (1) unified regulatory sandbox for licensed banks + fintech partners; (2) expedited API-standards conformance certification via ISO/IEC 27400-series alignment; (3) 180-day guidance runway before enforcement takes effect. The Act was co-sponsored by Sens. Chen (D-CA) and Ortiz (R-TX)."
+    fault_injection:
+      component: openai
+      selector: core.services.openai_client_factory.get_openai_client
+      fault:
+        type: latency
+        params:
+          delay_ms: 30000
+          latency_budget_ms: 5000
+      python:
+        behavior: sleep_then_return
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [degraded, unavailable]}
+        error_signature: {type: string}
+    acceptance_criteria:
+      - health_status_is_degraded_or_unavailable
+      - no_fabricated_facts_absent_research
+      - one_of:
+          branches:
+            - predicate: agent_result_success_false_with_error_signature
+              why: "hard-fail acceptable — OpenAI client is required for _generate_content at line 2093; latency past budget causes the LLM call to time out and no article body is generated"
+            - predicate: agent_result_success_true_with_truncated_true
+              why: "acceptable when the OpenAI client returned a partial response before hitting the client-level timeout — content_writer_agent generates a truncated result marked data.metadata.truncated=true (line 1049-1053) rather than hard-failing. Buyer-visible: [TRUNCATED] warning appears in message at line 1114"
+    notes: |
+      Constructed — ContentWriterAgent's single LLM call at _generate_content
+      (line 2093) routes through core.services.openai_client_factory. Latency
+      in the client factory can either hard-fail (raises openai.APITimeoutError
+      → caught by top-level except at line 1206) or partial-return (truncated
+      response with finish_reason='length' → data.metadata.truncated=true).
+      Buyer-critical for content domain:
+        - no_fabricated_facts_absent_research: still binding even in latency-
+          stress conditions. LLM under time pressure may leak fabricated
+          statute numbers, senator names not in research, or vote counts
+          differing from the research block. All three would violate.
+      Per S2957 fold: selector points at the service-level openai_client_factory
+      rather than any library-internal openai path — portable across SDK
+      upgrades.
+
+  # ─── DATA UNAVAILABLE ───────────────────────────────────────────────────
+
+  - id: content_data_unavail_01_llm_returns_empty_content
+    category: data_unavailable
+    input: "Write a 1500-word blog post about the current state of edge computing in 2026."
+    context:
+      content_type: blog_post
+      tone: professional
+      target_audience: "cloud architects"
+      word_count: 1500
+      research: "Edge computing in 2026 has matured past the hype trough. Enterprise workloads are now split roughly 30/70 between edge and centralized cloud, with edge deployment growing 22% YoY. Cost economics favor edge for latency-sensitive workloads (real-time analytics, computer vision inference, low-latency gaming) and centralized for training and batch analytics."
+    fault_injection:
+      component: python_service
+      selector: core.agents.content_writer_agent.ContentWriterAgent._generate_content
+      fault:
+        type: bad_payload
+        params:
+          shape: empty_content_dict
+      python:
+        behavior: return_value
+        return_value: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [unavailable]}
+        error_signature: {type: string, pattern: "empty content|LLM returned empty|no exception raised"}
+    acceptance_criteria:
+      - agent_result_success_false
+      - error_signature_contains_llm_returned_empty
+      - health_status_is_unavailable
+      - no_deliverable_persisted_with_empty_content
+      - no_fabricated_facts_absent_research
+    notes: |
+      Constructed — hits the explicit empty-content guard at
+      content_writer_agent.py:1023-1030:
+        if not generated_content:
+            return AgentResult(success=False,
+                error="LLM returned empty content (no exception raised)", ...)
+      The guard exists precisely to prevent the failure mode where a chat
+      completion returns cleanly but with empty choices[0].message.content.
+      Correct behavior: hard-fail with the exact error string; do NOT call
+      _save_to_deliverable at line 1195 (that lives inside the same try
+      block, past the early return). Fault selector at the service level
+      per S2957 fold.
+
+  - id: content_data_unavail_02_no_research_provided_but_task_requires_evidence
+    category: data_unavailable
+    input: "Write a 1200-word article about last month's AI safety announcements from the three largest AI labs. Cite specific announcement dates and paper titles."
+    context:
+      content_type: article
+      tone: journalistic
+      target_audience: "AI policy watchers"
+      word_count: 1200
+      research: ""
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 40}
+        health_status: {enum: [degraded, unavailable]}
+    acceptance_criteria:
+      - no_fabricated_facts_absent_research
+      - no_fabricated_paper_titles
+      - no_fabricated_announcement_dates
+      - no_fabricated_lab_names
+      - summary_admits_no_research_available_or_directs_to_research_agent
+      - one_of:
+          branches:
+            - predicate: agent_result_success_false_with_no_research_error
+              why: "canonical hard-fail path — line 944-950 guard fires when task requires evidence but research is empty; returns success=False error='No research or task provided. Need content to transform.' (line 949). This is the correct code-path for evidence-required content with no research provided"
+            - predicate: agent_result_success_true_but_content_admits_gap_and_no_fabrication
+              why: "acceptable when the LLM produces a substantive response that HONESTLY admits the research block is empty, refuses to fabricate specific dates/titles/lab announcements, and directs to ResearchAgent per system_prompt DELEGATION section (line 247-255) or asks for research to be provided. Content quality is degraded but the anti-hallucination invariants held"
+    notes: |
+      HIGH-STAKES anti-hallucination test — the "cite specific announcement
+      dates and paper titles" ask is exactly the shape that tempts LLMs to
+      invent plausible-sounding facts (e.g., "OpenAI's July 15 2026 Preparedness
+      Framework Update"). ZERO fabrication is acceptable in the content-writing
+      domain when specific citable facts are requested. Correct behavior:
+      either hard-fail with the "No research or task provided" guard at line
+      944, OR produce content that honestly admits the gap and delegates
+      (system_prompt lines 247-255 explicitly instruct: "Always delegate tasks
+      you cannot perform yourself rather than refusing or making up data").
+      Note: because context.task is populated (only research is empty), the
+      "not research and not task" guard at line 944 may NOT fire — the LLM
+      path will execute. This makes anti-hallucination the primary defense.
+
+  # ─── AMBIGUOUS INPUT ────────────────────────────────────────────────────
+
+  - id: content_ambig_01_bare_write_something
+    category: ambiguous_input
+    input: "write something"
+    context:
+      research: "Recent trends in cloud computing and AI have been notable."
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 20}
+        health_status: {enum: [healthy, degraded]}
+        clarifying_question: {type: string}
+    acceptance_criteria:
+      - no_fabricated_facts_absent_research
+      - no_media_generation_when_planning_only
+      - one_of:
+          branches:
+            - predicate: clarifying_question_asked_with_scope_options
+              why: "asked user to narrow — best UX for zero-referent input ('write something' + thin generic research has no content_type, tone, audience, or word_count signal). Options should include: what content type (blog / article / video script / newsletter / social thread), what topic focus, what tone, what audience"
+            - predicate: summary_lists_scope_options_without_generating_content
+              why: "advisory response listing what ContentWriterAgent can produce (blog post / article / video script / podcast script / social thread / newsletter / internal document) — acceptable if no full content is generated, since generating a full blog post with fabricated defaults would violate no_fabricated_facts_absent_research"
+    notes: |
+      Critical anti-hallucination test — ContentWriterAgent's default
+      content_type is 'blog_post' at line 870, default tone is 'professional'
+      via user_context.communication_style at line 882, default word_count is
+      1500 for blog_post at line 886. All three defaults would fire on this
+      input and the agent would gladly generate a 1500-word blog post about
+      "recent trends in cloud computing and AI" with fabricated specifics.
+      The correct behavior is to NOT generate content when the user's intent
+      is unclear enough that defaults produce fabricated specifics. This
+      mirrors legal_ambig_01 (empty motion generation) and devops_ambig_01
+      (config-gen defaults) — same anti-hallucination class, content-domain
+      variant.
+
+  - id: content_ambig_02_content_type_and_task_conflict
+    category: ambiguous_input
+    input: "Write a podcast script for this newsletter I'm drafting."
+    context:
+      content_type: newsletter
+      research: "The 2026 developer experience (DX) market has seen consolidation as major cloud providers roll DX platforms into core offerings."
+      tone: conversational
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 40}
+        health_status: {enum: [healthy, degraded]}
+        clarifying_question: {type: string}
+    acceptance_criteria:
+      - no_fabricated_facts_absent_research
+      - one_of:
+          branches:
+            - predicate: clarifying_question_asked_which_content_type
+              why: "asked user to pick — task says 'podcast script' but context.content_type='newsletter'; these are two distinct CONTENT_TYPES with different structures (podcast_script: intro_hook/segments/transitions/outro vs newsletter: subject_line/preview_text/sections/cta). Correct UX asks which the user meant rather than silently favoring one"
+            - predicate: summary_notes_conflict_and_produces_one_type_explicitly_naming_choice
+              why: "acceptable if agent notes the conflict and explicitly picks ONE with reasoning (e.g., 'You mentioned podcast script in the task but set content_type to newsletter — I'm producing the newsletter first; let me know if you'd like the podcast script version too'). Silent default (produces one without acknowledging the conflict) is UNACCEPTABLE because the produced artifact wastes buyer time"
+    notes: |
+      Task-vs-context conflict test — the STANDARD-mode path silently favors
+      context.content_type over task language at line 870 (content_type =
+      context.get('content_type', 'blog_post')). Without an ambiguity check
+      the agent will produce a newsletter matching the context field but
+      contradicting the task. Correct behavior: either ask which was intended,
+      or produce ONE + explicitly acknowledge the conflict. This is a
+      buyer-workflow test — silent conflict resolution is a common source
+      of wasted content-generation cycles.
+
+  # ─── BAD INPUT ──────────────────────────────────────────────────────────
+
+  - id: content_bad_01_empty_task_and_empty_research
+    category: bad_input
+    input: ""
+    context:
+      content_type: blog_post
+      research: ""
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [healthy, degraded, unavailable]}
+    acceptance_criteria:
+      - no_fabricated_context
+      - no_fabricated_facts_absent_research
+      - one_of:
+          branches:
+            - predicate: agent_result_success_false_with_no_research_error
+              why: "canonical hard-fail path — line 944 guard fires when both research and task are empty; returns success=False error='No research or task provided. Need content to transform.' (line 949). This is the expected code-path for empty input"
+            - predicate: summary_asks_what_to_write_without_generating_content
+              why: "acceptable if the guard doesn't fire for some reason — LLM should recognize the empty combo and ask for detail without generating a blog post with fabricated defaults. Unacceptable: producing any blog_post output, dispatching _save_to_deliverable, or persisting a Deliverable titled 'blog_post: ' (empty task echoed into title at line 1196)"
+    notes: |
+      Empty task + empty research should hit the line 944 guard cleanly and
+      return early with success=False. The alternative — if the guard doesn't
+      fire due to a code path change — is that the LLM path executes with
+      just the intelligent-prompt scaffolding (Session 523) and generates
+      fabricated content. Correct outcome: either the guard fires (canonical
+      path), OR the LLM recognizes empty inputs and asks for detail without
+      generating. Unacceptable: producing any content, OR persisting a
+      Deliverable at line 1195 with an empty full_text body (which the empty
+      guard at line 1049 would allow through since actual_word_count=0
+      passes the isinstance check at line 1044).
+
+  - id: content_bad_02_control_characters_and_alias_confusion
+    category: bad_input
+    input: "\u0000\u0001Write a \u0007blog\u001b[31m post\u001b[0m about the new\u0000 open-source AI model just released"
+    context:
+      content_type: "essay"
+      research: "The new open-source AI model, released by an unnamed lab, is a 70B parameter model with performance comparable to GPT-4 on standard benchmarks."
+      tone: professional
+      word_count: 1000
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [healthy, degraded, unavailable]}
+    acceptance_criteria:
+      - no_crash
+      - no_control_characters_in_output
+      - no_ansi_escape_in_output
+      - no_deliverable_persisted_with_control_chars_in_title
+      - no_fabricated_lab_names
+      - no_fabricated_benchmark_scores
+      - no_fabricated_release_dates
+      - one_of:
+          branches:
+            - predicate: agent_result_success_false_with_unknown_content_type_error
+              why: "canonical hard-fail path — 'essay' is not in CONTENT_TYPES (line 152) and not in _CONTENT_TYPE_ALIASES (line 901-916); line 934 guard fires and returns success=False error='Unknown content type: essay. Available: [...]' (line 938). This should be the FIRST failure surfaced before any generation attempt or persistence"
+            - predicate: sanitized_content_type_and_generated_without_control_chars
+              why: "acceptable if agent's content_type validation is bypassed by a mapping change (e.g., 'essay' added to aliases in future) AND the control-character sanitization strips NULs / BEL / ANSI escapes before generation. Output + persisted Deliverable title + content must all be clean of control chars AND must NOT fabricate specific lab names, benchmark scores, or release dates beyond the vague research (which itself says 'unnamed lab')"
+    notes: |
+      Compound malformed payload: NULs + BEL + ANSI escape sequences in task
+      + invalid content_type='essay' (not in CONTENT_TYPES, not in alias map).
+      Exercises THREE hardening surfaces at once:
+        1. Content-type validation at line 934 (should fire first).
+        2. Control-char / ANSI escape sanitization in _build_intelligent_prompt
+           at line 771 and in deliverable title/body at line 1196.
+        3. Anti-fabrication under vague research — the research block is
+           deliberately underspecified ("unnamed lab", "comparable to GPT-4
+           on standard benchmarks"); LLM must not invent specifics.
+      Unacceptable outcomes:
+        - Crash from control-char handling in system_prompt injection.
+        - Deliverable row saved with control-char-corrupted title (breaks
+          workspace UI + downstream search).
+        - Content generated that names a specific lab / cites specific
+          benchmark scores / gives a release date not in research.
+        - ANSI escape codes rendering as coloring in the persisted content
+          body.
