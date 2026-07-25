@@ -1098,7 +1098,7 @@ PA_TOOL_SCHEMAS = [
                 "action": {
                     "type": "string",
                     "enum": [
-                        "list", "get", "status", "create", "delete",
+                        "list", "get", "status", "create", "update", "delete",
                         "scan", "read", "write", "git_status", "git_commit", "git_branch",
                         "operations", "rollback",
                     ],
@@ -1107,6 +1107,7 @@ PA_TOOL_SCHEMAS = [
                         "get: get workspace details by ID or name. "
                         "status: quick status of active workspace. "
                         "create: make a new workspace. "
+                        "update: mutate workspace attributes (root_path / new_name / description / workspace_type / business_status). Requires workspace_id. "
                         "delete: remove a sandbox workspace. "
                         "scan: rescan workspace structure and stats. "
                         "read: read a file within the workspace root. "
@@ -1118,9 +1119,13 @@ PA_TOOL_SCHEMAS = [
                         "rollback: roll back an operation (requires confirm_rollback=true)."
                     ),
                 },
-                "workspace_id": {"type": "string", "description": "Workspace UUID (preferred for workspace-scoped actions, get, delete, scan, read, write, git, operations, rollback)"},
+                "workspace_id": {"type": "string", "description": "Workspace UUID (preferred for workspace-scoped actions, get, delete, scan, read, write, git, operations, rollback, update)"},
                 "name": {"type": "string", "description": "Workspace name — for search (list), lookup (get/set_active), creation (create/register), or delete"},
-                "description": {"type": "string", "description": "Description/notes (for create/register)"},
+                "new_name": {"type": "string", "description": "For update: new workspace name (distinct from 'name' which is used for lookup/create/delete)"},
+                "description": {"type": "string", "description": "Description/notes (for create/register/update)"},
+                "root_path": {"type": "string", "description": "For update: new root_path (must exist on disk; validated at write time)"},
+                "workspace_type": {"type": "string", "description": "For update: new workspace_type (e.g. 'sandbox', 'local')"},
+                "business_status": {"type": "string", "description": "For update: new business_status (on config; e.g. 'active', 'paused', 'archived')"},
                 "path": {"type": "string", "description": "For scan/register/read/write: project root path or file path, depending on action"},
                 "content": {"type": "string", "description": "For write: file content to save"},
                 "message": {"type": "string", "description": "For git_commit: commit message"},
@@ -5549,6 +5554,17 @@ PA_TOOL_SCHEMAS = [
                 "conversation_id": {
                     "type": "string",
                     "description": "Conversation ID to post results back to (optional — defaults to current conversation).",
+                },
+                "workspace_id": {
+                    "type": "string",
+                    "description": (
+                        "Session 2967 Slice 7 — workspace UUID whose root_path becomes the engineer's "
+                        "working tree. If omitted, resolves to the currently-active workspace "
+                        "(is_active=True). If neither an explicit workspace_id nor an active workspace "
+                        "can be resolved, the dispatch falls back to the Railway /tmp clone path "
+                        "(engineer will report 'no repo detected' on local dev). Response envelope echoes "
+                        "workspace_id_resolved + resolved_from ('explicit' | 'active_workspace' | 'fallback')."
+                    ),
                 },
                 "request_mode": {
                     "type": "string",
