@@ -399,6 +399,10 @@ class CodeJobHandlersMixin:
         # caps. Null / omitted = use engine defaults (150 iter / $5).
         max_iterations = payload.get('max_iterations')
         max_cost_usd = payload.get('max_cost_usd')
+        # Session 2968 PR-2 — optional context files list. Null → engine
+        # defaults (tree + CLAUDE.md excerpt + PLATFORM_INVENTORY excerpt).
+        # Empty list → explicit opt-out. Explicit list → only those files.
+        context_files = payload.get('context_files')
 
         from core.tasks import claude_code_engineer_task
         task = claude_code_engineer_task.delay(
@@ -409,6 +413,7 @@ class CodeJobHandlersMixin:
             workspace_root_path=workspace_root_path,
             max_iterations=max_iterations,
             max_cost_usd=max_cost_usd,
+            context_files=context_files,
         )
 
         # Session 2728 F-CC-3 — surface whether the completion banner will fire.
