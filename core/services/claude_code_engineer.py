@@ -238,6 +238,14 @@ def _persist_engineer_terminal_state(
                 'provider': result.get('provider', 'anthropic'),
                 'mode': result.get('mode'),
                 'iterations': result.get('iterations'),
+                # Session 2967 Slice 7 — echo workspace resolution + PR-1 caps.
+                'repo_root': result.get('repo_root'),
+                # Session 2967 Slice 7 PR-1 — cost + iteration cap telemetry.
+                'cost_usd': result.get('cost_usd'),
+                'iterations_used': result.get('iterations_used'),
+                'effective_max_iterations': result.get('effective_max_iterations'),
+                'effective_max_cost_usd': result.get('effective_max_cost_usd'),
+                'budget_exceeded': result.get('budget_exceeded'),
             }
             update_fields.append('output_data')
         else:
