@@ -1362,6 +1362,7 @@ PA_TOOL_SCHEMAS = [
                         # ── Stock & Markets ──
                         "stock_audit_coordinator", "stock_analyst_agent",
                         "bear_case_agent",
+                        "market_intelligence_agent",
                         "market_intelligence_coordinator",
                         # ── Sports & Betting ──
                         "prediction_market_analyst",
@@ -5701,6 +5702,35 @@ PA_TOOL_SCHEMAS = [
                 "after_seconds": {
                     "type": "integer",
                     "description": "TTL window in seconds (default 60, max 600). Subscription auto-expires if no completion in this window.",
+                },
+            },
+            "required": [],
+        },
+    },
+    # ── S2951: agent_job_status — poll dispatched agent tasks ───────────
+    {
+        "type": "function",
+        "name": "agent_job_status",
+        "description": (
+            "Poll status + output preview for an agent job dispatched via run_agent "
+            "(or any tool that returns a Celery task_id). Sibling to schedule_followup — "
+            "same lookup shape (task_id OR execution_id) — but returns an immediate "
+            "status snapshot instead of subscribing to a completion notification. "
+            "Use to poll long-running dispatches when you don't want to wait for the "
+            "follow-up banner. Returns: status (queued|in_progress|completed|failed), "
+            "agent_name, duration_ms, error_message, output_preview (first 800 chars of "
+            "output_data.message)."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task_id": {
+                    "type": "string",
+                    "description": "Celery task_id from dispatch response (e.g. run_agent's task_id).",
+                },
+                "execution_id": {
+                    "type": "string",
+                    "description": "Canonical UUID of AgentExecution row (from execution_history_tool detail/recent). Preferred if known.",
                 },
             },
             "required": [],

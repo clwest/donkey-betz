@@ -6615,3 +6615,61 @@ class AgentHandlersMixin:
                 f"you'll get an inline notification when it finishes (or in {after_seconds}s if not, whichever first)."
             ),
         )
+
+    def _handle_agent_job_status(
+        self,
+        tool_name: str,
+        payload: Dict[str, Any],
+        user_id: Optional[int],
+        trace_id: str,
+    ) -> Dict[str, Any]:
+        """Immediate status snapshot for an agent job dispatched via run_agent.
+
+        Sibling to schedule_followup — same lookup shape (task_id OR execution_id),
+        but returns status/output preview immediately instead of subscribing to a
+        completion notification. Use to poll long-running dispatches when you don't
+        want to wait for the follow-up banner.
+        """
+        from core.models_unified_system import AgentExecution
+
+        execution_id = (payload.get('execution_id') or '').strip()
+        task_id = (payload.get('task_id') or '').strip()
+        if not execution_id and not task_id:
+            return {
+                'ok': False,
+                'error': 'agent_job_status requires execution_id OR task_id',
+            }
+
+        if execution_id:
+            execution = AgentExecution.objects.filter(id=execution_id).first()
+            lookup = f'execution_id={execution_id}'
+        else:
+            execution = AgentExecution.objects.filter(
+                input_data__celery_task_id=task_id,
+            ).order_by('-created_at').first()
+            lookup = f'task_id={task_id}'
+
+        if not execution:
+            return {
+                'ok': False,
+                'status': 'unknown',
+                'error': f'No AgentExecution found for {lookup}',
+            }
+
+        output_preview = None
+        if isinstance(execution.output_data, dict):
+            msg = execution.output_data.get('message') or execution.output_data.get('content') or ''
+            output_preview = msg[:800] if msg else None
+
+        return {
+            'ok': True,
+            'execution_id': str(execution.id),
+            'task_id': (execution.input_data or {}).get('celery_task_id'),
+            'agent_name': execution.agent.name if execution.agent_id else None,
+            'status': execution.status,
+            'created_at': execution.created_at.isoformat() if execution.created_at else None,
+            'completed_at': execution.completed_at.isoformat() if execution.completed_at else None,
+            'duration_ms': execution.execution_time_ms,
+            'error_message': (execution.error_message or '')[:500] or None,
+            'output_preview': output_preview,
+        }

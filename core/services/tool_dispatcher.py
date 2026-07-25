@@ -360,6 +360,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("stock_audit_coordinator", self._handle_agent_tool)
         self.register("stock_analyst_agent", self._handle_agent_tool)
         self.register("bear_case_agent", self._handle_agent_tool)
+        self.register("market_intelligence_agent", self._handle_agent_tool)
         self.register("market_intelligence_coordinator", self._handle_agent_tool)
 
         # Sports & Betting agents
@@ -401,6 +402,7 @@ class ToolDispatcher(AgentHandlersMixin, ContentHandlersMixin, OpsHandlersMixin,
         self.register("universal_agent_tool", self._handle_universal_agent)
         # Session 1174 PR-2b-1: agent-follow-up wake subscription tool.
         self.register("schedule_followup", self._handle_schedule_followup)
+        self.register("agent_job_status", self._handle_agent_job_status)
         self.register("workspace_tool", self._handle_workspace)
         self.register("media_tool", self._handle_media)
         self.register("voice_clone_tool", self._handle_voice_clone)
