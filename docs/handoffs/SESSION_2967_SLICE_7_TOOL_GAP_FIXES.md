@@ -9,6 +9,24 @@
 
 ## What shipped
 
+**Six PRs total (S2967 mid-session re-slate + evening safety batch):**
+
+| PR | Title | Shape |
+|---|---|---|
+| **#3576** | `feat(s2967): Slice 7 tool-gap fixes — workspace_tool.update + claude_code_tool auto-resolve-repo` | +256/-33, 5 files |
+| **#3577** | `docs(s2967): close cascade — handoff + 00-START refresh + wrapper pin bump` | Initial close cascade (retired S2966 pin → minted `pa-7c4e0a19e31c413a`) |
+| **#3578** | `chore(s2967): remove hardcoded CLAUDE_CODE_ENGINE_PROVIDER=openai from Makefile` | Makefile 1-liner revert (Session 1229 workaround revert path) |
+| **#3579** | `chore(s2967): refresh Anthropic model ID in claude_code_engineer (Sonnet 4.6)` | 1-line model-name fix (targeted unblock) |
+| **#3580** | `chore(s2967): PR-1a — sweep 50 stale claude-sonnet-4-20250514 → claude-sonnet-4-6` | 50 sed refs across 3 files |
+| **#3581** | `feat(s2967): PR-1 — cost + iteration caps for claude_code_tool + engineer subsystem doc` | +541/-10, 6 files (schema + engine + tests + `docs/topics/claude-code-engineer.md`) |
+| **#3582** | `fix(s2967): PR-1b — persist PR-1 cap envelope fields on AgentExecution.output_data` | 8-line persister allowlist extension (A2 SIGN caught) |
+
+**Two functional arcs in one session:**
+1. **Slice 7 tool-gap fixes** (afternoon, PR #3576) — `workspace_tool.update` + `claude_code_tool` auto-resolve-repo. Ledger #22 discharge.
+2. **claude_code_tool safety + efficiency batch** (evening, PRs #3578 / #3579 / #3580 / #3581 / #3582) — driven by Signal Insights UI runaway ($5 in 16 min at iter 75, zero writes) that Chris killed. Ratified after joint Claude+Rigby recommendation → discharges gap #1 + #3 + #7 + partial #6 from the newly-authored `docs/topics/claude-code-engineer.md` §Known gaps.
+
+**Original Slice 7 details (PR #3576):**
+
 **PR #3576** — `feat(s2967): Slice 7 tool-gap fixes — workspace_tool.update + claude_code_tool auto-resolve-repo` (+256/-33 across 5 files).
 
 ### Fix 1 — `workspace_tool.update` (Ledger #22 discharge)
