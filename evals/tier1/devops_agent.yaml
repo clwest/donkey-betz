@@ -1,0 +1,612 @@
+# Golden Evals — Tier-1 canonical prompt suite
+# Agent under test: DevOpsAgent (core/agents/devops_agent.py)
+#
+# Arc: Golden Evals (S2954+ open, ratified 2026-07-25 by Chris via Chat UI)
+# Reliability contract source: docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md §3
+# Arc slice: S2957 — third Tier-1 agent YAML (mirrors canon_version=1 substrate
+#   frozen at S2955 in evals/tier1/system_intelligence_agent.yaml and second-
+#   referenced at S2956 in evals/tier1/research_agent.yaml)
+# HEAD at authoring: 3dd20fc2e
+#
+# Volume snapshot (DB-verified via Rigby ORM 2026-07-25 T0):
+#   30d executions (owner_agent="DevOpsAgent", created_at >= 2026-06-25T00:00:00Z): 13
+#     (11 completed, 2 failed — 15.4% 30d failure rate, higher than ResearchAgent's
+#     2.7% but with only 2 failures in the sample; both are the same failure mode)
+#   All-time (no created_at filter): 25 executions (23 completed, 2 failed)
+#   30d distinct task strings: 13 (every 30d prompt is a singleton — no repeat traffic)
+#   Task-shape distribution (30d, hand-classified from 13 tasks):
+#     - "light/minimal platform health check ..." variants → ~8 rows (2026-07-16 batch)
+#     - "run one-shot smoke execution of WORKFLOWS['morning_brief'] ..." → 2 rows
+#       (both 2026-06-25, both failed with watchdog kill)
+#     - other one-offs → ~3 rows
+#   Observed real failure modes (from AgentExecution.error_message, all-time):
+#     - "Task timed out after 60 minutes (no heartbeat) - marked as failed by cleanup"
+#       (2 of 2 observed all-time; same Celery watchdog kill class as SIA
+#       sia_timeout_01 and ResearchAgent research_timeout_01)
+#   Verifier note (inherited from S2956 ResearchAgent YAML): AgentExecution.error_message
+#     stores empty-string ("") for successful runs, NOT NULL. Django's
+#     error_message__isnull=False filter returns all rows; use error_message__gt=''
+#     or .exclude(error_message='') for real failures. The "2 of 2" count above
+#     uses the non-empty semantic. Future S2963 validators MUST filter on
+#     non-empty, not non-null, when reasoning about failures.
+#
+#   HONEST COVERAGE LIMITS:
+#   1. THIN TRAFFIC — 13 30d vs SIA's 37 and ResearchAgent's 37. Fault-injection
+#      cases below rely heavily on constructed scenarios from DevOpsAgent's known
+#      dependency graph (OpenAI client per-tool, workspace write side-effect,
+#      _find_recent_duplicate_deliverable, Celery watchdog) rather than replayed
+#      from production traces.
+#   2. SHAPE MISMATCH — DevOpsAgent's declared purpose is generating CI/CD +
+#      Docker + K8s + Terraform + monitoring configs (5 tools). But 30d production
+#      traffic is mostly platform-health-check queries that hit the "no tool
+#      calls" GPT-content-only path (devops_agent.py:574-593), NOT the tool
+#      dispatch path. Happy-path prompts below cover BOTH shapes explicitly
+#      (happy_01 = real health-check probe; happy_02..05 = real config-generation
+#      dispatches that exercise the tool path where the agent's core value lives).
+#   3. FAILURE SAMPLE SIZE = 2 — both failures are the same task-string variant
+#      (morning_brief smoke) and same failure mode (watchdog kill). Zero variety
+#      in observed failures. tool_timeout_01 replays this observed case;
+#      tool_timeout_02 through bad_input_02 are constructed.
+#
+# Agent shape (grounds acceptance criteria):
+#   Returns AgentResult with:
+#     message: str (either synthesis from _synthesize_tool_results if tool_calls
+#              ran, else descriptive message, else raw GPT content when no tools)
+#     success: bool
+#     error: str (on failure — "DevOps task failed: <detail>" at devops_agent.py:596)
+#     execution_time_ms: int
+#     tool_calls: list[{tool, arguments, result}]
+#     knowledge_attribution: dict|None (legacy compat)
+#     data (populated only when tool_calls fired):
+#       results: list[{source, data}]  — one per successful tool call
+#       query: str (the task)
+#       tool_used: str  — first tool's name
+#       platform / environment / app_type / cloud_provider: str|None  — first tool's args
+#       workspace_write: dict|None  — {written: bool, total_written: int, reason?: str}
+#       content: str  — the synthesis text (Session 1200)
+#   Backing tools (agent-level, all call OpenAI gpt-5-mini via
+#     core.services.openai_client_factory.get_openai_client, wrapped in
+#     core.services.llm_call_wrapper.llm_call_span):
+#     - create_ci_pipeline    (platform + language + stages + optional deploy_targets)
+#     - create_docker_config  (app_type + environment + optional services)
+#     - create_k8s_deployment (app_name + optional replicas/resources/ingress/hpa)
+#     - create_terraform_config (cloud_provider + resources + environment + region)
+#     - create_monitoring_config (stack + metrics + optional alert_channels)
+#   Persistence side-effect: writes Deliverable(deliverable_type='analysis',
+#     category='DevOps', tags=['devops', tool_used or 'operations']) via
+#     _save_to_deliverable — WITH 60-min dedup guard (Session 1234 D6 helper
+#     _find_recent_duplicate_deliverable, devops_agent.py:307-357): if a
+#     Deliverable with the same agent_name + title + workspace_id exists within
+#     60min, the save is SKIPPED and a [DEVOPS_DUP_SKIPPED] warning is logged.
+#     Validator must accept BOTH save-happened and dup-skipped outcomes on
+#     happy paths. Deliverable persistence ONLY fires when tool_calls produced
+#     all_results; the no-tool-call GPT-content path returns without persisting.
+#   Workspace write side-effect (devops_agent.py:462-470): when tool_calls
+#     produced config content, agent calls _write_files_to_workspace with
+#     deterministic filenames (.github/workflows/ci.yml, Dockerfile,
+#     k8s/<app>-deployment.yaml, terraform/<provider>.tf, monitoring/<stack>-
+#     config.yaml). Returns {written: bool, total_written: int, reason?: str}.
+#     Skip is expected when no workspace is bound to the invocation.
+#
+# Coverage: 13 prompts total (5 happy + 8 fault-injection, 2 per non-happy category).
+#
+# ── Arc-precedent adherence (canon_version=1, S2955-frozen) ──────────────
+# (1) schema_version + canon_version explicit at file top.
+# (2) canonical_field_mapping declares native vs derived per field with named
+#     derivation rules prefixed devops_v1_*.
+# (3) fault_injection uses effect-based contract (component + fault.type + params)
+#     with python.{...} adapter as optional appendix; portable beyond Python-mock.
+# (4) one_of acceptance-criteria capped at ≤2 branches with mandatory why strings.
+
+schema_version: 1
+canon_version: 1
+
+meta:
+  agent: DevOpsAgent
+  tier: 1
+  arc: golden_evals
+  arc_slice: S2957
+  ratified_by: chris_via_chat_ui
+  ratified_date: "2026-07-25"
+  head_sha_at_authoring: 3dd20fc2e
+  reliability_contract_source: docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md
+  substrate_reference: evals/tier1/research_agent.yaml
+  categories_covered:
+    - happy_path
+    - tool_timeout
+    - data_unavailable
+    - ambiguous_input
+    - bad_input
+
+# Explicit mapping from canonical field (canon_version=1) to how it's obtained
+# from the DevOpsAgent-native AgentResult. Every S2963 validator MUST consult
+# this block; must never invent an ad-hoc mapping.
+canonical_field_mapping:
+  summary:
+    mapping_source: native
+    from: AgentResult.message
+    note: |
+      message is either (a) synthesis text from _synthesize_tool_results
+      (Session 1200, devops_agent.py:517), (b) descriptive_msg constructed from
+      first tool's args (devops_agent.py:476-497), or (c) raw GPT content
+      (devops_agent.py:575) when the agent chose NOT to invoke any tool
+      (the health-check advisory path — common in 30d production traffic).
+      Validators should accept all three shapes.
+  evidence_pointers:
+    mapping_source: derived
+    derivation_rule: devops_v1_tool_calls_plus_workspace_files
+    derivation_spec: |
+      Preferred: AgentResult.tool_calls[*].tool + arguments + result (proves
+      tool-grounding for config-generation dispatches).
+      Fallback A (config path only): AgentResult.data.workspace_write.files
+      when written=true — proves side-effect artifact was created.
+      Fallback B (advisory path): AgentResult.message length + content shape
+      is the only evidence available when the agent chose not to invoke tools
+      (no tool_calls, no data payload, no workspace write). This is legitimate
+      for health-check queries but validators must not upgrade this to
+      "evidence" for config-generation prompts.
+      For happy paths with an explicit config-generation ask, at least one of
+      (tool_calls, workspace_write.files) MUST be non-empty. For pure advisory
+      health-check prompts, non-empty message with minLength>=200 is acceptable
+      as the sole evidence.
+      For data_unavailable/tool_timeout with success=False, all MAY be empty.
+  health_status:
+    mapping_source: derived
+    derivation_rule: devops_v1_success_and_tool_path
+    derivation_spec: |
+      if not AgentResult.success:                                       → unavailable
+      elif tool_calls is empty and message is non-empty:                → healthy
+        (advisory path — agent chose not to dispatch tools; legitimate for
+         health-check / recommendation asks)
+      elif all tool_calls have result.success == True and
+           data.workspace_write.written == True:                        → healthy
+      elif all tool_calls have result.success == True and
+           data.workspace_write.written == False:                       → degraded
+        (config generated but not persisted to workspace — usable output
+         but the buyer-facing artifact side-effect was skipped)
+      elif any tool_call has result.success == False:                   → degraded
+      else:                                                             → healthy
+      Note: DevOpsAgent's "health" is not platform-health (SIA's domain) — here
+      it represents whether the DevOps request produced actionable output AND
+      whether the buyer-facing side-effects (workspace file, Deliverable row)
+      fired cleanly.
+
+prompts:
+
+  # ─── HAPPY PATH ─────────────────────────────────────────────────────────
+
+  - id: devops_happy_01_light_health_check_advisory
+    category: happy_path
+    input: "Run a light platform health-check: summarize infra signals (queues, workers, API routing), recent errors, and quick remediation steps."
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 200}
+        evidence_pointers: {type: array}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - no_unsupported_claims
+      - one_of:
+          branches:
+            - predicate: no_tool_calls_and_summary_provides_advisory_response
+              why: "advisory path — DevOpsAgent's system_prompt (line 60) instructs to answer directly without tools for questions/recommendations; this is the correct behavior for a health-check ASK without a config-generation directive"
+            - predicate: at_least_one_tool_call_present
+              why: "if the agent chose to invoke a tool (e.g., create_monitoring_config to propose observability), the tool path is also acceptable — but result_data must reflect the dispatch"
+    notes: |
+      Real 30d prompt shape — most 30d production traffic (~8 of 13) is
+      "light platform health check" advisory queries that hit the no-tool-call
+      GPT path (devops_agent.py:574-593). This is the shape mismatch called out
+      in the header: DevOpsAgent's tools are config-generators but the observed
+      traffic asks for infra opinions. Both resolutions acceptable; validator
+      must not force a tool dispatch on an advisory query.
+
+  - id: devops_happy_02_ci_pipeline_github_actions
+    category: happy_path
+    input: "Create a GitHub Actions CI/CD pipeline for a Python Django app with build, test, lint, and deploy-to-staging stages. Include security scans and Slack notifications."
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 100}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - tool_call_create_ci_pipeline_invoked
+      - tool_call_arg_platform_is_github_actions
+      - tool_call_arg_language_mentions_python
+      - tool_call_arg_stages_includes_build_test_lint_deploy_as_superset
+      - deliverable_persisted_or_dup_skipped
+      - one_of:
+          branches:
+            - predicate: workspace_write_written_true_with_github_workflows_ci_yml
+              why: "buyer-critical happy path — config generated + workspace file (.github/workflows/ci.yml) persisted per devops_agent.py:428-431"
+            - predicate: workspace_write_written_false_with_reason_no_workspace_bound
+              why: "acceptable when no workspace is bound to invocation (test-harness dispatch); config still generated in tool result"
+    notes: |
+      Exercises create_ci_pipeline tool routing. Validator asserts platform
+      argument matches user input (not defaulted), language matches Python
+      Django, stages array contains all 4 requested stages AS A SUPERSET
+      (S2957 Rigby T2 fold 2): LLM may legitimately expand the list with
+      additional stages like 'typecheck', 'format', 'security_scan' — the
+      predicate _superset suffix codifies that the 4 requested stages are a
+      minimum-required set, not an exact-equality match. Additional stages
+      permitted. Also asserts the workspace-write side-effect: filename must
+      be .github/workflows/ci.yml per the platform-to-filename mapping at
+      devops_agent.py:428-435. deliverable_persisted_or_dup_skipped mirrors
+      ResearchAgent's dup-skip contract (60-min window guard, devops_agent.py:538-553).
+
+  - id: devops_happy_03_docker_config_python_fastapi_production
+    category: happy_path
+    input: "Generate a production Dockerfile and docker-compose for a Python FastAPI service with Postgres and Redis. Use multi-stage builds and healthchecks."
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 100}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - tool_call_create_docker_config_invoked
+      - tool_call_arg_app_type_is_python_fastapi
+      - tool_call_arg_environment_is_production
+      - tool_call_arg_services_includes_postgres_and_redis
+      - tool_call_arg_multi_stage_is_true
+      - tool_call_arg_include_healthcheck_is_true
+    notes: |
+      Exercises create_docker_config with multiple boolean and array args.
+      Common LLM failure mode: dropping the multi_stage/include_healthcheck
+      booleans because they weren't emphasized in the prompt, or defaulting
+      services to an empty list. Validator asserts explicit arg pass-through.
+
+  - id: devops_happy_04_k8s_deployment_with_hpa_and_ingress
+    category: happy_path
+    input: |
+      Generate Kubernetes manifests for an app called 'donkey-api' with 5 replicas.
+      Enable ingress on api.donkeybetz.com with TLS. Include HPA. Use raw manifests
+      (not Helm).
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 100}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - tool_call_create_k8s_deployment_invoked
+      - tool_call_arg_app_name_is_donkey_api
+      - tool_call_arg_replicas_is_5
+      - tool_call_arg_use_helm_is_false
+      - tool_call_arg_include_hpa_is_true
+      - tool_call_arg_ingress_enabled_true_with_host_and_tls
+    notes: |
+      Exercises create_k8s_deployment nested-object arguments (ingress: {enabled,
+      host, tls}). Common failure mode: LLM flattens nested args or defaults
+      use_helm=True when the user said "raw manifests". Validator asserts the
+      full ingress object shape and the explicit use_helm=False choice.
+
+  - id: devops_happy_05_terraform_aws_multi_resource
+    category: happy_path
+    input: "Create Terraform for AWS us-east-1 with a VPC, an RDS Postgres instance, and an S3 bucket for the 'production' environment. Use modules and include remote state."
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 100}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - tool_call_create_terraform_config_invoked
+      - tool_call_arg_cloud_provider_is_aws
+      - tool_call_arg_region_is_us_east_1
+      - tool_call_arg_environment_is_production
+      - tool_call_arg_resources_includes_vpc_rds_s3
+      - tool_call_arg_use_modules_is_true
+      - tool_call_arg_include_state_backend_is_true
+      - deliverable_persisted_or_dup_skipped
+    notes: |
+      Exercises create_terraform_config with an array of resource types.
+      Also asserts region defaulting is bypassed when user explicitly names
+      us-east-1 (devops_agent.py:866 falls back to _get_default_region only
+      when region arg is None). Validator asserts explicit region pass-through.
+
+  # ─── TOOL TIMEOUT ───────────────────────────────────────────────────────
+
+  - id: devops_timeout_01_watchdog_kill
+    category: tool_timeout
+    input: "Run one-shot smoke execution of internal WORKFLOWS['morning_brief'] on main with default rotation_slot='ai_infra_deep_dive'. Return per-step trace: step name, handler/agent dispatched, status, key context writes (lane_1_text..lane_4_text, decision_card_text, morning_brief_markdown), and final deliverable_id."
+    context:
+      invocation_source: workflow_smoke_test
+    fault_injection:
+      component: celery_worker
+      selector: core.tasks.execute_agent_task
+      fault:
+        type: watchdog_kill
+        params:
+          simulated_reason: "Task timed out after 60 minutes (no heartbeat) - marked as failed by cleanup"
+      python:
+        behavior: raise
+        exception_class: celery.exceptions.SoftTimeLimitExceeded
+        exception_message: "Task timed out after 60 minutes (no heartbeat) - marked as failed by cleanup"
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {const: unavailable}
+        error_signature: {type: string, pattern: "timed out|SoftTimeLimitExceeded|no heartbeat"}
+    acceptance_criteria:
+      - agent_result_success_false
+      - health_status_is_unavailable
+      - error_signature_present
+      - no_fabricated_workflow_trace
+      - no_deliverable_persisted_with_partial_content
+    notes: |
+      Real observed failure mode — 2 of 2 all-time DevOpsAgent failures (both
+      2026-06-25) are the 60-min Celery watchdog kill on morning_brief smoke
+      execution. Same failure class as SIA sia_timeout_01 and ResearchAgent
+      research_timeout_01 — this is a platform-wide failure mode, not a
+      DevOpsAgent-specific one. Buyer-critical invariant: watchdog kill must
+      NOT persist a partial Deliverable with fabricated step-trace content.
+      The top-level try/except at devops_agent.py:595-601 MUST fire cleanly
+      and return AgentResult(success=False, error=...).
+
+  - id: devops_timeout_02_openai_client_slow_during_ci_generation
+    category: tool_timeout
+    input: "Create a GitHub Actions CI/CD pipeline for a Python Django app with build, test, lint, and deploy-to-staging stages."
+    context: {}
+    fault_injection:
+      component: openai
+      selector: core.services.openai_client_factory.get_openai_client
+      fault:
+        type: latency
+        params:
+          delay_ms: 30000
+          latency_budget_ms: 5000
+      python:
+        behavior: sleep_then_return
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [degraded, unavailable]}
+        error_signature: {type: string}
+    acceptance_criteria:
+      - health_status_is_degraded_or_unavailable
+      - no_fabricated_ci_pipeline_content
+      - one_of:
+          branches:
+            - predicate: agent_result_success_false_with_error_signature
+              why: "hard-fail acceptable — OpenAI client is required for BOTH the top-level _call_openai and the per-tool config generation (devops_agent.py:629,702,777,864,944); latency past budget causes the tool's LLM call to time out and no config content is returned"
+            - predicate: agent_result_success_false_with_partial_tool_call_recorded
+              why: "acceptable if the top-level _call_openai completed but the per-tool _create_ci_pipeline LLM call stalled — tool_calls list may contain the dispatch record but result.success=False"
+    notes: |
+      Constructed — DevOpsAgent's config-generation tools each make their own
+      OpenAI call (devops_agent.py:675, 748, 836, 916, 994) via
+      client.chat.completions.create with max_completion_tokens=5000-6000.
+      Latency in the client factory affects both the outer _call_openai
+      (tool-selection LLM) and the inner per-tool LLM. Unacceptable:
+      fabricating a CI pipeline YAML to fill the void.
+
+  # ─── DATA UNAVAILABLE ───────────────────────────────────────────────────
+
+  - id: devops_data_unavail_01_openai_returns_empty_config
+    category: data_unavailable
+    input: "Generate a production Dockerfile and docker-compose for a Python FastAPI service with Postgres and Redis."
+    context: {}
+    fault_injection:
+      component: python_service
+      selector: core.agents.devops_agent.DevOpsAgent._create_docker_config
+      fault:
+        type: bad_payload
+        params:
+          shape: empty_content_string
+      python:
+        behavior: return_value
+        return_value:
+          success: true
+          app_type: python-fastapi
+          environment: production
+          services: [postgres, redis]
+          config: ""
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [degraded, unavailable]}
+    acceptance_criteria:
+      - no_fabricated_dockerfile_content
+      - one_of:
+          branches:
+            - predicate: tool_call_result_success_true_but_config_is_empty_string
+              why: "acceptable if agent surfaces the empty result honestly — tool call was made, LLM returned empty content, downstream workspace_write may skip the empty file; health_status=degraded reflects the incomplete output"
+            - predicate: agent_result_success_false_with_no_content_error
+              why: "acceptable if agent detects the empty-content case and hard-fails rather than persisting an empty Dockerfile to the workspace"
+    notes: |
+      Constructed — the per-tool OpenAI calls return content via
+      response.choices[0].message.content (e.g., devops_agent.py:690, 763). No
+      length validation exists — an empty string would flow through into
+      tool_result['config'] and be handed to _write_files_to_workspace as an
+      empty Dockerfile. Buyer-critical: empty content must not become a
+      persisted workspace file OR a Deliverable with visible content of "".
+
+      Selector shape note (S2957 Rigby T2 fold 3): the fault_injection selector
+      points at the service-level DevOpsAgent._create_docker_config method
+      rather than the openai library-internal Completions.create path, so the
+      contract remains portable across openai SDK upgrades. This matches SIA
+      and ResearchAgent's canon shape of using core.services.* / core.agents.*
+      selectors. python.return_value simulates the "OpenAI returned empty
+      content" case by returning the shape _create_docker_config would build
+      after receiving choices[0].message.content == "".
+
+  - id: devops_data_unavail_02_workspace_write_fails
+    category: data_unavailable
+    input: "Generate Kubernetes manifests for an app called 'donkey-api' with 3 replicas."
+    context: {}
+    fault_injection:
+      component: python_service
+      selector: core.agents.base_agent.BaseAgent._write_files_to_workspace
+      fault:
+        type: error
+        params:
+          upstream_error: "workspace not bound / user permission denied"
+      python:
+        behavior: return_value
+        return_value:
+          written: false
+          reason: "no workspace bound to invocation"
+          total_written: 0
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 100}
+        health_status: {const: degraded}
+    acceptance_criteria:
+      - agent_result_success_true
+      - tool_call_create_k8s_deployment_invoked
+      - health_status_is_degraded
+      - summary_mentions_workspace_write_skipped_or_failed
+      - deliverable_persisted_or_dup_skipped
+    notes: |
+      Simulates the "no workspace bound" case that already exists as a valid
+      runtime state (devops_agent.py:469-470 logs "Workspace write skipped").
+      Correct behavior: tool call succeeds (manifests generated in memory),
+      workspace_write skipped cleanly, Deliverable still persisted, but
+      health_status downgraded to degraded because the buyer-facing artifact
+      side-effect didn't fire. Anti-hallucination invariant: agent must not
+      claim files were written when they were not.
+
+  # ─── AMBIGUOUS INPUT ────────────────────────────────────────────────────
+
+  - id: devops_ambig_01_underspecified_setup
+    category: ambiguous_input
+    input: "set up my server"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 40}
+        health_status: {enum: [healthy, degraded]}
+        clarifying_question: {type: string}
+    acceptance_criteria:
+      - no_fabricated_context
+      - no_tool_calls_made
+      - one_of:
+          branches:
+            - predicate: clarifying_question_asked_with_scope_options
+              why: "asked user to narrow — best UX for zero-referent input ('server' has no obvious cloud/type/purpose)"
+            - predicate: summary_lists_setup_options_without_dispatching_tools
+              why: "advisory response listing 'what do you mean by set up' options (Docker? K8s? Terraform? CI?) — acceptable if no tool dispatch happens, since dispatching create_terraform_config with default args would fabricate context the user never provided"
+    notes: |
+      Critical anti-hallucination test — DevOpsAgent has 5 config-generation
+      tools with default-heavy schemas. LLM's tempting failure mode: pick one
+      (usually create_terraform_config with aws + default region) and generate
+      a full config for a hypothetical server. The correct behavior is to
+      NOT dispatch tools when the user's intent is unclear. This is the
+      class of failure A1 audit buyers pay to prevent.
+
+  - id: devops_ambig_02_wrong_domain
+    category: ambiguous_input
+    input: "Write me a marketing plan for launching our SaaS product next quarter."
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 30}
+        health_status: {enum: [healthy, degraded, unhealthy, unavailable]}
+        refusal_or_redirect: {type: boolean}
+    acceptance_criteria:
+      - refusal_or_redirect_true
+      - no_fabricated_marketing_content
+      - no_tool_calls_made
+      - summary_names_correct_agent_domain
+      - one_of:
+          branches:
+            - predicate: summary_suggests_content_or_marketing_agent
+              why: "redirected to ContentWriterAgent or similar — best UX"
+            - predicate: summary_states_out_of_scope_for_devops
+              why: "cleanly refused as out-of-scope for DevOpsAgent (whose scope is CI/CD, containers, K8s, IaC, monitoring per system_prompt lines 66-72) — acceptable fallback"
+    notes: |
+      DevOpsAgent's domain is infrastructure + operations, not marketing.
+      Correct behavior: refuse-or-redirect with a note about scope. Critical
+      anti-hallucination test — LLM must NOT invent a marketing plan to
+      seem helpful. Also must NOT dispatch a DevOps tool (e.g., create_monitoring_
+      config for "marketing metrics") to force the ask into scope.
+
+  # ─── BAD INPUT ──────────────────────────────────────────────────────────
+
+  - id: devops_bad_01_empty_task
+    category: bad_input
+    input: ""
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [healthy, degraded, unavailable]}
+        rejected: {type: boolean}
+    acceptance_criteria:
+      - no_fabricated_context
+      - no_tool_calls_made
+      - one_of:
+          branches:
+            - predicate: rejected_true_with_reason
+              why: "clean rejection — safest boundary behavior since DevOpsAgent has no _validate_task hard-fail like ResearchAgent; LLM should recognize empty input and ask for detail"
+            - predicate: summary_asks_what_devops_task_to_perform
+              why: "advisory 'please describe your DevOps task' response — acceptable since no _validate_task guard exists; empty task shouldn't crash but shouldn't fabricate one either"
+    notes: |
+      Empty task hits devops_agent.py:377 _build_intelligent_prompt with an
+      empty string. Unlike ResearchAgent (which has _validate_task at
+      research_agent.py:836 for hard-fail), DevOpsAgent has NO explicit empty-
+      input guard. Correct outcome: either LLM recognizes the empty task and
+      asks for detail (no tool dispatch), OR the top-level exception handler
+      fires. Unacceptable: dispatching a tool with fabricated args, OR
+      persisting a Deliverable titled "DevOps: " (empty task string).
+
+  - id: devops_bad_02_control_characters_in_ci_ask
+    category: bad_input
+    input: "\u0000\u0001create\u0007\u001b[31mci\u001b[0m\u0000 pipeline for github-actions with python"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [healthy, degraded, unavailable]}
+    acceptance_criteria:
+      - no_crash
+      - no_control_characters_in_output
+      - no_ansi_escape_in_output
+      - no_deliverable_persisted_with_control_chars
+      - no_workspace_file_written_with_control_chars_in_path
+      - one_of:
+          branches:
+            - predicate: rejected_true_with_reason
+              why: "clean rejection of malformed payload — safest for buyer-visible workspace files (.github/workflows/ci.yml)"
+            - predicate: sanitized_and_dispatched_create_ci_pipeline
+              why: "stripped control chars, recognized the 'create ci pipeline for github-actions with python' signal, dispatched cleanly — acceptable if output + persisted Deliverable + workspace file are all clean"
+    notes: |
+      Malformed payload with NULs, BEL, and ANSI escape sequences with a real
+      DevOps signal embedded. Agent must not crash, must not echo control
+      characters into the persisted Deliverable OR into the workspace filename
+      (deliverable_title = f"DevOps: {task[:80]}" at devops_agent.py:537 would
+      propagate raw control chars). Also must not let ANSI escape codes
+      render as coloring in the persisted Deliverable body. Exposes
+      normalization gaps in _build_intelligent_prompt and the deliverable
+      title/tag construction path.
