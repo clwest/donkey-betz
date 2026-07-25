@@ -154,6 +154,128 @@ def signal_dispatches_manual(request):
 
 @api_view(['GET'])
 @permission_classes([AllowAny])
+def signal_dispatches_eligible(request):
+    """List active SignalClusters that at least one rule can dispatch.
+
+    Backs the S2948 cluster-picker dropdown in the ManualDispatchModal.
+    Read-only — same permission posture as ``signal_dispatches_list``.
+
+    Query params:
+        limit (int, default 50, max 200)
+        pattern_type (str) — optional filter to a single pattern
+        include_blocked (bool, default false) — include clusters whose
+            5-min idempotent guard would currently block a dispatch
+
+    Response shape (one row per (cluster, matching-rule) pair collapsed
+    onto the cluster; the frontend picks a rule from ``matching_rules``):
+        {
+          success: true,
+          data: {
+            eligible: [
+              {
+                id, name, pattern_type, strength, confidence,
+                status, detected_at,
+                matching_rules: [{key, agent_name}, ...],
+                guard_blocked_rules: [rule_key, ...]  # subset blocked by 5-min guard
+              },
+              ...
+            ],
+            count: int,
+            limit: int
+          }
+        }
+    """
+    try:
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from core.models_signal_dispatch import SignalDispatch
+        from core.models_signal_intelligence import SignalCluster
+        from core.services.signal_dispatch_service import (
+            DEFAULT_MANUAL_GUARD_WINDOW_MINUTES,
+            SIGNAL_DISPATCH_RULES,
+        )
+
+        limit = max(1, min(int(request.GET.get('limit', 50)), 200))
+        pattern_filter = request.GET.get('pattern_type')
+        include_blocked = request.GET.get('include_blocked', '').lower() in ('1', 'true', 'yes')
+
+        rules_by_pattern: dict[str, list] = {}
+        for r in SIGNAL_DISPATCH_RULES:
+            rules_by_pattern.setdefault(r.pattern_type, []).append(r)
+
+        eligible_patterns = list(rules_by_pattern.keys())
+        if pattern_filter:
+            if pattern_filter not in rules_by_pattern:
+                return Response({
+                    'success': True,
+                    'data': {'eligible': [], 'count': 0, 'limit': limit},
+                })
+            eligible_patterns = [pattern_filter]
+
+        qs = (
+            SignalCluster.objects.filter(
+                status='active',
+                pattern_type__in=eligible_patterns,
+                strength__gte=0.5,
+                confidence__gte=0.5,
+            )
+            .order_by('-strength', '-detected_at')[:limit]
+        )
+        clusters = list(qs)
+
+        # Build guard-blocked lookup: (cluster_id, rule_key) pairs that
+        # would currently 409 from POST /manual/.
+        since = timezone.now() - timedelta(minutes=DEFAULT_MANUAL_GUARD_WINDOW_MINUTES)
+        blocked_pairs = set(
+            SignalDispatch.objects
+            .filter(
+                signal_cluster__in=clusters,
+                dispatched_at__gte=since,
+            )
+            .exclude(outcome='failed')
+            .values_list('signal_cluster_id', 'rule_key')
+        )
+
+        rows = []
+        for c in clusters:
+            rules = rules_by_pattern.get(c.pattern_type, [])
+            matching = [{'key': r.key, 'agent_name': r.agent_name} for r in rules]
+            blocked = [r.key for r in rules if (c.id, r.key) in blocked_pairs]
+
+            if not include_blocked and blocked and len(blocked) == len(rules):
+                # Every rule for this cluster is guard-blocked — hide from
+                # the default picker so operators don't hit 409s.
+                continue
+
+            rows.append({
+                'id': str(c.id),
+                'name': c.name,
+                'pattern_type': c.pattern_type,
+                'strength': float(c.strength or 0.0),
+                'confidence': float(c.confidence or 0.0),
+                'status': c.status,
+                'detected_at': c.detected_at.isoformat() if c.detected_at else None,
+                'matching_rules': matching,
+                'guard_blocked_rules': blocked,
+            })
+
+        return Response({
+            'success': True,
+            'data': {
+                'eligible': rows,
+                'count': len(rows),
+                'limit': limit,
+            },
+        })
+    except Exception as e:
+        logger.error(f"signal_dispatches_eligible failed: {e}")
+        return Response({'success': False, 'error': str(e)}, status=500)
+
+
+@api_view(['GET'])
+@permission_classes([AllowAny])
 def signal_dispatch_resolve_cluster(request, cluster_id):
     """Resolve a cluster UUID for the manual-dispatch modal preview.
 
