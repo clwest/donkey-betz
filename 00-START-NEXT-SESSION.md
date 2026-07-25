@@ -2,60 +2,57 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2948 CLOSED. NEW-4 Cluster Picker (Shape B upgrade) shipped + postbuild template auto-sync bundled. Chris hit the paste-UUID ergonomic gap Shape C left within minutes of the S2947 A8 ship ("I don't have a UUID to search for…") and pre-ratified the Shape B upgrade in the same session ("if you have the context and everything ship it now"). ManualDispatchModal rewritten as 2-column layout: searchable cluster list (left) + preview+rule+submit (right). New `GET /api/v1/agents/signal-dispatches/eligible/` endpoint returns active clusters with matching rules + guard-block flags. Default hides clusters whose only matching rule is guard-blocked (avoids 409s from the picker); `include_blocked=1` surfaces them with `guard_blocked_rules` populated. **Bonus fix bundled:** `frontend/scripts/generate-manifest.mjs` now auto-syncs `core/templates/index.html` bundle hashes from `dist/index.html` on every `npm run build` — permanently removes the stale-template bug that broke Chris's UI mid-S2947 close (that manual fix went out as PR #3535). Post-merge Rigby SIGN used `repo_tool` reads on views + postbuild script (non-rubber-stamp evidence per `feedback_verify_rigby_tool_runs_before_trusting_sign`). 32/32 signal-dispatch tests pass (25 pre-existing + 7 new for eligible endpoint). Live-verify pending Chris's first click on the new picker.
+## READ THIS FIRST — SESSION 2949 CLOSED. A9 shipped: 4th signal-dispatch rule (`demand_spike` → `MarketMovementMonitorAgent`) + per-rule diagnostics. Chris ratified "Begin A9" at open; Rigby SIGN converged on MarketMovementMonitorAgent (22 execs / effectiveness 84 / best semantic fit) via 5 shortlist introspections. Rigby zoom-out fold flagged 4-rule starvation risk classified `same_session_mitigatable` → shipped per_rule_diagnostics counters same PR. Post-merge Rigby SIGN found second fold: `blocked_by_cap` incremented once then broke, under-reporting magnitude → classified `same_pr_mitigatable` → Chris ratified fix-now via plain-English decision routing → amendment PR #3539 shipped same session with magnitude fix. Live-verify PASSED — all 4 rules present in `per_rule_diagnostics`, real dedupe counts observed (trend_emergence=4 blocked_by_dedupe, opportunity_window=3, demand_spike + content_gap all zeros matching 0-active state). Post-merge Rigby SIGN used `repo_tool.read` on 3 file ranges (non-rubber-stamp evidence per `feedback_verify_rigby_tool_runs_before_trusting_sign`).
 
-**Refreshed 2026-07-24 (S2948 close).** Gap-map headline: `100 validated_full / 0 untested` (unchanged — signal-dispatch UI upgrade, not a PA-tools sweep change).
+**Refreshed 2026-07-24 (S2949 close).** Gap-map headline: `100 validated_full / 0 untested` (unchanged — signal-dispatch net-new, not a PA-tools sweep change).
 
 **PRs shipped this session:**
-- u-d-b PR **#3536** — S2948 NEW-4: cluster picker (Shape B) + postbuild template auto-sync (7 files, +431/-147, 32/32 tests pass).
+- u-d-b PR **#3538** — S2949 A9: 4th signal-dispatch rule + per-rule diagnostics (2 files, +121/-18, 58/58 tests pass).
+- u-d-b PR **#3539** — S2949 A9 amendment: blocked_by_cap/daily_cap magnitude fix (2 files, +44/-3, 60/60 tests pass).
 
 **Twin mirrors shipped this session:**
-- Content mirror: `2bfac487-5869-4f26-90d0-8146a0ce0cf3` (Architecture & Research workspace, category `initiative_phase_doc`; diagnostic flag cleared via ORM).
-- Ratification envelope: `242deb77-e58c-41ce-a19f-765fb9d41ad0` (Architecture & Research workspace, `deliverable_type='ratification_record'`, category `governance`; diagnostic cleared via ORM).
+- Content mirror: `f6b386ab-19e6-4c33-990c-82773d6a96a3` (Architecture & Research workspace, category `initiative_phase_doc`; diagnostic flag cleared via ORM).
+- Ratification envelope: `8dfb4644-e76b-49ab-aab4-4e07fa971cb0` (Architecture & Research workspace, `deliverable_type='ratification_record'`, category `governance`; diagnostic cleared via ORM).
 
 **Files shipped this session:**
-- **NEW** `signal_dispatches_eligible` view in `core/views_signal_dispatch.py` (+118) — GET `/api/v1/agents/signal-dispatches/eligible/`.
-- **MODIFIED** `core/urls.py` (+2) — new route.
-- **NEW** 7 regression tests in `core/tests/test_s2934_signal_dispatch_harness.py` (+79) — `TestSignalDispatchesEligibleEndpoint`.
-- **REWRITE** `ManualDispatchModal` in `frontend/src/pages/workspace/tabs/SignalDispatchesTab.tsx` (~130 net delta) — 2-column picker layout.
-- **MODIFIED** `frontend/src/lib/api.ts` (+3) — `agentsApi.signalDispatchesEligible()`.
-- **MODIFIED** `frontend/scripts/generate-manifest.mjs` (+38) — postbuild template auto-sync.
-- **MODIFIED** `core/templates/index.html` — first auto-synced write (S2948 bundle hashes).
+- **MODIFIED** `core/services/signal_dispatch_service.py` (net +64) — 4th `SignalDispatchRuleDef` (demand_spike__market_movement_monitor); `scan_and_dispatch()` returns `per_rule_diagnostics` (`eligible_count`, `blocked_by_cap`, `blocked_by_dedupe`, `blocked_by_daily_cap`); `_eligible_clusters_for_rule` returns `(clusters, dedupe_excluded_count)` tuple; magnitude semantics for cap counters.
+- **MODIFIED** `core/tests/test_signal_dispatch_service.py` (net +83) — 7 new tests total across both PRs.
 
 **Post-merge live-dispatch (per PLAYBOOK-7.4.4):**
-- Recycled after PR #3536 merge (`make celery-recycle` + `make stop && make start`).
-- Frontend rebuilt (`npm run build`) — auto-sync log line confirmed: `[generate-manifest] Synced core/templates/index.html to current dist hashes.`
-- Live-verify pending Chris's first click.
+- Recycled after PR #3538 merge (`make celery-recycle`) — task `4858d440-b3f9-41a6-8a95-7fb145a4126a` returned expected shape.
+- Recycled after PR #3539 amendment merge — workers matched HEAD at close.
 
-**Governance:** none this session. D6 moratorium unchanged. Governance pattern candidate observed (see below).
+**Governance:** none this session. D6 moratorium unchanged. One new pattern candidate observed (see below).
 
-**Governance-worthy pattern candidate (first trigger only, S2948 addition):** _"When Shape MVP will inevitably surface an ergonomic gap on first-use, ship the ergonomic upgrade in the same session (or explicitly commit to a follow-up before merging the MVP)."_ S2947 A8 Shape C → S2948 NEW-4 Shape B loop took ~30 min from "I don't have a UUID" to shipped/merged/recycled — good outcome, but validates Shape C under-scoped the ergonomic requirement. Watch for corroboration on another Shape MVP → same-session upgrade before proposing a playbook rule. Do NOT codify yet. Combines with S2947 first-trigger candidate ("spend-mutation endpoints must not be AllowAny") — two open pattern candidates in flight.
+**Governance-worthy pattern candidate (first trigger only, S2949):** _"When a post-merge Rigby SIGN fold classifies `same_pr_mitigatable` after the PR is already closed, ship a same-session amendment PR as the operational equivalent."_ First trigger this session (PR #3539 shipped ~15 min after PR #3538). Watch for corroboration before proposing a Playbook rule. Do NOT codify yet. Combines with S2948 pattern candidate ("Shape MVP + same-session ergonomic upgrade") + S2947 pattern candidate ("spend-mutation endpoints must not be AllowAny") — three open pattern candidates in flight.
 
 **Rigby Tool Gap Ledger:** no new formal entries. Known `deliverable_tool.create` diagnostic-flag bug re-hit twice (both mirrors) and re-worked-around via ORM as expected.
 
-Full session context: `docs/handoffs/SESSION_2948_NEW_4_CLUSTER_PICKER.md`.
+Full session context: `docs/handoffs/SESSION_2949_A9_4TH_DISPATCH_RULE.md`.
 
 ---
 
-## S2949 open sequence
+## S2950 open sequence
 
-**S2949 first-action is Chris-directed.** No pre-ratified plan carries forward from S2948.
+**S2950 first-action is Chris-directed.** No pre-ratified plan carries forward from S2949.
 
 ### Universal open sequence
 
 1. **Live-verify signal-dispatch pipeline still healthy:** ORM checks:
    - `SignalCluster.objects.filter(status='active').count()` — expect ≥ 9 (S2946 baseline + ongoing lift)
-   - `SignalDispatch.objects.filter(scan_run_id='manual').count()` — expect ≥ 2 (S2947 baseline + any Chris clicks)
+   - `SignalDispatch.objects.filter(scan_run_id='manual').count()` — expect ≥ 5 (S2948 baseline + any Chris clicks)
 2. **First-action lint pre-flight:** `python manage.py build_pa_tool_audit --gap-only --emit-gap-json --check` — confirm gap-map headline `100 validated_full / 0 untested`.
-3. **Verify wrapper pin freshness:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2949 pin (retired at S2948 close cascade).
+3. **Verify wrapper pin freshness:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2950 pin (retired at S2949 close cascade).
 4. **Chris directs first-action from the deferred queue below.**
 
-### Deferred queue (updated at S2948 close — Chris picks)
+### Deferred queue (updated at S2949 close — Chris picks)
 
 Engineering-first candidates (per `feedback_engineering_bias_over_audit`), sorted by leverage adjacency to what just shipped:
 
-- **(A9) 4th signal-dispatch rule** — `demand_spike` (250 clusters) or `skill_demand` (131 clusters). **Directly amplified by S2946 + S2947 + S2948 combined** — more clusters + easy-to-use picker = more useful rule-firing surface.
+- **(A10) 5th signal-dispatch rule — `skill_demand`** — pattern already ratified at S2949 for follow-up. 133 total clusters / 4 detecting. Agent shortlist to route through Rigby introspection: `TalentMarketAnalyst` (if exists) / `MarketIntelligenceAgent` / `OpportunityPipelineAgent`.
 - **(NEW-1) Wire up A1 shipping** — engineering-net-new. Turn Rigby into a product a stranger can pay for.
+- **(NEW-6) Fair-share round-robin scanning in `scan_and_dispatch()`** — S2949 amendment made starvation _visible_ but not _prevented_. Rule tuple order still determines dispatch priority under cap contention. Add round-robin or slot-based fairness. Needs regression tests on non-drift correctness. Trigger to open: observed non-zero `blocked_by_cap` on a rule for N consecutive scans.
+- **(NEW-7) `per_rule_diagnostics` persisted per `scan_run_id`** — currently logged + returned but not written to any audit table. If operators start querying "which rule got starved most yesterday?" ledger growth matters. Deferred until real need surfaces.
 - **(NEW-2) Rank + cap + paginate follow-ups on Rigby S2946 zoom-out fold** — reactive; only ship if a specific consumer bites at post-lift active-count levels.
 - **(NEW-3) Option 2 revisit — per-pattern-type diversity floors** — if /3 across the board proves too noisy for `opportunity_window`, introduce `PER_PATTERN_DIVERSITY_FLOOR` dict.
 - **(NEW-5) "Manual dispatch" cost estimate in modal (S2947 Z2 reactive follow-up)** — if operators start firing many manual dispatches and LLM spend spikes.
@@ -70,29 +67,34 @@ Engineering-first candidates (per `feedback_engineering_bias_over_audit`), sorte
 
 ---
 
-## What's forbidden at S2949 (D6 MORATORIUM still in force)
+## What's forbidden at S2950 (D6 MORATORIUM still in force)
 
-All prior forbidden entries carry forward. **S2948 new forbidden entries:** none. Clean session.
+All prior forbidden entries carry forward. **S2949 new forbidden entries:** none. Clean session.
 
 ---
 
 ## What's queued but deferred (do NOT open unless Chris directs)
 
-**S2948 additions to the deferred queue:**
+**S2949 additions to the deferred queue:**
 
-- **Advanced paste-UUID fallback** — the S2948 picker replaced paste-UUID entirely. If an operator ever needs to dispatch a cluster NOT in the eligible list (e.g., `include_blocked=1` case or a non-actionable cluster), add a collapsed "Advanced: paste UUID" toggle. Only ship if the need surfaces.
-- **Server-side search + pagination on `/eligible/`** — client-side filter is fine at ~10-100 clusters. If active count grows past ~500 (unlikely at current post-S2946 levels), promote to server-side.
+- **Fair-share round-robin scanning** — see NEW-6 above.
+- **Persist `per_rule_diagnostics` in audit table** — see NEW-7 above.
+
+**Prior deferred entries carry forward from S2948:**
+
+- **Advanced paste-UUID fallback** — the S2948 picker replaced paste-UUID entirely. If an operator ever needs to dispatch a cluster NOT in the eligible list, add a collapsed "Advanced: paste UUID" toggle.
+- **Server-side search + pagination on `/eligible/`** — client-side filter fine at ~10-100 clusters.
 
 **Prior deferred entries carry forward from S2947:**
 
 - **Z1 — Manual+auto shared daily-cap UI hint** (Rigby S2947 zoom-out, reactive).
-- **Z2 — Cost estimate / rate-limiting story for the modal** (Rigby S2947 zoom-out, reactive) — see NEW-5 above.
+- **Z2 — Cost estimate / rate-limiting story for the modal** (Rigby S2947 zoom-out, reactive) — see NEW-5.
 - **Z4 — Queue backlog handling / CSRF polish / "queued" success toast** (Rigby S2947 zoom-out, reactive).
 
 **Prior deferred entries carry forward from S2946:**
 
 - **Rank + cap + paginate follow-ups** (Rigby S2946 zoom-out fold, reactive).
-- **Per-pattern-type diversity floors** (Option 2 alternate to S2946 shipped Option 1) — see NEW-3 above.
+- **Per-pattern-type diversity floors** (Option 2 alternate to S2946 shipped Option 1) — see NEW-3.
 
 **Long-standing deferred entries:**
 
@@ -121,12 +123,12 @@ All prior forbidden entries carry forward. **S2948 new forbidden entries:** none
 - **Dedicated `agent_execution_query` PA tool** — S2931 Ledger #33 alternative path.
 - **Shared `skip_in_test` decorator** — S2931 Ledger #34 alternative.
 - **Slice 5-hardening session** — 3-4 executable invariants deferred at S2928 fork A.
-- **Bundled dev-env drift slate** — pre-existing pyright warnings on many files including `signal_aggregation_service.py` (S2946) + `signal_dispatch_service.py` (S2947) + `views_signal_dispatch.py` (S2947+S2948) + `test_s2934_signal_dispatch_harness.py` (S2947+S2948).
+- **Bundled dev-env drift slate** — pre-existing pyright warnings on many files including `signal_aggregation_service.py` (S2946) + `signal_dispatch_service.py` (S2947+S2948+S2949) + `views_signal_dispatch.py` (S2947+S2948) + `test_s2934_signal_dispatch_harness.py` (S2947+S2948) + `test_signal_dispatch_service.py` (S2949).
 - **Phase 0 heading fixes (8 tools)** — doc-only PR.
 - **Slice 1.5b autopilot mutations** — staged-enforcement session per pre-commit note.
 - **S2907 harness-substrate: MLEngine per-invocation NLP-model load** — unchanged.
 - **S2908 doc-fix candidate + Ledger candidate: media_tool.delete IRREVERSIBLE** — unchanged.
-- **Content-mirror auto-flagged as diagnostic (S2909 Ledger #31)** — unchanged; S2948 hit twice and workaround-cleared via ORM.
+- **Content-mirror auto-flagged as diagnostic (S2909 Ledger #31)** — unchanged; S2949 hit twice and workaround-cleared via ORM.
 - **FT-5 minimal_safe_args_v2 tracker (S2909 Ledger #32)** — unchanged.
 - **S2919 narrative_tool dev-env drift** — unchanged.
 - **S2925 Ledger #34 (LOW, distinct from S2931's #34)** — broader stale-model latent bug.
@@ -157,6 +159,7 @@ All prior forbidden entries carry forward. **S2948 new forbidden entries:** none
 **S2946 A6:** Signal-substrate topology fix (adjacent domain).
 **S2947 A8:** Signal-dispatch button + POST/resolve endpoints (adjacent domain).
 **S2948 NEW-4:** Cluster picker + eligible endpoint + postbuild template sync (adjacent domain).
+**S2949 A9:** 4th signal-dispatch rule (demand_spike) + per-rule diagnostics + magnitude-fix amendment (adjacent domain).
 
 **Total remaining sweep tools: 0.** All ratified sweep scope discharged.
 
@@ -176,7 +179,7 @@ _(unchanged — see prior 00-START snapshots)_
 
 ## A4 Warm-up Operating Constraints (Rigby-authored, S2846-ratified, still in force)
 
-1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2948: zero A4 spend** — pure engineering ship.
+1. **Spend lane:** A4 warm-up uses a separate budget lane/cap and must NOT consume or contend with A1 shipping spend. **S2949: zero A4 spend** — pure engineering ship.
 2. **Evidence tag:** All A4 artifacts are labeled "discovery-quality, not truth."
 3. **Capability claims:** (a)…(uu) as ratified at S2887 close. No additions.
 4. **Pilot framing only:** A4 messaging is pilot/early-access/concierge only.
@@ -185,14 +188,15 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## For fuller context (S2846 → S2948)
+## For fuller context (S2846 → S2949)
 
 See:
-- **S2948 handoff (current):** `docs/handoffs/SESSION_2948_NEW_4_CLUSTER_PICKER.md`
-- **S2948 shipped code:**
-  - `core/views_signal_dispatch.py:141-238` — `signal_dispatches_eligible` view
-  - `frontend/src/pages/workspace/tabs/SignalDispatchesTab.tsx:117-317` — ManualDispatchModal v2
-  - `frontend/scripts/generate-manifest.mjs:104-139` — postbuild template auto-sync
+- **S2949 handoff (current):** `docs/handoffs/SESSION_2949_A9_4TH_DISPATCH_RULE.md`
+- **S2949 shipped code:**
+  - `core/services/signal_dispatch_service.py:82-108` — 4th `SignalDispatchRuleDef` (demand_spike__market_movement_monitor)
+  - `core/services/signal_dispatch_service.py:130-200` — `scan_and_dispatch()` with per_rule_diagnostics + magnitude semantics
+  - `core/services/signal_dispatch_service.py:210-241` — `_eligible_clusters_for_rule` returning `(clusters, dedupe_excluded_count)` tuple
+- **S2948 handoff:** `docs/handoffs/SESSION_2948_NEW_4_CLUSTER_PICKER.md`
 - **S2947 handoff:** `docs/handoffs/SESSION_2947_A8_MANUAL_DISPATCH_BUTTON.md`
 - **S2946 handoff:** `docs/handoffs/SESSION_2946_A6_DIVERSITY_DENOMINATOR.md`
 - **S2945 handoff:** `docs/handoffs/SESSION_2945_LEDGER_38_BATCH_4.md`
@@ -204,8 +208,8 @@ See:
 - **Signal-substrate anchor files:**
   - `core/models_signal_intelligence.py` — `SignalCluster` model + `is_actionable` property (line 249) + status enum (line 203)
   - `core/services/signal_aggregation_service.py` — `_calculate_strength` (line 839) + `_calculate_confidence` (line 866) + `MIN_CLUSTER_SIZE=3` (line 44)
-  - `core/services/signal_dispatch_service.py` — `SignalDispatchService` + `SIGNAL_DISPATCH_RULES` (line 58) + `create_manual_dispatch` (S2947, line 308) + `execute_dispatch` (line 369) + `MANUAL_SCAN_RUN_ID='manual'` + `DEFAULT_MANUAL_GUARD_WINDOW_MINUTES=5`
-  - `core/views_signal_dispatch.py` — 3 endpoints: list (S2934 A4) + manual POST (S2947 A8) + resolve (S2947 A8) + eligible (S2948 NEW-4)
+  - `core/services/signal_dispatch_service.py` — `SignalDispatchService` + `SIGNAL_DISPATCH_RULES` (4 rules as of S2949, line 58) + `create_manual_dispatch` (S2947, line 308) + `execute_dispatch` (line 369) + `MANUAL_SCAN_RUN_ID='manual'` + `DEFAULT_MANUAL_GUARD_WINDOW_MINUTES=5`
+  - `core/views_signal_dispatch.py` — 4 endpoints: list (S2934 A4) + manual POST (S2947 A8) + resolve (S2947 A8) + eligible (S2948 NEW-4)
   - `core/models_signal_dispatch.py` — SignalDispatch model
 - **Parent-workspace multi-Claude rulebook:** `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`
 
