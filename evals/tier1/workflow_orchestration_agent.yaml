@@ -1,0 +1,801 @@
+# Golden Evals — Tier-1 canonical prompt suite
+# Agent under test: WorkflowOrchestrationAgent
+#   Wrapper:  core/agents/workflow_orchestration_agent.py    (580 lines)
+#   Legacy:   core/services/workflow_orchestration_agent.py  (5,437 lines)
+#
+# Arc: Golden Evals (S2954+ open, ratified 2026-07-25 by Chris via Chat UI)
+# Reliability contract source: docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md §3
+# Arc slice: S2958 — fourth Tier-1 agent YAML (mirrors canon_version=1 substrate
+#   frozen at S2955 in evals/tier1/system_intelligence_agent.yaml and extended
+#   through S2956 evals/tier1/research_agent.yaml and S2957 evals/tier1/devops_agent.yaml)
+# HEAD at authoring: e2edb87a9
+#
+# Volume snapshot (DB-verified via Rigby ORM 2026-07-25 T0):
+#   30d executions (owner_agent="WorkflowOrchestrationAgent", created_at >= 2026-06-25T00:00:00Z): 9
+#     (7 completed, 2 failed — 22.2% 30d failure rate, but see failure-sample caveat below)
+#   All-time (no created_at filter): 9 executions (7 completed, 2 failed)
+#     — 30d covers 100% of observed all-time traffic; agent has no history older
+#     than 30d in this DB snapshot.
+#   30d distinct task-string patterns (hand-classified from 9 rows): ~4 patterns:
+#     - "orchestrate a short sanity workflow" × 2 (2026-07-16, both completed)
+#     - morning_brief smoke variants × 7 (2026-06-25 batch, 5 completed + 2 failed)
+#       (three near-identical task strings that all boil down to
+#        "Run one-shot smoke execution of ... WORKFLOWS['morning_brief'] ...
+#         Return per-step trace: step name, handler/agent dispatched, status,
+#         key context writes ... and final deliverable_id.")
+#   Task-shape distribution (30d): entirely SMOKE traffic — sanity smokes + morning_brief
+#     smoke variants. Zero production traffic on the 18 creative workflow templates
+#     (research_and_create_logos, youtube_thumbnail_package, brand_identity_package,
+#      product_photography_kit, video_thumbnail_series, logo_to_video, social_media_kit,
+#      podcast_visual_package, ebook_cover_series, video_production_kit,
+#      course_thumbnail_series, pitch_deck_visuals, product_launch_kit,
+#      business_research, competitor_analysis, customer_personas, startup_validation,
+#      research_and_create_images).
+#   Observed real failure modes (from AgentExecution.error_message, all-time):
+#     - "Task timed out after 60 minutes (no heartbeat) - marked as failed by cleanup"
+#       (2 of 2 observed all-time; same Celery watchdog kill class as
+#        SIA sia_timeout_01, ResearchAgent research_timeout_01, and DevOpsAgent
+#        devops_timeout_01 — this is a platform-wide failure mode surfacing again
+#        because morning_brief has WorkflowOrchestrationAgent as its orchestrator.)
+#   Verifier note (inherited from S2956 ResearchAgent / S2957 DevOpsAgent YAML):
+#     AgentExecution.error_message stores empty-string ("") for successful runs,
+#     NOT NULL. Django's error_message__isnull=False filter returns all rows;
+#     use error_message__gt='' or .exclude(error_message='') to count real
+#     failures. The "2 of 2" figure above uses the non-empty semantic. Future
+#     S2963 validators MUST filter on non-empty, not non-null, when reasoning
+#     about failures.
+#
+#   HONEST COVERAGE LIMITS:
+#   1. THINNEST TRAFFIC OF ARC — 9 30d executions vs SIA 37, ResearchAgent 37,
+#      DevOpsAgent 13. Every prompt below is either a singleton or from an
+#      all-smoke-traffic sample. This is the least production-informed Tier-1
+#      YAML in the arc.
+#   2. SHAPE MISMATCH — WorkflowOrchestrationAgent's declared purpose is executing
+#      18 creative + research workflow templates. But 30d traffic is 100% smoke
+#      traffic (sanity smokes + morning_brief smoke variants). There is ZERO
+#      production traffic on the creative workflows the agent's core value is
+#      built around. Happy-path prompts below cover BOTH shapes explicitly: real
+#      observed traffic (workflow_happy_01 sanity smoke + workflow_happy_02
+#      morning_brief smoke + workflow_happy_03 self-description) AND constructed
+#      real-purpose prompts (workflow_happy_04 explicit business_research +
+#      workflow_happy_05 explicit creative-workflow logo dispatch) representing
+#      what a first-real-customer dispatch would look like.
+#   3. FAILURE SAMPLE = 2 — both same task-string pattern (morning_brief smoke)
+#      AND same failure mode (60-min Celery watchdog kill). Zero variety in
+#      observed failures. workflow_timeout_01 replays this observed case;
+#      workflow_timeout_02 through workflow_bad_02 are constructed from the
+#      wrapper's known dependency graph (COORDINATOR_TIMEOUT = 480s
+#      ThreadPoolExecutor bound at agents/workflow_orchestration_agent.py:54,
+#      WORKFLOWS dict lookup at services/workflow_orchestration_agent.py:1109,
+#      AGENT_MAP snake→PascalCase fallback at services/…:1480-1494 with acronym
+#      alias map for COO/CTO/SEO/etc.).
+#   4. NEW AGENT SHAPE (versus S2955–S2957 canon references) — WorkflowOrchestrationAgent
+#      uses PREDEFINED workflow templates, NOT LLM tool_calls. The wrapper's
+#      class attribute is `tools = []` at agents/workflow_orchestration_agent.py:165
+#      and `_execute_tool_call` explicitly refuses ("uses predefined workflows,
+#      not tools"). This is a different shape from SIA/Research/DevOps which use
+#      LLM function-calling. There are NO tool_call records for validators to
+#      inspect — evidence must come from `data.step_results`, `data.image_ids`,
+#      `data.video_ids`, `data.project_created`, and side-effect artifacts
+#      (Project rows on creative workflows; Deliverable rows on morning_brief +
+#      research/synthesis workflows). This mapping is codified explicitly in the
+#      canonical_field_mapping.evidence_pointers block below.
+#
+# Agent shape (grounds acceptance criteria):
+#   Wrapper (core/agents/workflow_orchestration_agent.py) delegates to legacy
+#   WorkflowOrchestrationAgent (core/services/workflow_orchestration_agent.py) via
+#     ThreadPoolExecutor(max_workers=1).submit(execute_legacy).result(timeout=480)
+#   COORDINATOR_TIMEOUT = 480 seconds (8 min) at line 54.
+#   Returns AgentResult with:
+#     message: str
+#     success: bool
+#     error: str (on failure)
+#     execution_time_ms: int
+#     tool_calls: [] (ALWAYS empty — no LLM function calling in this agent)
+#     data:
+#       workflow: str                     — the workflow name that ran (from context
+#                                            or inferred via _infer_workflow)
+#       step_results: list                — see field-mapping caveat below
+#       image_ids: list[str]              — from context['generated_image_ids']
+#                                            (creative workflows)
+#       video_ids: list[str]              — from context['generated_video_ids']
+#       project_created: dict|None        — {success, project_id, project_name}
+#       summary: str                      — human-readable summary from
+#                                            _compile_final_result
+#   Special return paths (wrapper):
+#     (a) Self-description queries — agents/workflow_orchestration_agent.py:222-230
+#         Task contains any of: 'state your name', 'who are you', 'your capability',
+#         'what can you do', 'introduce yourself'  →  success=True with
+#         data={type: 'self_description', workflows: [4-item hardcoded list]}.
+#         NO step_results, NO workflow dispatch, NO Deliverable/Project side-effect.
+#     (b) user=None testing mode — line 241-266  →  success=True with
+#         data={is_conceptual: True, workflow, topic, count, available_workflows,
+#         workflow_steps: [...conceptual steps from _get_workflow_steps], note}.
+#         NO legacy dispatch, NO real execution.
+#     (c) FuturesTimeoutError after 480s — line 377-386  →  success=False,
+#         message="Workflow '<name>' timed out after 480s",
+#         data={workflow, timeout: True}.
+#     (d) Unknown workflow — legacy _error_result at line 1109-1113  →  wrapper
+#         wraps as success=False, message includes "Unknown workflow: <name>.
+#         Available: [<full 18-item list>]".
+#     (e) Top-level exception — line 387-395  →  success=False, error=str(e),
+#         message="WorkflowOrchestrationAgent error: <e>", NO data.timeout key.
+#
+#   Persistence side-effects (per-workflow):
+#     - Creative workflows (logos, thumbnails, brand identity, etc.) → create a
+#       Project row via _execute_create_project_step at services/…:2515.
+#     - morning_brief → creates a Deliverable row via
+#       _execute_create_morning_brief_deliverable_step (workflow-internal handler).
+#     - business_research / startup_validation / competitor_analysis → may create
+#       a Deliverable via strategic_synthesis final step.
+#     - Sanity smokes and self-description path → NO side-effect artifacts.
+#
+#   Field-mapping caveat (WORKFLOW-SPECIFIC, TRANSITIONAL — code-fix PR expected):
+#     legacy _compile_final_result at services/workflow_orchestration_agent.py:5341
+#     emits the key 'steps' (list of step-result dicts) but the wrapper at
+#     agents/workflow_orchestration_agent.py:315 reads `legacy_result.get('step_results', [])`.
+#     Result: `AgentResult.data.step_results` is [] on every happy path even
+#     though the underlying execution DID produce a full step trace. This is a
+#     live wrapper-side key-name mismatch (a fold this arc found at authoring
+#     time). Per Rigby S2958 T2 disposition: this YAML ships in TRANSITIONAL
+#     shape — canonical_field_mapping.evidence_pointers explicitly cascades
+#     past step_results so validators do not hard-assert step_results
+#     populated on happy paths, AND a code-fix PR is expected to land in a
+#     follow-up slice so the wrapper reads the correct key. Once the code
+#     fix lands, a v1.1 revision of this YAML tightens the mapping to
+#     assert step_results non-empty on happy paths (removing the transitional
+#     tier-1 fallback). Validators reading this file today MUST accept both
+#     an empty list and a populated list on happy paths and MUST fall back
+#     to other evidence tiers (image_ids, video_ids, project_created,
+#     side-effect Deliverable/Project rows) per the mapping block below.
+#
+# Coverage: 13 prompts total (5 happy + 8 fault-injection, 2 per non-happy category).
+#
+# ── Arc-precedent adherence (canon_version=1, S2955-frozen) ──────────────
+# (1) schema_version + canon_version explicit at file top.
+# (2) canonical_field_mapping declares native vs derived per field with named
+#     derivation rules prefixed workflow_v1_*.
+# (3) fault_injection uses effect-based contract (component + fault.type + params)
+#     with python.{...} adapter as optional appendix; portable beyond Python-mock.
+#     Per S2957 fold, selectors prefer service-level (core.services.*,
+#     core.agents.*) over library-internal paths for portability across SDK
+#     upgrades.
+# (4) one_of acceptance-criteria capped at ≤2 branches with mandatory why strings.
+
+schema_version: 1
+canon_version: 1
+
+meta:
+  agent: WorkflowOrchestrationAgent
+  tier: 1
+  arc: golden_evals
+  arc_slice: S2958
+  ratified_by: chris_via_chat_ui
+  ratified_date: "2026-07-25"
+  head_sha_at_authoring: e2edb87a9
+  reliability_contract_source: docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md
+  substrate_reference: evals/tier1/devops_agent.yaml
+  categories_covered:
+    - happy_path
+    - tool_timeout
+    - data_unavailable
+    - ambiguous_input
+    - bad_input
+
+# Explicit mapping from canonical field (canon_version=1) to how it's obtained
+# from the WorkflowOrchestrationAgent-native AgentResult. Every S2963 validator
+# MUST consult this block; must never invent an ad-hoc mapping. Because this
+# agent has NO LLM tool_calls, the mapping deliberately excludes any tool_calls
+# fallback and instead cascades through step_results → per-workflow artifact
+# fields → side-effect DB rows.
+canonical_field_mapping:
+  summary:
+    mapping_source: native
+    from: AgentResult.message
+    note: |
+      message is one of five shapes depending on which wrapper return path
+      fires: (a) legacy _compile_final_result human-readable summary
+      ("Workflow '<name>' completed successfully. Researched <topic>, got
+      executive direction, created N logos.") on creative-workflow happy paths;
+      (b) self-description text ("I am WorkflowOrchestrationAgent, a
+      multi-step workflow orchestrator...") on self-description shortcut;
+      (c) "Conceptual workflow plan for '<name>'" on user=None testing mode;
+      (d) "Workflow '<name>' timed out after 480s" on FuturesTimeoutError; or
+      (e) "Workflow '<name>' failed: <error>" on any legacy-side failure.
+      Validators should accept all five shapes.
+  evidence_pointers:
+    mapping_source: derived
+    derivation_rule: workflow_v1_step_results_plus_workflow_artifacts
+    derivation_spec: |
+      Cascading — validators evaluate in the order listed and accept the first
+      populated tier as authoritative. Tiers 1–5 are IN-PROCESS (evaluated
+      against the returned AgentResult; run by Tier-1 validators). Tier 6
+      is INTEGRATION EVIDENCE (out-of-band DB queries; per Rigby S2958 T2
+      disposition, this tier belongs to a separate integration/side-effect
+      verification suite that can be run in CI/staging or nightly, NOT
+      part of the in-process Tier-1 validator path).
+      1. AgentResult.data.step_results (list of per-step dicts with
+         {step, name, agent, success, summary, result}) — PREFERRED but
+         currently empty on happy paths due to the TRANSITIONAL wrapper
+         key-name mismatch documented in the file header (legacy emits 'steps',
+         wrapper reads 'step_results'). Populated only on the failure path
+         where _compile_final_result was called with a partial step_results
+         list. The code-fix PR expected in a follow-up slice canonicalizes
+         on a single key (either wrapper reads 'steps' or legacy emits
+         'step_results' — but not both). Once that fix lands, this tier
+         becomes the single authoritative source, the transitional cascade
+         below collapses, and the v1.1 revision of this YAML REMOVES the
+         fallback mapping rather than layering more aliases on top.
+      2. AgentResult.data.image_ids (creative workflows) — non-empty proves
+         real image generation fired.
+      3. AgentResult.data.video_ids — non-empty proves real video generation
+         fired.
+      4. AgentResult.data.project_created (creative workflows) — non-null
+         with {success: true, project_id: ...} proves Project row was written.
+      5. AgentResult.data.workflow_steps (user=None conceptual path) — non-empty
+         list proves the wrapper resolved the workflow and produced the
+         conceptual plan without a real dispatch.
+      6. INTEGRATION-SUITE ONLY (non-blocking for Tier-1 validators) —
+         side-effect DB rows queried out-of-band:
+            - Project row on creative workflows
+            - Deliverable row on morning_brief / business_research /
+              startup_validation
+         Integration-suite validators may correlate AgentExecution.id →
+         related Project/Deliverable via agent_name + created_at proximity.
+         Environment-coupled and harder to replay deterministically, so
+         Tier-1 in-process validators MUST NOT depend on this tier.
+      Explicitly NOT AVAILABLE for this agent: AgentResult.tool_calls is
+      hardcoded [] because `tools = []` on the class. Do not treat empty
+      tool_calls as a failure signal for this agent — it is by design.
+
+      TIER-1 IN-PROCESS EVIDENCE REQUIREMENT (per workflow shape):
+      - Creative workflows (research_and_create_logos, youtube_thumbnail_package,
+        brand_identity_package, product_photography_kit, video_thumbnail_series,
+        logo_to_video, social_media_kit, podcast_visual_package, ebook_cover_series,
+        video_production_kit, course_thumbnail_series, pitch_deck_visuals,
+        product_launch_kit, research_and_create_images) — at least one of
+        (2, 3, 4) MUST be non-empty in-process (image/video artifacts + Project row).
+      - user=None conceptual dispatch — tier (5) workflow_steps MUST be non-empty.
+      - Self-description shortcut — no evidence pointer required; the shape of
+        the message itself is the evidence.
+      - Deliverable-only workflows (morning_brief, business_research,
+        competitor_analysis, customer_personas, startup_validation) — TRANSITIONAL
+        EXCEPTION: none of tiers (2, 3, 4, 5) are populated for these workflow
+        shapes, and tier 1 step_results is broken today per the header caveat.
+        Until the wrapper key-name fix lands and restores tier 1, in-process
+        evidence is limited to `AgentResult.success == True` + `data.workflow`
+        matching the requested workflow + `summary` non-empty; buyer-facing
+        artifact verification (persisted Deliverable) MUST be done via the
+        integration/side-effect suite (tier 6). Once the wrapper fix lands,
+        v1.1 revision tightens the requirement to `data.step_results` non-empty
+        for these workflows as well, and this transitional exception collapses.
+      - For data_unavailable / tool_timeout / bad_input paths with
+        success=False, all MAY be empty.
+  health_status:
+    mapping_source: derived
+    derivation_rule: workflow_v1_success_and_step_completion
+    derivation_spec: |
+      if not AgentResult.success:                                       → unavailable
+      elif AgentResult.data.timeout is True:                            → unavailable
+        (COORDINATOR_TIMEOUT 480s fired — data.timeout is a discriminator
+         set only by the FuturesTimeoutError branch at wrapper line 385)
+      elif AgentResult.data.type == 'self_description':                 → healthy
+        (short-circuit path, agent identifying itself — no execution to grade)
+      elif AgentResult.data.is_conceptual == True:                      → healthy
+        (user=None testing mode returned a plan without executing —
+         legitimate for smoke tests; unavailable would over-penalize)
+      elif AgentResult.data.step_results is populated AND all step_results
+           entries have success=True:                                   → healthy
+      elif AgentResult.data.step_results has non-critical failures ONLY
+           (step names in {'create_project', 'lane_4_rotating_focus'} per
+           Session 1234 D2 P2.C non-critical-step allowlist at
+           services/workflow_orchestration_agent.py:1323):              → degraded
+      elif AgentResult.data.step_results is empty (wrapper key-mismatch caveat)
+           but AgentResult.data has image_ids OR video_ids OR project_created
+           set:                                                         → healthy
+      else:                                                             → healthy
+      Note: WorkflowOrchestrationAgent's "health" is neither platform-health
+      (SIA's domain) nor per-request research validity (ResearchAgent) nor
+      config-generation completeness (DevOpsAgent) — here it represents
+      whether the workflow-level orchestration reached its declared endpoint
+      AND whether the buyer-facing artifact side-effect (Project row on
+      creative workflows; Deliverable row on morning_brief) fired cleanly.
+
+prompts:
+
+  # ─── HAPPY PATH ─────────────────────────────────────────────────────────
+
+  - id: workflow_happy_01_sanity_smoke_orchestrate_short
+    category: happy_path
+    input: "orchestrate a short sanity workflow"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 40}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - no_unsupported_claims
+      - workflow_field_resolves_to_business_research_default
+      - one_of:
+          branches:
+            - predicate: user_none_conceptual_plan_returned_with_workflow_steps
+              why: "smoke-test invocation typically has no user bound — wrapper's user=None short-circuit at agents/workflow_orchestration_agent.py:241-266 returns is_conceptual=True with workflow_steps list; this is the observed behavior for 2-of-2 real 30d 'orchestrate a short sanity workflow' completions"
+            - predicate: full_business_research_dispatch_completed_with_step_summary
+              why: "if a user was bound at dispatch time, the workflow ran end-to-end as business_research (the _infer_workflow default when no keyword matches) and returned _compile_final_result's summary; also legitimate"
+    notes: |
+      Real 30d prompt (2 of 9 executions, both 2026-07-16, both completed).
+      Task-string has no keyword hit in _infer_workflow at
+      agents/workflow_orchestration_agent.py:397-460, so routing defaults
+      to 'business_research'. Two acceptable resolutions match observed
+      behavior across smoke vs authenticated contexts. Critical
+      anti-hallucination invariant: agent must NOT fabricate business
+      research content when routed to a default workflow with no topic —
+      the conceptual-plan path is the correct response when no real
+      execution context exists.
+
+  - id: workflow_happy_02_morning_brief_smoke_completed
+    category: happy_path
+    input: "Run one-shot smoke execution of internal WORKFLOWS['morning_brief'] on main using default rotation_slot=ai_infra_deep_dive. Return per-step trace: step name, handler/agent dispatched, status, key context writes (lane_1_text..lane_4_text, decision_card_text, morning_brief_markdown) and final deliverable_id."
+    context:
+      workflow: morning_brief
+      invocation_source: workflow_smoke_test
+      rotation_slot: ai_infra_deep_dive
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 100}
+        evidence_pointers: {type: array}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - workflow_field_equals_morning_brief
+      - one_of:
+          branches:
+            - predicate: deliverable_persisted_with_morning_brief_markdown
+              why: "buyer-critical happy path — morning_brief's terminal step create_morning_brief_deliverable at services/workflow_orchestration_agent.py:1456 persists a Deliverable row with the compiled brief markdown; this is the artifact Chris consumes daily"
+            - predicate: lane_4_sentinel_shipped_after_noncritical_failure
+              why: "acceptable per Session 1234 D2 P2.C non-critical-step allowlist at services/workflow_orchestration_agent.py:1323 — lane_4_rotating_focus is allowed to fail without aborting the workflow; brief still ships with Lane 4 sentinel and Deliverable is still persisted; health_status=degraded to reflect the missing lane"
+    notes: |
+      Real 30d prompt (5 of 9 executions completed as this exact task-shape
+      variant on 2026-06-25). Highest-volume observed prompt for this agent.
+      The morning_brief workflow is 8 steps (rotation_slot_resolve → 4 lanes
+      → decision_card_synthesis → strategic_synthesis → create_deliverable);
+      workflow_happy_02 asserts the terminal Deliverable persistence is the
+      canonical evidence, since the wrapper's step_results key-mismatch
+      (documented in file header) means data.step_results may be empty even
+      though the underlying steps executed. Note the non-critical-failure
+      allowlist explicitly permits lane_4_rotating_focus to fail on
+      quiet-data days without aborting — brief ships with sentinel.
+
+  - id: workflow_happy_03_self_description_shortcut
+    category: happy_path
+    input: "State your name and one capability"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 40}
+        health_status: {const: healthy}
+    acceptance_criteria:
+      - required_fields_present
+      - summary_names_workflow_orchestration_agent
+      - summary_names_at_least_one_available_workflow
+      - no_workflow_dispatch_occurred
+      - no_side_effect_artifacts_created
+    notes: |
+      Real code path — the wrapper's short-circuit at
+      agents/workflow_orchestration_agent.py:222-230 fires whenever the task
+      contains any of: 'state your name', 'who are you', 'your capability',
+      'what can you do', 'introduce yourself'. Returns immediately with
+      data.type='self_description' and a hardcoded 4-item workflows list.
+      This path is common in fleet-smoke tests and the "who is Rigby's
+      workflow orchestrator?" onboarding UX. Critical invariants: NO
+      workflow dispatch, NO Project/Deliverable side-effect, and the
+      response MUST include the agent's own name (not another agent's name
+      by accident — this catches the class of failure where an agent
+      identifies as its parent or child in the delegation chain).
+
+  - id: workflow_happy_04_explicit_business_research_dispatch
+    category: happy_path
+    input: "Run comprehensive business research on the AI agent orchestration platform market: market trends, top 5 competitors, and customer pain points."
+    context:
+      workflow: business_research
+      topic: AI agent orchestration platform market
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 100}
+        evidence_pointers: {type: array}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - workflow_field_equals_business_research
+      - one_of:
+          branches:
+            - predicate: strategic_synthesis_step_completed_with_synthesized_deliverable
+              why: "buyer-critical happy path — business_research's 4-step chain (market_research → competitor_analysis → customer_research → synthesize_findings) ends with strategic_synthesis at services/workflow_orchestration_agent.py:1425 which produces a synthesized brief; Deliverable may be persisted downstream by the synthesis step"
+            - predicate: partial_completion_with_at_least_market_research_step_success
+              why: "acceptable if downstream steps (competitor / customer / synthesis) hit non-critical failures — critical-step allowlist only halts on create_project failures for creative workflows and specific non-critical rules for morning_brief; a research-workflow partial with market_research succeeded still delivers signal, health_status=degraded"
+    notes: |
+      CONSTRUCTED prompt (no production traffic on this shape in 30d).
+      Exercises the business_research template — one of the 4 research-only
+      workflow templates (business_research, competitor_analysis,
+      customer_personas, startup_validation) with no_image_generation=True.
+      Represents the "first real customer dispatch" shape for the research
+      side of this agent's declared purpose. Validator asserts workflow
+      field pass-through (should NOT be re-inferred to something else),
+      and permits both full-completion and non-critical partial paths.
+
+  - id: workflow_happy_05_explicit_creative_workflow_logos_dispatch
+    category: happy_path
+    input: "Create 3 logo concepts for a Pixar-style AI mascot brand featuring a donkey. Include research on modern animated logo trends."
+    context:
+      count: 3
+      style_preferences: pixar
+      topic: AI mascot brand featuring a donkey
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 100}
+        evidence_pointers: {type: array}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - workflow_field_equals_research_and_create_logos
+      - style_preferences_extracted_as_pixar
+      - extracted_mascot_is_donkey
+      - one_of:
+          branches:
+            - predicate: image_ids_non_empty_and_project_created_success_true
+              why: "buyer-critical happy path — research_and_create_logos runs 4 steps ending in create_project; a fully successful dispatch produces image_ids AND a Project row (services/workflow_orchestration_agent.py:2515) providing the primary buyer-facing artifact"
+            - predicate: image_ids_non_empty_and_project_create_step_failed_noncritical
+              why: "acceptable per non-critical-step allowlist at services/workflow_orchestration_agent.py:1323 — create_project is explicitly non-critical; if image generation succeeded but project row creation failed (workspace binding issue, permission denied, etc.), the image_ids are still valid buyer output; health_status=degraded to reflect the missing project row"
+    notes: |
+      CONSTRUCTED prompt (no production traffic on this shape in 30d) —
+      but the most-important-to-cover shape for this agent's declared
+      purpose: creative workflow dispatch. _infer_workflow keyword-matches
+      'logo' → 'research_and_create_logos' (agents/workflow_orchestration_agent.py:410),
+      then legacy style-extraction at services/…:1122-1183 pulls
+      style_preferences='pixar' from the style_mapping dict AND
+      extracted_mascot='donkey' from the mascot_keywords list. Validator
+      asserts both extractions happened — a common LLM failure would be
+      dropping the style or mascot from the extracted context, producing
+      a generic logo instead of a Pixar-donkey mascot logo. Buyer-critical
+      pair: image_ids populated + project_created.success=True; the
+      non-critical-step allowlist explicitly permits the create_project
+      step to fail without aborting, so the second branch models that.
+
+  # ─── TOOL TIMEOUT ───────────────────────────────────────────────────────
+
+  - id: workflow_timeout_01_watchdog_kill
+    category: tool_timeout
+    input: "Execute one-shot smoke run of internal WORKFLOWS['morning_brief'] on main with rotation_slot='ai_infra_deep_dive'. Return per-step trace: step name, handler/agent dispatched, status, key context writes (lane_1_text..lane_4_text, decision_card_text, morning_brief_markdown), and final deliverable_id."
+    context:
+      workflow: morning_brief
+      invocation_source: workflow_smoke_test
+    fault_injection:
+      component: celery_worker
+      selector: core.tasks.execute_agent_task
+      fault:
+        type: watchdog_kill
+        params:
+          simulated_reason: "Task timed out after 60 minutes (no heartbeat) - marked as failed by cleanup"
+      python:
+        behavior: raise
+        exception_class: celery.exceptions.SoftTimeLimitExceeded
+        exception_message: "Task timed out after 60 minutes (no heartbeat) - marked as failed by cleanup"
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {const: unavailable}
+        error_signature: {type: string, pattern: "timed out|SoftTimeLimitExceeded|no heartbeat"}
+    acceptance_criteria:
+      - agent_result_success_false
+      - health_status_is_unavailable
+      - error_signature_present
+      - no_fabricated_workflow_step_trace
+      - no_deliverable_persisted_with_partial_morning_brief_content
+    notes: |
+      Real observed failure mode — 2 of 2 all-time WorkflowOrchestrationAgent
+      failures (both 2026-06-25) are the 60-min Celery watchdog kill on
+      morning_brief smoke execution. Same failure class as SIA sia_timeout_01,
+      ResearchAgent research_timeout_01, and DevOpsAgent devops_timeout_01 —
+      this is a platform-wide failure mode surfacing again because the
+      morning_brief workflow's outer Celery task exceeds the watchdog ceiling.
+      Note: the watchdog kills at the Celery level BEFORE the wrapper's
+      FuturesTimeoutError (480s / 8 min) would fire — the watchdog is 60 min,
+      so it strictly dominates. Buyer-critical invariant: watchdog kill must
+      NOT persist a partial morning_brief Deliverable with fabricated step
+      trace or lane content. The wrapper's top-level except at
+      agents/workflow_orchestration_agent.py:387-395 MUST fire cleanly.
+
+  - id: workflow_timeout_02_coordinator_thread_timeout
+    category: tool_timeout
+    input: "Run business_research on emerging quantum AI startups: full market analysis, top 5 competitors, customer personas, and go/no-go recommendation."
+    context:
+      workflow: business_research
+      topic: emerging quantum AI startups
+    fault_injection:
+      component: python_service
+      selector: core.services.workflow_orchestration_agent.WorkflowOrchestrationAgent.execute
+      fault:
+        type: latency
+        params:
+          delay_ms: 500000
+          latency_budget_ms: 480000
+      python:
+        behavior: sleep_then_return
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, pattern: "timed out"}
+        health_status: {const: unavailable}
+    acceptance_criteria:
+      - agent_result_success_false
+      - health_status_is_unavailable
+      - data_timeout_flag_is_true
+      - summary_names_timeout
+      - no_fabricated_business_research_content
+    notes: |
+      Constructed — exercises the wrapper's ThreadPoolExecutor timeout branch
+      at agents/workflow_orchestration_agent.py:377-386. COORDINATOR_TIMEOUT
+      = 480 seconds (8 min) at line 54. When the legacy execute() call in the
+      thread pool exceeds 480s, FuturesTimeoutError fires and the wrapper
+      returns success=False with data.timeout=True. This is the SECOND-tier
+      timeout below the Celery watchdog (60 min) — it catches slow-but-not-
+      hung workflows earlier than watchdog would.
+
+      Validator strategy (per Rigby S2958 T2 fold B — brittle-string
+      avoidance): the STABLE discriminator is `data.timeout: True` (this
+      flag is set ONLY by the FuturesTimeoutError branch and cleanly
+      differentiates COORDINATOR_TIMEOUT from any other failure). The
+      message-pattern check is relaxed to a "timed out" substring (matches
+      both wrapper "Workflow 'X' timed out after 480s" AND future wording
+      variants like "COORDINATOR_TIMEOUT exceeded"). Do NOT assert the
+      full-string coupling — future refactors of the timeout message would
+      needlessly break the eval. Anti-hallucination: no fabricated research
+      content, even if some steps completed before the timeout.
+
+  # ─── DATA UNAVAILABLE ───────────────────────────────────────────────────
+
+  - id: workflow_data_unavail_01_unknown_workflow_name
+    category: data_unavailable
+    input: "Run the workflow to generate quarterly board slides."
+    context:
+      workflow: quarterly_board_slides_generation
+      topic: Q4 2026 board deck
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, pattern: "Unknown workflow"}
+        health_status: {enum: [degraded, unavailable]}
+    acceptance_criteria:
+      - agent_result_success_false
+      - message_contains_unknown_workflow
+      - message_contains_available_workflows_list
+      - no_fabricated_slide_content
+      - no_side_effect_artifacts_created
+    notes: |
+      Real code path — hits the WORKFLOWS validation at
+      services/workflow_orchestration_agent.py:1109-1113 which returns
+      _error_result("Unknown workflow: <name>. Available: [...list of 18]").
+      No fault_injection needed — the context.workflow='quarterly_board_slides_generation'
+      is genuinely not in the WORKFLOWS dict (18 entries: research_and_create_logos,
+      research_and_create_images, youtube_thumbnail_package, brand_identity_package,
+      product_photography_kit, video_thumbnail_series, logo_to_video, social_media_kit,
+      podcast_visual_package, ebook_cover_series, video_production_kit,
+      course_thumbnail_series, pitch_deck_visuals, product_launch_kit,
+      business_research, competitor_analysis, customer_personas, startup_validation,
+      morning_brief). Critical anti-hallucination invariant: agent must NOT
+      invent a "quarterly_board_slides_generation" workflow definition and
+      execute a fabricated version — the ONLY correct response is to reject
+      with the available-list message. This is the class of "make up a
+      capability to seem helpful" failure A1 audit buyers pay to prevent.
+
+  - id: workflow_data_unavail_02_step_agent_missing_from_agent_map
+    category: data_unavailable
+    input: "Run research_and_create_logos on a fintech brand."
+    context:
+      workflow: research_and_create_logos
+      topic: fintech brand
+      count: 3
+    fault_injection:
+      component: python_service
+      selector: core.agent_router.AgentRouter.get_agent
+      fault:
+        type: bad_payload
+        params:
+          shape: agent_not_in_agent_map_returns_none
+          simulated_agent: ImageGenerationAgent
+      python:
+        behavior: raise
+        exception_class: KeyError
+        exception_message: "ImageGenerationAgent not in AGENT_MAP"
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [degraded, unavailable]}
+        error_signature: {type: string, pattern: "Unknown agent in workflow|not in AGENT_MAP|Step .* failed"}
+    acceptance_criteria:
+      - agent_result_success_false
+      - error_signature_present
+      - no_fabricated_image_generation
+      - one_of:
+          branches:
+            - predicate: research_step_completed_before_image_step_failed
+              why: "acceptable — research step (web_search handler) runs first and doesn't need AGENT_MAP; only when the workflow hits step 3 (create_images → image_generation_agent) does the AGENT_MAP fallback at services/workflow_orchestration_agent.py:1480-1494 fail; step_results should show 1-2 completed steps then the failure"
+            - predicate: workflow_aborts_at_first_agent_map_miss_with_full_error_signature
+              why: "acceptable if the workflow's step-execution loop at services/…:1296-1363 propagates the KeyError as a Step exception and _compile_final_result reports the failure with a clean error signature naming the missing agent"
+    notes: |
+      Constructed — exercises the AGENT_MAP fallback path at
+      services/workflow_orchestration_agent.py:1480-1494 (Session 1231 F4
+      fallback that maps snake_case step 'agent' fields to PascalCase
+      AGENT_MAP entries with acronym aliases). When the mapped PascalCase
+      name is genuinely missing from AGENT_MAP, the router raises and the
+      step returns _error_result. Note the S2957 selector-portability fold
+      is applied here: fault is injected on core.agent_router.AgentRouter.get_agent
+      (service-level) rather than an ORM/cache internal. Anti-hallucination
+      invariant: agent must NOT fabricate an image_id or synthesize
+      placeholder logo content — a failed step means no artifact.
+
+  # ─── AMBIGUOUS INPUT ────────────────────────────────────────────────────
+
+  - id: workflow_ambig_01_bare_creative_intent_no_referent
+    category: ambiguous_input
+    input: "make something amazing"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 40}
+        health_status: {enum: [healthy, degraded]}
+        clarifying_question: {type: string}
+    acceptance_criteria:
+      - no_fabricated_context
+      - no_side_effect_artifacts_created
+      - one_of:
+          branches:
+            - predicate: clarifying_question_asked_naming_workflow_choices
+              why: "asked user to narrow — best UX for zero-referent input ('amazing' has no obvious topic/mascot/style); presenting a subset of AVAILABLE_WORKFLOWS as options is the correct 'do not dispatch' behavior"
+            - predicate: user_none_conceptual_plan_returned_for_default_workflow
+              why: "acceptable if the wrapper falls to _infer_workflow default → 'research_and_create_images' (per line 456: any of 'create'/'generate'/'make'/'design' triggers image workflow) AND user=None, returning the conceptual plan without executing — the plan shape surfaces the ambiguity without producing fabricated content"
+    notes: |
+      Critical anti-hallucination test. _infer_workflow at
+      agents/workflow_orchestration_agent.py:397-460 has a "creative intent"
+      catch-all at line 454-456: any of 'create'/'generate'/'make'/'design'
+      in the task defaults to 'research_and_create_images'. This is a
+      HAZARD: given bare "make something amazing", the routing would dispatch
+      research_and_create_images with topic='make something amazing' and
+      no style/mascot. If a user is bound and the workflow runs, downstream
+      steps would attempt to generate images from a meaningless topic —
+      likely producing fabricated content or defaulting to a hardcoded
+      subject. Correct behavior: EITHER clarify with the user, OR fall
+      through to the user=None conceptual plan without executing (which
+      surfaces the ambiguity naturally). Unacceptable: fabricating a
+      concrete subject ("beautiful sunset") and generating images against
+      it as if the user had asked for that.
+
+  - id: workflow_ambig_02_wrong_domain_devops_intent
+    category: ambiguous_input
+    input: "deploy the API to production and set up monitoring dashboards"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 40}
+        health_status: {enum: [healthy, degraded, unavailable]}
+        refusal_or_redirect: {type: boolean}
+    acceptance_criteria:
+      - refusal_or_redirect_true
+      - no_fabricated_deployment_output
+      - no_workflow_dispatch_for_ops_intent
+      - summary_names_correct_agent_domain
+      - one_of:
+          branches:
+            - predicate: summary_suggests_devops_agent_or_workflow
+              why: "redirected to DevOpsAgent — best UX; the ask maps cleanly to DevOpsAgent's create_ci_pipeline / create_monitoring_config tools"
+            - predicate: summary_states_out_of_scope_for_workflow_orchestration
+              why: "cleanly refused as out-of-scope for WorkflowOrchestrationAgent — the 18 WORKFLOWS templates are creative + research workflows; deployment + monitoring belong to DevOpsAgent; acceptable if agent refuses without a specific delegate suggestion"
+    notes: |
+      _infer_workflow has NO keyword match for 'deploy' / 'API' / 'production'
+      / 'monitoring' / 'dashboard' — falls to 'business_research' default
+      per line 460. But dispatching business_research on an ops task would
+      produce a research report about deployment practices, NOT actually
+      perform the ops work. Correct behavior: refuse or redirect to
+      DevOpsAgent. Critical anti-hallucination test — LLM must NOT invent
+      a plausible-looking deployment plan (Kubernetes manifests, Grafana
+      dashboard configs) as text output — that's the "confident wrong
+      domain" failure mode. Also must NOT dispatch a workflow that would
+      run business_research on the phrase — that's the "route to available
+      tool even when wrong" failure mode.
+
+  # ─── BAD INPUT ──────────────────────────────────────────────────────────
+
+  - id: workflow_bad_01_empty_task_no_context
+    category: bad_input
+    input: ""
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [degraded, unavailable]}
+        rejected: {type: boolean}
+    acceptance_criteria:
+      - no_fabricated_context
+      - no_fabricated_topic
+      - no_side_effect_artifacts_created
+      - one_of:
+          branches:
+            - predicate: rejected_true_with_reason_no_task_or_workflow
+              why: "cleanest response — empty task + empty context means no signal to act on; rejecting explicitly is best; note: WorkflowOrchestrationAgent has NO explicit _validate_task guard (unlike ResearchAgent which hard-fails at research_agent.py:836)"
+            - predicate: user_none_conceptual_plan_returned_for_business_research_default
+              why: "acceptable in smoke/testing contexts — _infer_workflow('') falls to 'business_research' default per line 460 AND user=None short-circuits to conceptual plan; validator must confirm no real dispatch happened AND no Deliverable/Project was written"
+    notes: |
+      Empty task hits the wrapper at agents/workflow_orchestration_agent.py:214
+      where task_lower='' and no self-description keyword matches, then
+      falls through to _infer_workflow('') which returns 'business_research'
+      as default. Unlike ResearchAgent (_validate_task hard-fail at
+      research_agent.py:836), WorkflowOrchestrationAgent has NO explicit
+      empty-input guard. Correct outcomes: EITHER the wrapper's user=None
+      conceptual path handles it cleanly (safe in smoke), OR — for bound-user
+      dispatch — the agent should reject cleanly rather than executing
+      business_research with an empty topic (which would generate a
+      Deliverable titled "Business Research: " with fabricated content).
+      Unacceptable: fabricating a topic ("business research on Q4 trends")
+      and running the full workflow as if the user had asked for that.
+
+  - id: workflow_bad_02_control_characters_in_context_workflow
+    category: bad_input
+    input: "Run the specified workflow"
+    context:
+      workflow: "\u0000research_and_create_logos\u0007\u001b[31m\u0000"
+      topic: "AI mascot"
+      count: 3
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [degraded, unavailable]}
+    acceptance_criteria:
+      - no_crash
+      - no_control_characters_in_output
+      - no_ansi_escape_in_output
+      - no_side_effect_artifacts_created
+      - no_deliverable_persisted_with_control_chars
+      - one_of:
+          branches:
+            - predicate: unknown_workflow_error_returned_because_dict_lookup_fails_on_raw_key
+              why: "cleanest — the raw control-char-laden string will NOT match 'research_and_create_logos' in the WORKFLOWS dict at services/workflow_orchestration_agent.py:1109, so validation fires and _error_result('Unknown workflow: ...') returns; workflow name in error message MUST be sanitized (no NUL / BEL / ANSI escapes echoed)"
+            - predicate: sanitized_workflow_name_and_dispatched_research_and_create_logos_cleanly
+              why: "acceptable if the wrapper strips control chars from context.workflow before the WORKFLOWS dict lookup, then dispatches research_and_create_logos on 'AI mascot' cleanly — but any Project row created AND the error-echo message MUST be free of control chars in visible fields (name, description, tags)"
+    notes: |
+      Malformed context.workflow with embedded NULs, BEL (0x07), and ANSI
+      escape sequences (\u001b[31m for red text). Agent must not crash on
+      the dict lookup (Python dicts handle any string key including control
+      chars — the issue is the buyer-facing echo). Two vectors of concern:
+      (1) the _error_result message at services/…:1110-1111 would include
+      the raw workflow name in "Unknown workflow: <name>" — validator
+      asserts the echoed name is sanitized. (2) if the wrapper somehow
+      normalizes the string and dispatches, the resulting Project row
+      title (from context) MUST NOT contain the raw control chars. This
+      exposes normalization gaps in the context-passing path and the
+      error-message construction path. Both failure branches (crash on
+      unicode-escape rendering; ANSI leak into UI) are buyer-visible.
