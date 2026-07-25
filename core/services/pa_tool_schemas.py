@@ -50,14 +50,20 @@ PA_TOOL_SCHEMAS = [
         },
     },
 
-    # ── Brainstorm Search ───────────────────────────────────────────────────
+    # ── Brainstorm Search + Async Single-Agent Dispatch ─────────────────────
     {
         "type": "function",
         "name": "brainstorm_tool",
         "description": (
-            "Search and list brainstorm sessions: discussion panels, multi-agent debates, "
-            "and collaborative insights. Use 'list' for bulk paginated export, 'search' "
-            "for keyword search, 'details' for a single session, 'stats' for activity stats."
+            "Search historical brainstorm/panel/discussion conversations, OR dispatch a "
+            "single-agent async reasoning pass on a topic. "
+            "READ actions (list/search/recent/details/by_category/stats): query the archive "
+            "of past brainstorming — this archive may include historical multi-agent panels "
+            "and discussions from earlier system versions. "
+            "CREATE action: dispatches ONE ThinkingAgent asynchronously on the given topic "
+            "and returns a task_id — this is NOT a live multi-participant panel/debate. "
+            "Poll progress with agent_job_status. Multi-agent panel dispatch is not yet "
+            "implemented; a distinct create_panel action is on the roadmap when needed."
         ),
         "parameters": {
             "type": "object",
@@ -65,18 +71,35 @@ PA_TOOL_SCHEMAS = [
                 "action": {
                     "type": "string",
                     "enum": ["list", "search", "recent", "details", "by_category", "stats", "create"],
-                    "description": "Brainstorm action: list, search, recent summaries, details of conversation, by_category, stats, or create new brainstorm",
+                    "description": (
+                        "READ: list, search, recent, details, by_category, stats. "
+                        "WRITE (dispatch): create — kicks off a single ThinkingAgent async run "
+                        "(NOT a multi-agent panel)."
+                    ),
                 },
                 "id": {"type": "string", "description": "UUID of brainstorm session (alias: conversation_id)"},
                 "conversation_id": {"type": "string", "description": "UUID of brainstorm conversation for details action"},
                 "query": {"type": "string", "description": "Search query for brainstorm content"},
                 "category": {"type": "string", "description": "Category filter for by_category action"},
-                "topic": {"type": "string", "description": "Topic/prompt for create action — kicks off a new brainstorm discussion"},
+                "topic": {
+                    "type": "string",
+                    "description": (
+                        "Topic/prompt for create action — dispatches a single ThinkingAgent async. "
+                        "Returns task_id; poll with agent_job_status."
+                    ),
+                },
                 "limit": {"type": "integer", "description": "Max items (default 50 for list, 10 for search)"},
                 "offset": {"type": "integer", "description": "Pagination offset for list action (default 0)"},
                 "days": {"type": "integer", "description": "Days back to search (default 30)"},
                 "days_back": {"type": "integer", "description": "Alias for days"},
-                "type": {"type": "string", "description": "Filter by type: 'discussion' or 'panel'"},
+                "type": {
+                    "type": "string",
+                    "description": (
+                        "Filter historical results by conversation type: 'discussion' or 'panel'. "
+                        "Applies to READ actions only — does NOT change create-action behavior "
+                        "(create always dispatches a single ThinkingAgent)."
+                    ),
+                },
                 "status": {"type": "string", "description": "Filter by conversation status"},
                 "include_transcript": {"type": "boolean", "description": "Include full message transcript (default false)"},
                 "include_full_content": {"type": "boolean", "description": "Include full content in details (default false)"},
