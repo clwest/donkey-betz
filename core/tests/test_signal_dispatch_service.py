@@ -246,6 +246,44 @@ class TestScanner(TestCase):
         self.assertEqual(diag['eligible_count'], 0)
         self.assertEqual(diag['blocked_by_dedupe'], 1)
 
+    @override_settings(SIGNAL_DISPATCH_MAX_PER_SCAN=2)
+    def test_blocked_by_cap_records_magnitude_not_just_indicator(self):
+        # S2949 A9 amendment (Rigby fold same_pr_mitigatable / Chris ratified):
+        # When the global cap halts a rule mid-eligible-loop, blocked_by_cap
+        # must equal the count of remaining eligible clusters, not 1.
+        # Seed 5 eligible clusters; cap=2 → 2 dispatched, 3 blocked_by_cap.
+        for i in range(5):
+            _make_cluster(pattern_type='trend_emergence', strength=0.9, confidence=0.9, name=f'mag-{i}')
+        service = SignalDispatchService()
+        summary = service.scan_and_dispatch()
+        diag = summary['per_rule_diagnostics']['trend_emergence__trend_analysis']
+        self.assertEqual(summary['enqueued'], 2)
+        self.assertEqual(diag['eligible_count'], 5)
+        self.assertEqual(diag['blocked_by_cap'], 3)
+
+    def test_blocked_by_daily_cap_records_magnitude_not_just_indicator(self):
+        # S2949 A9 amendment: same magnitude semantics for daily cap.
+        rule = get_rule('trend_emergence__trend_analysis')
+        assert rule is not None
+        # Seed daily-cap-worth of succeeded rows so the rule's per-day cap hits.
+        seed = _make_cluster(pattern_type='trend_emergence', strength=0.8, confidence=0.7, name='seed')
+        for _ in range(rule.max_per_day):
+            SignalDispatch.objects.create(
+                rule_key=rule.key,
+                pattern_type='trend_emergence',
+                agent_name='TrendAnalysisAgent',
+                signal_cluster=seed,
+                outcome='succeeded',
+            )
+        # 4 fresh eligible clusters; all should register as blocked_by_daily_cap.
+        for i in range(4):
+            _make_cluster(pattern_type='trend_emergence', strength=0.95, confidence=0.9, name=f'fresh-{i}')
+        service = SignalDispatchService()
+        summary = service.scan_and_dispatch()
+        diag = summary['per_rule_diagnostics']['trend_emergence__trend_analysis']
+        self.assertEqual(summary['per_rule']['trend_emergence__trend_analysis'], 0)
+        self.assertEqual(diag['blocked_by_daily_cap'], 4)
+
 
 class TestExecuteDispatch(TestCase):
     """Q3 / Q4 — per-dispatch executor writes outcome + error_summary."""
