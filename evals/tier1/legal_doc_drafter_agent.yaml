@@ -1,0 +1,794 @@
+# Golden Evals — Tier-1 canonical prompt suite
+# Agent under test: LegalDocDrafterAgent (core/agents/legal/legal_doc_drafter_agent.py:474)
+#
+# Arc: Golden Evals (S2954+ open, ratified 2026-07-25 by Chris via Chat UI)
+# Reliability contract source: docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md §3
+# Arc slice: S2959 — fifth Tier-1 agent YAML (mirrors canon_version=1 substrate
+#   frozen at S2955 in evals/tier1/system_intelligence_agent.yaml and validated
+#   through S2956 research_agent.yaml, S2957 devops_agent.yaml, and S2958
+#   workflow_orchestration_agent.yaml)
+# HEAD at authoring: c0e87d2f8
+#
+# Volume snapshot (DB-verified via direct ORM 2026-07-25 T0):
+#   30d executions (owner_agent="LegalDocDrafterAgent",
+#                   created_at >= 2026-06-25T00:00:00Z):        5
+#     (5 completed, 0 failed — 0% 30d failure rate)
+#   All-time (no created_at filter):                           12
+#     (12 completed, 0 failed — earliest 2026-06-23, latest 2026-07-17)
+#   30d distinct task strings: 3 (multiple retries of the same "Draft a motion
+#     to modify visitation" ask — every 30d prompt is a variant of the same
+#     Colorado parenting-time modification scenario).
+#   Task-shape distribution (30d, exact from ORM sample):
+#     - "Draft a motion to modify visitation from every other weekend to
+#        every weekend" → 3 rows (2026-07-17)
+#     - "Draft a motion to change visitation from every other weekend to
+#        every weekend" → 1 row (2026-07-17)
+#     - "Draft a motion to modify visitation to every weekend from every
+#        other weekend" → 1 row (2026-07-17)
+#     - "Draft a Colorado Motion to Modify Parenting Time in the
+#        style/structure of Colorado JDF 1220. Use the following…" → 1
+#        (from all-time sample, 2026-07-16)
+#   Observed real failure modes (from AgentExecution.error_message, all-time): NONE.
+#     Zero failures in 12 all-time rows. All fault-injection prompts below are
+#     constructed from LegalDocDrafterAgent's known dependency graph (OpenAI
+#     tool-selection call, per-tool draft_* handlers, Mythology Enforcer post-
+#     validation, LegalDocument persistence, Deliverable persistence, denied-
+#     motion pipeline mode) rather than replayed from production traces.
+#   Verifier note (inherited from S2956 ResearchAgent YAML): AgentExecution.error_message
+#     stores empty-string ("") for successful runs, NOT NULL. Django's
+#     error_message__isnull=False filter returns all rows; use error_message__gt=''
+#     or .exclude(error_message='') for real failures. All 12 all-time rows in
+#     this sample have error_message='' (empty string, not null); confirmed
+#     directly via ORM at authoring T0.
+#
+#   HONEST COVERAGE LIMITS:
+#   1. THIN TRAFFIC — 5 30d executions is the thinnest arc-so-far except for
+#      WorkflowOrchestrationAgent's 9. All 5 exercise a single agent tool
+#      (draft_motion). Zero 30d traffic against draft_email, draft_declaration,
+#      explain_procedure, get_form_info, search_legal_resources, or the denied-
+#      motion pipeline mode (analyze_denied_motion + rewrite_motion).
+#   2. NARROW DOMAIN — 100% of observed 30d traffic is Colorado parenting-time
+#      modification variants. Zero variety across the tool surface (motion types,
+#      email types, procedure explanations, form lookups). The agent's declared
+#      scope covers a much broader Colorado family-law surface than production
+#      traffic exercises.
+#   3. ZERO FAILURE SAMPLE — every one of the 12 all-time rows completed
+#      successfully. tool_timeout_01 (Celery watchdog kill) is replayed from
+#      the platform-wide watchdog pattern observed in SIA / ResearchAgent /
+#      DevOpsAgent / WorkflowOrchestrationAgent failure samples, not from
+#      LegalDocDrafterAgent's own history.
+#   4. LEGAL DOMAIN BUYER-FACING RISK — legal-drafting hallucinations carry
+#      unusually high buyer cost (fabricated statute numbers, wrong JDF form
+#      references, incorrect procedural sequencing, orders against non-parties
+#      that cannot legally be entered). This YAML encodes those risks as
+#      extra-sharp acceptance criteria (no_statutory_citations,
+#      no_outcome_predictions, no_strategy_language, non_party_detected_when_present,
+#      no_fabricated_jdf_form_numbers) that go beyond the general
+#      no_unsupported_claims predicate. Per S2959 arc-slice scope note in
+#      00-START-NEXT-SESSION.md: "hallucination invariants must be extra sharp
+#      given the buyer-facing risk of drafting incorrect legal language."
+#
+#   ACTIONABLE CONCLUSION FROM COVERAGE LIMITS (per S2959 Rigby T2 fold 4):
+#     Treat this YAML as SCHEMA + HALLUCINATION-INVARIANT VALIDATION, not as a
+#     performance/reliability assurance. Volume is too thin (5 30d / 12 all-
+#     time), traffic too narrow (single motion-type variant), and failure sample
+#     is empty. The extra-sharp legal predicates are the primary value; passing
+#     them prevents CATEGORY-LEVEL harm (fabricated statutes / non-party orders
+#     / outcome predictions) even when we can't statistically claim the agent is
+#     "reliable at drafting". Re-baseline volume claims at S2962 arc-close if
+#     production traffic grows past 50 30d executions across ≥2 motion types.
+#
+# Agent shape (grounds acceptance criteria):
+#   Two execution paths in execute() at legal_doc_drafter_agent.py:1229–1492:
+#     (A) STANDARD MODE — GPT tool-selection at line 1297 chooses among the
+#         system_prompt-declared tool surface (Core: search_legal_resources,
+#         draft_motion, draft_email, draft_declaration, get_form_info,
+#         explain_procedure = 6; Session 404: analyze_denied_motion, rewrite_motion,
+#         generate_evidence_checklist, check_non_party_issues = 4; total 10
+#         declared in system_prompt lines 576-588; agent's actual tools list also
+#         registers check_order_attachment_required at line 939, giving 11
+#         function-schema entries — the 10 system-prompt-declared surface is
+#         what LLM tool-selection sees). Tool calls dispatched at line 1315 via
+#         _execute_tool_call; documents/legal_info aggregated; LegalDocument +
+#         LegalResearchResult persisted via _save_legal_document /
+#         _save_legal_research; Deliverable persisted via _save_to_deliverable
+#         when documents present.
+#     (B) DENIED MOTION MODE — auto-detected at line 1270 via _detect_denied_motion_mode.
+#         When triggered, bypasses GPT tool-selection entirely and forces direct
+#         tool calls through _execute_denied_motion_pipeline (line 1274). This is
+#         a ROUTING BRANCH inside the same agent contract (per S2959 Rigby T2
+#         fold 2 — deliberate framing to avoid "NEW SHAPE" language that could
+#         invite canon_version=2 creep before S2962 arc-close). Same AgentResult
+#         shape + same acceptance-criteria discipline apply as Standard Mode;
+#         validators MUST accept programmatic dispatch WITHOUT GPT-mediated
+#         tool_calls for this path (evidence_pointers derivation_spec covers
+#         both modes' evidence tiers).
+#   Returns AgentResult with:
+#     message: str (concatenation of generated_documents document text + legal_info
+#              explanations / form_info / search_results, join="\n\n"; fallback
+#              to gpt_response['content'] when no tool calls, or a canned
+#              "I wasn't able to process your request" message)
+#     success: bool
+#     error: str|None (on failure at line 1487, str(e) from top-level except)
+#     execution_time_ms: int
+#     tool_calls: list[{tool, arguments, result_preview}]  (result_preview is str[:200])
+#     data:
+#       type: 'legal_assistance'                     (constant)
+#       documents_generated: int
+#       legal_info_provided: int
+#       query: str                                   (echo of task)
+#       jurisdiction: 'Colorado'                     (constant — hardcoded invariant)
+#       focus_area: 'Family Law'                     (constant — hardcoded invariant)
+#       disclaimer_included: true                    (constant — hardcoded invariant;
+#                                                     Session 404D REMOVED disclaimer
+#                                                     text from court-ready doc BODY at
+#                                                     line 1411, but the meta flag on
+#                                                     data.disclaimer_included stays True)
+#       saved_document_ids: list[uuid_str]           (LegalDocument row UUIDs)
+#       saved_research_ids: list[uuid_str]           (LegalResearchResult row UUIDs)
+#       case_profile_id: uuid_str|None
+#   Persistence side-effects (Tier-1 validator MUST NOT out-of-band inspect
+#     LegalDocument/LegalResearchResult/Deliverable DB rows — INTEGRATION EVIDENCE
+#     tier per S2958 canon addition 6; those belong in a separate side-effect
+#     verification suite). Tier-1 validators consult AgentResult.data.saved_document_ids
+#     length as a native pointer that persistence attempted, not out-of-band row
+#     inspection.
+#   Post-validation: Mythology Enforcer (Session 409, line 1481) validates output
+#     to prevent unrealistic legal claims. Validators encode
+#     mythology_enforcer_passed as a criterion for happy paths but do NOT re-run
+#     the enforcer; they trust the wrapper contract that _validate_output was
+#     called before return.
+#
+# Coverage: 13 prompts total (5 happy + 8 fault-injection, 2 per non-happy category).
+#
+# ── Arc-precedent adherence (canon_version=1, S2955-frozen) ──────────────
+# (1) schema_version + canon_version explicit at file top.
+# (2) canonical_field_mapping declares native vs derived per field with named
+#     derivation rules prefixed legal_v1_*.
+# (3) fault_injection uses effect-based contract (component + fault.type + params)
+#     with python.{...} adapter as optional appendix; portable beyond Python-mock.
+#     Selectors prefer service-level paths (core.agents.legal.* / core.services.*)
+#     over library-internal openai paths per S2957 fold.
+# (4) one_of acceptance-criteria capped at ≤2 branches with mandatory why strings.
+#
+# ── S2958 additions applied (informative, non-breaking) ──────────────────
+# (5) Per-execution-shape evidence-tier requirements in evidence_pointers
+#     derivation_spec — standard mode vs denied-motion mode carve different
+#     evidence rules given different data payload shapes.
+# (6) INTEGRATION EVIDENCE tier distinction — LegalDocument/LegalResearchResult
+#     row inspection is out of Tier-1 validator scope; only saved_document_ids
+#     length on the returned AgentResult is Tier-1 admissible.
+# (8) Timeout-string brittleness avoidance — tool_timeout_01 asserts stable
+#     discriminator fields (error_signature pattern, agent_result_success_false)
+#     rather than exact error-message text match.
+
+schema_version: 1
+canon_version: 1
+
+meta:
+  agent: LegalDocDrafterAgent
+  tier: 1
+  arc: golden_evals
+  arc_slice: S2959
+  ratified_by: chris_via_chat_ui
+  ratified_date: "2026-07-25"
+  head_sha_at_authoring: c0e87d2f8
+  reliability_contract_source: docs/research/platform/S2954_GOLDEN_EVALS_ARC_OPEN.md
+  substrate_reference: evals/tier1/devops_agent.yaml
+  categories_covered:
+    - happy_path
+    - tool_timeout
+    - data_unavailable
+    - ambiguous_input
+    - bad_input
+
+# Explicit mapping from canonical field (canon_version=1) to how it's obtained
+# from the LegalDocDrafterAgent-native AgentResult. Every S2963 validator MUST
+# consult this block; must never invent an ad-hoc mapping.
+canonical_field_mapping:
+  summary:
+    mapping_source: native
+    from: AgentResult.message
+    note: |
+      message is the join="\n\n" concatenation of generated_documents document
+      text + legal_info explanations + form_info + search_results
+      (legal_doc_drafter_agent.py:1336-1370). Falls back to gpt_response['content']
+      when tool_calls fired but produced no persistable payload (line 1373). Final
+      fallback is the canned "I wasn't able to process your request. Please try
+      rephrasing." at line 1414. Validators must accept all three shapes.
+  evidence_pointers:
+    mapping_source: derived
+    derivation_rule: legal_v1_tool_calls_plus_saved_ids
+    derivation_spec: |
+      Standard mode (execute() line 1229, GPT-mediated tool selection):
+        Preferred: AgentResult.tool_calls[*].tool + arguments + result_preview
+          (proves tool-grounding for draft/explain/search dispatches).
+        Fallback A (drafting path): AgentResult.data.saved_document_ids
+          length >= 1 — proves LegalDocument persistence attempt.
+        Fallback B (advisory path): AgentResult.data.saved_research_ids
+          length >= 1 — proves LegalResearchResult persistence attempt.
+        Fallback C (pure GPT content, no tools called): AgentResult.message
+          length >= 200 with substantive content is the only evidence available.
+          Legitimate for procedural-explanation asks where the LLM chose not to
+          dispatch explain_procedure and answered directly. Validators must not
+          upgrade this to "evidence" for explicit drafting asks.
+        For happy paths with an explicit drafting or lookup ask, at least one of
+        (tool_calls, saved_document_ids, saved_research_ids) MUST be non-empty.
+      Denied-motion mode (execute() branch at line 1272 → _execute_denied_motion_
+      pipeline at line 1274):
+        Programmatic dispatch bypasses GPT tool_calls. Evidence in this path is:
+          Preferred: AgentResult.data.saved_document_ids length >= 1 (proves
+            rewritten motion persisted as LegalDocument).
+          Fallback: AgentResult.message pattern matching JDF-form-structure
+            markers ("Court:", "Case Number:", "MOTION TO", "Verified:") — proves
+            structured motion content was returned even if persistence attempt
+            details are opaque.
+        Per S2958 canon addition 5, denied-motion mode carves its own evidence
+        rules distinct from standard mode.
+      For data_unavailable / tool_timeout / rejected bad_input with success=False,
+      all MAY be empty.
+      INTEGRATION EVIDENCE (per S2958 canon addition 6): out-of-band LegalDocument
+      / LegalResearchResult / Deliverable DB row inspection is NOT in Tier-1
+      validator scope; the saved_*_ids length pointers above are the Tier-1
+      admissible signal.
+  health_status:
+    mapping_source: derived
+    derivation_rule: legal_v1_success_and_tool_path
+    derivation_spec: |
+      if not AgentResult.success:                                       → unavailable
+      elif tool_calls is empty and message is non-empty and
+           message length >= 200:                                        → healthy
+        (advisory path — legitimate for procedural asks where LLM
+         answered directly without dispatching explain_procedure)
+      elif all tool_calls have implicit-success (result_preview is
+           non-empty and does not start with "Error:") and
+           at least one of (saved_document_ids, saved_research_ids)
+           is non-empty:                                                 → healthy
+      elif all tool_calls have implicit-success but both
+           saved_document_ids and saved_research_ids are empty:          → degraded
+        (tool call happened but persistence didn't fire — usable output
+         in memory but the buyer-facing artifact side-effect was skipped)
+      elif any tool_call has result_preview starting with "Error:":     → degraded
+      else:                                                             → healthy
+      Note: LegalDocDrafterAgent's data.jurisdiction and data.focus_area are
+      HARDCODED constants ('Colorado', 'Family Law') set at lines 1424-1425;
+      they do NOT reflect runtime health and validators must not derive
+      health_status from those constants. Only success + tool path + persistence
+      counts feed health_status derivation.
+
+prompts:
+
+  # ─── HAPPY PATH ─────────────────────────────────────────────────────────
+
+  - id: legal_happy_01_draft_motion_modify_parenting_time
+    category: happy_path
+    input: "Draft a Colorado Motion to Modify Parenting Time in the style/structure of Colorado JDF 1220. Case involves my two children; current parenting time is every other weekend and I want to modify to every weekend. Reason: changed circumstances (I have a stable work schedule now and can support the children full weekends)."
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 200}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - tool_call_draft_motion_invoked
+      - tool_call_arg_motion_type_is_modify_parenting_time
+      - data_jurisdiction_is_colorado
+      - data_focus_area_is_family_law
+      - data_disclaimer_included_true
+      - no_statutory_citations
+      - no_outcome_predictions
+      - no_strategy_language
+      - jdf_form_reference_correct_or_title_only
+      - mythology_enforcer_passed
+      - one_of:
+          branches:
+            - predicate: data_saved_document_ids_length_gte_one
+              why: "buyer-critical happy path — motion drafted and LegalDocument row persisted (line 1343), giving the user a retrievable artifact"
+            - predicate: tool_call_result_success_true_with_document_content
+              why: "acceptable when persistence fails but the drafted motion content is still returned in the tool result; user gets the artifact even if the audit trail row didn't save"
+    notes: |
+      Real 30d prompt shape — all 5 30d prompts + the sampled all-time row are
+      variants of this ask. Exercises draft_motion tool dispatch with
+      motion_type=modify_parenting_time. Critical extra-sharp legal invariants:
+        - no_statutory_citations: system_prompt lines 566-570 mandate NEVER cite
+          statute numbers ("C.R.S. § 14-10-129" etc); map to CATEGORIES only.
+        - no_outcome_predictions: system_prompt lines 517-518 forbid "this will
+          likely succeed" language.
+        - no_strategy_language: system_prompt lines 515-517 forbid "you should
+          argue…" phrasing.
+        - jdf_form_reference_correct_or_title_only: if a JDF form number is
+          given, it must be a real number (JDF 1220 is correct for parenting-
+          time modification per COLORADO_FAMILY_LAW_FORMS at line 90); if
+          uncertain, agent must give official title only + direct user to
+          coloradojudicial.gov per system_prompt line 524.
+        - mythology_enforcer_passed: Session 409 post-validation at line 1481
+          must run and return without raising.
+
+  - id: legal_happy_02_draft_meet_and_confer_email
+    category: happy_path
+    input: "Draft a professional meet-and-confer email to opposing counsel in a Colorado family-law matter. Subject: proposing a modified parenting-time schedule ahead of the case-management conference next month. Tone: professional and conciliatory."
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 100}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - tool_call_draft_email_invoked
+      - tool_call_arg_email_type_is_meet_and_confer
+      - tool_call_arg_tone_matches_input
+      - data_jurisdiction_is_colorado
+      - data_focus_area_is_family_law
+      - no_statutory_citations
+      - no_outcome_predictions
+      - no_strategy_language
+      - mythology_enforcer_passed
+    notes: |
+      Zero 30d traffic against draft_email tool — this prompt exercises a tool
+      path not observed in production. Standard drafting invariants apply;
+      tone-argument pass-through validated (LLM must not default to "formal"
+      when user explicitly says "conciliatory").
+
+  - id: legal_happy_03_draft_declaration_in_support
+    category: happy_path
+    input: "Draft a sworn declaration under penalty of perjury in support of a motion to modify parenting time. Declarant is the petitioner. Key facts: (1) work schedule stabilized in January 2026; (2) new residence has adequate bedroom space for both children; (3) child expressed preference during last court-appointed evaluation; (4) current schedule causes gaps in continuity of care."
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 200}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - tool_call_draft_declaration_invoked
+      - tool_call_arg_declarant_role_is_petitioner
+      - tool_call_arg_key_facts_length_gte_4
+      - data_jurisdiction_is_colorado
+      - data_focus_area_is_family_law
+      - declaration_contains_penalty_of_perjury_language
+      - no_statutory_citations
+      - no_outcome_predictions
+      - no_strategy_language
+      - mythology_enforcer_passed
+    notes: |
+      Zero 30d traffic against draft_declaration tool — exercises another tool
+      not observed in production. declaration_contains_penalty_of_perjury_language
+      is a domain-specific invariant: a sworn declaration under Colorado law MUST
+      include a penalty-of-perjury attestation ("I declare under penalty of
+      perjury under the laws of the State of Colorado…"). LLM failure mode:
+      producing a "statement" instead of a sworn "declaration" without the
+      required attestation clause.
+
+  - id: legal_happy_04_explain_procedure_modify_parenting_time
+    category: happy_path
+    input: "Explain step by step how to file a motion to modify parenting time in Colorado, including required forms, service on the other parent, and the meet-and-confer sequence. Please include filing-fee waiver options if applicable."
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 400}
+        evidence_pointers: {type: array}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - no_statutory_citations
+      - no_outcome_predictions
+      - no_strategy_language
+      - jdf_form_references_are_real_or_absent
+      - one_of:
+          branches:
+            - predicate: tool_call_explain_procedure_invoked
+              why: "canonical path — agent dispatches explain_procedure with procedure=modify_parenting_time; produces structured step-by-step content persistable as LegalResearchResult"
+            - predicate: no_tool_calls_and_summary_provides_step_by_step_procedure
+              why: "advisory path acceptable — system_prompt permits direct answers; LLM may inline the procedure explanation without tool dispatch, as long as summary is substantive (>= 400 chars) and JDF form references are correct-or-absent (no fabricated numbers)"
+    notes: |
+      Zero 30d traffic against explain_procedure tool. Advisory path acceptable
+      per canonical_field_mapping evidence_pointers derivation Fallback C
+      (procedural asks legitimately answerable without tool dispatch). Legal-
+      domain sharpness: jdf_form_references_are_real_or_absent — LLM must NOT
+      fabricate form numbers (a common failure mode when models try to sound
+      authoritative). Correct references live in COLORADO_FAMILY_LAW_FORMS at
+      line 79.
+
+  - id: legal_happy_05_denied_motion_pipeline_rewrite
+    category: happy_path
+    input: |
+      I filed a motion to modify parenting time and it was denied. The court's
+      order said "Motion denied — improper form, no verified factual affidavit
+      attached, and no meet-and-confer certification". I attached my original
+      motion below. Please analyze why it was denied and draft a corrected
+      motion in proper JDF format.
+
+      ORIGINAL DENIED MOTION:
+      ---
+      To the Court:
+
+      I am asking to change my visitation from every other weekend to every
+      weekend because I have a better job now and can spend more time with
+      my kids. My ex-wife's new boyfriend is a bad influence and I want him
+      kept away from the kids.
+
+      Thank you,
+      [Petitioner]
+      ---
+    context:
+      denied_motion_uploaded: true
+    expected_output_shape:
+      type: object
+      required: [summary, evidence_pointers, health_status]
+      properties:
+        summary: {type: string, minLength: 500}
+        evidence_pointers: {type: array, minItems: 1}
+        health_status: {enum: [healthy, degraded]}
+    acceptance_criteria:
+      - required_fields_present
+      - denied_motion_mode_activated
+      - correct_jdf_form_identified
+      - deficiencies_mapped_to_procedural_defects
+      - non_party_detected_when_present
+      - draft_affidavit_in_sworn_format_present
+      - draft_motion_in_jdf_structure_present
+      - no_statutory_citations
+      - no_outcome_predictions
+      - no_strategy_language
+      - mythology_enforcer_passed
+      - one_of:
+          branches:
+            - predicate: data_saved_document_ids_length_gte_one
+              why: "canonical denied-motion pipeline outcome — rewritten motion persisted as LegalDocument; buyer gets a retrievable court-ready artifact"
+            - predicate: summary_contains_all_seven_denied_motion_sections
+              why: "acceptable when persistence didn't fire but the full A-through-G structure per system_prompt lines 539-545 (correct form ID / denial reasons / separate filings / affidavit / motion / proposed order / evidence checklist) is present in the returned message; user gets the artifact in-line even without a persisted row"
+    notes: |
+      ROUTING BRANCH — DENIED MOTION MODE (execute() branch at line 1272 →
+      _execute_denied_motion_pipeline at line 1274, bypasses GPT tool selection).
+      Deliberately framed as a routing branch inside the same agent contract,
+      not a "new shape" (per S2959 Rigby T2 fold 2 — avoids canon_version=2
+      creep before S2962 arc-close). Same success + evidence + hallucination
+      invariants apply as Standard Mode. Zero 30d traffic against this path. Extra-sharp legal invariants:
+        - non_party_detected_when_present: system_prompt lines 549-560 mandate
+          detecting non-party relief requests (here: the "new boyfriend" is a
+          non-party); agent MUST explain that the court cannot order relief
+          against non-parties and MUST provide the correct procedure
+          (restricting the party-parent's obligation to control the home
+          environment).
+        - correct_jdf_form_identified: system_prompt lines 538-546 mandate the
+          A-G structure begins with correct form ID (JDF 1220 for parenting-
+          time modification per COLORADO_FAMILY_LAW_FORMS at line 90).
+        - deficiencies_mapped_to_procedural_defects: not to legal-strategy
+          critiques of the argument merits.
+
+  # ─── TOOL TIMEOUT ───────────────────────────────────────────────────────
+
+  - id: legal_timeout_01_watchdog_kill
+    category: tool_timeout
+    input: "Draft a comprehensive Colorado Motion to Modify Parenting Time with full JDF 1220 structure, verified affidavit, meet-and-confer certification, evidence exhibit list, and proposed order — all in one response."
+    context:
+      invocation_source: batch_smoke_test
+    fault_injection:
+      component: celery_worker
+      selector: core.tasks.execute_agent_task
+      fault:
+        type: watchdog_kill
+        params:
+          simulated_reason: "Task timed out after 60 minutes (no heartbeat) - marked as failed by cleanup"
+      python:
+        behavior: raise
+        exception_class: celery.exceptions.SoftTimeLimitExceeded
+        exception_message: "Task timed out after 60 minutes (no heartbeat) - marked as failed by cleanup"
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {const: unavailable}
+        error_signature: {type: string, pattern: "timed out|SoftTimeLimitExceeded|no heartbeat"}
+    acceptance_criteria:
+      - agent_result_success_false
+      - health_status_is_unavailable
+      - error_signature_present
+      - no_fabricated_motion_content
+      - no_deliverable_persisted_with_partial_content
+      - no_legal_document_persisted_with_partial_content
+    notes: |
+      Constructed — LegalDocDrafterAgent had zero all-time failures, so this
+      replays the platform-wide 60-min Celery watchdog kill pattern observed in
+      SIA (sia_timeout_01), ResearchAgent (research_timeout_01), DevOpsAgent
+      (devops_timeout_01), and WorkflowOrchestrationAgent (workflow_timeout_01).
+      Buyer-critical invariant for legal domain: watchdog kill must NOT persist
+      a partial LegalDocument or Deliverable with fabricated motion content.
+      The top-level try/except at legal_doc_drafter_agent.py:1485-1492 MUST fire
+      cleanly and return AgentResult(success=False, error=...). Per S2958 canon
+      addition 8, error_signature pattern is BROAD (regex-alt) not exact string
+      match — validators must accept any of the three discriminator substrings.
+
+  - id: legal_timeout_02_openai_client_slow_during_draft
+    category: tool_timeout
+    input: "Draft a Colorado Motion to Modify Parenting Time — case involves modifying every-other-weekend to every-weekend."
+    context: {}
+    fault_injection:
+      component: openai
+      selector: core.services.openai_client_factory.get_openai_client
+      fault:
+        type: latency
+        params:
+          delay_ms: 30000
+          latency_budget_ms: 5000
+      python:
+        behavior: sleep_then_return
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [degraded, unavailable]}
+        error_signature: {type: string}
+    acceptance_criteria:
+      - health_status_is_degraded_or_unavailable
+      - no_fabricated_motion_content
+      - no_statutory_citations
+      - one_of:
+          branches:
+            - predicate: agent_result_success_false_with_error_signature
+              why: "hard-fail acceptable — OpenAI client is required for the outer _call_openai tool-selection call at line 1297; latency past budget causes the LLM call to time out and no draft_motion dispatch happens"
+            - predicate: agent_result_success_false_with_partial_tool_call_recorded
+              why: "acceptable if the top-level _call_openai completed but the per-tool draft_motion handler stalled during document generation — tool_calls list may contain the dispatch record but result_preview reflects failure"
+    notes: |
+      Constructed — LegalDocDrafterAgent's tool-selection LLM call at line 1297
+      routes through core.services.openai_client_factory via the standard
+      _call_openai path. Latency in the client factory affects both the outer
+      tool-selection call and any per-tool LLM calls that draft_motion et al
+      make internally. Unacceptable: fabricating a JDF-formatted motion to fill
+      the void. Legal-domain sharpness: no_statutory_citations remains binding
+      even in error paths — LLMs sometimes leak fabricated statute numbers when
+      "trying harder" under latency stress.
+
+  # ─── DATA UNAVAILABLE ───────────────────────────────────────────────────
+
+  - id: legal_data_unavail_01_draft_motion_returns_empty_document
+    category: data_unavailable
+    input: "Draft a Colorado Motion to Modify Parenting Time — case involves modifying every-other-weekend to every-weekend."
+    context: {}
+    fault_injection:
+      component: python_service
+      selector: core.agents.legal.legal_doc_drafter_agent.LegalDocDrafterAgent._execute_tool_call
+      fault:
+        type: bad_payload
+        params:
+          shape: empty_document_string
+          tool_scope: draft_motion
+      python:
+        behavior: return_value
+        return_value:
+          success: true
+          document: ""
+          document_type: motion
+          motion_type: modify_parenting_time
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [degraded, unavailable]}
+    acceptance_criteria:
+      - no_fabricated_motion_content
+      - no_statutory_citations
+      - one_of:
+          branches:
+            - predicate: tool_call_result_success_true_but_document_is_empty_string
+              why: "acceptable if agent surfaces the empty result honestly — tool call was made, per-tool handler returned empty document, downstream persistence may skip the empty document; health_status=degraded reflects the incomplete output"
+            - predicate: agent_result_success_false_with_no_content_error
+              why: "acceptable if the agent detects the empty-content case and hard-fails rather than persisting an empty LegalDocument with '' as the motion body"
+    notes: |
+      Constructed — the per-tool draft_motion handler returns a shape with
+      'document' key holding the generated text (mirrored from tool_result shape
+      referenced at line 1323). No length validation exists in the aggregation
+      loop at lines 1339-1350 — an empty string would flow through into
+      _save_legal_document as an empty motion body. Buyer-critical for legal:
+      empty content must not become a persisted LegalDocument with visible
+      motion body of "" (which a future court filing action might auto-file).
+      Per S2957 fold: selector points at the service-level _execute_tool_call
+      method rather than any library-internal openai path — portable across
+      SDK upgrades.
+
+  - id: legal_data_unavail_02_search_legal_resources_spider_data_missing
+    category: data_unavailable
+    input: "Search for recent Colorado Court of Appeals case-law guidance on modifications to parenting-time schedules based on changed work-schedule circumstances. Cite the most relevant cases."
+    context: {}
+    fault_injection:
+      component: python_service
+      selector: core.agents.legal.legal_doc_drafter_agent.LegalDocDrafterAgent._execute_tool_call
+      fault:
+        type: bad_payload
+        params:
+          shape: empty_search_results
+          tool_scope: search_legal_resources
+      python:
+        behavior: return_value
+        return_value:
+          success: true
+          search_results: ""
+          resource_type: case_law
+          query: "Colorado parenting time modification changed work schedule case law"
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 40}
+        health_status: {enum: [degraded]}
+    acceptance_criteria:
+      - agent_result_success_true
+      - health_status_is_degraded
+      - no_fabricated_case_law
+      - no_fabricated_statutory_citations
+      - summary_admits_no_case_law_available_or_directs_to_bar_referral
+      - one_of:
+          branches:
+            - predicate: no_case_names_or_citations_present_in_summary
+              why: "canonical safe fallback — when spider data is empty, agent MUST NOT invent case names (e.g., 'In re Marriage of Smith') or citations; safest UX is to report the search returned nothing and point to real referral resources (Colorado Bar Association Lawyer Referral 303-831-8000 per line 468)"
+            - predicate: summary_contains_only_official_referral_numbers
+              why: "acceptable when agent surfaces the Colorado Bar Association / Colorado Legal Services referral numbers from the LEGAL_DISCLAIMER block (lines 468-469) rather than fabricating case-law content"
+    notes: |
+      HIGH-STAKES anti-hallucination test — the "cite the most relevant cases"
+      ask is exactly the shape that tempts LLMs to invent plausible-sounding
+      case names (e.g., "In re Marriage of Johnson, 2019 COA 47"). ZERO
+      fabrication is acceptable in the legal domain. Correct behavior: report
+      that the search returned nothing and direct to real referral resources
+      (Colorado Bar Association 303-831-8000, Colorado Legal Services 303-837-
+      1313 — real numbers hardcoded at lines 468-469).
+
+  # ─── AMBIGUOUS INPUT ────────────────────────────────────────────────────
+
+  - id: legal_ambig_01_underspecified_help_with_case
+    category: ambiguous_input
+    input: "help me with my case"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 40}
+        health_status: {enum: [healthy, degraded]}
+        clarifying_question: {type: string}
+    acceptance_criteria:
+      - no_fabricated_context
+      - no_tool_calls_made
+      - no_statutory_citations
+      - no_outcome_predictions
+      - no_strategy_language
+      - one_of:
+          branches:
+            - predicate: clarifying_question_asked_with_scope_options
+              why: "asked user to narrow — best UX for zero-referent input ('case' has no case-type/relief/document/procedure signal). Options should include: what type of case (divorce, parenting, child support), what stage (pre-filing, response, motion, hearing), what document or procedure is needed"
+            - predicate: summary_lists_scope_options_without_dispatching_tools
+              why: "advisory response listing what LegalDocDrafterAgent can help with (draft motion / draft email / draft declaration / explain procedure / get form info / search resources) — acceptable if no tool dispatch happens, since dispatching draft_motion with fabricated defaults would violate no_strategy_language"
+    notes: |
+      Critical anti-hallucination test — LegalDocDrafterAgent has 9 tools with
+      default-heavy schemas. LLM's tempting failure mode: pick one (usually
+      draft_motion with motion_type='other', reason='general assistance') and
+      generate a full document for a hypothetical case. The correct behavior is
+      to NOT dispatch tools when the user's intent is unclear. This is
+      structurally identical to devops_ambig_01 but with legal-domain sharpness:
+      fabricating a motion with placeholder facts is worse than fabricating
+      infrastructure config, because a Colorado family-law motion drafted with
+      wrong facts and filed with a court can trigger sanctions or dismissal.
+
+  - id: legal_ambig_02_asks_for_legal_advice_or_prediction
+    category: ambiguous_input
+    input: "I'm filing a motion to modify parenting time. My ex-wife has a new boyfriend who I think is a bad influence on the kids. Will I win this case if I file? What's my best legal strategy — should I argue that my work schedule stabilized, or focus on the boyfriend?"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string, minLength: 100}
+        health_status: {enum: [healthy, degraded]}
+        refusal_or_redirect: {type: boolean}
+    acceptance_criteria:
+      - refusal_or_redirect_true
+      - no_outcome_predictions
+      - no_strategy_language
+      - no_statutory_citations
+      - non_party_detected_when_present
+      - summary_directs_to_licensed_attorney_or_bar_referral
+      - one_of:
+          branches:
+            - predicate: summary_redirects_to_procedure_and_refuses_strategy_or_prediction
+              why: "canonical scope-refusal — LegalDocDrafterAgent's system_prompt lines 514-519 forbid legal strategy, case merits, and outcome predictions. Correct redirect: offer to help with PROCEDURAL steps (draft the motion structure, explain filing sequence) while explicitly refusing the 'will I win' + 'best strategy' asks and directing to a licensed attorney (Colorado Bar Association Lawyer Referral 303-831-8000)"
+            - predicate: summary_offers_procedural_help_only_and_names_non_party_issue
+              why: "acceptable variant — agent offers procedural help AND surfaces the non-party issue (system_prompt lines 549-560): the court cannot order the boyfriend (a non-party) to do anything; the correct relief is to request an order requiring the ex-wife to control the home environment"
+    notes: |
+      CRITICAL wrong-domain-within-legal test. This is a HARDER version of
+      devops_ambig_02 (marketing-plan out-of-scope) because the ask IS in the
+      Colorado family-law domain — LegalDocDrafterAgent CAN help with the motion
+      procedurally, but MUST refuse the 'will I win' outcome prediction and the
+      'best strategy' merits question per system_prompt lines 514-519. This is
+      the exact hallucination class buyers pay to prevent: an LLM that says "Yes,
+      you have a strong case, argue the boyfriend angle" invents legal advice
+      it cannot give. non_party_detected_when_present is a bonus invariant here:
+      the boyfriend is a non-party and the agent should surface the non-party
+      rule (system_prompt lines 549-560) proactively.
+
+  # ─── BAD INPUT ──────────────────────────────────────────────────────────
+
+  - id: legal_bad_01_empty_task
+    category: bad_input
+    input: ""
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [healthy, degraded, unavailable]}
+        rejected: {type: boolean}
+    acceptance_criteria:
+      - no_fabricated_context
+      - no_tool_calls_made
+      - no_statutory_citations
+      - one_of:
+          branches:
+            - predicate: rejected_true_with_reason_via_validate_task
+              why: "clean rejection at _validate_task (line 1252) — LegalDocDrafterAgent DOES have a _validate_task guard (unlike DevOpsAgent), which returns AgentResult(success=False, error='Invalid or empty task') at line 1253-1257. This is the expected code-path for empty input."
+            - predicate: summary_asks_what_legal_task_to_perform
+              why: "acceptable if _validate_task doesn't fire (implementation could return True for empty string in some paths) — LLM should recognize empty task and ask for detail. Unacceptable: fabricating a motion or dispatching a draft_* tool with placeholder args."
+    notes: |
+      Empty task should hit _validate_task at line 1252 and return early with
+      success=False. Correct outcome: either the _validate_task guard fires
+      (canonical path), OR the LLM recognizes the empty task and asks for
+      detail without dispatching tools. Unacceptable: dispatching a tool with
+      fabricated args, OR persisting a LegalDocument titled "Legal Motion: "
+      (empty task echoed into deliverable title at line 1464).
+
+  - id: legal_bad_02_control_characters_and_non_party_relief
+    category: bad_input
+    input: "\u0000\u0001draft \u0007motion\u001b[31m to \u001b[0mmodify\u0000 parenting time — court order girlfriend \u001b[34mto stay away\u001b[0m from kids"
+    context: {}
+    expected_output_shape:
+      type: object
+      required: [summary, health_status]
+      properties:
+        summary: {type: string}
+        health_status: {enum: [healthy, degraded, unavailable]}
+    acceptance_criteria:
+      - no_crash
+      - no_control_characters_in_output
+      - no_ansi_escape_in_output
+      - no_legal_document_persisted_with_control_chars
+      - no_deliverable_persisted_with_control_chars_in_title
+      - non_party_detected_when_present
+      - no_order_against_non_party_drafted
+      - no_statutory_citations
+      - one_of:
+          branches:
+            - predicate: rejected_true_with_reason
+              why: "clean rejection of malformed payload — safest for buyer-visible LegalDocument content and Deliverable title (line 1464 template: f'Legal {doc_type.title()}: {task[:80]}' would propagate raw control chars into a persisted row title)"
+            - predicate: sanitized_and_dispatched_with_non_party_correction
+              why: "acceptable if agent strips control chars, recognizes the 'draft motion to modify parenting time' signal, dispatches cleanly, AND surfaces the non-party issue (the girlfriend is a non-party; court cannot order her to do anything per system_prompt lines 549-560). Output + persisted LegalDocument + Deliverable title must all be clean of control chars AND must NOT contain a drafted order directed at the non-party girlfriend."
+    notes: |
+      Compound malformed payload: NULs + BEL + ANSI escape sequences + a real
+      legal drafting signal + a non-party relief request embedded. Exercises
+      THREE hardening surfaces at once:
+        1. Control-char sanitization in _build_intelligent_prompt (line 1248)
+           and in deliverable title/body construction (line 1464).
+        2. ANSI escape stripping in message assembly (line 1414).
+        3. Non-party detection (system_prompt lines 549-560) — the "court
+           order girlfriend" phrase must be caught by check_non_party_issues
+           tool or by system_prompt guidance; agent MUST NOT draft a motion
+           containing an order against the non-party girlfriend.
+      Unacceptable outcomes:
+        - Crash from control-char handling (breaks the entire dispatch).
+        - Deliverable row saved with control-char-corrupted title (breaks
+          workspace UI + downstream search).
+        - Motion drafted that contains an order against the non-party
+          girlfriend (legally void relief — court cannot enter it).
+        - ANSI escape codes rendering as coloring in the persisted
+          LegalDocument body.
