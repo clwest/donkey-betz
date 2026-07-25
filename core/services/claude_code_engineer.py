@@ -1087,8 +1087,15 @@ def execute_engineering_task(
             # Rate limit retry loop
             for retry in range(3):
                 try:
+                    # Session 2967: model name refresh — the previous
+                    # "claude-sonnet-4-20250514" returned Anthropic 404
+                    # not_found_error at Rigby A2 redispatch time. Current
+                    # stable Sonnet 4.6 ID per platform brief. Broader
+                    # 40+-site rename in models_llm_routing.py is deferred
+                    # to a dedicated Anthropic-model-refresh arc — this is
+                    # a targeted unblock for claude_code_tool.
                     response = client.messages.create(
-                        model="claude-sonnet-4-20250514",
+                        model="claude-sonnet-4-6",
                         max_tokens=4096,
                         system=system_prompt,
                         tools=TOOLS,
