@@ -40,7 +40,7 @@
 - **Ledger #21 — no change** (PA→ToolCallRecord write silent regression). Fix in separate arc.
 - **Ledger #17 — no change** (Chris terminal path continues; **10 consecutive terminal ratifications S2957→S2966**).
 - **Ledger #19 — no change** (allowlist landed S2964; still discharged).
-- **Rigby outbound-messaging gap candidate — SECOND TRIGGER OBSERVED S2966** (first at S2965 T2 close). Claude routed "Chris D-verdict framing" to Rigby via PA chat expecting Chat UI relay; Rigby has no outbound Chat UI post surface, so framing was moved to terminal output. Promote to ledger entry next session.
+- **Rigby outbound-messaging gap candidate — RE-SCOPED S2966 post-close** (2 triggers observed for arbitrary-outbound sub-case; async completion notification VERIFIED working via post-close flow test — see §Flow test correction). NOT promoting to urgent arc.
 
 Full session context: `docs/handoffs/SESSION_2966_GOLDEN_EVALS_HARNESS_PR2B.md`.
 
@@ -48,13 +48,30 @@ Full session context: `docs/handoffs/SESSION_2966_GOLDEN_EVALS_HARNESS_PR2B.md`.
 
 ## S2967 open sequence
 
-**S2967 first-action = TBD** — two viable paths (Chris to ratify):
+**S2967 first-action = Path A** — nightly beat + pass-rate drift dashboard. **Ratified 2026-07-25 (Chris terminal) after S2966 post-close flow test** (see §Flow test correction below).
 
-**Path A: Nightly beat + pass-rate drift dashboard** (per S2963 arc structure "S2965+ nightly beat + drift dashboard"). Ship a Celery beat task that runs `run_golden_evals --execute` across all 8 slices on a schedule + a UI/API to surface pass-rate trends per-slice/per-prompt/per-substrate. Uses `GoldenEvalRun` rows already persisting (112 as of S2966 close).
+**Path A (RATIFIED for S2967):** Ship a Celery beat task that runs `run_golden_evals --execute` across all 8 slices on a schedule + a UI/API to surface pass-rate trends per-slice/per-prompt/per-substrate. Uses `GoldenEvalRun` rows already persisting (112 as of S2966 close). Per S2963 arc structure "S2965+ nightly beat + drift dashboard".
 
-**Path B: Per-slice named predicate graduation** — take slice 1 (SIA) as first candidate; register the named predicates that currently return INCONCLUSIVE (`tool_call_get_system_attention_invoked`, `severity_filter_argument_is_critical`, `warning_and_info_items_absent_from_summary`, `counts_reconcile_with_tool_output`, etc.). Small per-slice PRs — 1 PR per slice. Rigby predicates for slice 8 are the highest-value target after the ledger fixes land.
+**Path B (deferred):** Per-slice named predicate graduation — register named predicates that currently return INCONCLUSIVE. Small per-slice PRs; SIA first as smallest.
 
-**Path C: Ledger #20 + #21 fix arc** (separate arc, referenced repeatedly). Populate `trace_id` at ToolCallRecord write sites; investigate + fix silent PA write regression at `tool_dispatcher.py:1043`; migrate `ToolCallRecord.conversation_id` to CharField or add UUID coerce helper. Unblocks Rigby fabrication predicates from perpetual INCONCLUSIVE.
+**Path C (deferred):** Ledger #20 + #21 fix arc. Populate `trace_id` at ToolCallRecord write sites; investigate + fix silent PA write regression at `tool_dispatcher.py:1043`; migrate `ToolCallRecord.conversation_id` to CharField or add UUID coerce helper. Unblocks Rigby fabrication predicates from perpetual INCONCLUSIVE.
+
+### Flow test correction (S2966 post-close, 2026-07-25)
+
+Chris asked whether the flow "Rigby researches platform → proposes business → dispatches agents → returns findings" actually works today. Live test dispatched `bash tools/pa_local.sh "Rigby — real end-to-end test..."` at 19:55:25 UTC.
+
+**Result: FLOW WORKS.** Rigby:
+1. Ran 4 platform-research tools (`kb_tool`, `search_docs`, `ops_digest_tool`, `agent_introspection_tool`).
+2. Proposed a concrete business: "Close Pack + Outreach Sequencer" — AI tool converting service offer → proposal + contract + invoice + 3-touch email sequence. 30-day shippable.
+3. Dispatched 3 real async agents via `universal_agent_tool` with `auto_followup=true`:
+   - `CustomerResearchAgent` (task `f711a403-…`) — completed at 19:56:13 (3,829 tokens)
+   - `CompetitorAnalysisAgent` (task `8e51cb69-…`) — completed at 19:56:24 (3,223 tokens)
+   - `OpportunityScoringAgent` (task `a69dc4fa-…`) — completed at 20:00:02 (4,444 tokens)
+4. All 3 `AgentFollowupSubscription` rows fired (`state='fired'`) via `fire_agent_followup_subscriptions` at `tasks_agents.py:337`.
+5. 3 completion notifications posted back to conversation `pa-bb3ef373c93847db` as `source='pa' intent='agent_completion'` ChatConversation rows.
+6. 2 Deliverables persisted (Customer Research `b2eccbbb-…`, Competitor Analysis `e6bc8628-…`) — visible in workspace UI.
+
+**Correction to S2966 handoff §"Rigby outbound-messaging gap SECOND TRIGGER OBSERVED":** the promotion candidate was mis-scoped. The gap conflated (a) async agent-completion notification — which WORKS end-to-end via `fire_agent_followup_subscriptions` — with (b) arbitrary outbound (Rigby proactively starting a new topic in a thread she wasn't called into) — which is a distinct, lower-urgency gap with 2 observed triggers (S2965 D-verdict framing / S2966 D-verdict framing). Neither trigger blocks Chris's core flow. Not promoting to urgent arc; if it recurs on end-user-visible surfaces (not SIGN cycle relay), reconsider then.
 
 ### Universal open sequence (unchanged)
 
