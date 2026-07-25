@@ -100,3 +100,40 @@ if (!existsSync(DIST)) {
 const outPath = resolve(DIST, '__manifest.json');
 writeFileSync(outPath, JSON.stringify(manifest, null, 2));
 console.log(`[generate-manifest] Wrote ${outPath} (${routes.length} routes, sha=${gitSha})`);
+
+// ── Sync core/templates/index.html to current dist bundle hashes ────────────
+// Django TEMPLATES DIRS puts core/templates/ before frontend/dist/, so the
+// template's <script src=…> + <link href=…> must be updated on every build
+// or the browser loads stale bundles. Ships automatically as part of build.
+// (S2948 NEW-4 close: replaces manual sync surfaced in S2947 close.)
+
+try {
+  const distIndexPath = resolve(DIST, 'index.html');
+  const templatePath = resolve(ROOT, '..', 'core', 'templates', 'index.html');
+
+  if (existsSync(distIndexPath) && existsSync(templatePath)) {
+    const distHtml = readFileSync(distIndexPath, 'utf-8');
+    const templateHtml = readFileSync(templatePath, 'utf-8');
+
+    const scriptRe = /<script[^>]*src="\/static\/assets\/index-[^"]+\.js"[^>]*><\/script>/;
+    const linkRe = /<link[^>]*href="\/static\/assets\/index-[^"]+\.css"[^>]*>/;
+
+    // Vite config already writes /static/assets/ paths in dist/index.html.
+    const distScript = distHtml.match(scriptRe)?.[0];
+    const distLink = distHtml.match(linkRe)?.[0];
+
+    if (distScript && distLink && scriptRe.test(templateHtml) && linkRe.test(templateHtml)) {
+      const updated = templateHtml.replace(scriptRe, distScript).replace(linkRe, distLink);
+      if (updated !== templateHtml) {
+        writeFileSync(templatePath, updated);
+        console.log(`[generate-manifest] Synced ${templatePath} to current dist hashes.`);
+      } else {
+        console.log('[generate-manifest] core/templates/index.html already matches dist — no sync needed.');
+      }
+    } else {
+      console.warn('[generate-manifest] Could not locate script/link tags in dist or template — skipping template sync.');
+    }
+  }
+} catch (err) {
+  console.warn(`[generate-manifest] Template sync failed (non-fatal): ${err.message}`);
+}

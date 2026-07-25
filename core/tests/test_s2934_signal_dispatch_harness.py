@@ -408,3 +408,92 @@ class TestSignalDispatchesManualEndpoint(TestCase):
         )
         self.assertEqual(resp.status_code, 409)
         self.assertEqual(resp.json()['error_code'], 'guard_blocked')
+
+
+class TestSignalDispatchesEligibleEndpoint(TestCase):
+    """S2948 NEW-4 — GET /api/v1/agents/signal-dispatches/eligible/"""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='sd-elig', password='x')
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+        self.url = reverse('signal-dispatches-eligible')
+
+    def test_returns_active_clusters_with_matching_rules(self):
+        c1 = _make_cluster(pattern_type='trend_emergence', name='trend-a', strength=0.8)
+        c2 = _make_cluster(pattern_type='content_gap', name='gap-b', strength=0.6)
+        # Cluster whose pattern has no rule — should NOT appear.
+        _make_cluster(pattern_type='sentiment_shift', name='sent-c')
+        # Detecting cluster — should NOT appear (only active).
+        _make_cluster(pattern_type='trend_emergence', name='trend-d', status='detecting')
+
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.status_code, 200)
+        body = resp.json()
+        self.assertTrue(body['success'])
+        ids = {row['id'] for row in body['data']['eligible']}
+        self.assertEqual(ids, {str(c1.id), str(c2.id)})
+
+    def test_orders_by_strength_desc(self):
+        low = _make_cluster(pattern_type='trend_emergence', name='low', strength=0.55)
+        high = _make_cluster(pattern_type='trend_emergence', name='high', strength=0.9)
+        mid = _make_cluster(pattern_type='trend_emergence', name='mid', strength=0.7)
+
+        resp = self.client.get(self.url)
+        rows = resp.json()['data']['eligible']
+        self.assertEqual([r['id'] for r in rows], [str(high.id), str(mid.id), str(low.id)])
+
+    def test_pattern_type_filter(self):
+        _make_cluster(pattern_type='trend_emergence', name='trend-only')
+        gap = _make_cluster(pattern_type='content_gap', name='gap-only')
+        resp = self.client.get(self.url, {'pattern_type': 'content_gap'})
+        rows = resp.json()['data']['eligible']
+        self.assertEqual([r['id'] for r in rows], [str(gap.id)])
+
+    def test_matching_rules_populated(self):
+        c = _make_cluster(pattern_type='trend_emergence', name='trend-r')
+        resp = self.client.get(self.url)
+        rows = resp.json()['data']['eligible']
+        self.assertEqual(len(rows), 1)
+        rules = rows[0]['matching_rules']
+        self.assertEqual(len(rules), 1)
+        self.assertEqual(rules[0]['key'], 'trend_emergence__trend_analysis')
+        self.assertEqual(rules[0]['agent_name'], 'TrendAnalysisAgent')
+
+    def test_guard_blocked_hidden_by_default(self):
+        c = _make_cluster(pattern_type='trend_emergence', name='blocked')
+        rule = get_rule('trend_emergence__trend_analysis')
+        assert rule is not None
+        # Recent non-failed dispatch → guard-blocks the only matching rule
+        SignalDispatch.objects.create(
+            rule_key=rule.key,
+            pattern_type=c.pattern_type,
+            agent_name=rule.agent_name,
+            signal_cluster=c,
+            outcome='succeeded',
+            scan_run_id='previous',
+        )
+        resp = self.client.get(self.url)
+        self.assertEqual(resp.json()['data']['eligible'], [])
+
+    def test_include_blocked_surfaces_them_with_flag(self):
+        c = _make_cluster(pattern_type='trend_emergence', name='blocked-visible')
+        rule = get_rule('trend_emergence__trend_analysis')
+        assert rule is not None
+        SignalDispatch.objects.create(
+            rule_key=rule.key,
+            pattern_type=c.pattern_type,
+            agent_name=rule.agent_name,
+            signal_cluster=c,
+            outcome='succeeded',
+            scan_run_id='previous',
+        )
+        resp = self.client.get(self.url, {'include_blocked': 'true'})
+        rows = resp.json()['data']['eligible']
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['guard_blocked_rules'], [rule.key])
+
+    def test_limit_capped_at_200(self):
+        _make_cluster(pattern_type='trend_emergence', name='one')
+        resp = self.client.get(self.url, {'limit': 9999})
+        self.assertEqual(resp.json()['data']['limit'], 200)
