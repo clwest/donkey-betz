@@ -395,6 +395,11 @@ class CodeJobHandlersMixin:
         # log, not a 4xx — keeps Rigby's tool surface forgiving.
         request_mode = (payload.get('request_mode') or 'auto').strip().lower()
 
+        # Session 2967 Slice 7 PR-1 — pass through optional cost / iteration
+        # caps. Null / omitted = use engine defaults (150 iter / $5).
+        max_iterations = payload.get('max_iterations')
+        max_cost_usd = payload.get('max_cost_usd')
+
         from core.tasks import claude_code_engineer_task
         task = claude_code_engineer_task.delay(
             task_description=task_description,
@@ -402,6 +407,8 @@ class CodeJobHandlersMixin:
             requested_by='rigby',
             request_mode=request_mode,
             workspace_root_path=workspace_root_path,
+            max_iterations=max_iterations,
+            max_cost_usd=max_cost_usd,
         )
 
         # Session 2728 F-CC-3 — surface whether the completion banner will fire.
@@ -441,11 +448,19 @@ class CodeJobHandlersMixin:
             'workspace_id_resolved': workspace_id_resolved,
             'workspace_root_path': workspace_root_path,
             'resolved_from': resolved_from or 'fallback',
+            # Session 2967 Slice 7 PR-1 — surface requested caps (null = engine
+            # defaults 150 iter / $5). Engineer's actual `effective_*` values
+            # land in the completion envelope (output_data on AgentExecution).
+            'max_iterations_requested': max_iterations,
+            'max_cost_usd_requested': max_cost_usd,
             'message': (
                 f'Claude Code engineering session started '
                 f'(request_mode={request_mode}). Task ID: {task.id}. '
                 f'Working tree: {workspace_root_path or "engineer default (Railway /tmp clone or /app fallback)"} '
-                f'({resolved_from or "fallback"}). {message_suffix}'
+                f'({resolved_from or "fallback"}). '
+                f'Budget: max_iterations={max_iterations or "default (150)"}, '
+                f'max_cost_usd={max_cost_usd if max_cost_usd is not None else "default ($5)"}. '
+                f'{message_suffix}'
             ),
         }
 
