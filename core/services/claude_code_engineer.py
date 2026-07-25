@@ -291,8 +291,16 @@ def _mark_post_back_failed_on_execution(
             type(exc).__name__, exc,
         )
 
-REPO_ROOT = '/app'  # Railway container path — may be read-only
+REPO_ROOT = '/app'  # Railway container path — may be read-only. Fallback only.
 WRITABLE_ROOT = '/tmp/engineer-workspace'  # Writable clone for git operations
+
+# Session 2967 Slice 7 — REPO_ROOT is no longer mutated at runtime. It stays
+# as a Railway-container fallback constant. Callers pass `workspace_root_path`
+# through `claude_code_engineer_task` → `execute_engineering_task` →
+# `_execute_tool(..., repo_root=…)` so the engineer's working tree is
+# unambiguous per-dispatch and safe under concurrent workers. See Rigby T1
+# SIGN pushback #2 ("global REPO_ROOT is a latent concurrency bomb") at
+# `docs/handoffs/SESSION_2967_*` for full context.
 
 # Session 1230 P4 — Two-mode system prompts.
 #
@@ -522,20 +530,22 @@ TOOLS = [
 ]
 
 
-def _ensure_git_repo():
+def _ensure_git_repo() -> str:
     """
-    Clone the repo into a writable temp directory.
+    Clone the repo into a writable temp directory and return the resolved path.
+
     Railway's /app/ is read-only for the appuser, so we shallow-clone
     into /tmp/engineer-workspace/ which is always writable.
-    Updates REPO_ROOT globally so all tools use the writable copy.
-    """
-    global REPO_ROOT
 
+    Session 2967 Slice 7: returns the resolved path instead of mutating
+    the module-level ``REPO_ROOT``. Callers pass the returned value down to
+    ``_execute_tool(..., repo_root=…)`` so per-dispatch working trees are
+    unambiguous and safe under concurrent workers.
+    """
     # If writable workspace already exists, use it
     if os.path.exists(os.path.join(WRITABLE_ROOT, '.git')):
-        REPO_ROOT = WRITABLE_ROOT
         logger.info("[ClaudeEngineer] Using existing writable workspace")
-        return
+        return WRITABLE_ROOT
 
     github_token = os.environ.get('GITHUB_TOKEN', '')
     repo_slug = os.environ.get('GITHUB_REPO', 'clwest/donkey-betz-platform')
@@ -574,23 +584,59 @@ def _ensure_git_repo():
                 subprocess.run(f'git config credential.helper "{helper_path}"',
                              shell=True, cwd=WRITABLE_ROOT, capture_output=True, timeout=10)
 
-            REPO_ROOT = WRITABLE_ROOT
             logger.info(f"[ClaudeEngineer] Repo cloned successfully to {WRITABLE_ROOT}")
+            return WRITABLE_ROOT
         else:
             logger.warning(f"[ClaudeEngineer] Clone failed: {result.stderr[:300]}")
-            # Fall back to /app/ read-only access
-            logger.info("[ClaudeEngineer] Falling back to /app/ (read-only)")
+            logger.info(f"[ClaudeEngineer] Falling back to REPO_ROOT constant: {REPO_ROOT}")
+            return REPO_ROOT
 
     except Exception as e:
         logger.warning(f"[ClaudeEngineer] Git setup failed: {e}")
-        logger.info("[ClaudeEngineer] Falling back to /app/ (read-only)")
+        logger.info(f"[ClaudeEngineer] Falling back to REPO_ROOT constant: {REPO_ROOT}")
+        return REPO_ROOT
 
 
-def _execute_tool(tool_name: str, tool_input: dict) -> str:
-    """Execute a tool and return the result as a string."""
+def _resolve_repo_root(workspace_root_path: Optional[str]) -> str:
+    """
+    Session 2967 Slice 7: resolve the engineer's working tree for this dispatch.
+
+    Priority:
+      1. Explicit ``workspace_root_path`` (dispatcher passed a workspace_id or
+         resolved the currently-active workspace). Must be a real directory.
+      2. Existing writable clone at ``WRITABLE_ROOT`` (Railway warm path).
+      3. Fresh clone into ``WRITABLE_ROOT`` (Railway cold path, needs
+         ``GITHUB_TOKEN``).
+      4. Fallback to module-level ``REPO_ROOT`` constant (``/app`` on Railway;
+         nonexistent on local dev — the engineer's LLM loop will then report
+         'no repo detected' the same way it did pre-S2967).
+    """
+    if workspace_root_path and os.path.isdir(workspace_root_path):
+        logger.info(
+            "[ClaudeEngineer] Using dispatcher-supplied workspace_root_path: %s",
+            workspace_root_path,
+        )
+        return workspace_root_path
+    if workspace_root_path:
+        logger.warning(
+            "[ClaudeEngineer] Dispatcher supplied workspace_root_path=%r but it "
+            "is not a directory on disk — falling back to _ensure_git_repo().",
+            workspace_root_path,
+        )
+    return _ensure_git_repo()
+
+
+def _execute_tool(tool_name: str, tool_input: dict, repo_root: str = REPO_ROOT) -> str:
+    """Execute a tool and return the result as a string.
+
+    Session 2967 Slice 7: ``repo_root`` is now a per-dispatch parameter
+    threaded from ``execute_engineering_task``. Defaults to module-level
+    ``REPO_ROOT`` for legacy callers, but the shipped engineer always
+    passes an explicit value.
+    """
     try:
         if tool_name == "read_file":
-            path = os.path.join(REPO_ROOT, tool_input["path"])
+            path = os.path.join(repo_root, tool_input["path"])
             if not os.path.exists(path):
                 return f"Error: File not found: {tool_input['path']}"
             with open(path) as f:
@@ -604,15 +650,15 @@ def _execute_tool(tool_name: str, tool_input: dict) -> str:
             pattern = tool_input["pattern"]
             glob = tool_input.get("file_glob", "*.py")
             max_results = tool_input.get("max_results", 20)
-            cmd = ["grep", "-rn", "--include", glob, pattern, REPO_ROOT]
+            cmd = ["grep", "-rn", "--include", glob, pattern, repo_root]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
             lines = result.stdout.strip().split('\n')[:max_results]
             # Remove repo root prefix for cleaner output
-            cleaned = [l.replace(REPO_ROOT + '/', '') for l in lines]
+            cleaned = [l.replace(repo_root + '/', '') for l in lines]
             return '\n'.join(cleaned) or "No matches found"
 
         elif tool_name == "write_file":
-            path = os.path.join(REPO_ROOT, tool_input["path"])
+            path = os.path.join(repo_root, tool_input["path"])
             os.makedirs(os.path.dirname(path), exist_ok=True)
             with open(path, 'w') as f:
                 f.write(tool_input["content"])
@@ -622,7 +668,7 @@ def _execute_tool(tool_name: str, tool_input: dict) -> str:
             cmd = f"git {tool_input['command']}"
             result = subprocess.run(
                 cmd, shell=True, capture_output=True, text=True,
-                cwd=REPO_ROOT, timeout=60
+                cwd=repo_root, timeout=60
             )
             output = result.stdout + result.stderr
             return output[:10000] or "(no output)"
@@ -636,7 +682,7 @@ def _execute_tool(tool_name: str, tool_input: dict) -> str:
             # Get current branch
             branch_result = subprocess.run(
                 "git rev-parse --abbrev-ref HEAD",
-                shell=True, capture_output=True, text=True, cwd=REPO_ROOT, timeout=10
+                shell=True, capture_output=True, text=True, cwd=repo_root, timeout=10
             )
             branch = branch_result.stdout.strip() or "main"
 
@@ -760,6 +806,7 @@ def _execute_engineering_task_openai(
     task_description: str,
     max_iterations: int,
     system_prompt: str = CHANGE_SYSTEM_PROMPT,
+    repo_root: str = REPO_ROOT,
 ) -> Dict[str, Any]:
     """OpenAI fallback path for execute_engineering_task.
 
@@ -831,7 +878,7 @@ def _execute_engineering_task_openai(
                 except json.JSONDecodeError:
                     tool_input = {}
                 logger.info(f"[ClaudeEngineer:openai] Tool: {tool_name} (iteration {iteration+1})")
-                result = _execute_tool(tool_name, tool_input)
+                result = _execute_tool(tool_name, tool_input, repo_root)
 
                 if tool_name == 'write_file':
                     files_changed.append(tool_input.get('path', '?'))
@@ -869,6 +916,7 @@ def execute_engineering_task(
     max_iterations: int = 500,
     request_mode: str = 'auto',
     agent_execution_id: Optional[str] = None,
+    workspace_root_path: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Execute an engineering task using Claude with codebase tools.
@@ -881,9 +929,17 @@ def execute_engineering_task(
         request_mode: 'answer' (readonly Q&A), 'change' (code change), or
             'auto' (verb-heuristic dispatch). Session 1230 P4. See module
             docstring for the original behavioral-delta incident.
+        workspace_root_path: Session 2967 Slice 7. Optional explicit working
+            tree from the dispatcher (typically a ProjectWorkspace.root_path
+            resolved by ``td_handlers_codejobs._handle_claude_code``). If
+            supplied and points at a real directory, becomes the ``repo_root``
+            passed to every ``_execute_tool`` call. Otherwise falls back to
+            ``_ensure_git_repo()`` (Railway clone-to-/tmp path).
 
     Returns:
-        Dict with status, summary, files_changed, pr_url, provider, mode
+        Dict with status, summary, files_changed, pr_url, provider, mode,
+        repo_root (Session 2967 addition — echoes the resolved working tree
+        so callers/logs can confirm which tree the engineer ran against).
 
     Session 1226 P4 — provider routing:
     When CLAUDE_CODE_ENGINE_PROVIDER='openai' the LLM loop runs through
@@ -919,15 +975,19 @@ def execute_engineering_task(
         max_iterations,
     )
 
+    # Session 2967 Slice 7 — resolve the engineer's working tree BEFORE routing
+    # to the provider path. Threaded to _execute_tool via `repo_root` param.
+    repo_root = _resolve_repo_root(workspace_root_path)
+
     # Session 1226 P4 — OpenAI fallback path
     provider = os.environ.get('CLAUDE_CODE_ENGINE_PROVIDER', 'anthropic').strip().lower()
     if provider == 'openai':
-        _ensure_git_repo()
         try:
             result = _execute_engineering_task_openai(
                 task_description=task_description,
                 max_iterations=max_iterations,
                 system_prompt=system_prompt,
+                repo_root=repo_root,
             )
             final_text = result['final_text']
             envelope_status = 'success'
@@ -955,6 +1015,7 @@ def execute_engineering_task(
                     task_description=hardened_task,
                     max_iterations=max_iterations,
                     system_prompt=ANSWER_SYSTEM_PROMPT,
+                    repo_root=repo_root,
                 )
                 final_text = retry['final_text']
                 if _looks_like_clarification_stall(final_text):
@@ -985,6 +1046,7 @@ def execute_engineering_task(
                 'pr_url': result['pr_url'],
                 'provider': 'openai',
                 'mode': resolved_mode,
+                'repo_root': repo_root,
             }
         except Exception as e:
             logger.error(f"[ClaudeEngineer:openai] Task failed: {e}")
@@ -998,6 +1060,7 @@ def execute_engineering_task(
                 'error': str(e),
                 'provider': 'openai',
                 'mode': resolved_mode,
+                'repo_root': repo_root,
             }
 
     # Default Anthropic path (unchanged from prior behavior)
@@ -1005,8 +1068,9 @@ def execute_engineering_task(
     if not api_key:
         return {'status': 'error', 'error': 'ANTHROPIC_API_KEY not set'}
 
-    # Initialize git repo if not present (Railway containers don't include .git)
-    _ensure_git_repo()
+    # Session 2967 Slice 7 — repo_root already resolved at function top; no
+    # need to re-invoke `_ensure_git_repo()` here. The resolver handles all
+    # four paths (explicit workspace / warm clone / fresh clone / /app fallback).
 
     try:
         # Session 1084 round 49: shared factory for timeout/retry config.
@@ -1052,7 +1116,7 @@ def execute_engineering_task(
             for block in response.content:
                 if block.type == "tool_use":
                     logger.info(f"[ClaudeEngineer] Tool: {block.name} (iteration {iteration+1})")
-                    result = _execute_tool(block.name, block.input)
+                    result = _execute_tool(block.name, block.input, repo_root)
 
                     # Track file changes
                     if block.name == "write_file":
@@ -1094,6 +1158,7 @@ def execute_engineering_task(
             'files_changed': files_changed,
             'pr_url': pr_url,
             'iterations': iteration + 1 if 'iteration' in dir() else 0,
+            'repo_root': repo_root,
         }
 
     except Exception as e:
@@ -1105,7 +1170,7 @@ def execute_engineering_task(
             agent_execution_id=agent_execution_id,
         )
 
-        return {'status': 'error', 'error': str(e)}
+        return {'status': 'error', 'error': str(e), 'repo_root': repo_root}
 
 
 def _post_to_conversation(
