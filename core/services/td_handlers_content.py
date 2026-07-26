@@ -2952,11 +2952,15 @@ class ContentHandlersMixin:
                 # Bypass circuit breaker for explicit human-initiated creation via PA.
                 # The breaker exists to prevent autonomous/auto-spawned initiatives from
                 # piling up, but when a human explicitly asks the PA to create one, honour it.
+                # S2977 follow-up: `Initiative.owner` is NOT NULL (I-0302 A1); pass
+                # the acting `user_id` so the service can populate `owner_id`
+                # instead of hitting the DB constraint.
                 initiative, created = svc.get_or_create_initiative(
                     topic=name,
                     description=description,
                     created_by=PA_IDENTITY,
                     bypass_circuit_breaker=True,
+                    owner_user_id=user_id,
                 )
             except InitiativeCreationBlocked as e:
                 return {'action': 'create', 'error': str(e), 'blocked': True}
