@@ -2,41 +2,43 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2974 CLOSED. Workflow reframe validated for the **sixth walk** (S2969–S2974); **second walk of the Rigby-drafted-spec origination variant** (S2973 was first). One code PR shipped: **#3602 (S2974 legislation extractor hardening + retriage command)**. Chris handed Deliverable `914b1118` (Rigby-drafted spec) asking to classify + reduce [NO_ITEMS] for huggingface + legislation. I sampled 25 rows/spider via Django ORM BEFORE T1 SIGN — the sampling picked the fix. Huggingface's recent NO_ITEMS is 100% legitimate `all_deduped` (Class 2); the historical Class 3 empty-raw rows self-resolved 2026-07-17. **Legislation was 100% Class 4 extractor mismatch**: every item is a wrapped envelope carrying pre-computed `item['embedding_text']` (like `"H7030. Establishes the healthcare worker platform..."`) — the extractor just never looked there. Fix at `core/models_unified_system.py:3898`: new `_extract_item_text` helper supports three shapes (spider-provided embedding_text with sentinel + length guards / nested `item['raw_data']` / flat top-level unchanged) + new `retriage_no_items --spider <name> [--apply]` management command (recompute-driven, dry-run default). 50/50 tests pass. Rigby T1 + A2 SIGN both AGREE, no F-BLOCKERs. Post-merge: retriage cleared 61 rows, direct backfill embedded all 61 (0 failed). **24h intake NO_ITEMS rate dropped 79.1% → 71.0%** from one spider's fix. Legislation dropped OFF top-20 producers in 24h AND 7d windows. Full context: `docs/handoffs/SESSION_2974_LEGISLATION_EXTRACTOR.md`.
+## READ THIS FIRST — SESSION 2975 CLOSED. Workflow reframe validated for the **seventh walk** (S2969–S2975); **third walk of the Rigby-drafted-spec origination variant** (S2973 + S2974 + S2975). Three code PRs shipped this session: **#3604 (cleanup_stale_no_items + observable stale bucket)**, **#3605 (discord_training Policy A)**, **#3606 (spider_feed stale-sentinel fix, caught by Rigby A2 SIGN grep spot-check)**. Chris handed Deliverable `cb8a622c` (Rigby-drafted spec) asking to continue [NO_ITEMS] discovery + repairs (theodds deferred). I sampled 25 rows/spider across FOUR candidates (discord_training, securityweek, remoteok, techcrunch_startups) via Django ORM BEFORE T1 SIGN — the sampling picked the fix and revealed a **cross-spider system-wide pattern**: 10,738 historical rows with `raw_data={}` + `embedding_text='[NO_ITEMS]'` that dominated the 30d NO_ITEMS rate (89.5%) but had fully self-resolved 2026-07-19. Same pattern S2974 saw in ONE spider (huggingface), now confirmed across 15+ spiders. Non-destructive fix: bump matching rows to a distinct `[NO_ITEMS_STALE_EMPTY_RAW]` sentinel + expose `stale_empty_raw_data_total` bucket + centralize `BACKFILL_SKIP_SENTINELS` helper (Rigby T1 mitigation). PR2 added discord_training to Policy A (statistics-rollup shape, confirmed by sampling). PR3 fixed the spider_feed bug Rigby's A2 grep-check surfaced. Rigby T1 + A2 SIGN both AGREE, no F-BLOCKERs; grep spot-check surfaced 3 real gaps → PR3 same-session. 65/65 tests pass. Post-cleanup: **30d NO_ITEMS rate dropped 86.7% → 9.1%** (77.6-point drop; 10,728 rows flagged system-wide). 24h/7d unaffected. Full context: `docs/handoffs/SESSION_2975_NO_ITEMS_STALE_CLEANUP.md`.
 
-**Session cost this session:** minimal — 5 PA turns (fetch-spec / T1 / A2 / tool-verify / verdict), no v2 subprocess dispatches, no revision cycles.
+**Session cost this session:** higher than S2974 — ~6 PA dispatches (fetch-spec / T1 / A2 / grep verification), 3 PRs shipped vs 1 planned, no v2 subprocess dispatches, no revision cycles.
 
-**HEAD at close:** `c331a0404` (PR #3602 merged; docs cascade PR TBD). Workers recycled after merge per PLAYBOOK-7.4.4.
+**HEAD at close:** `8bd3daf3e` (PRs #3604 + #3605 + #3606 merged; docs cascade PR TBD). Workers recycled after merges per PLAYBOOK-7.4.4.
 
 ---
 
-## S2975 first-action — WAIT FOR CHRIS (same as S2969–S2974)
+## S2976 first-action — WAIT FOR CHRIS (same as S2969–S2975)
 
-The reframe held for the **sixth time**. Same open shape:
+The reframe held for the **seventh time**. Same open shape:
 
 1. Run `context-kit orient` (auto-injected at session start; read the output).
 2. Absorb this file + MEMORY.md + CLAUDE.md (auto-injected).
-3. Read `docs/handoffs/SESSION_2974_LEGISLATION_EXTRACTOR.md` in full — especially §"Root cause narrative", §"Ground-truth numbers", §"Live-verify results".
+3. Read `docs/handoffs/SESSION_2975_NO_ITEMS_STALE_CLEANUP.md` in full — especially §"Root cause narrative", §"Ground-truth numbers", §"Live-verify results", §"SIGN cycle log" (Rigby A2 grep spot-check is the interesting fold).
 4. **Optionally probe the shipped state:**
-   - `curl -s -H "Cookie: sessionid=<yours>" 'http://localhost:8000/api/signals/embedding-coverage/?include_breakdown=1&window=168'` — legislation should be OFF the top-20 spiders list.
-   - Or from Django shell: `LegacySpiderData.objects.filter(spider_name='legislation', embedding__isnull=False).count()` — should be ≥61.
-   - Or `python manage.py retriage_no_items --spider legislation` (dry-run) — should show `would clear: 0, still empty: 564` (unrecoverable historical rows).
-5. **Report readiness in one short message and wait.** Something like: "Oriented. S2974 closed — reframe validated for the sixth walk. Legislation extractor shipped; 61 rows recovered; 24h NO_ITEMS rate 71.0% (was 79.1%). Ready when you have a spec pointer."
+   - From Django shell: `LegacySpiderData.objects.filter(embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]').count()` — should be ~10,728.
+   - Or: `get_spider_semantic_search().get_embedding_stats(include_breakdown=True, breakdown_window_hours=720)['no_items_breakdown']['no_items_rate']` — should be ~9.1% (was 86.7%).
+   - Or: `python manage.py cleanup_stale_no_items` (dry-run) — should report 0 remaining candidates.
+5. **Report readiness in one short message and wait.** Something like: "Oriented. S2975 closed — reframe validated for the seventh walk. Stale cleanup shipped; 10,728 ghost rows flagged; 30d NO_ITEMS rate 9.1% (was 86.7%). Ready when you have a spec pointer."
 6. **Do NOT propose engineering work. Do NOT dispatch anything to Rigby proactively.** Chris opens Rigby chat first; you wait for the handoff.
 
-**When Chris hands you a Deliverable ID / title / spec pointer:** follow the S2969–S2974 pattern — read spec, targeted "existing implementation analysis" (Cycle 1A verify-before-build), **for diagnostic-shape arcs, complete the ORM sampling BEFORE T1 SIGN** (S2974 candidate fold #11), T1 SIGN to Rigby with zoom-out ask, fold, implement, A2 SIGN with file+line evidence, merge with `--admin`, `make recycle-all`, live-verify in-shell (Django `Client().force_login` for auth-gated routes; **`HTTP_HOST='localhost'` required or DisallowedHost fires**), Rigby verifies from her tool surface, report three-part summary to Chris.
+**When Chris hands you a Deliverable ID / title / spec pointer:** follow the S2969–S2975 pattern — read spec, targeted "existing implementation analysis" (Cycle 1A verify-before-build), **for diagnostic-shape arcs, complete the ORM sampling BEFORE T1 SIGN** (S2974 fold #11 corroborated at S2975), **for cross-spider audits, sample MULTIPLE spiders with intent to find shared patterns** (S2975 new fold), T1 SIGN to Rigby with zoom-out ask, fold, implement, A2 SIGN with grep spot-check for predicate drift when new sentinels/predicates are introduced (S2975 new fold), merge with `--admin`, `make celery-recycle`, live-verify in-shell (Django `Client().force_login` for auth-gated routes; **`HTTP_HOST='localhost'` required or DisallowedHost fires**), Rigby verifies from her tool surface, report three-part summary to Chris.
 
 ---
 
-## S2975 high-value seeds (Chris picks whether to open)
+## S2976 high-value seeds (Chris picks whether to open)
 
-**huggingface `all_deduped` write suppression.** Rigby's suggested follow-up during S2974 T1: spider writes an audit row every 30 min saying "all items were duplicates". Only 9 rows / 24h, but adds noise to intake metrics and shows up in the 24h NO_ITEMS rate calc. Options: drop to a separate run-log table, or suppress writes on `diagnostic.status='success_empty'`. Small (~1-2 files touched) but touches spider write path — needs testing.
+**remoteok pre-dedup filter (NEW from S2975 sampling).** Root cause identified: `ai_core/spiders/remoteok_spider.py` saves the remoteok API's legal preamble (`type: "item", legal: "API Terms of Service..."`) as the only "unique" item because its `last_updated` field mutates every fetch and beats dedup while real jobs get deduped (30 fetched, 29 duplicated, 1 preamble). Fix: pre-dedup filter to skip items with `type == "item"` AND `legal` field present. Small surface, needs tests + `retriage_no_items --spider remoteok --apply` post-merge.
 
-**theodds auth-failure fix (STILL OPEN from S2972+S2973).** Top NO_ITEMS producer at ~294 rows / 30d. Rigby's S2973 shape-sampling confirmed rows carry `auth_failure_circuit_breaker` / `error_summary` envelopes. Fix requires Chris to rotate `THE_ODDS_API_KEY` (or verify API quota). Post-fix: re-run 24h + 30d breakdown to validate top-producers list re-ranks and rate drops.
+**huggingface `all_deduped` write suppression (STILL OPEN from S2974 + S2975).** Spider writes an audit row every 30 min for "all items were duplicates". Post-S2975 cleanup, this is one of the top-5 non-deferred producers. Options: drop to a separate run-log table, or suppress writes on `diagnostic.status='success_empty'`. Small (~1-2 files) but touches spider write path — needs testing.
 
-**Shape sampling for remaining top-10 producers** (`securityweek`, `udemy`, `colorado_family_law`, `behance`, `freecodecamp`, `techcrunch_startups`, `education_rss` — all at 10 rows / 7d after legislation dropped off). Sample ~10 rows each, classify into class 1/2/3/4 per S2973+S2974 rubric. May yield another extractor-hardening win or 1-2 policy additions.
+**theodds auth-failure fix (STILL OPEN from S2972+S2973+S2974).** Top NO_ITEMS producer at ~294 rows / 30d, unchanged. Fix requires Chris to rotate `THE_ODDS_API_KEY` (or verify API quota). Post-fix: re-run breakdown to validate re-rank.
 
-**Deliverable-as-spec fold @ trigger 6 — Playbook rule candidate.** Reframe pattern has now walked 6 times (S2969–S2974) in two variants. If S2975 continues the pattern, propose as a Playbook §5 or §6 rule at S2975 close. Substrate is ready: existing envelope pattern from prior Playbook amendments applies directly.
+**Shape sampling for remaining top-10 producers post-cleanup.** After S2975, top non-deferred are `behance` / `udemy` / `coursera` / `freecodecamp` (all at 11 rows/30d). Sample ~10 rows each, classify per S2973+S2974 rubric. May yield another extractor-hardening win.
+
+**Deliverable-as-spec fold @ trigger 7 — Playbook rule candidate READY TO PROPOSE.** Pattern has walked 7 times (S2969–S2975) across 3 variants. Chris directive at S2974 close said "propose at S2975 close if the pattern holds one more walk" — it did. Substrate ready: existing envelope pattern from prior Playbook amendments applies. Chris ratifies whether to open a Playbook amendment arc.
 
 ---
 
@@ -77,15 +79,17 @@ Branch `feat/s2968-pr-b-deliverable-as-spec` remains pushed to origin, no PR ope
 1. **Soft-key-vs-LLM-schema-gate.** **Trigger count: 1** (S2968).
 2. **"Duplicate of a thing we already have" pattern.** **Trigger count: 2** (S2968).
 3. **"Auditability primitive already exists in a different plane" pattern.** **Trigger count: 1** (S2969).
-4. **"Deliverable-as-spec first walk validates the workflow reframe."** **Trigger count: 6** (S2969–S2974). **Six-trigger corpus. Strong Playbook rule candidate.** Two variants: Chris-paste (S2969–S2972) + Rigby-drafted-per-Chris-ratification (S2973 + S2974). Both walk the same 10-step shape. **Recommend proposing as Playbook rule at S2975 session close if the pattern holds one more walk.**
-5. **"Live-verify surfaces the real root cause the observability layer was designed to expose."** **Trigger count: 3** (S2970, S2972, S2974).
+4. **"Deliverable-as-spec first walk validates the workflow reframe."** **Trigger count: 7** (S2969–S2975). **Seven-trigger corpus. Playbook rule PROPOSAL READY at S2976 open per Chris directive.** Three variants now: Chris-paste (S2969–S2972) + Rigby-drafted-per-Chris-ratification (S2973 + S2974 + S2975). All walk the same 10-step shape.
+5. **"Live-verify surfaces the real root cause the observability layer was designed to expose."** **Trigger count: 4** (S2970, S2972, S2974, S2975). Reinforced.
 6. **"Post-merge live-verify reveals scope-adjacent infra bug; scope-in a flag-gated fix, don't defer."** **Trigger count: 1** (S2970).
 7. **"Route-placement is a settable expectation, not a spec constraint."** **Trigger count: 1** (S2971).
 8. **"Rigby web_fetch_tool can't authenticate against Django session-cookie endpoints."** **Trigger count: 2** (S2971, S2972). Watch for third — could become Rigby Tool Gap Ledger entry.
-9. **"Rigby-drafted spec deliverable is a first-class origination path."** **Trigger count: 2** (S2973, S2974). Could formalize as variant of fold #4.
+9. **"Rigby-drafted spec deliverable is a first-class origination path."** **Trigger count: 3** (S2973, S2974, S2975). Could formalize as variant of fold #4.
 10. **"Sampling extrapolation past ~10k rows produces cross-session drift."** **Trigger count: 1** (S2972).
-11. **NEW: "Sample-before-plan cuts T1 revision cycles to zero."** **Trigger count: 1** (S2974). For diagnostic-shape arcs, complete the ORM sampling BEFORE drafting T1 — evidence-grounded T1 earns Rigby AGREE + refinements on first turn, no revision loop. Watch for second.
-12. **NEW: "Retriage-command-as-primitive over blanket ORM update"** **Trigger count: 1** (S2974). When extractor improvement retroactively unblocks marked rows, ship a recompute-driven clear command with dry-run default + required spider arg — not a blanket ORM update or a generic "re-triage all" primitive. Watch for second when next extractor improvement lands.
+11. **"Sample-before-plan cuts T1 revision cycles to zero."** **Trigger count: 2** (S2974, S2975). For diagnostic-shape arcs, complete ORM sampling BEFORE drafting T1 — evidence-grounded T1 earns Rigby AGREE on first turn, no revision loop. **Corroborated. Ready for Playbook rule proposal when Chris directs.**
+12. **"Retriage-command-as-primitive over blanket ORM update"** **Trigger count: 2** (S2974 `retriage_no_items`, S2975 `cleanup_stale_no_items`). Same pattern: dry-run default, scoped spider/date filter, non-destructive reversible update, prints candidates before apply. Corroborated across two independent primitives. **Playbook rule candidate.**
+13. **NEW: "Cross-spider sampling reveals system-wide fix leverage."** **Trigger count: 1** (S2975). Sampling MULTIPLE spiders with the intent to find shared patterns produced a 89.5% system-wide fix vs S2974's single-spider 5%. When multiple candidates share a shape/date/error signature, extend sampling to identify the class. Watch for second.
+14. **NEW: "Rigby A2 SIGN grep spot-check catches predicate-drift bugs same-session."** **Trigger count: 1** (S2975 PR3). A2 zoom-out "grep for missed predicate sites" caught 3 real `spider_feed.py` gaps that would have shipped latent. Ship the fix same-session, not deferred. Watch for corroboration in future SIGN cycles introducing new sentinels/predicates.
 
 ---
 
@@ -94,14 +98,14 @@ Branch `feat/s2968-pr-b-deliverable-as-spec` remains pushed to origin, no PR ope
 1. `context-kit orient` — source-of-truth chain, latest handoff
 2. Absorb `MEMORY.md` + `CLAUDE.md` (both auto-injected)
 3. Read this `00-START-NEXT-SESSION.md` in full
-4. **Session-open atomic mint check:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2975 pin minted at S2974 close cascade. If not fresh, run `python manage.py session_lifecycle close --label s2974-legislation-extractor --allow-no-mirror` first (per `feedback_session_open_atomic_mint_before_pa_dispatch`).
+4. **Session-open atomic mint check:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2976 pin minted at S2975 close cascade. If not fresh, run `python manage.py session_lifecycle close --label s2975-no-items-stale-cleanup --allow-no-mirror` first (per `feedback_session_open_atomic_mint_before_pa_dispatch`).
 5. Verify `claude` CLI availability (if v2 dispatches are on the day's plan): `which claude && claude --version` (should show 2.1.114+ at `~/.local/bin/claude`)
-6. Read `docs/handoffs/SESSION_2974_LEGISLATION_EXTRACTOR.md` — full context on this session's shipped code + reframe walk 6
+6. Read `docs/handoffs/SESSION_2975_NO_ITEMS_STALE_CLEANUP.md` — full context on this session's shipped code + reframe walk 7
 7. **Wait for Chris to hand you a spec pointer via Rigby.** Do not proactively propose work.
 
 ---
 
-## What's forbidden at S2975 (D6 MORATORIUM still in force)
+## What's forbidden at S2976 (D6 MORATORIUM still in force)
 
 All prior forbidden entries carry forward.
 
@@ -110,15 +114,21 @@ All prior forbidden entries carry forward.
 - **Do not chase spider parsing bugs for reddit / sports_injuries** — S2969/S2970 verified code path works.
 - **Do not flip `SPIDER_USE_THREADED_DNS_RESOLVER` off in this env** — aiodns 3.5.0 is broken here; the flag default is `true` intentionally.
 - **Do NOT expand the Policy A exclusion list (`core/services/no_items_policy.py`) without shape-sampling target rows first** — false exclusions HIDE real data-quality bugs. Sample before adding.
-- **NEW at S2974: Do NOT clear `[NO_ITEMS]` sentinels via blanket ORM update.** Always route through `retriage_no_items --spider <name>` which recomputes `get_searchable_text` per row and clears only where non-empty. Blanket clears cause backfill thrash (rows re-mark themselves).
+- **S2974: Do NOT clear `[NO_ITEMS]` sentinels via blanket ORM update.** Always route through `retriage_no_items --spider <name>` which recomputes `get_searchable_text` per row and clears only where non-empty. Blanket clears cause backfill thrash (rows re-mark themselves).
+- **NEW at S2975: Do NOT introduce a new sentinel or predicate on `embedding_text` without extending `BACKFILL_SKIP_SENTINELS` in `core/services/no_items_policy.py` AND grep-checking all call sites.** Missed sites are silent bugs (see PR3 — `spider_feed.py` had 3 latent gaps caught only by Rigby A2 SIGN grep spot-check).
 
 ---
 
 ## What's queued but deferred (do NOT open unless Chris directs)
 
+**S2975 additions:**
+- remoteok pre-dedup filter (spider-side; ~1-2 files; identified via S2975 sampling)
+- Post-cleanup shape sampling for remaining top producers (behance / udemy / coursera / freecodecamp — all at 11/30d)
+- Deliverable-as-spec Playbook rule proposal (fold #4 at trigger 7 per Chris S2974-close directive)
+
 **S2974 additions:**
-- huggingface `all_deduped` write suppression (small; deferred per Rigby T1 fold #1)
-- Shape sampling for `securityweek` / `udemy` / `colorado_family_law` / `behance` / `freecodecamp` / `techcrunch_startups` / `education_rss` (all tied at 10 rows / 7d)
+- huggingface `all_deduped` write suppression (STILL open — one of top-5 non-deferred post-cleanup)
+- Shape sampling for `securityweek` / `udemy` / `colorado_family_law` / `freecodecamp` / `techcrunch_startups` / `education_rss` (S2975 sampled 3 of these — see handoff for what's already classified)
 
 **S2971 additions:**
 - Rail shortcut for /signals (~5 min)
@@ -172,10 +182,14 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## For fuller context (S2846 → S2974)
+## For fuller context (S2846 → S2975)
 
 See:
-- **S2974 handoff (current):** `docs/handoffs/SESSION_2974_LEGISLATION_EXTRACTOR.md`
+- **S2975 handoff (current):** `docs/handoffs/SESSION_2975_NO_ITEMS_STALE_CLEANUP.md`
+- **S2975 shipped code:** PR #3604 (`cleanup_stale_no_items + stale bucket`), PR #3605 (`discord_training Policy A`), PR #3606 (`spider_feed stale-sentinel fix`)
+- **S2975 spec deliverable:** `cb8a622c-ca94-4b96-b044-c5d7417955a8` (Rigby-drafted)
+- **S2975 support conversation:** `pa-f545685143384188`
+- **S2974 handoff:** `docs/handoffs/SESSION_2974_LEGISLATION_EXTRACTOR.md`
 - **S2974 shipped code:** PR #3602 (`feat(s2974): legislation extractor hardening — wrapped-item shape + retriage`)
 - **S2974 spec deliverable:** `914b1118-4eed-4abf-8c84-86ff42a459c3` (Rigby-drafted)
 - **S2974 support conversation:** `pa-3377eb5f247a` (shared with S2972+S2973)
