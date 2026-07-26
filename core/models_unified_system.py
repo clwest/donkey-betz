@@ -50,6 +50,59 @@ def _record_non_dict_raw_data(instance, raw) -> None:
         )
 
 
+# S2974: shared helpers for LegacySpiderData.get_searchable_text extractor.
+# Kept at module scope so tests can exercise them without an ORM instance.
+_TITLE_FIELDS = ('title', 'name', 'modelId', 'id', 'headline', 'bill_number')
+_DESC_FIELDS = ('description', 'summary', 'plain_summary', 'pipeline_tag', 'last_action')
+
+
+def _has_title_like_field(item: dict) -> bool:
+    for f in _TITLE_FIELDS:
+        v = item.get(f)
+        if isinstance(v, str) and v.strip():
+            return True
+    return False
+
+
+def _build_flat_item_text(item: dict) -> str:
+    """Build searchable text from a flat item dict (title + description + tags).
+
+    Returns empty string when no title-like field is present — matches the
+    pre-S2974 behavior that a title is required to contribute any text.
+    """
+    title = ''
+    for f in _TITLE_FIELDS:
+        v = item.get(f)
+        if isinstance(v, str) and v.strip():
+            title = v.strip()
+            break
+    if not title:
+        return ''
+
+    description = ''
+    for f in _DESC_FIELDS:
+        v = item.get(f)
+        if isinstance(v, str) and v.strip():
+            description = v.strip()
+            break
+
+    tags_raw = item.get('tags', [])
+    if isinstance(tags_raw, list):
+        tag_strs = []
+        for t in tags_raw[:5]:
+            if isinstance(t, dict):
+                tag_strs.append(t.get('name', str(t)))
+            elif t is not None:
+                tag_strs.append(str(t))
+        tags = ', '.join(tag_strs)
+    elif isinstance(tags_raw, str):
+        tags = tags_raw
+    else:
+        tags = ''
+
+    return f"{title}. {description[:200]} {tags}".strip()
+
+
 # Session 730: Import pgvector for native vector operations
 try:
     from pgvector.django import VectorField
@@ -3843,33 +3896,68 @@ class LegacySpiderData(models.Model):
         return {}
 
     def get_searchable_text(self) -> str:
-        """Build searchable text from all items for embedding generation."""
+        """Build searchable text from all items for embedding generation.
+
+        S2974: supports three item shapes without regressing older flat shapes:
+          (a) wrapped items with spider-provided ``item['embedding_text']``
+              (e.g. legislation) — trusted after sentinel + length guards
+          (b) wrapped items with content nested in ``item['raw_data']``
+              (fallback when no pre-computed text)
+          (c) flat items with top-level ``title|name|modelId|id`` (huggingface,
+              kaggle, rss-shaped spiders — unchanged behavior)
+        """
         if not self.raw_data_dict:
             return ""
 
         texts = []
         items = self.raw_data_dict.get('items', [])
-        for item in items[:20]:  # Limit to 20 items to avoid huge embeddings
-            # Session 505: Added modelId and id as fallbacks for huggingface/kaggle data
-            title = item.get('title') or item.get('name') or item.get('modelId') or item.get('id') or ''
-            description = item.get('description') or item.get('summary') or item.get('pipeline_tag') or ''
-            tags = item.get('tags', [])
-            if isinstance(tags, list):
-                # Handle tags that might be dicts (e.g., kaggle tags)
-                tag_strs = []
-                for t in tags[:5]:
-                    if isinstance(t, dict):
-                        tag_strs.append(t.get('name', str(t)))
-                    else:
-                        tag_strs.append(str(t))
-                tags = ', '.join(tag_strs)
-            elif not isinstance(tags, str):
-                tags = ''
+        if not isinstance(items, list):
+            return ""
 
-            if title:
-                texts.append(f"{title}. {description[:200]} {tags}")
+        for item in items[:20]:  # Limit to 20 items to avoid huge embeddings
+            if not isinstance(item, dict):
+                continue
+            text = self._extract_item_text(item)
+            if text:
+                texts.append(text)
 
         return "\n".join(texts)[:4000]  # Limit total text length
+
+    # S2974: sentinels that should never be trusted as embeddable text.
+    _EMBEDDING_TEXT_SENTINELS = frozenset({'', '[NO_ITEMS]', '[EMPTY]', '[NONE]'})
+    _MIN_TRUSTED_EMB_TEXT_LEN = 20
+    _MAX_PER_ITEM_TEXT_LEN = 1000
+
+    @classmethod
+    def _extract_item_text(cls, item: dict) -> str:
+        """Return searchable text for a single item across supported shapes.
+
+        Priority: spider-provided embedding_text → nested raw_data → flat top-level.
+        """
+        # (a) Spider-provided embedding_text — trust after sentinel + length guards.
+        emb_text = item.get('embedding_text')
+        if isinstance(emb_text, str):
+            stripped = emb_text.strip()
+            if stripped and stripped not in cls._EMBEDDING_TEXT_SENTINELS:
+                if len(stripped) >= cls._MIN_TRUSTED_EMB_TEXT_LEN:
+                    return stripped[:cls._MAX_PER_ITEM_TEXT_LEN]
+                # short but non-sentinel: only use if we also have a title-ish field
+                if _has_title_like_field(item):
+                    return stripped[:cls._MAX_PER_ITEM_TEXT_LEN]
+
+        # (b) Wrapped shape: content nested one level deep in item['raw_data'].
+        nested = item.get('raw_data')
+        if isinstance(nested, dict):
+            nested_text = _build_flat_item_text(nested)
+            if nested_text:
+                return nested_text[:cls._MAX_PER_ITEM_TEXT_LEN]
+
+        # (c) Flat top-level shape (huggingface / kaggle / rss).
+        flat_text = _build_flat_item_text(item)
+        if flat_text:
+            return flat_text[:cls._MAX_PER_ITEM_TEXT_LEN]
+
+        return ""
 
     class Meta:
         app_label = 'core'
