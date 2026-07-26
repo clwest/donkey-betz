@@ -2,26 +2,34 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2971 CLOSED. Workflow reframe third walk validated. One code PR shipped: #3597 (Signal Intelligence UI — Workspace tab). Three new views (Dashboard / Feed Explorer / Cluster Explorer) reachable at `/workspace?tab=intelligence&sub=signals`. Backend adds 4 thin HTTP endpoints reusing existing service functions (`aggregate_spider_data`, new `query_spider_feed`, `get_embedding_stats`) plus extended `SignalClusterViewSet` filters (window_hours, min_confidence, source_spider, query). Frontend adds one Workspace sub-tab under `intelligence` primary with shared 24h/7d/30d window selector + drill-down drawers. 29/29 backend tests pass; frontend build clean; live-verify all 4 endpoints returned 200 with real data (447 clusters, 4,022/16,874 embedding coverage matching session-open baseline). Rigby T1 + A2 SIGN both AGREE, no F-BLOCKERS. Three T1 folds shipped: (1) Workspace-tab placement not standalone `/signals`, (2) pure `spider_feed.py` helper (not calling handler from HTTP), (3) `get_queryset()` override not custom FilterSet. Full context: `docs/handoffs/SESSION_2971_SIGNAL_INTELLIGENCE_UI.md`.
+## READ THIS FIRST — SESSION 2972+2973 CLOSED. Workflow reframe walks 4 AND 5 validated in the SAME session (first back-to-back two-arc session in the reframe run). Two code PRs shipped: **#3599 (S2972 fix backfill stats-alignment)** + **#3600 (S2973 NO_ITEMS breakdown + Policy A 2-spider exclusion list)**. Chris flagged "backfill returning skipped/concurrent, UI shows 25% coverage / 12,851 pending." Root cause turned out to be a stats-contract bug, not a broken backfill — every "pending" row was already marked [NO_ITEMS] (real backfill queue = 0). S2972 fixed the stats contract; live-verify surfaced **79.1% of new rows in 24h are marked [NO_ITEMS]** which motivated Chris to ratify the S2973 follow-up mid-session. Rigby drafted the S2973 spec (first Rigby-drafted-per-Chris-ratification origination — fold candidate #9). S2973 added `?include_breakdown=1&window=N` param + conservative 2-spider policy exclusion list. 41/41 backend tests pass; frontend build clean; live-verify at HEAD `fa3213b4c` returned real 24h + 30d + baseline + invalid-window scenarios all correctly. Rigby T1 + A2 SIGN both AGREE on both PRs, no F-BLOCKERS. Full context: `docs/handoffs/SESSION_2972_2973_STATS_ALIGNMENT_AND_NO_ITEMS.md`.
 
-**Session cost this session:** minimal — no v2 subprocess dispatches; only PA-tool calls to Rigby (5 turns: T1 SIGN + T1 ACK + A2 SIGN + post-merge verify ping + close ack).
+**Session cost this session:** minimal — no v2 subprocess dispatches; ~7 PA turns for T1/A2/verify/ledger across both arcs.
 
-**HEAD at close:** `c9cb67cad` (PR #3597 merged; docs cascade PR TBD). Worker recycled twice per PLAYBOOK-7.4.4; third recycle after docs cascade merge.
+**HEAD at close:** `fa3213b4c` (PRs #3599 + #3600 merged; docs cascade PR TBD). Workers recycled after each merge per PLAYBOOK-7.4.4.
 
 ---
 
-## S2972 first-action — WAIT FOR CHRIS (same as S2969, S2970, S2971)
+## S2974 first-action — WAIT FOR CHRIS (same as S2969-S2973)
 
-The reframe held for the **third time**. Same open shape:
+The reframe held for the **fifth time** — and for the first time via two variants in a single session (Chris-paste for S2972; Rigby-drafted for S2973). Same open shape:
 
 1. Run `context-kit orient` (auto-injected at session start; read the output).
 2. Absorb this file + MEMORY.md + CLAUDE.md (auto-injected).
-3. Read `docs/handoffs/SESSION_2971_SIGNAL_INTELLIGENCE_UI.md` in full — especially §"The workflow reframe: third walk" and §"Live-verify results (post-merge + recycle)".
-4. **Optionally probe the shipped Signals UI:** `curl -s -H "Cookie: sessionid=<yours>" http://localhost:8000/api/signals/embedding-coverage/` or open `/workspace?tab=intelligence&sub=signals` in a browser. Confirms the S2971 build is still live and backfill is still draining.
-5. **Report readiness in one short message and wait.** Something like: "Oriented. S2971 closed — reframe validated for the third walk. Signal Intelligence UI live at `/workspace?tab=intelligence&sub=signals`; backfill continues draining. Ready when you have a spec pointer."
+3. Read `docs/handoffs/SESSION_2972_2973_STATS_ALIGNMENT_AND_NO_ITEMS.md` in full — especially §"Root cause narrative", §"Ground-truth numbers", §"Classification framework — 3-shape NO_ITEMS model", §"Live-verify results".
+4. **Optionally probe the shipped state:** `curl -s -H "Cookie: sessionid=<yours>" 'http://localhost:8000/api/signals/embedding-coverage/?include_breakdown=1&window=24'` or open `/workspace?tab=intelligence&sub=signals` and expand "Top no-items producers (24h)". Confirms both S2972 + S2973 builds are still live.
+5. **Report readiness in one short message and wait.** Something like: "Oriented. S2972+S2973 closed — reframe validated for the fourth and fifth walk in one session. Coverage widget live at `/workspace?tab=intelligence&sub=signals`; 79.1%/86.7% no_items rate visible; policy list has 2 spiders. Ready when you have a spec pointer."
 6. **Do NOT propose engineering work. Do NOT dispatch anything to Rigby proactively.** Chris opens Rigby chat first; you wait for the handoff.
 
-**When Chris hands you a Deliverable ID / title / spec pointer:** follow the S2969/S2970/S2971 pattern — read spec, targeted "existing implementation analysis" (Cycle 1A verify-before-build), T1 SIGN to Rigby with zoom-out ask, fold, implement, A2 SIGN with file+line evidence, merge with `--admin`, `make recycle-all`, live-verify in-shell (Django `Client().force_login` for auth-gated routes), Rigby verifies from her tool surface, report three-part summary to Chris.
+**When Chris hands you a Deliverable ID / title / spec pointer:** follow the S2969-S2973 pattern — read spec, targeted "existing implementation analysis" (Cycle 1A verify-before-build), T1 SIGN to Rigby with zoom-out ask, fold, implement, A2 SIGN with file+line evidence, merge with `--admin`, `make recycle-all`, live-verify in-shell (Django `Client().force_login` for auth-gated routes; **`HTTP_HOST='localhost'` required or DisallowedHost fires**), Rigby verifies from her tool surface, report three-part summary to Chris.
+
+---
+
+## S2974 high-value seeds (Chris picks whether to open)
+
+**theodds auth-failure fix.** Top NO_ITEMS producer at 294 rows / 30d, 15 rows / 24h. Rigby's S2973 shape-sampling confirmed the rows are `auth_failure_circuit_breaker` / `error_summary` envelopes, not legitimate empties. Fix requires Chris to rotate `THE_ODDS_API_KEY` (or verify API quota). Post-fix: re-run 24h + 30d breakdown to validate top-producers list re-ranks and rate drops.
+
+**Shape sampling for top NO_ITEMS producers (huggingface / legislation / discord_training / udemy).** Sample ~10 rows each, classify into rollup / empty-run / error-envelope per S2973's 3-shape model. May yield 1-2 additions to Policy A exclusion list, or may surface real extractor misses (Policy B territory). huggingface is top-5 over 30d (193 rows) but not 24h — either fires less often now or the pattern is older; sample decides.
 
 ---
 
@@ -81,14 +89,14 @@ New at S2971:
 1. `context-kit orient` — source-of-truth chain, latest handoff
 2. Absorb `MEMORY.md` + `CLAUDE.md` (both auto-injected)
 3. Read this `00-START-NEXT-SESSION.md` in full
-4. **Session-open atomic mint check:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2972 pin minted at S2971 close cascade. If not fresh, run `python manage.py session_lifecycle close --label s2971-signal-intelligence-ui` first (per `feedback_session_open_atomic_mint_before_pa_dispatch`).
+4. **Session-open atomic mint check:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2974 pin minted at S2972+S2973 close cascade. If not fresh, run `python manage.py session_lifecycle close --label s2972-s2973-stats-alignment-and-no-items` first (per `feedback_session_open_atomic_mint_before_pa_dispatch`).
 5. Verify `claude` CLI availability (if v2 dispatches are on the day's plan): `which claude && claude --version` (should show 2.1.114+ at `~/.local/bin/claude`)
-6. Read `docs/handoffs/SESSION_2971_SIGNAL_INTELLIGENCE_UI.md` — full context on this session's shipped code + reframe third walk
+6. Read `docs/handoffs/SESSION_2972_2973_STATS_ALIGNMENT_AND_NO_ITEMS.md` — full context on this session's shipped code + reframe walks 4-5
 7. **Wait for Chris to hand you a spec pointer via Rigby.** Do not proactively propose work.
 
 ---
 
-## What's forbidden at S2972 (D6 MORATORIUM still in force)
+## What's forbidden at S2974 (D6 MORATORIUM still in force)
 
 All prior forbidden entries carry forward.
 
@@ -96,6 +104,7 @@ All prior forbidden entries carry forward.
 - **Do not proactively dispatch v2 test runs at session open** — each burns ~$0.15-0.20.
 - **Do not chase spider parsing bugs for reddit / sports_injuries** — S2969/S2970 verified code path works.
 - **Do not flip `SPIDER_USE_THREADED_DNS_RESOLVER` off in this env** — aiodns 3.5.0 is broken here; the flag default is `true` intentionally.
+- **NEW at S2973: Do NOT expand the Policy A exclusion list (`core/services/no_items_policy.py`) without shape-sampling target rows first** — false exclusions HIDE real data-quality bugs (theodds auth failure, extractor misses). Sample before adding.
 
 ---
 
