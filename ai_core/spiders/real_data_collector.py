@@ -75,16 +75,14 @@ SPIDER_TARGET_URLS = {
     'techcrunch_startups': ['https://techcrunch.com/category/startups/feed/'],
 
     # === COMMUNITY SPIDERS (Session 294) ===
-    # Reddit - uses JSON API (no API key needed)
+    # Reddit — S2970: switched from JSON API to Atom `.rss`. Kept to 3
+    # subreddits to reduce 429 rate-limit surface; each Atom feed returns
+    # ~25 entries with canonical permalinks, so DoD ≥5 unique items has
+    # ample headroom even if 1-2 URLs 429.
     'reddit': [
-        'https://www.reddit.com/r/webdev/hot.json?limit=15',
-        'https://www.reddit.com/r/MachineLearning/hot.json?limit=15',
-        'https://www.reddit.com/r/StableDiffusion/hot.json?limit=15',
-        'https://www.reddit.com/r/Entrepreneur/hot.json?limit=15',
-        'https://www.reddit.com/r/freelance/hot.json?limit=15',
-        'https://www.reddit.com/r/startups/hot.json?limit=15',
-        'https://www.reddit.com/r/SideProject/hot.json?limit=10',
-        'https://www.reddit.com/r/ChatGPT/hot.json?limit=10',
+        'https://www.reddit.com/r/webdev/.rss',
+        'https://www.reddit.com/r/programming/.rss',
+        'https://www.reddit.com/r/Entrepreneur/.rss',
     ],
 
     # Session 399: Renamed from 'indiehackers' (feed broken, returns HTML)
@@ -299,15 +297,88 @@ SPIDER_TARGET_URLS = {
         'https://sports.yahoo.com/rss/',
         'https://www.si.com/rss/si_topstories.rss',
     ],
+    # S2970: prior URLs (rotowire injuries.xml + cbssports injuries +
+    # rotogrinders) all returned HTTP 404. Replaced with rotowire per-sport
+    # news feeds, which surface player status updates (roster + injuries).
+    # The runner applies an injury-keyword filter for this spider (see
+    # ``SPORTS_INJURY_KEYWORDS`` + ``filter_injury_items``) so
+    # non-injury roster items are dropped before dedup.
     'sports_injuries': [
-        'https://www.rotowire.com/rss/injuries.xml',
-        'https://www.cbssports.com/rss/headlines/injuries/',
-        'https://rotogrinders.com/feeds/injury-report.xml',
+        'https://www.rotowire.com/rss/news.php?sport=NFL',
+        'https://www.rotowire.com/rss/news.php?sport=MLB',
+        'https://www.rotowire.com/rss/news.php?sport=NBA',
+        'https://www.rotowire.com/rss/news.php?sport=NHL',
+        'https://www.rotowire.com/rss/news.php?sport=SOCCER',
     ],
 }
 
 # User agent to avoid blocks
 USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+
+
+# S2970: injury-keyword filter for the sports_injuries spider. Applied to
+# each item's title + description; requires at least one keyword hit to
+# survive. Prevents rotowire per-sport news feeds — which mix injury
+# updates with roster/transaction items — from turning into a generic
+# roster-news firehose. Order irrelevant; substring match on lowercased
+# concatenated (title + ' ' + description).
+SPORTS_INJURY_KEYWORDS = (
+    'injur',           # matches injury, injured, injuries
+    'questionable',
+    'doubtful',
+    ' out ',
+    ' out.',
+    ' out,',
+    'ruled out',
+    'sidelined',
+    'day-to-day',
+    ' dtd',
+    ' dnp',
+    ' il ',            # injured list
+    ' il.',
+    ' il,',
+    ' ir ',            # injured reserve
+    ' ir.',
+    ' ir,',
+    'pup ',            # physically unable to perform
+    'will miss',
+    'surgery',
+    'concussion',
+    'hamstring',
+    'acl',
+    'mcl',
+    'sprain',
+    'strain',
+    'torn',
+    'fracture',
+    'contusion',
+    # Rigby A2 fold: availability-adjacent terms most likely to cause
+    # silent drops of legit availability updates in the news feeds.
+    'mri',
+    'illness',
+    'covid',
+)
+
+
+def filter_injury_items(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Return only items whose title + description contain an injury keyword.
+
+    Case-insensitive substring match. Keywords are chosen to catch injury
+    reports and status transitions (Out/Questionable/IR/etc.) while
+    dropping pure roster news (trades, signings, contract items). Empty
+    input returns empty output."""
+    if not items:
+        return []
+    kept: List[Dict[str, Any]] = []
+    for item in items:
+        title = str(item.get('title', '') or '')
+        description = str(item.get('description', '') or '')
+        # Pad with spaces so word-boundary-ish tokens (" out ", " il ")
+        # still match at string edges.
+        blob = f' {title.lower()} {description.lower()} '
+        if any(kw in blob for kw in SPORTS_INJURY_KEYWORDS):
+            kept.append(item)
+    return kept
 
 
 async def fetch_url(session: aiohttp.ClientSession, url: str, timeout: int = 30) -> Optional[Dict[str, Any]]:
@@ -2198,12 +2269,24 @@ async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
         }
 
     all_items = []
+    # S2970: track per-URL fetch outcomes so the runner can distinguish
+    # "spider ran, all fetches failed" from "spider ran, feeds were empty".
+    # Passed downstream via `data['fetch_stats']`; the runner reads it to
+    # derive empty_reason='fetch_failed' vs 'no_items' / 'all_deduped'.
+    fetch_stats: Dict[str, Any] = {
+        'attempts': 0,
+        'successes': 0,
+        'urls_attempted': list(urls),
+        'failed_urls': [],
+    }
 
     async with aiohttp.ClientSession() as session:
         for url in urls:
+            fetch_stats['attempts'] += 1
             result = await fetch_url(session, url)
 
             if result:
+                fetch_stats['successes'] += 1
                 # Session 394: Special handling for HackerNews
                 # The topstories.json only returns IDs, so we fetch full stories
                 if spider_name == 'hackernews' and result['type'] == 'json':
@@ -2222,12 +2305,28 @@ async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
 
                 all_items.extend(items)
                 logger.info(f"Spider {spider_name}: collected {len(items)} items from {url}")
+            else:
+                fetch_stats['failed_urls'].append(url)
+
+    # S2970: sports_injuries spider — filter parsed items to injury-relevant
+    # only. Applied here (post-parse, pre-dedup) so downstream dedup and
+    # LegacySpiderData writes see the filtered set; keeps the spider's
+    # semantic identity ("injury updates") aligned with what its RSS
+    # sources (rotowire per-sport news) actually emit.
+    if spider_name == 'sports_injuries' and all_items:
+        pre_filter = len(all_items)
+        all_items = filter_injury_items(all_items)
+        logger.info(
+            f"Spider sports_injuries: injury filter kept "
+            f"{len(all_items)}/{pre_filter} items"
+        )
 
     return {
         'items': all_items[:50],  # Limit to 50 items
         'item_count': len(all_items),
         'source': spider_name,
         'urls_scraped': urls,
+        'fetch_stats': fetch_stats,
         'collected_at': datetime.now(timezone.utc).isoformat()
     }
 
