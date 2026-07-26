@@ -451,10 +451,13 @@ class SpiderSemanticSearch:
         # Session 782: Exclude by embedding_text instead of embedding=[] (pgvector error)
         # Session 1083: .only() to avoid loading every column (was pulling
         # large `processed_data` JSONB fields into memory unnecessarily)
+        # S2975: Skip both NO_ITEMS and STALE_EMPTY_RAW sentinels via helper.
+        from core.services.no_items_policy import BACKFILL_SKIP_SENTINELS
+
         qs = LegacySpiderData.objects.filter(
             embedding__isnull=True  # Only NULL, not empty list
         ).exclude(
-            embedding_text='[NO_ITEMS]'  # Skip already-marked empty entries
+            embedding_text__in=BACKFILL_SKIP_SENTINELS
         ).only('id', 'raw_data', 'embedding_text', 'created_at')
         if hours is not None:
             qs = qs.filter(created_at__gte=timezone.now() - timedelta(hours=hours))
@@ -581,12 +584,15 @@ class SpiderSemanticSearch:
 
         # Get spider data with embeddings
         # Session 736: Exclude entries marked as empty (embedding_text='[NO_ITEMS]')
+        # S2975: Excludes both NO_ITEMS and STALE_EMPTY_RAW sentinels via helper.
+        from core.services.no_items_policy import BACKFILL_SKIP_SENTINELS
+
         since = timezone.now() - timedelta(hours=hours)
         queryset = LegacySpiderData.objects.filter(
             created_at__gte=since,
             embedding__isnull=False
         ).exclude(
-            embedding_text='[NO_ITEMS]'
+            embedding_text__in=BACKFILL_SKIP_SENTINELS
         )
 
         if category:
@@ -681,6 +687,7 @@ class SpiderSemanticSearch:
         return results[:limit]
 
     NO_ITEMS_SENTINEL = '[NO_ITEMS]'
+    STALE_EMPTY_SENTINEL = '[NO_ITEMS_STALE_EMPTY_RAW]'
 
     def get_embedding_stats(
         self,
@@ -695,12 +702,17 @@ class SpiderSemanticSearch:
         pilot sizes, noisy past ~10k rows) and split "pending" into the two
         buckets that actually matter for backfill triage:
 
-          - pending_eligible: embedding IS NULL AND embedding_text != '[NO_ITEMS]'
+          - pending_eligible: embedding IS NULL AND embedding_text is not a skip sentinel
               → real backfill queue; backfill_embeddings will process these.
           - ineligible_empty: embedding IS NULL AND embedding_text == '[NO_ITEMS]'
               → already visited by backfill and found to have no embeddable
                 content (aggregator rollups, metric-only responses, extractor
                 misses). Currently the entire "pending" bucket at HEAD.
+          - stale_empty_raw_data_total: embedding IS NULL AND embedding_text ==
+              '[NO_ITEMS_STALE_EMPTY_RAW]' (S2975) — historical ghost rows
+              (raw_data={} from a resolved ingest bug) flagged by
+              cleanup_stale_no_items so they no longer distort the 30d
+              NO_ITEMS rate while remaining observable.
 
         Also exposes 24h intake-quality breakdown so the UI can answer
         "is the backfill queue at 0 because the pipeline is healthy or
@@ -710,12 +722,13 @@ class SpiderSemanticSearch:
         searchable, coverage_percent, recent_24h.with_embedding) preserved
         with EXACT counts (no more sampling drift). Invariant asserted in
         test_embedding_coverage_pending_eligible_split:
-            pending == pending_eligible + ineligible_empty
+            pending == pending_eligible + ineligible_empty + stale_empty_raw_data_total
         """
         from django.db.models import Count, Q
 
         from core.models_unified_system import LegacySpiderData
         from core.services.no_items_policy import (
+            BACKFILL_SKIP_SENTINELS,
             EXCLUDED_DATA_TYPES,
             EXCLUDED_SPIDER_NAMES,
         )
@@ -737,11 +750,15 @@ class SpiderSemanticSearch:
             present=Count('id', filter=Q(embedding__isnull=False)),
             pending_eligible=Count(
                 'id',
-                filter=Q(embedding__isnull=True) & ~Q(embedding_text=self.NO_ITEMS_SENTINEL),
+                filter=Q(embedding__isnull=True) & ~Q(embedding_text__in=BACKFILL_SKIP_SENTINELS),
             ),
             ineligible_empty=Count(
                 'id',
                 filter=Q(embedding__isnull=True, embedding_text=self.NO_ITEMS_SENTINEL),
+            ),
+            stale_empty_raw_data_total=Count(
+                'id',
+                filter=Q(embedding__isnull=True, embedding_text=self.STALE_EMPTY_SENTINEL),
             ),
             policy_excluded_total=(
                 Count('id', filter=policy_filter)
@@ -753,8 +770,12 @@ class SpiderSemanticSearch:
         present = buckets['present']
         pending_eligible = buckets['pending_eligible']
         ineligible_empty = buckets['ineligible_empty']
+        stale_empty_raw_data_total = buckets['stale_empty_raw_data_total']
         policy_excluded_total = buckets['policy_excluded_total']
-        pending = pending_eligible + ineligible_empty  # legacy semantics
+        # legacy semantics: `pending` = every NULL-embedding row (whether it
+        # will be embedded, has been triaged, or is a stale ghost). Update the
+        # invariant callers hold: pending = eligible + ineligible + stale.
+        pending = pending_eligible + ineligible_empty + stale_empty_raw_data_total
 
         # Embeddable denominator = rows worth counting for coverage
         # (rules out [NO_ITEMS] rows so a healthy pipeline reads 100%).
@@ -767,6 +788,8 @@ class SpiderSemanticSearch:
         coverage_percent = round(present / total * 100, 1) if total > 0 else 0
 
         # Last 24h intake quality — same bucketing, filtered to fresh rows.
+        # S2975: `still_pending` must exclude both sentinels (stale rows have
+        # embedding__isnull=True but are not a real backfill queue).
         since = timezone.now() - timedelta(hours=24)
         recent = LegacySpiderData.objects.filter(created_at__gte=since).aggregate(
             total=Count('id'),
@@ -777,7 +800,7 @@ class SpiderSemanticSearch:
             ),
             still_pending=Count(
                 'id',
-                filter=Q(embedding__isnull=True) & ~Q(embedding_text=self.NO_ITEMS_SENTINEL),
+                filter=Q(embedding__isnull=True) & ~Q(embedding_text__in=BACKFILL_SKIP_SENTINELS),
             ),
         )
         recent_total = recent['total']
@@ -800,6 +823,9 @@ class SpiderSemanticSearch:
             # New (S2973) — policy-exclusion context (denominator hint, not a
             # separate percent — see docs in core/services/no_items_policy.py).
             'policy_excluded_total': policy_excluded_total,
+            # New (S2975) — historical ghost rows flagged by
+            # cleanup_stale_no_items. Observable but not counted as NO_ITEMS.
+            'stale_empty_raw_data_total': stale_empty_raw_data_total,
             # Legacy — same values, kept for backward compat.
             'total_entries': total,
             'with_embedding': present,
@@ -854,6 +880,12 @@ class SpiderSemanticSearch:
             no_items_total=Count(
                 'id', filter=Q(embedding_text=self.NO_ITEMS_SENTINEL),
             ),
+            # S2975: observable stale-ghost bucket in the same window so
+            # dashboards can render "N historical artifacts (not counted as
+            # NO_ITEMS)" alongside the active rate.
+            stale_empty_raw_data_total=Count(
+                'id', filter=Q(embedding_text=self.STALE_EMPTY_SENTINEL),
+            ),
         )
         no_items_by_spider = list(
             no_items_qs.values('spider_name')
@@ -876,6 +908,7 @@ class SpiderSemanticSearch:
             'total_rows': window_totals['total_rows'],
             'no_items_total': window_totals['no_items_total'],
             'no_items_rate': window_rate,
+            'stale_empty_raw_data_total': window_totals['stale_empty_raw_data_total'],
             'by_spider': no_items_by_spider,
             'by_data_type': no_items_by_data_type,
             # Policy reflection so the UI can render "Excludes: X, Y" without
