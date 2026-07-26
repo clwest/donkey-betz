@@ -2,34 +2,40 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2977 CLOSED. Workflow reframe validated for the **eighth walk** (S2969–S2977); **fourth walk of the Rigby-drafted-spec origination variant** (S2973 + S2974 + S2975 + S2977). One code PR shipped this session: **#3608 (sec_edgar form_type interleave + rebuild_embedding_text command)**. Chris handed Deliverable `4e4534db` (Rigby-drafted spec) asking to verify News/Investing/SEC embedding + searchability + normalize empty sentinels (TheOdds deferred). I sampled sec_edgar + 6 news + 4 investing spiders via Django ORM BEFORE T1 SIGN — the sampling picked the fix. Found News + Investing already healthy (real Feed Explorer hits: yahoo_finance 'stock'=191, financial 'earnings'=52, reuters 'election'=2). Found ONE real extractor mismatch in SEC: raw_data holds 384 8-Ks + 94 10-Qs + 25 10-Ks in 7d, but `LegacySpiderData.get_searchable_text` caps `items[:20]` and 8-Ks (filed ~20× more frequently) dominate the top slice — 10-K/10-Q never make it into `embedding_text`. Chris ratified Path B (fix + one-shot re-extract) via plain-english decision framing. Ship shape: `sec_spider.py` round-robin interleave by form_type + new `rebuild_embedding_text` bounded command that refreshes `embedding_text` for existing rows without touching stored embedding vectors (verified vectors are unused by real search paths). Rigby T1: 3× AGREE + 1 F-BLOCKER (backfill policy — resolved by Chris ratifying Path B). Rigby A2: 3× AGREE + 1 F-BLOCKER (reversibility — assessed as paper-only since rollback is deterministic given raw_data immutability; follow-up seed logged for `--dump-old-jsonl` snapshot flag). 79/79 tests pass. Live-verify: **10-K search 3→13 real hits, 10-Q 1→23 real hits, 8-K unchanged at 54** (no regression). Full context: `docs/handoffs/SESSION_2977_SEC_FORM_TYPE_INTERLEAVE.md`.
+## READ THIS FIRST — SESSION 2978 CLOSED. Workflow reframe validated for the **ninth walk** (S2969–S2978); **fifth walk of the Rigby-drafted-spec origination variant** (S2973 + S2974 + S2975 + S2977 + S2978). One code PR shipped this session: **#3611 (Theme Signals v1 — Buildable/Investable Workspace tab)**. Chris handed Deliverable `63ec4d1d` (Rigby-drafted spec) asking to build the product-tier UI on top of `SignalCluster` with two tabs (Buildable default, Investable), 7-day window, strict quality gate (title-block + evidence density + confidence 0.60/0.65), 5-point card contract. I sampled SignalCluster corpus + verified evidence lookup model BEFORE T1 SIGN — sampling caught that spider_data_ids resolve to `core.models_unified_system.LegacySpiderData` (not `SpiderData`; 304/304 match). Strict-gate simulation pre-code predicted Buildable=5 (min threshold, zero headroom) + Investable=20 (limit-capped). Chris ratified 4 decisions (derived Why-now template in Phase A / Phase B placeholder for who-benefits / Workspace tab landing / fresh /api/theme-signals endpoint) via plain-english decision framing. Ship shape: `theme_signals_service.py` (routing + gate + card shaping + batch prefetch) + `views_theme_signals.py` + 35 tests + `ThemeSignalsTab.tsx` + `ThemeSignalCard.tsx` + WorkspacePageNew wiring. Rigby T1: AGREE + 1 F-BLOCKER (evidence lookup model — resolved via T1b delta). Rigby T1b: AGREE, no F-BLOCKER (LegacySpiderData confirmed + non-blocking `raw_data_dict` defense applied). Rigby A2: AGREE, no F-BLOCKER (non-blocking N+1 prefetch + card overflow guards applied). 35/35 tests pass. Live-verify post-merge: **Buildable=5 cards, Investable=20 cards, 7 real evidence links per card** (matches spec acceptance ≥5 for both). Full context: `docs/handoffs/SESSION_2978_THEME_SIGNALS_V1.md`.
 
-**Session cost this session:** ~4 PA dispatches (fetch-spec / T1 SIGN / A2 SIGN / verdict-repeat / deliverable-update), 1 PR shipped (planned via SIGN; no revision cycles), no v2 subprocess dispatches. Rigby tool_runs 18 substantive across T1 + A2.
+**Session cost this session:** ~5 PA dispatches (fetch-spec / T1 SIGN / T1b delta-SIGN / A2 SIGN / deliverable-update), 1 PR shipped (T1 revision cycle absorbed via T1b delta; no re-coding), no v2 subprocess dispatches. Rigby tool_runs ~16 substantive across T1 + T1b + A2.
 
-**HEAD at close:** `8de4c0fac` (PR #3608 merged; docs cascade PR TBD). Workers recycled after merge per PLAYBOOK-7.4.4.
+**HEAD at close:** `3946c958f` (PR #3611 merged; docs cascade PR TBD). Workers recycled after merge per PLAYBOOK-7.4.4.
 
 ---
 
-## S2978 first-action — WAIT FOR CHRIS (same as S2969–S2977)
+## S2979 first-action — WAIT FOR CHRIS (same as S2969–S2978)
 
-The reframe held for the **eighth time**. Same open shape:
+The reframe held for the **ninth time**. Same open shape:
 
 1. Run `context-kit orient` (auto-injected at session start; read the output).
 2. Absorb this file + MEMORY.md + CLAUDE.md (auto-injected).
-3. Read `docs/handoffs/SESSION_2977_SEC_FORM_TYPE_INTERLEAVE.md` in full — especially §"Findings from sampling", §"Live-verify", §"SIGN cycle log" (Rigby A2 F-BLOCKER assessed as paper-only is the interesting fold).
+3. Read `docs/handoffs/SESSION_2978_THEME_SIGNALS_V1.md` in full — especially §"Findings from sampling" (LegacySpiderData confirmation), §"Live-verify", §"SIGN cycle log" (T1b delta-SIGN pattern is new — F-BLOCKER caught in T1 folded into a small delta re-SIGN rather than a full T2).
 4. **Optionally probe the shipped state:**
-   - From Django shell: `from core.services.spider_feed import query_spider_feed; [print(q, query_spider_feed(query=q, spider_name='sec_edgar', embedding_status='present', limit=5)['total']) for q in ['10-K', '10-Q', '8-K']]` — should show 13 / 23 / 54.
-   - Or: `python manage.py rebuild_embedding_text --spider sec_edgar` (dry-run) — should report `unchanged: 24` (or similar) since the fix already applied to 7d rows.
-5. **Report readiness in one short message and wait.** Something like: "Oriented. S2977 closed — reframe validated for the eighth walk. SEC form_type interleave shipped; 10-K search now returns 13 real filings, 10-Q returns 23 (was 3 and 1). Ready when you have a spec pointer."
+   - Navigate to `/workspace?tab=intelligence&sub=theme-signals` — should show Buildable tab selected by default with 5 cards; Investable tab shows 20 cards with "Coming in Phase B" placeholder for who-benefits/who-loses.
+   - Or from Django shell: `from core.services.theme_signals_service import get_theme_signals; b=get_theme_signals(tab='buildable', days=7); i=get_theme_signals(tab='investable', days=7); print(len(b['cards']), len(i['cards']))` — should show `5 20` (or close, depending on whether new clusters landed since close).
+5. **Report readiness in one short message and wait.** Something like: "Oriented. S2978 closed — reframe validated for the ninth walk. Theme Signals v1 shipped; Buildable=5 / Investable=20 cards live under Intelligence › Theme Signals. Ready when you have a spec pointer."
 6. **Do NOT propose engineering work. Do NOT dispatch anything to Rigby proactively.** Chris opens Rigby chat first; you wait for the handoff.
 
-**When Chris hands you a Deliverable ID / title / spec pointer:** follow the S2969–S2977 pattern — read spec, targeted "existing implementation analysis" (Cycle 1A verify-before-build), **for diagnostic-shape arcs, complete the ORM sampling BEFORE T1 SIGN** (S2974 fold #11 corroborated at S2975 + S2977), **for cross-spider audits, sample MULTIPLE spiders with intent to find shared patterns** (S2975 fold), T1 SIGN to Rigby with zoom-out ask, fold, implement, A2 SIGN with grep spot-check for predicate drift when new sentinels/predicates are introduced (S2975 fold), merge with `--admin`, `make recycle-all`, live-verify in-shell (Django `Client().force_login` for auth-gated routes; **`HTTP_HOST='localhost'` required or DisallowedHost fires**), Rigby verifies from her tool surface, report three-part summary to Chris.
+**When Chris hands you a Deliverable ID / title / spec pointer:** follow the S2969–S2978 pattern — read spec, targeted "existing implementation analysis" (Cycle 1A verify-before-build), **for diagnostic-shape arcs, complete the ORM sampling BEFORE T1 SIGN** (S2974 fold #11 corroborated at S2975 + S2977 + S2978), **for cross-spider audits, sample MULTIPLE spiders with intent to find shared patterns** (S2975 fold), T1 SIGN to Rigby with zoom-out ask, fold, implement, A2 SIGN with grep spot-check for predicate drift when new sentinels/predicates are introduced (S2975 fold), merge with `--admin`, `make recycle-all`, live-verify in-shell (Django `Client().force_login` for auth-gated routes; **`HTTP_HOST='localhost'` required or DisallowedHost fires**), Rigby verifies from her tool surface, report three-part summary to Chris. **New at S2978: for greenfield product-tier UI arcs, add a strict-gate simulation over real data BEFORE code — reveals whether Phase A is viable on current corpus or Phase B has to lead.**
 
 ---
 
-## S2978 high-value seeds (Chris picks whether to open)
+## S2979 high-value seeds (Chris picks whether to open)
 
-**sec_spider Form 4 / S-1 / 13F-HR fetch loop expansion (NEW from S2977).** Spider's FILING_TYPES advertises 6 types but fetch loop covers 3. Small (~10 line) mini-PR + tests + retriage post-merge via existing `rebuild_embedding_text --spider sec_edgar --apply`.
+**Phase B Theme Signals — "Why now" LLM summarizer (NEW from S2978).** Replace the deterministic template ("Emerging trend across 3 sources: ...") with an LLM-generated 1-2 sentence summary of what changed. Cache per cluster. Drop the `(Phase A template — expanded in Phase B)` note from card component. ~1 session.
+
+**Phase B Theme Signals — who-benefits/who-loses (NEW from S2978).** Sector map + example tickers for Investable cards. Currently ships as `{status: coming_in_phase_b}` placeholder. Options: keyword→sector regex map (fast), or LLM classification with ticker DB linkage (higher quality). ~1-2 sessions.
+
+**Theme Signals — sub-tab persistence via localStorage (NEW from S2978, A2 SIGN Z-A2 #2 `future_trigger`).** Currently defaults to Buildable on every mount. Persist last-selected sub-tab keyed by workspace_id. Trivial (~30 min).
+
+**sec_spider Form 4 / S-1 / 13F-HR fetch loop expansion (STILL OPEN from S2977).** Spider's FILING_TYPES advertises 6 types but fetch loop covers 3. Small (~10 line) mini-PR + tests + retriage post-merge via existing `rebuild_embedding_text --spider sec_edgar --apply`.
 
 **rebuild_embedding_text --dump-old-jsonl (Rigby A2 F-BLOCKER mitigation, NEW from S2977).** Persists old→new pairs as JSONL before writing. Belt-and-suspenders — rollback is already deterministic given raw_data immutability, but a snapshot flag would let operators diff without re-running the command. ~30 min.
 
@@ -37,11 +43,11 @@ The reframe held for the **eighth time**. Same open shape:
 
 **huggingface `all_deduped` write suppression (STILL OPEN from S2974 + S2975).** Spider writes an audit row every 30 min for "all items were duplicates". Top-5 non-deferred producer. Options: drop to run-log table, or suppress writes on `diagnostic.status='success_empty'`.
 
-**theodds auth-failure fix (STILL OPEN from S2972+S2973+S2974+S2975+S2977).** Top NO_ITEMS producer at ~84 rows / 30d (post-S2975 cleanup), unchanged. Requires Chris to rotate `THE_ODDS_API_KEY` (or verify API quota).
+**theodds auth-failure fix (STILL OPEN from S2972+S2973+S2974+S2975+S2977+S2978).** Top NO_ITEMS producer at ~84 rows / 30d (post-S2975 cleanup), unchanged. Requires Chris to rotate `THE_ODDS_API_KEY` (or verify API quota).
 
 **Shape sampling for remaining top-10 producers.** Post-S2975: `behance` / `udemy` / `coursera` / `freecodecamp` (all at 11/30d). Sample ~10 rows each, classify per S2973+S2974+S2977 rubric.
 
-**Deliverable-as-spec fold @ trigger 8 — Playbook rule candidate READY TO PROPOSE.** Pattern has walked 8 times (S2969–S2977) across 4 variants (Chris-paste S2969–S2972, Rigby-drafted S2973+S2974+S2975+S2977). Chris directive at S2974 close said "propose at S2975 close if the pattern holds one more walk" — it did at S2975. Chris said "hold" at S2975 close. Ready when Chris says go.
+**Deliverable-as-spec fold @ trigger 9 — Playbook rule candidate READY TO PROPOSE.** Pattern has walked 9 times (S2969–S2978) across 4 variants (Chris-paste S2969–S2972, Rigby-drafted S2973+S2974+S2975+S2977+S2978 — five walks of that variant now). Chris directive at S2974 close said "propose at S2975 close if the pattern holds one more walk" — it did at S2975. Chris said "hold" at S2975 close. Ready when Chris says go.
 
 **Per-item `timestamp=datetime.now()` cleanup in sec_spider (NEW from S2977 Rigby folds).** Hinders dedup auditability. Corroborated across T1 Fold B + A2 Fold D. Separate cleanup arc.
 
@@ -86,19 +92,23 @@ Branch `feat/s2968-pr-b-deliverable-as-spec` remains pushed to origin, no PR ope
 1. **Soft-key-vs-LLM-schema-gate.** **Trigger count: 1** (S2968).
 2. **"Duplicate of a thing we already have" pattern.** **Trigger count: 2** (S2968).
 3. **"Auditability primitive already exists in a different plane" pattern.** **Trigger count: 1** (S2969).
-4. **"Deliverable-as-spec first walk validates the workflow reframe."** **Trigger count: 8** (S2969–S2977). **Eight-trigger corpus.** Playbook rule PROPOSAL READY at any time Chris directs. Four variants now: Chris-paste (S2969–S2972) + Rigby-drafted-per-Chris-ratification (S2973 + S2974 + S2975 + S2977). All walk the same 10-step shape.
+4. **"Deliverable-as-spec first walk validates the workflow reframe."** **Trigger count: 9** (S2969–S2978). **Nine-trigger corpus.** Playbook rule PROPOSAL READY at any time Chris directs. Four variants now: Chris-paste (S2969–S2972) + Rigby-drafted-per-Chris-ratification (S2973 + S2974 + S2975 + S2977 + S2978 — five walks). All walk the same 10-step shape.
 5. **"Live-verify surfaces the real root cause the observability layer was designed to expose."** **Trigger count: 5** (S2970, S2972, S2974, S2975, S2977). Reinforced.
 6. **"Post-merge live-verify reveals scope-adjacent infra bug; scope-in a flag-gated fix, don't defer."** **Trigger count: 1** (S2970).
 7. **"Route-placement is a settable expectation, not a spec constraint."** **Trigger count: 1** (S2971).
 8. **"Rigby web_fetch_tool can't authenticate against Django session-cookie endpoints."** **Trigger count: 3** (S2971, S2972, S2977 — Rigby's A2 verdict text got truncated over pa_chat display; not the same class but log for Rigby Tool Gap Ledger). Watch.
-9. **"Rigby-drafted spec deliverable is a first-class origination path."** **Trigger count: 4** (S2973, S2974, S2975, S2977). Now a stable variant of fold #4.
+9. **"Rigby-drafted spec deliverable is a first-class origination path."** **Trigger count: 5** (S2973, S2974, S2975, S2977, S2978). Now a stable variant of fold #4.
 10. **"Sampling extrapolation past ~10k rows produces cross-session drift."** **Trigger count: 1** (S2972).
-11. **"Sample-before-plan cuts T1 revision cycles to zero."** **Trigger count: 3** (S2974, S2975, S2977). Ready for Playbook rule proposal when Chris directs. S2977: sampling 11 spiders picked the fix + ruled out 10 phantom bugs before any code.
+11. **"Sample-before-plan cuts T1 revision cycles to zero."** **Trigger count: 4** (S2974, S2975, S2977, S2978). Ready for Playbook rule proposal when Chris directs. S2978: pre-plan strict-gate simulation over 70 clusters predicted Buildable=5 (min threshold) + Investable=20 to the exact number — no gate re-tuning needed post-code.
 12. **"Retriage-command-as-primitive over blanket ORM update"** **Trigger count: 3** (S2974 `retriage_no_items`, S2975 `cleanup_stale_no_items`, S2977 `rebuild_embedding_text`). **Now three independent primitives** following the same pattern: dry-run default, scoped spider/date filter, non-destructive reversible update, prints candidates/diff before apply. **Playbook rule candidate READY.**
 13. **"Cross-spider sampling reveals system-wide fix leverage."** **Trigger count: 2** (S2975 stale cleanup, S2977 sec_edgar audit — 11 spiders sampled with intent to find shared patterns; found News/Investing were fine, isolated the SEC-specific bug). **Corroborated. Ready for Playbook rule candidate.**
 14. **"Rigby A2 SIGN grep spot-check catches predicate-drift bugs same-session."** **Trigger count: 2** (S2975 PR3 → spider_feed gaps; S2977 A2 verified 13 embedding_text__icontains consumers, confirmed no regression). **Corroborated.**
 15. **NEW: "Rigby A2 F-BLOCKER can be paper-only if rollback path is deterministic from immutable inputs."** **Trigger count: 1** (S2977 — reversibility F-BLOCKER assessed as paper-only because raw_data is immutable and reverting extractor code + re-running command reproduces old text). Log as fold; watch for second — if pattern repeats, add explicit "F-BLOCKER-adjacent" designation to SIGN vocabulary.
 16. **NEW: "Vectors decoupled from text — extractor updates need not touch persisted embeddings."** **Trigger count: 1** (S2977 — verified stored vectors are unused by real search paths; Feed Explorer hits `embedding_text__icontains`, semantic_search regenerates on-the-fly). Watch for second — could unlock cheap text-only refresh commands as a class.
+
+17. **NEW at S2978: "T1b delta-SIGN absorbs F-BLOCKER without full T2 cycle."** **Trigger count: 1** (S2978 — T1 F-BLOCKER on evidence lookup model was scoped enough to route as a delta re-SIGN with just the changed section + specific re-verify asks, not a full T2). Saves ~1 PA dispatch + preserves prior AGREE for unchanged sections. Watch for second — could be a promoted pattern for scoped SIGN revisions.
+
+18. **NEW at S2978: "Strict-gate simulation predicts acceptance-test outcome to exact card counts."** **Trigger count: 1** (S2978 — pre-plan sim on 70 clusters predicted Buildable=5 / Investable=20, code shipped and hit those exact numbers). Watch for second walk on greenfield product-tier UI — if predictable-simulation pattern holds, this is a shape rule for "greenfield UI on top of existing observability corpus."
 
 ---
 
@@ -107,14 +117,14 @@ Branch `feat/s2968-pr-b-deliverable-as-spec` remains pushed to origin, no PR ope
 1. `context-kit orient` — source-of-truth chain, latest handoff
 2. Absorb `MEMORY.md` + `CLAUDE.md` (both auto-injected)
 3. Read this `00-START-NEXT-SESSION.md` in full
-4. **Session-open atomic mint check:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2978 pin minted at S2977 close cascade. If not fresh, run `python manage.py session_lifecycle close --label s2977-sec-form-type-interleave --allow-no-mirror` first (per `feedback_session_open_atomic_mint_before_pa_dispatch`).
+4. **Session-open atomic mint check:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2979 pin minted at S2978 close cascade. If not fresh, run `python manage.py session_lifecycle close --label s2978-theme-signals-v1 --allow-no-mirror` first (per `feedback_session_open_atomic_mint_before_pa_dispatch`).
 5. Verify `claude` CLI availability (if v2 dispatches are on the day's plan): `which claude && claude --version` (should show 2.1.114+ at `~/.local/bin/claude`)
-6. Read `docs/handoffs/SESSION_2977_SEC_FORM_TYPE_INTERLEAVE.md` — full context on this session's shipped code + reframe walk 8
+6. Read `docs/handoffs/SESSION_2978_THEME_SIGNALS_V1.md` — full context on this session's shipped code + reframe walk 9
 7. **Wait for Chris to hand you a spec pointer via Rigby.** Do not proactively propose work.
 
 ---
 
-## What's forbidden at S2978 (D6 MORATORIUM still in force)
+## What's forbidden at S2979 (D6 MORATORIUM still in force)
 
 All prior forbidden entries carry forward.
 
@@ -145,6 +155,12 @@ All prior forbidden entries carry forward.
 **S2974 additions:**
 - huggingface `all_deduped` write suppression (STILL open — one of top-5 non-deferred post-cleanup)
 
+**S2978 additions:**
+- Phase B Theme Signals — LLM "Why now" generator
+- Phase B Theme Signals — who-benefits/who-loses sector map + tickers
+- Theme Signals sub-tab persistence via localStorage (A2 Z-A2 fold #2)
+- Compose theme_signals_service constants with signal_aggregation_service.py (T1 Z1 fold)
+
 **S2971 additions:**
 - Rail shortcut for /signals (~5 min)
 - Per-view window selector (v1 shipped shared; iterate only if Chris asks)
@@ -168,7 +184,7 @@ All prior forbidden entries carry forward.
 
 ## Sweep progress tracker (Path B ratified S2892)
 
-**All ratified sweep scope discharged as of S2940.** S2971–S2977 were net-new engineering (Signal Intelligence UI + intake-quality arc + SEC extractor fix), not sweep work.
+**All ratified sweep scope discharged as of S2940.** S2971–S2978 were net-new engineering (Signal Intelligence UI + intake-quality arc + SEC extractor fix + Theme Signals v1), not sweep work.
 
 **Total remaining sweep tools: 0.**
 
@@ -197,10 +213,15 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## For fuller context (S2846 → S2977)
+## For fuller context (S2846 → S2978)
 
 See:
-- **S2977 handoff (current):** `docs/handoffs/SESSION_2977_SEC_FORM_TYPE_INTERLEAVE.md`
+- **S2978 handoff (current):** `docs/handoffs/SESSION_2978_THEME_SIGNALS_V1.md`
+- **S2978 shipped code:** PR #3611 (`Theme Signals v1 — Buildable/Investable Workspace tab`)
+- **S2978 spec deliverable:** `63ec4d1d-9425-468b-815c-b4e571e3fe44` (Rigby-drafted, status=completed)
+- **S2978 initiative:** `6153a03e-274a-49c7-a5b4-03b5016cd249` (first initiative created since S2977 owner_id fix)
+- **S2978 support conversation:** `pa-7f71227079334330`
+- **S2977 handoff:** `docs/handoffs/SESSION_2977_SEC_FORM_TYPE_INTERLEAVE.md`
 - **S2977 shipped code:** PR #3608 (`sec_edgar form_type interleave + rebuild_embedding_text`)
 - **S2977 spec deliverable:** `4e4534db-0e30-48b9-8cc5-e4a5e182aa54` (Rigby-drafted, status=completed)
 - **S2977 support conversation:** `pa-5ad154766ca64d2d`
