@@ -982,3 +982,310 @@ class CleanupStaleNoItemsCommandTests(TestCase):
             if LegacySpiderData.objects.get(pk=r.pk).embedding_text == '[NO_ITEMS_STALE_EMPTY_RAW]'
         )
         assert flagged == 2
+
+
+class SECSpiderInterleaveTests(TestCase):
+    """S2977: sec_spider `_interleave_by_form_type` round-robin behavior.
+
+    Pure function; no HTTP, no DB. Verifies that the extractor's `items[:20]`
+    cap will see a mix of 8-K / 10-K / 10-Q when all three are present.
+    """
+
+    @staticmethod
+    def _filing(form_type: str, filed_at: str, accession: str = '') -> dict:
+        return {
+            'form_type': form_type,
+            'filed_at': filed_at,
+            'accession_number': accession or f'{form_type}-{filed_at}',
+            'title': f'{form_type} - Company X',
+        }
+
+    def test_mixed_types_land_in_top_20(self):
+        """When a fetch has 20+ 8-Ks and a handful of 10-K / 10-Q, the top 20
+        slice (what get_searchable_text sees) MUST include the minority types."""
+        from ai_core.spiders.specialized.sec_spider import SECSpider
+
+        filings = (
+            [self._filing('8-K', f'2026-07-{25 - i:02d}', f'8k-{i}') for i in range(20)]
+            + [self._filing('10-K', f'2026-07-{15 - i:02d}', f'10k-{i}') for i in range(6)]
+            + [self._filing('10-Q', f'2026-07-{10 - i:02d}', f'10q-{i}') for i in range(1)]
+        )
+
+        interleaved = SECSpider._interleave_by_form_type(filings)
+        top_20 = interleaved[:20]
+        form_types_top20 = {f['form_type'] for f in top_20}
+
+        # This is the whole point of S2977: 10-K + 10-Q must NOT be dropped
+        # off the top-20 slice by a dominant 8-K stream.
+        assert '10-K' in form_types_top20
+        assert '10-Q' in form_types_top20
+        assert '8-K' in form_types_top20
+
+    def test_single_type_input_degrades_to_sorted_list(self):
+        """Only 8-Ks present → interleave collapses to a single sorted list —
+        no worse than the prior global sort. Rigby T1 guardrail."""
+        from ai_core.spiders.specialized.sec_spider import SECSpider
+
+        filings = [self._filing('8-K', f'2026-07-{25 - i:02d}', f'8k-{i}') for i in range(5)]
+        interleaved = SECSpider._interleave_by_form_type(filings)
+
+        assert len(interleaved) == 5
+        # Sort by filed_at desc within a single type is stable.
+        filed_dates = [f['filed_at'] for f in interleaved]
+        assert filed_dates == sorted(filed_dates, reverse=True)
+
+    def test_per_type_ordering_preserved_within_slots(self):
+        """Within each form_type, filed_at desc order is preserved across the
+        round-robin slots."""
+        from ai_core.spiders.specialized.sec_spider import SECSpider
+
+        filings = (
+            [self._filing('8-K', '2026-07-20', '8k-a'),
+             self._filing('8-K', '2026-07-19', '8k-b'),
+             self._filing('8-K', '2026-07-18', '8k-c')]
+            + [self._filing('10-K', '2026-07-15', '10k-a'),
+               self._filing('10-K', '2026-07-14', '10k-b')]
+        )
+
+        interleaved = SECSpider._interleave_by_form_type(filings)
+        eight_k_order = [f['accession_number'] for f in interleaved if f['form_type'] == '8-K']
+        ten_k_order = [f['accession_number'] for f in interleaved if f['form_type'] == '10-K']
+
+        assert eight_k_order == ['8k-a', '8k-b', '8k-c']
+        assert ten_k_order == ['10k-a', '10k-b']
+
+    def test_missing_filed_at_uses_string_fallback(self):
+        """Missing/empty `filed_at` retains the prior string-sort fallback —
+        no new datetime parsing introduced. Rigby T1 guardrail."""
+        from ai_core.spiders.specialized.sec_spider import SECSpider
+
+        filings = [
+            {'form_type': '8-K', 'accession_number': 'no-date'},  # filed_at absent
+            {'form_type': '8-K', 'filed_at': '2026-07-20', 'accession_number': 'with-date'},
+        ]
+        # Should not raise on missing filed_at.
+        interleaved = SECSpider._interleave_by_form_type(filings)
+        assert len(interleaved) == 2
+        # 'with-date' sorts before '' (empty string) in reverse.
+        assert interleaved[0]['accession_number'] == 'with-date'
+
+    def test_empty_input_returns_empty(self):
+        from ai_core.spiders.specialized.sec_spider import SECSpider
+        assert SECSpider._interleave_by_form_type([]) == []
+
+
+class RebuildEmbeddingTextCommandTests(TestCase):
+    """S2977: `rebuild_embedding_text` re-extracts embedding_text from current
+    get_searchable_text() output without touching vectors."""
+
+    def _row(self, *, spider_name: str, days_ago: int, embedding_text: str,
+             raw_data=_UNSET, embedding=None):
+        row = _make_spider_row(
+            spider_name=spider_name,
+            days_ago=days_ago,
+            embedding_text=embedding_text,
+            raw_data=raw_data if raw_data is not _UNSET else {'items': [{'title': 'live item'}]},
+        )
+        if embedding is not None:
+            LegacySpiderData.objects.filter(pk=row.pk).update(embedding=embedding)
+            row.refresh_from_db()
+        return row
+
+    def test_dry_run_reports_would_update_without_writing(self):
+        """Dry-run must count would-update rows but never write."""
+        from io import StringIO
+        from django.core.management import call_command
+
+        row = self._row(
+            spider_name='sec_edgar',
+            days_ago=2,
+            embedding_text='stale text — 8-K only',
+            raw_data={'items': [{'title': 'fresh 10-K - Company X'}]},
+        )
+
+        buf = StringIO()
+        call_command('rebuild_embedding_text', '--spider', 'sec_edgar', stdout=buf)
+        output = buf.getvalue()
+
+        assert 'DRY RUN' in output
+        assert 'would update:  1' in output
+        # No write in dry-run.
+        row.refresh_from_db()
+        assert row.embedding_text == 'stale text — 8-K only'
+
+    def test_apply_updates_embedding_text(self):
+        """`--apply` writes the new extractor output to embedding_text."""
+        from django.core.management import call_command
+
+        row = self._row(
+            spider_name='sec_edgar',
+            days_ago=2,
+            embedding_text='old only-8-K text',
+            raw_data={'items': [{'title': 'fresh 10-K - Company X',
+                                  'description': 'annual report filed'}]},
+        )
+
+        call_command('rebuild_embedding_text', '--spider', 'sec_edgar',
+                     '--apply', verbosity=0)
+
+        row.refresh_from_db()
+        # New text must reflect the current get_searchable_text output.
+        assert 'fresh 10-K' in row.embedding_text
+        assert row.embedding_text != 'old only-8-K text'
+
+    def test_sec_prefix_row_gets_form_type_diversity(self):
+        """Pre-fix rows stored raw_data with 20+ 8-Ks at the top (filed_at desc)
+        so a plain re-extract would produce identical text (8Ks only). The
+        command MUST re-interleave sec_edgar items by form_type before
+        extracting — otherwise Path B is a no-op for existing rows."""
+        from django.core.management import call_command
+
+        # Shape mirrors S2977 sampling: 20+ 8-Ks dominate the front of the
+        # list, 10-K + 10-Q sit further down.
+        items = (
+            [{'title': f'8-K - Company{i:02d}', 'form_type': '8-K',
+              'filed_at': f'2026-07-{25 - i:02d}'} for i in range(20)]
+            + [{'title': '10-K - Annual Company', 'form_type': '10-K',
+                'filed_at': '2026-07-05'}]
+            + [{'title': '10-Q - Quarterly Company', 'form_type': '10-Q',
+                'filed_at': '2026-07-04'}]
+        )
+        row = self._row(
+            spider_name='sec_edgar', days_ago=2,
+            embedding_text='old 8K-only text',
+            raw_data={'items': items},
+        )
+
+        call_command('rebuild_embedding_text', '--spider', 'sec_edgar',
+                     '--apply', verbosity=0)
+
+        row.refresh_from_db()
+        # After interleave the top-20 slice must contain 10-K + 10-Q text.
+        assert '10-K - Annual Company' in row.embedding_text
+        assert '10-Q - Quarterly Company' in row.embedding_text
+
+    def test_vectors_untouched(self):
+        """The stored embedding vector must NOT be modified — that's Path B's
+        whole point (only refresh the searchable text)."""
+        from django.core.management import call_command
+
+        vec = [0.1] * 1536
+        row = self._row(
+            spider_name='sec_edgar',
+            days_ago=2,
+            embedding_text='old text',
+            raw_data={'items': [{'title': '10-Q - New Company'}]},
+            embedding=vec,
+        )
+
+        call_command('rebuild_embedding_text', '--spider', 'sec_edgar',
+                     '--apply', verbosity=0)
+
+        refreshed = LegacySpiderData.objects.get(pk=row.pk)
+        assert refreshed.embedding_text != 'old text'
+        # Embedding vector is preserved.
+        assert refreshed.embedding is not None
+        assert len(list(refreshed.embedding)) == 1536
+
+    def test_skips_sentinel_rows(self):
+        """Rows with [NO_ITEMS] / [NO_ITEMS_STALE_EMPTY_RAW] are owned by
+        retriage_no_items / cleanup_stale_no_items — must NOT be touched."""
+        from django.core.management import call_command
+
+        no_items = self._row(
+            spider_name='sec_edgar', days_ago=2, embedding_text='[NO_ITEMS]',
+            raw_data={'items': [{'title': 'now has content'}]},
+        )
+        stale = self._row(
+            spider_name='sec_edgar', days_ago=2,
+            embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]',
+            raw_data={'items': [{'title': 'now has content'}]},
+        )
+
+        call_command('rebuild_embedding_text', '--spider', 'sec_edgar',
+                     '--apply', verbosity=0)
+
+        no_items.refresh_from_db()
+        stale.refresh_from_db()
+        assert no_items.embedding_text == '[NO_ITEMS]'
+        assert stale.embedding_text == '[NO_ITEMS_STALE_EMPTY_RAW]'
+
+    def test_skips_rows_where_extractor_returns_empty(self):
+        """If the new extractor returns empty for a row that currently has
+        real text, DO NOT overwrite — that would look like a data loss."""
+        from django.core.management import call_command
+
+        row = self._row(
+            spider_name='sec_edgar', days_ago=2,
+            embedding_text='real text worth preserving',
+            raw_data={},  # extractor returns "" — row must be left alone
+        )
+
+        call_command('rebuild_embedding_text', '--spider', 'sec_edgar',
+                     '--apply', verbosity=0)
+
+        row.refresh_from_db()
+        assert row.embedding_text == 'real text worth preserving'
+
+    def test_days_window_scopes_row_selection(self):
+        """`--days 3` must exclude rows older than 3 days."""
+        from django.core.management import call_command
+
+        recent = self._row(
+            spider_name='sec_edgar', days_ago=1, embedding_text='old text',
+            raw_data={'items': [{'title': 'fresh title'}]},
+        )
+        older = self._row(
+            spider_name='sec_edgar', days_ago=10, embedding_text='old text',
+            raw_data={'items': [{'title': 'also fresh'}]},
+        )
+
+        call_command('rebuild_embedding_text', '--spider', 'sec_edgar',
+                     '--days', '3', '--apply', verbosity=0)
+
+        recent.refresh_from_db()
+        older.refresh_from_db()
+        assert recent.embedding_text != 'old text'
+        assert older.embedding_text == 'old text'  # outside window
+
+    def test_spider_scope_filter(self):
+        """`--spider X` only touches rows for that spider."""
+        from django.core.management import call_command
+
+        sec = self._row(
+            spider_name='sec_edgar', days_ago=1, embedding_text='old text',
+            raw_data={'items': [{'title': 'sec fresh'}]},
+        )
+        other = self._row(
+            spider_name='reuters_rss', days_ago=1, embedding_text='old text',
+            raw_data={'items': [{'title': 'reuters fresh'}]},
+        )
+
+        call_command('rebuild_embedding_text', '--spider', 'sec_edgar',
+                     '--apply', verbosity=0)
+
+        sec.refresh_from_db()
+        other.refresh_from_db()
+        assert sec.embedding_text != 'old text'
+        assert other.embedding_text == 'old text'  # untouched
+
+    def test_limit_caps_scan(self):
+        """`--limit N` caps the number of rows scanned."""
+        from django.core.management import call_command
+
+        rows = [
+            self._row(
+                spider_name='sec_edgar', days_ago=1, embedding_text='old text',
+                raw_data={'items': [{'title': f'fresh item {i}'}]},
+            )
+            for i in range(5)
+        ]
+
+        call_command('rebuild_embedding_text', '--spider', 'sec_edgar',
+                     '--limit', '2', '--apply', verbosity=0)
+
+        updated = sum(
+            1 for r in rows
+            if LegacySpiderData.objects.get(pk=r.pk).embedding_text != 'old text'
+        )
+        assert updated == 2
