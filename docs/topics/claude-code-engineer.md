@@ -144,6 +144,26 @@ v2 requires the `claude` CLI installed on `$PATH` (checked at import via `shutil
 
 PR-A ships v2 behind the env flag; PR-D (post-A/B validation) will flip default to `v2` and delete the ~600 LOC v1 loop.
 
+### Deliverable-as-spec (S2968 PR-B)
+
+Instead of a free-form `task` string, callers can pass `deliverable_id` on `claude_code_tool` — the handler resolves the Deliverable and constructs the engineer's task from its title + type + content. Purpose: **Chris reviews the spec in the workspace UI BEFORE dispatch**, catching scope creep + spend-runaway risk at spec-review time rather than after the engineer has already burned budget.
+
+- **When to use:** any dispatch worth spending >$0.50 on. Author the spec as a Deliverable (`deliverable_type='engineering_spec'`), ratify in the workspace, then dispatch with just `deliverable_id`.
+- **Precedence:** when both `task` and `deliverable_id` are passed, deliverable_id wins (spec > free-form). When only `deliverable_id` is passed, the `task` param is no longer required.
+- **Provenance:** response envelope echoes `deliverable_id_resolved`, `deliverable_title`, and `deliverable_warnings` (currently just `['spec_size_exceeds_soft_cap']` when content > 50k chars — warning only, dispatch still proceeds).
+- **Not-found:** returns error envelope, no Celery dispatch.
+- **Exempt from `missing_initiative_id` diagnostic:** `engineering_spec` deliverable_type is in `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT` at `deliverable_factory.py:1414` so specs don't get flagged as orphaned artifacts in the UI.
+
+Structured spec sections the engineer respects (convention, not enforced by schema):
+- **Goal** — one-paragraph what-and-why
+- **Acceptance criteria** — bulleted list; engineer satisfies each
+- **Files to touch** (optional) — path hints; engineer may explore beyond if needed
+- **Related docs** — links to CLAUDE.md sections, ADRs, topic docs
+- **Out of scope** — what NOT to change
+- **Expected shape** — PR title convention, commit message format, tests required?
+
+PR-C (planned) will add Deliverable status write-back — the engineer marks its spec `completed`/`partial`/`blocked`/`escalated` on ship, giving Chris a full audit trail per Deliverable.
+
 ---
 
 ## Response envelope
