@@ -329,6 +329,9 @@ class CodeJobHandlersMixin:
 
     def _handle_claude_code(self, tool_name, payload, user_id, trace_id):
         """Spawn autonomous Claude Code engineering session. Reads files, writes code, creates PRs."""
+        import logging
+        _log = logging.getLogger(__name__)
+
         # Accept multiple param names — LLM may use different keys
         task_description = (
             payload.get('task')
@@ -338,13 +341,115 @@ class CodeJobHandlersMixin:
             or payload.get('message')
             or ''
         )
-        if not task_description:
-            # Log what we actually received for debugging
-            import logging
-            logging.getLogger(__name__).warning(
-                f"[claude_code_tool] No task found in payload keys: {list(payload.keys())} | trace={trace_id}"
+
+        # Session 2968 PR-B — Deliverable-as-spec resolution. When `deliverable_id`
+        # is present, resolve the Deliverable and use its content as the engineer's
+        # spec (title + content injected into task_description). Precedence: if
+        # both `task` and `deliverable_id` are set, deliverable_id wins per Rigby
+        # T1 SIGN AGREE ("spec > free-form"). Response envelope echoes
+        # `deliverable_id_resolved` + `deliverable_title` for provenance parity
+        # with S2967's workspace_id_resolved shape.
+        deliverable_id_raw = (payload.get('deliverable_id') or '').strip()
+        deliverable_id_resolved = None
+        deliverable_title = None
+        deliverable_warnings: list = []
+        if deliverable_id_raw:
+            try:
+                from core.models_deliverables import Deliverable
+                spec = (
+                    Deliverable.objects
+                    .select_related('workspace')
+                    .filter(id=deliverable_id_raw)
+                    .first()
+                )
+            except Exception as exc:
+                _log.warning(
+                    "[claude_code_tool] deliverable resolution raised "
+                    "(%s: %s) | id=%s trace=%s",
+                    type(exc).__name__, exc, deliverable_id_raw, trace_id,
+                )
+                return {
+                    'status': 'error',
+                    'error': (
+                        f'deliverable_id resolution failed: {type(exc).__name__}: {exc}. '
+                        f'Verify the UUID is well-formed and the Deliverable row exists.'
+                    ),
+                    'deliverable_id_requested': deliverable_id_raw,
+                    'trace_id': trace_id,
+                }
+            if spec is None:
+                _log.warning(
+                    "[claude_code_tool] deliverable_id=%s not found | trace=%s",
+                    deliverable_id_raw, trace_id,
+                )
+                return {
+                    'status': 'error',
+                    'error': (
+                        f'Deliverable {deliverable_id_raw} not found. Verify the UUID '
+                        f'and that the Deliverable has not been deleted.'
+                    ),
+                    'deliverable_id_requested': deliverable_id_raw,
+                    'trace_id': trace_id,
+                }
+            deliverable_id_resolved = str(spec.id)
+            deliverable_title = spec.title
+            spec_content = spec.content or ''
+
+            # Rigby T1 SIGN F-BLOCKING #2: soft cap on spec content size.
+            # Warn (not hard-fail) so callers with legit large specs still ship;
+            # PR-C is expected to add tmpfile fallback for the size-exceeded path.
+            _SPEC_SOFT_CAP_CHARS = 50_000
+            if len(spec_content) > _SPEC_SOFT_CAP_CHARS:
+                warn_msg = (
+                    f'spec_content_length={len(spec_content)} exceeds soft cap '
+                    f'{_SPEC_SOFT_CAP_CHARS}; prompt will be bloated and cost inflated. '
+                    f'Consider splitting the spec into smaller Deliverables or wait for '
+                    f'PR-C tmpfile fallback.'
+                )
+                _log.warning(
+                    "[claude_code_tool] %s | deliverable_id=%s trace=%s",
+                    warn_msg, deliverable_id_resolved, trace_id,
+                )
+                deliverable_warnings.append('spec_size_exceeds_soft_cap')
+
+            # Build the enriched task description from the spec. If the caller
+            # ALSO passed a `task` string, log both but let spec win.
+            if task_description:
+                _log.info(
+                    "[claude_code_tool] both `task` and `deliverable_id` provided; "
+                    "deliverable spec wins per S2968 PR-B contract. Original task "
+                    "chars=%d | deliverable_id=%s trace=%s",
+                    len(task_description), deliverable_id_resolved, trace_id,
+                )
+            spec_workspace = getattr(spec, 'workspace', None)
+            workspace_name = spec_workspace.name if spec_workspace else '(no workspace)'
+            task_description = (
+                f"ENGINEERING TASK — spec from Deliverable {deliverable_id_resolved}\n\n"
+                f"Title: {spec.title}\n"
+                f"Type: {spec.deliverable_type}\n"
+                f"Workspace: {workspace_name}\n\n"
+                f"Spec content:\n"
+                f"{spec_content}\n\n"
+                f"Execute per the acceptance criteria in the spec. If any section "
+                f"is ambiguous, prefer the explicit acceptance criteria over "
+                f"inferred intent. If you cannot proceed without clarification, "
+                f"stop and return a structured questions/assumptions block "
+                f"rather than guessing."
             )
-            return {'error': f'task description is required. Received keys: {list(payload.keys())}'}
+
+        # After spec resolution, we still need SOMETHING to dispatch. Rigby T1
+        # SIGN F-BLOCKING #1: the gate now accepts `task` OR `deliverable_id`.
+        if not task_description:
+            _log.warning(
+                "[claude_code_tool] No task and no deliverable_id in payload "
+                "keys: %s | trace=%s", list(payload.keys()), trace_id,
+            )
+            return {
+                'error': (
+                    f'task description or deliverable_id is required. '
+                    f'Received keys: {list(payload.keys())}'
+                ),
+            }
 
         # Auto-inject conversation_id from the PA context if not explicitly set
         conversation_id = payload.get('conversation_id')
@@ -458,6 +563,12 @@ class CodeJobHandlersMixin:
             'workspace_id_resolved': workspace_id_resolved,
             'workspace_root_path': workspace_root_path,
             'resolved_from': resolved_from or 'fallback',
+            # Session 2968 PR-B — surface Deliverable-as-spec provenance so
+            # callers can confirm the spec that governed this dispatch. Null
+            # when no deliverable_id was passed (free-form task path).
+            'deliverable_id_resolved': deliverable_id_resolved,
+            'deliverable_title': deliverable_title,
+            'deliverable_warnings': deliverable_warnings,
             # Session 2967 Slice 7 PR-1 — surface requested caps (null = engine
             # defaults 150 iter / $5). Engineer's actual `effective_*` values
             # land in the completion envelope (output_data on AgentExecution).
