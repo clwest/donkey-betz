@@ -25,6 +25,12 @@ from typing import Any, Dict, List, Literal, Optional, Tuple
 
 from django.utils import timezone
 
+from core.services.evidence_display import (
+    evidence_from_sample_signals,
+    normalize_evidence_row,
+    sort_evidence_by_relevance,
+)
+
 logger = logging.getLogger(__name__)
 
 Tab = Literal["buildable", "investable"]
@@ -210,54 +216,73 @@ def _items_from_row(row) -> List[Dict[str, Any]]:
 
 
 def _extract_evidence_from_row_items(row, items, out: List[Dict[str, Any]], max_items: int) -> bool:
-    """Append valid evidence entries from a row's items list. Returns True when out is full."""
+    """Append valid evidence entries from a row's items list.
+
+    Each entry passes through ``normalize_evidence_row``, which applies
+    URL sanitization (Bluesky ``at://`` transform + http/https allowlist)
+    and source-label mapping (raw slug → display label). Rows where the
+    normalized title AND url are both empty are silently skipped. Returns
+    True when ``out`` is full.
+    """
     for item in items:
         if not isinstance(item, dict):
             continue
         title = item.get("title") or item.get("headline") or item.get("name")
         url = item.get("url") or item.get("link") or item.get("source_url")
-        if not (title and url):
+        if not title and not url:
             continue
-        out.append({
-            "title": str(title)[:200],
-            "url": str(url),
-            "source": item.get("source") or row.spider_name,
-            "published": item.get("published"),
-        })
+        row_entry = normalize_evidence_row(
+            title=title,
+            url=url,
+            source=item.get("source") or row.spider_name,
+            published=item.get("published"),
+        )
+        if row_entry is None:
+            continue
+        out.append(row_entry)
         if len(out) >= max_items:
             return True
     return False
 
 
 def extract_evidence_from_cluster(cluster, max_items: int = MAX_EVIDENCE) -> List[Dict[str, Any]]:
-    """Flatten `LegacySpiderData.raw_data['items']` across cluster rows.
+    """Flatten evidence for one cluster: primary spider_data_ids path,
+    with ``sample_signals`` as fallback when primary yields zero items.
 
-    Per-item fallback chain:
+    Primary — ``LegacySpiderData.raw_data['items']`` across cluster rows:
       title: item.get('title') or item.get('headline') or item.get('name')
       url:   item.get('url')   or item.get('link')     or item.get('source_url')
 
-    Skip items where both title and url are missing (silent). Skip rows where
-    `raw_data` is not dict-shaped (defends against list-shaped payloads).
+    Skip items where both title AND url are missing. Skip rows where
+    ``raw_data`` is not dict-shaped (defends against list-shaped payloads).
+    Fallback — ``SignalCluster.sample_signals`` (only when primary is empty):
+    Chris ratified Option B at S2979 — sample_signals is lower-integrity
+    (mixed source/url pairings, blobby text) so it stays a fallback, never
+    preferred over the primary path.
+    Results are relevance-sorted (clickable before unclickable, real
+    titles before placeholders).
     """
     from core.models_unified_system import LegacySpiderData
 
-    ids = cluster.spider_data_ids or []
-    if not ids:
-        return []
-
-    rows = LegacySpiderData.objects.filter(id__in=ids)
     out: List[Dict[str, Any]] = []
-    for row in rows:
-        if _extract_evidence_from_row_items(row, _items_from_row(row), out, max_items):
-            break
-    return out
+    ids = cluster.spider_data_ids or []
+    if ids:
+        for row in LegacySpiderData.objects.filter(id__in=ids):
+            if _extract_evidence_from_row_items(row, _items_from_row(row), out, max_items):
+                break
+    if not out:
+        out = evidence_from_sample_signals(cluster.sample_signals, max_items)
+    return sort_evidence_by_relevance(out)
 
 
 def _prefetch_evidence_for_clusters(clusters) -> Dict[str, List[Dict[str, Any]]]:
-    """Batch-fetch all LegacySpiderData rows referenced by any cluster in one query.
+    """Batch-fetch evidence for all survivor clusters in one query.
 
-    Returns {cluster_id: [evidence...]} pre-computed. Eliminates N+1 across the
-    survivors loop when rendering >1 card (A2 SIGN Z-A2 fold #1, same_pr_mitigatable).
+    Applies the same primary/fallback logic as ``extract_evidence_from_cluster``
+    but issues a single ``LegacySpiderData.objects.filter(id__in=...)`` for
+    the union of ``spider_data_ids`` across all survivors. Returns
+    ``{cluster_id: [evidence...]}`` pre-computed. Eliminates N+1 across the
+    survivors loop when rendering >1 card (A2 SIGN Z-A2 fold #1).
     """
     from core.models_unified_system import LegacySpiderData
 
@@ -267,23 +292,27 @@ def _prefetch_evidence_for_clusters(clusters) -> Dict[str, List[Dict[str, Any]]]
         ids = [str(i) for i in (c.spider_data_ids or [])]
         per_cluster[str(c.id)] = ids
         all_ids.extend(ids)
-    if not all_ids:
-        return {str(c.id): [] for c in clusters}
 
-    row_by_id: Dict[str, Any] = {
-        str(row.id): row
-        for row in LegacySpiderData.objects.filter(id__in=list(set(all_ids)))
-    }
+    row_by_id: Dict[str, Any] = {}
+    if all_ids:
+        row_by_id = {
+            str(row.id): row
+            for row in LegacySpiderData.objects.filter(id__in=list(set(all_ids)))
+        }
+
     out: Dict[str, List[Dict[str, Any]]] = {}
-    for cid, ids in per_cluster.items():
+    for c in clusters:
+        cid = str(c.id)
         evidence: List[Dict[str, Any]] = []
-        for i in ids:
+        for i in per_cluster.get(cid, []):
             row = row_by_id.get(i)
             if row is None:
                 continue
             if _extract_evidence_from_row_items(row, _items_from_row(row), evidence, MAX_EVIDENCE):
                 break
-        out[cid] = evidence
+        if not evidence:
+            evidence = evidence_from_sample_signals(c.sample_signals, MAX_EVIDENCE)
+        out[cid] = sort_evidence_by_relevance(evidence)
     return out
 
 
