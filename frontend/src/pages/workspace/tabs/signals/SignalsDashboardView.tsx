@@ -39,13 +39,30 @@ interface AggregateResponse {
 }
 
 interface CoverageResponse {
+  // S2972 accurate buckets (preferred).
+  total: number
+  present: number
+  pending_eligible: number
+  ineligible_empty: number
+  embeddable_total: number
+  embeddable_coverage_percent: number
+  // Legacy fields (kept for backward compat with any older callers).
   total_entries: number
   with_embedding: number
   marked_empty: number
   pending: number
   searchable: number
   coverage_percent: number
-  recent_24h: { total: number; with_embedding: number }
+  recent_24h: {
+    // S2972 additions.
+    total: number
+    embedded: number
+    marked_no_items: number
+    still_pending: number
+    no_items_rate: number
+    // Legacy alias.
+    with_embedding: number
+  }
 }
 
 interface ClusterRow {
@@ -236,47 +253,78 @@ function CoverageCard({
       {error && <ErrorState message={(error as Error).message || 'Failed to load'} />}
       {data && (
         <div className="space-y-3">
+          {/* S2972: primary number is embeddable-coverage (excludes [NO_ITEMS])
+              — so a pipeline where every eligible row is embedded reads 100%,
+              regardless of how many rollup/metric rows exist. Legacy percent is
+              still shown below for cross-reference. */}
           <div>
             <div className="text-3xl font-bold text-primary-400">
-              {data.coverage_percent.toFixed(1)}%
+              {data.embeddable_coverage_percent.toFixed(1)}%
             </div>
-            <div className="text-[10px] text-gray-500 uppercase tracking-wide">
-              {formatNumber(data.searchable)} of {formatNumber(data.total_entries)} searchable
+            <div
+              className="text-[10px] text-gray-500 uppercase tracking-wide"
+              title="Coverage of rows that carry embeddable content. Rollup/metric-only spider rows are excluded."
+            >
+              coverage (embeddable rows)
+            </div>
+            <div className="text-[10px] text-gray-500 mt-0.5">
+              {formatNumber(data.present)} embedded / {formatNumber(data.embeddable_total)} embeddable · {formatNumber(data.total)} total rows
             </div>
           </div>
 
           <div className="h-2 bg-gray-800 rounded overflow-hidden">
             <div
               className="h-full bg-primary-500"
-              style={{ width: `${Math.min(100, data.coverage_percent)}%` }}
+              style={{ width: `${Math.min(100, data.embeddable_coverage_percent)}%` }}
             />
           </div>
 
           <div className="grid grid-cols-3 gap-2 pt-1 text-center">
             <div>
               <div className="text-sm font-semibold text-emerald-400">
-                {formatNumber(data.with_embedding)}
+                {formatNumber(data.present)}
               </div>
-              <div className="text-[10px] text-gray-500 uppercase">present</div>
+              <div className="text-[10px] text-gray-500 uppercase">embedded</div>
             </div>
             <div>
               <div className="text-sm font-semibold text-yellow-400">
-                {formatNumber(data.pending)}
+                {formatNumber(data.pending_eligible)}
               </div>
-              <div className="text-[10px] text-gray-500 uppercase">pending</div>
+              <div
+                className="text-[10px] text-gray-500 uppercase"
+                title="Rows waiting for backfill. Backfill Beat runs every 15 min; queue usually drains within one cycle."
+              >
+                eligible queue
+              </div>
             </div>
             <div>
               <div className="text-sm font-semibold text-gray-500">
-                {formatNumber(data.marked_empty)}
+                {formatNumber(data.ineligible_empty)}
               </div>
-              <div className="text-[10px] text-gray-500 uppercase">empty</div>
+              <div
+                className="text-[10px] text-gray-500 uppercase"
+                title="Rows already visited by backfill and found to have no embeddable content — typically analytics rollups, weather/odds APIs, or extractor misses."
+              >
+                no items
+              </div>
             </div>
           </div>
 
           {data.recent_24h && (
-            <div className="pt-2 border-t border-gray-800 text-xs text-gray-400 flex items-center gap-1">
-              <TrendingUp size={12} />
-              Last 24h: {formatNumber(data.recent_24h.with_embedding)} / {formatNumber(data.recent_24h.total)} embedded
+            <div className="pt-2 border-t border-gray-800 text-xs text-gray-400 space-y-1">
+              <div className="flex items-center gap-1">
+                <TrendingUp size={12} />
+                <span>
+                  Last 24h: {formatNumber(data.recent_24h.embedded)} embedded ·{' '}
+                  {formatNumber(data.recent_24h.marked_no_items)} no-items ·{' '}
+                  {formatNumber(data.recent_24h.still_pending)} queued
+                </span>
+              </div>
+              {data.recent_24h.total > 0 && (
+                <div className="text-[10px] text-gray-500">
+                  {data.recent_24h.no_items_rate.toFixed(1)}% of new rows marked no-items · {formatNumber(data.recent_24h.total)} new rows total
+                </div>
+              )}
             </div>
           )}
         </div>

@@ -212,14 +212,28 @@ class SignalsEndpointTests(TestCase):
     def test_embedding_coverage_returns_stats_shape(self):
         with mock.patch('core.services.spider_semantic_search.get_spider_semantic_search') as m:
             m.return_value.get_embedding_stats.return_value = {
-                'total_entries': 100, 'with_embedding': 40, 'marked_empty': 5,
-                'pending': 55, 'searchable': 40, 'coverage_percent': 40.0,
-                'recent_24h': {'total': 10, 'with_embedding': 4},
+                # S2972 new fields
+                'total': 100, 'present': 40, 'pending_eligible': 5,
+                'ineligible_empty': 55, 'embeddable_total': 45,
+                'embeddable_coverage_percent': 88.9,
+                # legacy compat
+                'total_entries': 100, 'with_embedding': 40, 'marked_empty': 0,
+                'pending': 60, 'searchable': 40, 'coverage_percent': 40.0,
+                'recent_24h': {
+                    'total': 10, 'embedded': 4, 'marked_no_items': 3,
+                    'still_pending': 3, 'no_items_rate': 30.0,
+                    'with_embedding': 4,
+                },
             }
             resp = self.client.get('/api/signals/embedding-coverage/')
         assert resp.status_code == 200, resp.content
         body = resp.json()
+        # Both new + legacy shapes surface end-to-end.
         assert body['coverage_percent'] == 40.0
+        assert body['embeddable_coverage_percent'] == 88.9
+        assert body['pending_eligible'] == 5
+        assert body['ineligible_empty'] == 55
+        assert body['recent_24h']['no_items_rate'] == 30.0
 
     def test_all_endpoints_require_auth(self):
         anon = APIClient()
@@ -230,6 +244,105 @@ class SignalsEndpointTests(TestCase):
         ]:
             resp = anon.get(path)
             assert resp.status_code in (401, 403), f'{path}: {resp.status_code}'
+
+
+class EmbeddingCoverageStatsTests(TestCase):
+    """S2972: `SpiderSemanticSearch.get_embedding_stats` bucket split.
+
+    Isolated TestCase (no shared setUpTestData) so we don't collide with
+    LegacySpiderData rows the SignalsEndpointTests fixtures create.
+    """
+
+    def test_pending_eligible_excludes_marked_no_items(self):
+        """The primary S2972 assertion: `pending_eligible` counts NULL
+        embeddings NOT flagged [NO_ITEMS] — i.e., the actual backfill
+        queue. `ineligible_empty` counts NULL rows already visited by
+        backfill and marked empty."""
+        from core.services.spider_semantic_search import get_spider_semantic_search
+
+        # 1 present (has embedding vector)
+        present_row = _make_spider_row(spider_name='reddit', embedding_text='real content')
+        LegacySpiderData.objects.filter(pk=present_row.pk).update(
+            embedding=[0.1] * 1536,
+        )
+        # 1 pending_eligible (NULL embedding, NOT [NO_ITEMS])
+        _make_spider_row(spider_name='reddit', embedding_text='pending content')
+        # 1 ineligible_empty (NULL embedding, marked [NO_ITEMS])
+        _make_spider_row(spider_name='reddit', embedding_text='[NO_ITEMS]')
+
+        stats = get_spider_semantic_search().get_embedding_stats()
+
+        assert stats['total'] == 3
+        assert stats['present'] == 1
+        assert stats['pending_eligible'] == 1
+        assert stats['ineligible_empty'] == 1
+        assert stats['embeddable_total'] == 2
+        # embeddable coverage = 1 present / (1 present + 1 pending_eligible) = 50%
+        assert stats['embeddable_coverage_percent'] == 50.0
+
+    def test_pending_invariant_equals_split_sum(self):
+        """Rigby T1 fold invariant: legacy `pending` equals
+        `pending_eligible + ineligible_empty`. Locks the backward-compat
+        contract in place so future edits can't silently drift the sum."""
+        from core.services.spider_semantic_search import get_spider_semantic_search
+
+        _make_spider_row(embedding_text='real content')  # pending_eligible
+        _make_spider_row(embedding_text='another one')   # pending_eligible
+        _make_spider_row(embedding_text='[NO_ITEMS]')    # ineligible_empty
+        _make_spider_row(embedding_text='[NO_ITEMS]')    # ineligible_empty
+        _make_spider_row(embedding_text='[NO_ITEMS]')    # ineligible_empty
+
+        stats = get_spider_semantic_search().get_embedding_stats()
+
+        assert stats['pending'] == stats['pending_eligible'] + stats['ineligible_empty']
+        # Legacy fields still equal new ones exactly (no more sampling drift).
+        assert stats['with_embedding'] == stats['present']
+        assert stats['searchable'] == stats['present']
+        assert stats['total_entries'] == stats['total']
+
+    def test_embeddable_coverage_100_percent_when_no_eligible(self):
+        """S2972: when there's no eligible pending queue, embeddable coverage
+        reads 100% (not 0/0 crash). Prevents the 'coverage regressed from
+        25% to 0%' misread that motivated this arc — the OLD `coverage_percent`
+        still reports 0% for the same state so both perspectives coexist."""
+        from core.services.spider_semantic_search import get_spider_semantic_search
+
+        # Only [NO_ITEMS] rows — nothing embeddable.
+        _make_spider_row(embedding_text='[NO_ITEMS]')
+        _make_spider_row(embedding_text='[NO_ITEMS]')
+
+        stats = get_spider_semantic_search().get_embedding_stats()
+        assert stats['pending_eligible'] == 0
+        assert stats['embeddable_total'] == 0
+        # No embeddable rows → treat as fully covered (0/0 doesn't degrade).
+        assert stats['embeddable_coverage_percent'] == 100.0
+        # But total coverage is still 0% (no rows have embeddings).
+        assert stats['coverage_percent'] == 0
+
+    def test_recent_24h_bucketing(self):
+        """S2972 last-24h intake quality: split fresh rows into embedded /
+        marked_no_items / still_pending, plus the no_items_rate that the UI
+        needs to signal a pipeline-health regression."""
+        from core.services.spider_semantic_search import get_spider_semantic_search
+
+        # 4 rows created 1 day ago (inside 24h window)
+        r1 = _make_spider_row(embedding_text='embedded', days_ago=0)
+        LegacySpiderData.objects.filter(pk=r1.pk).update(embedding=[0.1] * 1536)
+        _make_spider_row(embedding_text='[NO_ITEMS]', days_ago=0)
+        _make_spider_row(embedding_text='[NO_ITEMS]', days_ago=0)
+        _make_spider_row(embedding_text='still pending', days_ago=0)
+        # Old row outside window
+        _make_spider_row(embedding_text='old', days_ago=10)
+
+        stats = get_spider_semantic_search().get_embedding_stats()
+        r24 = stats['recent_24h']
+        assert r24['total'] == 4
+        assert r24['embedded'] == 1
+        assert r24['marked_no_items'] == 2
+        assert r24['still_pending'] == 1
+        assert r24['no_items_rate'] == 50.0  # 2 of 4
+        # Legacy alias still populated.
+        assert r24['with_embedding'] == 1
 
 
 class SignalClusterFilterTests(TestCase):
