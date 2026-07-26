@@ -41,6 +41,55 @@ Stored in `core.models_unified_system`. Key fields:
 
 Do NOT use: market_alert, security_alert, price_alert, breaking_news (these don't exist).
 
+## Diagnostic run persistence (S2969)
+
+Before S2969 the Beat spider runner (``_impl_run_spider_network`` in
+``core/tasks_spiders.py``) skipped ``LegacySpiderData`` persistence
+whenever ``unique_items`` was empty. Combined with dashboards that
+count ``LegacySpiderData`` rows, spiders that ran-but-produced-nothing
+appeared as ``never_run`` even though ``SpiderExecutionLog`` had 76+
+successful runs on record for the last 7d.
+
+The runner now persists lightweight *diagnostic* rows into
+``LegacySpiderData`` under two conditions:
+
+- ``success_empty`` — fetch succeeded but yielded 0 unique items after
+  dedup (``empty_reason`` is ``no_items`` if the fetch itself returned
+  nothing, or ``all_deduped`` if items were fetched but all had been
+  seen before)
+- ``skipped_missing_credentials`` — the spider's declared
+  ``required_env_keys`` (in ``core.services.spider_diagnostic``) were
+  unset; the fetch is skipped entirely and a diagnostic row records
+  which keys were missing
+
+Diagnostic rows carry ``raw_data.diagnostic`` (dict) with
+``ephemeral_empty_run=True`` (in the default ``diagnostic_7d`` mode),
+``relevance_score=0`` (so signal-quality scoring ignores them), and a
+back-pointer ``execution_log_id`` linking to the corresponding
+``SpiderExecutionLog`` row.
+
+> ``execution_log_id`` is a **best-effort debugging pointer**, not a
+> foreign key. It may be ``None`` on the dashboard-Execute path (which
+> writes diagnostic rows without going through ``SpiderExecutionLog``),
+> and it may point at a row that has since been retention-pruned. Do
+> not treat it as a join contract.
+
+**Feature flags (env):**
+- ``SPIDER_EMPTY_RUN_PERSISTENCE_MODE`` ∈ ``{'off', 'diagnostic_7d', 'always'}``
+  (default ``diagnostic_7d``). ``off`` restores pre-S2969 silent no-op.
+  ``always`` keeps diagnostic rows forever.
+- ``SPIDER_SKIP_MISSING_CREDS_LOUDLY`` ∈ ``{'true', 'false'}`` (default ``true``).
+
+**Retention:** ``core.tasks.cleanup_empty_spider_runs(days=7)`` deletes
+diagnostic rows tagged ``ephemeral_empty_run=True`` older than the
+given window. Ships un-scheduled — run manually (or add a beat entry)
+once accumulation rates are known.
+
+**Applies to:** ``_impl_run_spider_network`` (Beat-scheduled) only.
+The on-demand paths (``execute_single_spider`` and
+``execute_single_spider_lightweight``) preserve the old silent-skip
+behavior so UI-triggered runs don't create diagnostic noise.
+
 ## Signal Aggregation Flow
 
 ```
