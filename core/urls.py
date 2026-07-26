@@ -1619,6 +1619,7 @@ from core.views.signals_ui import (
     signals_feed_detail as _signals_feed_detail,
     signals_embedding_coverage as _signals_embedding_coverage,
 )
+from core.views_theme_signals import theme_signals as _theme_signals
 
 urlpatterns = [
     # UNIFIED FRONTEND - Primary routing (Session 31: Consolidated to root routes)
@@ -2753,7 +2754,11 @@ urlpatterns = [
     path('api/signals/feed/', _signals_feed, name='signals-feed'),
     path('api/signals/feed/<uuid:row_id>/', _signals_feed_detail, name='signals-feed-detail'),
     path('api/signals/embedding-coverage/', _signals_embedding_coverage, name='signals-embedding-coverage'),
-    
+
+    # S2978: Theme Signals v1 — Buildable/Investable tab-scoped cards for the
+    # Workspace UI. See core/views_theme_signals.py + deliverable 63ec4d1d.
+    path('api/theme-signals/', _theme_signals, name='theme-signals'),
+
     # ===== MIGRATED API ENDPOINTS =====
     
     # Analytics & Dashboard APIs (from donkey_betz core)

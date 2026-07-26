@@ -671,6 +671,9 @@ export const signalsApi = {
     api.get('/v1/signal-clusters/', { params }),
   clusterDetail: (clusterId: string) =>
     api.get(`/v1/signal-clusters/${clusterId}/`),
+  // S2978: Theme Signals v1 — tab-scoped Buildable/Investable cards.
+  themeSignals: (params?: { tab?: 'buildable' | 'investable'; days?: number; limit?: number; min_confidence?: number }) =>
+    api.get('/theme-signals/', { params }),
 }
 
 // Session 734: Income Builder API - Revenue generation and action plans
