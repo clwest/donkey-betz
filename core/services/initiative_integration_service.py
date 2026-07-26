@@ -344,10 +344,28 @@ class InitiativeIntegrationService:
 
         # Session 915: Trigger Stage 1 document generation
         # This ensures all new initiatives get their Research Brief created automatically
+        # S2981 follow-up: routed through queue_stage_document_generation for
+        # enqueue-time validation + durable provenance.
         try:
-            from core.tasks import generate_initiative_stage_document
-            task = generate_initiative_stage_document.delay(str(initiative.id), 1)
-            self.logger.info(f"[Session 915] Triggered Stage 1 document generation for {initiative.name}: task {task.id}")
+            from core.services.initiative_stage_dispatch import (
+                queue_stage_document_generation,
+            )
+            outcome = queue_stage_document_generation(
+                str(initiative.id), 1,
+                triggered_by='initiative_integration_service.initialize_stages',
+            )
+            if outcome['success']:
+                self.logger.info(
+                    f"[Session 915] Triggered Stage 1 document generation for "
+                    f"{initiative.name}: task {outcome['task_id']} "
+                    f"(provenance={outcome['provenance_execution_id']})"
+                )
+            else:
+                self.logger.warning(
+                    f"[Session 915] Stage 1 enqueue refused for "
+                    f"{initiative.name}: reason={outcome['reason']} "
+                    f"error={outcome['error']}"
+                )
         except Exception as e:
             # Don't fail initiative creation if task scheduling fails
             self.logger.warning(f"[Session 915] Could not trigger Stage 1 generation for {initiative.name}: {e}")

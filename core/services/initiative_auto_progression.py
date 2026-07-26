@@ -646,7 +646,9 @@ def trigger_next_stage_generation(initiative_id: str) -> Dict[str, Any]:
         Dict with generation status
     """
     from core.models_document_registry import Initiative, InitiativeStage
-    from core.tasks import generate_initiative_stage_document
+    from core.services.initiative_stage_dispatch import (
+        queue_stage_document_generation,
+    )
 
     try:
         initiative = Initiative.objects.get(id=initiative_id)
@@ -682,23 +684,35 @@ def trigger_next_stage_generation(initiative_id: str) -> Dict[str, Any]:
         }
 
     # Schedule async generation
-    try:
-        task = generate_initiative_stage_document.delay(
-            str(initiative_id),
-            current_stage
+    # S2981 follow-up: routed through queue_stage_document_generation for
+    # enqueue-time validation + durable provenance.
+    outcome = queue_stage_document_generation(
+        str(initiative_id), current_stage,
+        triggered_by='initiative_auto_progression.trigger_next_stage_generation',
+    )
+    if outcome['success']:
+        logger.info(
+            f"[Session 905] Scheduled Stage {current_stage} generation for "
+            f"{initiative.name}: task {outcome['task_id']} "
+            f"(provenance={outcome['provenance_execution_id']})"
         )
-        logger.info(f"[Session 905] Scheduled Stage {current_stage} generation for {initiative.name}: task {task.id}")
-
         return {
             'success': True,
             'stage': current_stage,
-            'task_id': task.id,
+            'task_id': outcome['task_id'],
+            'provenance_execution_id': outcome['provenance_execution_id'],
             'initiative_name': initiative.name,
-            'message': f'Stage {current_stage} document generation scheduled'
+            'message': f'Stage {current_stage} document generation scheduled',
         }
-    except Exception as e:
-        logger.error(f"[Session 905] Failed to schedule stage generation: {e}")
-        return {'success': False, 'error': str(e)}
+    logger.error(
+        f"[Session 905] Failed to schedule stage generation for "
+        f"{initiative.name}: {outcome['error']}"
+    )
+    return {
+        'success': False,
+        'error': outcome['error'] or 'enqueue refused',
+        'reason': outcome['reason'],
+    }
 
 
 def get_initiatives_ready_for_progression() -> list:
