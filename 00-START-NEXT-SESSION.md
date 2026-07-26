@@ -2,43 +2,41 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2968 CLOSED with a workflow reframe. Two code PRs shipped (#3588 PR-A v2 subprocess dispatch + #3589 PR-A schema follow-up), one code branch pushed-not-merged (`feat/s2968-pr-b-deliverable-as-spec`, local commit `1189232a6`). **The end-of-session reframe is the important artifact**: Rigby doesn't need her own coding agent inside the app. The user (Chris) works with Rigby → Rigby writes an engineering-spec Deliverable → the user hands the spec pointer to Claude Code → CC picks it up on orient → CC executes + SIGNs with Rigby + ships. Same workflow shape as tonight; the initiation direction flips (Chris→Rigby→CC instead of Chris→CC→Rigby). Full context: `docs/handoffs/SESSION_2968_OPTION_BETA_AND_REFRAME.md`.
+## READ THIS FIRST — SESSION 2969 CLOSED. Workflow reframe validated on first walk. One code PR shipped (#3591 PR-A spider diagnostic persistence). Chris + Rigby produced spec deliverable → Chris handed UUID to CC on session open → CC executed with T1/A2×2 SIGN cycles → merged + recycled → Rigby verified via `spider_status_tool.history` → Chris ratified via terminal. Zero terminal yes/no asks during execution. Reddit + sports_injuries "never_run" symptom RESOLVED at the dashboard/tool-surface level. Root cause of 0-items outcome (network/DNS egress) surfaced as a candidate infra arc. PR-B (fix spider code) CLOSED under Rigby verdict — spider code isn't the bug. Full context: `docs/handoffs/SESSION_2969_SPIDER_DIAGNOSTIC_PERSISTENCE.md`.
 
-**Session cost this session:** ~$0.51 (0.13 CLI probe + 0.17 in-process v2 + 0.02 v1 through worker + 0.19 v2 through worker). No further spend after Chris called timeout mid-PR-B live-verify prep.
+**Session cost this session:** minimal — no v2 subprocess dispatches; only PA-tool calls to Rigby (2 T1/A2 cycles + 1 spider_status_tool verify + 1 live-verify report).
 
-**HEAD at close:** `f3c62fbdc` (PR #3589 merged; docs cascade PR TBD). Workers recycled twice per PLAYBOOK-7.4.4.
+**HEAD at close:** `e6dea2d52` (PR #3591 merged; docs cascade PR TBD). Worker recycled once per PLAYBOOK-7.4.4; second recycle after docs cascade merge.
 
 ---
 
-## S2969 first-action — WAIT FOR CHRIS
+## S2970 first-action — WAIT FOR CHRIS (same as S2969)
 
-**Do NOT open the day with a code proposal.** The reframe says the workflow starts with Chris + Rigby, not Chris + CC. Your job at session open:
+The reframe held. Same open shape as S2969:
 
 1. Run `context-kit orient` (auto-injected at session start; read the output).
 2. Absorb this file + MEMORY.md + CLAUDE.md (auto-injected).
-3. Read `docs/handoffs/SESSION_2968_OPTION_BETA_AND_REFRAME.md` in full — especially §"End-of-session reframe."
-4. **Report readiness in one short message and wait.** Something like: "Oriented. S2968 closed with a workflow reframe — you work with Rigby first, then hand me a spec pointer. Ready when you have one."
+3. Read `docs/handoffs/SESSION_2969_SPIDER_DIAGNOSTIC_PERSISTENCE.md` in full — especially §"The workflow reframe: first walk" and §"What deferred / closed under Rigby's verdict."
+4. **Report readiness in one short message and wait.** Something like: "Oriented. S2969 closed — workflow reframe validated. Spider observability shipped, root cause of 0-items is worker egress (deferred to infra arc). Ready when you have a spec pointer."
 5. **Do NOT propose engineering work. Do NOT dispatch anything to Rigby proactively.** Chris opens Rigby chat first; you wait for the handoff.
 
 **When Chris hands you a Deliverable ID / title / spec pointer:**
 
-1. Read the spec: `bash tools/pa_local.sh "deliverable_tool action=get id=<UUID>"` (or read directly from ORM if faster).
+1. Read the spec: `bash tools/pa_local.sh "deliverable_tool action=get id=<UUID>"` (or read directly from ORM if faster — surface truncates around ~8k chars).
 2. Confirm you understand: "Got it — spec title is X, acceptance criteria are Y, out of scope is Z. Starting."
-3. Execute the code per the spec's acceptance criteria.
-4. Ping Rigby for SIGN cycle(s) using the pattern from S2968 (T1 pre-code SIGN with tool-verify directives + mandatory zoom-out ask; A2 post-code SIGN with live verification evidence).
-5. On AGREE: commit + PR + merge with `--admin` + `make recycle-all` per PLAYBOOK-7.4.4.
-6. Report back to Chris with the per-PR three-part plain-English summary (per `feedback_session_close_three_part_summary` + `feedback_per_pr_summary_signals_close_readiness`).
+3. Explore the code surface + probe live state before drafting a plan (S2969 pattern: shell probe surfaced `SpiderExecutionLog` had 76 successful runs while `LegacySpiderData` had 0 — this reframed the entire fix from "spider parsing" to "auditability primitive lives in a different table").
+4. Route T1 pre-code plan to Rigby with tool-verify directives + mandatory zoom-out ask.
+5. Fold refinements → implement → tests → route A2 post-code SIGN with concrete file+line evidence per PLAYBOOK-6.10.9.
+6. On AGREE: commit + PR + merge with `--admin` + `make recycle-all` per PLAYBOOK-7.4.4.
+7. Live-verify (in-shell dispatch bypasses singleton locks; or dispatch through worker via `apply_async`).
+8. Ping Rigby to verify from HER tool surface — "loop closed" is when Rigby's PA tool returns the expected result, not when CC's ORM query does.
+9. Report back to Chris with the three-part plain-English summary.
 
 ---
 
-## PR-B branch decision (defer to Chris)
+## S2968 PR-B branch decision — STILL OPEN
 
-**Branch `feat/s2968-pr-b-deliverable-as-spec` is pushed to origin, no PR opened.** Contains ~470 LOC (deliverable-id resolution branch on `_handle_claude_code`, 10 tests, doc note). Under the reframe:
-
-- The **`engineering_spec` deliverable_type + `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT` addition** is still correct regardless of dispatch wiring — the spec IS the interchange format between Rigby and CC.
-- The **`deliverable_id` schema addition + resolution branch** is architecturally fine but wired for the wrong path (subprocess dispatch). Under the reframe, `deliverable_id` should route to a queue-for-pickup that CC-orient reads, not to a Celery `claude_code_engineer_task` dispatch.
-
-**Three options for PR-B (Chris picks):**
+**Branch `feat/s2968-pr-b-deliverable-as-spec` remains pushed to origin, no PR opened.** S2969 did not touch it. Chris now has empirical data on how the reframe works in practice; the A/B/C options from S2968 close still apply:
 
 | Option | What it does | Cost |
 |---|---|---|
@@ -46,19 +44,17 @@
 | **B. Push as draft** | Open PR-B as `[DRAFT — do not merge]` for visibility; note that dispatch wiring needs rework under reframe. Preserves work without acting. | ~2 min |
 | **C. Delete** | `git push origin --delete feat/s2968-pr-b-deliverable-as-spec` — throw it away. Rebuild from scratch when needed. | ~1 min |
 
-**Recommend A once Chris walks the new workflow once and confirms it feels right.** No urgency — the branch is safely on origin.
+**S2969 datapoint:** Chris DID hand a deliverable UUID by pasting it into terminal alongside the callback conversation_id. CC picked it up via `deliverable_tool.get` (surface) + ORM (full content). Worked cleanly, zero code needed. This SUPPORTS closing PR-B to option C (delete) — the manual UUID-paste flow is fine and no exempt-list / schema plumbing is strictly required for the workflow to function. But option A (ship the exempt-list + doc note only) still has value if Rigby needs to CREATE engineering_spec deliverables that would otherwise get flagged as diagnostic.
+
+**Recommend Chris pick between A and C at S2970 open.**
 
 ---
 
-## What tonight's shipped code still earns under the reframe
+## S2969 candidate arc queued (Chris picks whether to open)
 
-**PR #3588 (v2 subprocess dispatch) — DEMOTED but still real.** Not the primary path anymore, but real infrastructure for:
-- Scheduled/background dispatches (Rigby nightly evals, autonomous drift-remediation, incident response) where no human is at a terminal
-- The A/B validation trail toward eventual PR-D flip is still a valid future arc IF we decide autonomous dispatch matters as a product feature
+**Worker egress validation.** S2969 live-verify surfaced that reddit + sports_injuries + github + spotify + discord all fetch 0 items even from the worker daemon (not just Chris's local shell). Root cause is likely worker-environment DNS resolution or HTTPS egress being blocked for these hosts. Investigation would answer: which spider targets are worker-reachable? Does `make celery` inherit network egress permissions from Chris's env? Should the worker run under a network profile that whitelists spider target hosts?
 
-**PR #3589 (schema follow-up) — still needed.** Exposes `engine_mode` to LLM callers regardless of primary-vs-fallback status.
-
-**Reframe implication:** the S2968 arc's remaining planned PRs (PR-C = Deliverable status write-back, PR-D = v2 default flip + v1 deletion) become **optional / deferred** rather than automatic. Reconsider after walking the new workflow.
+**Small arc — no urgency.** If Chris cares about actual spider data (not just observability), this is the next spec Rigby should write. If Chris only cared about the "never_run" dashboard lie, that's already fixed and this can wait indefinitely.
 
 ---
 
@@ -66,9 +62,17 @@
 
 **Trigger count building toward Playbook rules — do NOT amend without a second trigger:**
 
-1. **Soft-key-vs-LLM-schema-gate.** When any param must be passed by an LLM caller, it MUST be declared in the tool schema. Soft-keys only work for internal Python callers. **Trigger count: 1** (PR #3589 was the manifestation).
+Carrying forward from S2968:
 
-2. **"We're building a duplicate of a thing we already have" pattern.** Option β caught it once (homegrown coding loop reimplementing `claude` CLI). Chris's end-of-session reframe caught it again (Rigby-side coding agent reimplementing the user's CC terminal). **Trigger count: 2 within one session.** Cross-domain (code + orchestration); may warrant a rule about "before adding a new capability, ask what already provides it in the platform's actual usage shape."
+1. **Soft-key-vs-LLM-schema-gate.** When any param must be passed by an LLM caller, it MUST be declared in the tool schema. Soft-keys only work for internal Python callers. **Trigger count: 1** (S2968 PR #3589).
+
+2. **"We're building a duplicate of a thing we already have" pattern.** Option β caught it once (homegrown coding loop reimplementing `claude` CLI). Chris's end-of-session reframe caught it again (Rigby-side coding agent reimplementing the user's CC terminal). **Trigger count: 2 within one session (S2968).** Cross-domain (code + orchestration).
+
+New at S2969:
+
+3. **"Auditability primitive already exists in a different plane" pattern.** `SpiderExecutionLog` already recorded every run with success/error/duration — the "never_run" symptom was really a dashboard-reads-wrong-table bug. Fix could have been "make dashboard read both surfaces" (Path β) instead of "persist a second signal" (Path α). We shipped α because the spec was explicit + it doesn't require dashboard changes, but the pattern is worth naming: **before adding a new observability signal, check what existing primitive already carries the answer, and consider whether the fix is at the reader instead of the writer.** **Trigger count: 1** (S2969 live probe surfaced it).
+
+4. **"Deliverable-as-spec first walk validates the workflow reframe."** S2968 end-of-session reframe held in practice: Chris + Rigby produce spec → hand UUID to CC → CC executes with SIGN cycles → merges → reports. Zero terminal yes/no asks during execution. **Trigger count: 1** (S2969 arc). If this pattern holds across another 2-3 arcs, worth surfacing as a first-class rule about "spec-driven session shape" vs the older "direct-instruction session shape." Related but distinct from #2 above — this is about SESSION SHAPE, that one is about DUPLICATE CAPABILITY.
 
 ---
 
@@ -77,24 +81,29 @@
 1. `context-kit orient` — source-of-truth chain, latest handoff
 2. Absorb `MEMORY.md` + `CLAUDE.md` (both auto-injected)
 3. Read this `00-START-NEXT-SESSION.md` in full
-4. **Session-open atomic mint check:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2969 pin minted at S2968 close cascade. If not fresh, run `python manage.py session_lifecycle close --label s2968-option-beta-reframe` first (per `feedback_session_open_atomic_mint_before_pa_dispatch`).
+4. **Session-open atomic mint check:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2970 pin minted at S2969 close cascade. If not fresh, run `python manage.py session_lifecycle close --label s2969-spider-diagnostic-persistence` first (per `feedback_session_open_atomic_mint_before_pa_dispatch`).
 5. Verify `claude` CLI availability (if v2 dispatches are on the day's plan): `which claude && claude --version` (should show 2.1.114+ at `~/.local/bin/claude`)
-6. Read `docs/handoffs/SESSION_2968_OPTION_BETA_AND_REFRAME.md` — full context on tonight's shipped code + the reframe
+6. Read `docs/handoffs/SESSION_2969_SPIDER_DIAGNOSTIC_PERSISTENCE.md` — full context on tonight's shipped code + the reframe first-walk
 7. **Wait for Chris to hand you a spec pointer via Rigby.** Do not proactively propose work.
 
 ---
 
-## What's forbidden at S2969 (D6 MORATORIUM still in force)
+## What's forbidden at S2970 (D6 MORATORIUM still in force)
 
-All prior forbidden entries carry forward. **S2968 new forbidden entries:**
-- **Do not automatically merge PR-B** — its dispatch wiring is architecturally stale under the reframe. Chris picks Option A/B/C above before any merge.
+All prior forbidden entries carry forward. **S2968-S2969 forbidden entries:**
+- **Do not automatically merge S2968 PR-B** — its dispatch wiring is architecturally stale under the reframe. Chris picks Option A/C above before any merge.
 - **Do not proactively dispatch v2 test runs at session open** — each burns ~$0.15-0.20. Only dispatch when Chris explicitly requests a v2 run.
+- **Do not chase spider parsing bugs for reddit / sports_injuries** — S2969 verified the code path works; the 0-items outcome is worker-egress at the environment level. Any fix belongs in a "worker egress validation" arc, not a spider-code arc.
 
 ---
 
 ## What's queued but deferred (do NOT open unless Chris directs)
 
-**S2968 additions:**
+**S2969 additions:**
+- **Worker egress validation arc** — investigate whether the worker daemon has outbound DNS + HTTPS access to spider target hosts (`reddit.com`, `rotowire.com`, `rss.nytimes.com`, etc.). Would need to be a Rigby-authored spec Deliverable; CC picks it up.
+- **Retention task Beat schedule** — `cleanup_empty_spider_runs` ships un-scheduled per Rigby T1. If empty-run rows accumulate faster than expected, add a Beat entry in `core/celery.py` (daily at 03:00 UTC is the suggested cadence but hold until we see actual accumulation rate).
+
+**S2968 additions (unchanged):**
 - **PR-C (Deliverable status write-back)** — reconsider after the reframe walk. May not be needed if pickup-queue design supplants dispatch-and-write-back.
 - **PR-D (v2 default flip + v1 deletion)** — deferred until we know whether autonomous dispatch is a keeper feature.
 - **Path A (nightly beat + drift dashboard for Golden Evals)** — deferred from S2968 first-action; still on the queue for whenever Chris wants it.
@@ -149,10 +158,17 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## For fuller context (S2846 → S2968)
+## For fuller context (S2846 → S2969)
 
 See:
-- **S2968 handoff (current):** `docs/handoffs/SESSION_2968_OPTION_BETA_AND_REFRAME.md`
+- **S2969 handoff (current):** `docs/handoffs/SESSION_2969_SPIDER_DIAGNOSTIC_PERSISTENCE.md`
+- **S2969 shipped code:**
+  - `core/services/spider_diagnostic.py` (NEW — env-flag helpers + persist_diagnostic_row + SPIDER_REQUIRED_ENV_KEYS)
+  - `core/tasks_spiders.py` (`_impl_run_spider_network` preflight + empty-run + enriched metrics at lines 436, 498-519, 534-545, 585-599; `_impl_execute_single_spider_lightweight` Phase 1A parity at lines 799-822)
+  - `core/tasks.py:1527` (`cleanup_empty_spider_runs` task with `_raw_delete` + `batch_cap`)
+  - `docs/topics/spider-network.md` ("Diagnostic run persistence (S2969)" section)
+  - `core/tests/test_spider_diagnostic_persistence.py` (30 tests)
+- **S2968 handoff (prior):** `docs/handoffs/SESSION_2968_OPTION_BETA_AND_REFRAME.md`
 - **S2968 shipped code:**
   - `core/services/claude_code_engineer.py` (v2 subprocess dispatch — `execute_engineering_task_v2` at line 1428+ + helpers)
   - `core/services/pa_tool_schemas.py` (`engine_mode` schema addition on `claude_code_tool`)
