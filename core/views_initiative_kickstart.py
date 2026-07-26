@@ -1510,10 +1510,23 @@ def trigger_stage_backfill(request):
                 result['triggered'] += 1
             else:
                 try:
-                    task = generate_initiative_stage_document.delay(str(init.id), 1)
-                    item['status'] = 'triggered'
-                    item['task_id'] = str(task.id)
-                    result['triggered'] += 1
+                    # S2981 follow-up: enqueue via helper for validation + provenance.
+                    from core.services.initiative_stage_dispatch import (
+                        queue_stage_document_generation,
+                    )
+                    outcome = queue_stage_document_generation(
+                        str(init.id), 1,
+                        triggered_by='views_initiative_kickstart.trigger_backfill',
+                    )
+                    if outcome['success']:
+                        item['status'] = 'triggered'
+                        item['task_id'] = outcome['task_id']
+                        item['provenance_execution_id'] = outcome['provenance_execution_id']
+                        result['triggered'] += 1
+                    else:
+                        item['status'] = f"refused: {outcome['reason']}"
+                        item['error'] = outcome['error']
+                        result['errors'] += 1
                 except Exception as e:
                     item['status'] = f'error: {str(e)}'
                     result['errors'] += 1
