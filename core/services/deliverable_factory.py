@@ -1417,6 +1417,14 @@ _TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT = frozenset({
     'engineering_record',
     'code_review',
     'session_handoff',
+    # S2968 PR-B: Rigby-authored specs for claude_code_tool dispatch.
+    # Engineering specs are session-scoped work orders (title + acceptance
+    # criteria + files-to-touch + out-of-scope), not initiative-tied
+    # artifacts. Chris reviews the spec Deliverable in the workspace UI
+    # BEFORE dispatch; the initiative-alignment diagnostic would only
+    # confuse the review by adding a false-positive "missing initiative"
+    # flag on every spec.
+    'engineering_spec',
 })
 
 
