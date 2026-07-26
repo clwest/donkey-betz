@@ -1,31 +1,31 @@
 ---
 title: "Donkey Betz Engineering Playbook"
-version: "0.9.0"
+version: "0.10.0"
 version_status: ratified
 scope: platform
-parent_version: "0.8.0"
+parent_version: "0.9.0"
 supersedes: []
-compatible_with: ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.4.1", "0.5.0", "0.6.0", "0.7.0", "0.8.0"]
+compatible_with: ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.4.1", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0"]
 ratifier: chris
-ratified_date: 2026-07-22
+ratified_date: 2026-07-26
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
   deliverable_id: PLACEHOLDER_FILLED_AT_RATIFICATION
 canonical_authority: repo_canonical
 repository_path: docs/ENGINEERING_PLAYBOOK.md
-branch_authored: playbook/v0.9.0-handler-test-authoring-discipline
+branch_authored: playbook/v0.10.0-workflow-shape-codification
 commit_sha: PLACEHOLDER_FILLED_AT_MERGE
 content_hash: PLACEHOLDER_FILLED_AT_MERGE
-git_tag: playbook-v0.9.0
+git_tag: playbook-v0.10.0
 schema_version: 1
 prior_ratification:
-  version: "0.8.0"
-  ratified_date: 2026-07-14
+  version: "0.9.0"
+  ratified_date: 2026-07-22
   deliverable_id: PLACEHOLDER_FILLED_AT_RATIFICATION
   commit_sha: PLACEHOLDER_FILLED_AT_MERGE
   content_hash: PLACEHOLDER_FILLED_AT_MERGE
-  git_tag: playbook-v0.8.0
-authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740, 2742, 2752, 2753, 2766, 2778, 2786, 2889]
+  git_tag: playbook-v0.9.0
+authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740, 2742, 2752, 2753, 2766, 2778, 2786, 2889, 2981]
 correction_sessions: [2723, 2725, 2727]
 audit_sessions: [2722, 2724, 2725, 2727, 2738, 2740, 2742, 2752]
 ratification_package_session: 2726
@@ -49,7 +49,9 @@ v0_8_0_authoring_session: 2786
 v0_8_0_ratification_session: 2786
 v0_9_0_authoring_session: 2889
 v0_9_0_ratification_session: 2889
-rule_count: 207
+v0_10_0_authoring_session: 2981
+v0_10_0_ratification_session: 2981
+rule_count: 211
 rules_added_v0_2_0: [PLAYBOOK-5.2.2, PLAYBOOK-2.2.2, PLAYBOOK-3.2.2]
 rules_added_v0_3_0: [PLAYBOOK-6.6.14, PLAYBOOK-6.10.5]
 rules_added_v0_4_0: [PLAYBOOK-6.10.6]
@@ -58,10 +60,11 @@ rules_added_v0_6_0: [PLAYBOOK-7.4.4]
 rules_added_v0_7_0: [PLAYBOOK-6.10.7, PLAYBOOK-6.10.8]
 rules_added_v0_8_0: [PLAYBOOK-6.10.9]
 rules_added_v0_9_0: [PLAYBOOK-3.2.3, PLAYBOOK-3.2.4]
+rules_added_v0_10_0: [PLAYBOOK-7.7.1, PLAYBOOK-7.7.2, PLAYBOOK-7.7.3, PLAYBOOK-7.7.4]
 evidence_manifest: docs/research/platform/engineering_playbook_evidence_manifest.md
 ---
 
-# Donkey Betz Engineering Playbook v0.9.0
+# Donkey Betz Engineering Playbook v0.10.0
 
 # Chapter 0 — Preamble and How to Read This Playbook
 
@@ -966,12 +969,12 @@ The following extension points are informative. They identify where a future MIN
 **Chapter ID:** PLAYBOOK-CH-7
 **Purpose:** Establish constitutional scope for session-open and session-close discipline as it applies to Playbook authoring sessions.
 **Scope:** Every Playbook-authoring session; session-open orientation; session-close handoff production; cascade sequencing at session boundaries.
-**Status:** STUB (v0.1). Partial activation at v0.5.0 (§7.4/§7.5/§7.6 authored); §7.4 extended at v0.6.0 with PLAYBOOK-7.4.4; remainder deferred to future MINOR amendments.
+**Status:** STUB (v0.1). Partial activation at v0.5.0 (§7.4/§7.5/§7.6 authored); §7.4 extended at v0.6.0 with PLAYBOOK-7.4.4; §7.7 authored at v0.10.0 (spec→ship workflow shape codification); remainder deferred to future MINOR amendments.
 **Introduced in:** v0.1.0
-**Last substantive change:** v0.6.0
+**Last substantive change:** v0.10.0
 **Evidence anchor:** `docs/research/platform/engineering_playbook_evidence_manifest.md`
 **Statement classes present:** [EP], [GR]
-**Rule ID range:** PLAYBOOK-7.1.1 through PLAYBOOK-7.6.1
+**Rule ID range:** PLAYBOOK-7.1.1 through PLAYBOOK-7.7.4
 
 ---
 
@@ -1013,16 +1016,31 @@ SIGN methodology is inherited from the Research Operating System per PLAYBOOK-6.
 
 **[GR] PLAYBOOK-7.6.1** For phase-close and arc-close SIGN cycles, the SIGN request MUST be structured as numbered watchpoints (W1..Wn), each attesting a specific verification dimension of the close (for example: ratification record scope; arc-doc chain-of-custody; phase-close doc completeness; cascade output shape). The SIGN reviewer's response MUST return a per-watchpoint PASS or BLOCK verdict, plus any non-blocking asks classified per PLAYBOOK-6.10.3. Per-watchpoint outcomes MUST be recorded into the close-doc SIGN log. This rule EXTENDS PLAYBOOK-6.10.3 for the close-cycle scope; it does NOT supersede the ROS SIGN methodology outside close cycles. [E2: RATIFICATION_2026-07-10_i0302_arc_close.md §5.3 (candidacy record) + §10.1 (retrospective — SIGN cycles that ran cleanly across the arc); E3: `docs/research/process/RESEARCH_OPERATING_SYSTEM.md` §2.7.1 Operational cadence (Rigby SIGN v2 fold) — the parent contract this rule extends; E6: `docs/handoffs/SESSION_2751_I0302_PHASE_4_CLOSED.md` §SIGN (first watchpoint SIGN cycle in-wild); E6: `docs/handoffs/SESSION_2751_I0302_ARC_CLOSED.md` §SIGN (second watchpoint SIGN cycle in-wild)]
 
-## 7.7 Cross-references (informative)
+## 7.7 Spec→Ship Workflow Shape
+
+§7.7 codifies a session-shape contract for spec-originated implementation work: a canonical 9-phase loop from spec receipt through close cascade, with SIGN evidence discipline, Chris-facing decision framing, and a repo-adapter contract for cross-repository application. §7.7 is a session-shape contract for spec-originated implementation sessions; it is NOT a universal SDLC contract for every PR in the platform (§7.4 codifies close-ceremony PR discipline for a distinct scope; §7.5 codifies the three-PR staged-codification pattern for a third distinct scope). §7.7 was first exercised in-wild at S2980 (Theme Signals UX Upgrade PR #3615) and refined for codification at S2981.
+
+**[GR] PLAYBOOK-7.7.1** A spec-originated implementation session MUST follow the 9-phase spec→ship contract: (1) spec receipt + pre-code discovery; (2) implementation plan with Verified Premises (each verified spec claim tagged with verification method + finding) and Artifact Map (enumeration of every artifact the session will produce by end-of-session); (3) T1 SIGN routing to the verifier with explicit file/line verify instructions and a mandatory zoom-out ask; (4) T1 verdict processing with F-BLOCKER application to the plan; (5) joint recommendation to Chris framed as ≤1 decision; (6) implement; (7) A2 SIGN routing verifying F-BLOCKER resolution and spec conformance; (8) ship (merge + post-merge worker recycle per PLAYBOOK-7.4.4 + live verify); (9) close cascade. Once the session enters Phase 6 implement, phases MUST NOT be skipped and Phase 7 A2 SIGN MUST precede Phase 8 ship. A session MAY abort at any phase between Phase 1 and Phase 5 without executing subsequent phases when Phase 1 or Phase 2 discovery invalidates a spec premise, when the T1 verdict returns a DISAGREE without a same-PR mitigation, or when Chris's D-verdict rejects the plan; an abort MUST be recorded in a session handoff citing the invalidating finding. Phase 8 ship EXTENDS Chapter 7 §7.4 close-ceremony rules when the shipped PR is a close-ceremony PR (per PLAYBOOK-7.4.1 bundle discipline); when the shipped PR is not a close-ceremony PR, Phase 8 is standard merge discipline plus live verify. This rule EXTENDS PLAYBOOK-7.2.1 (session-open orientation baseline) with a spec-originated-work contract. [E2: RATIFICATION_2026-07-26_PLAYBOOK_V0_10_0.md §3 (S2980 first-trigger + S2981 second-trigger — this envelope itself walks the phases); E5: workspace deliverable `e8429049-300f-4725-8d02-a79c285ed720` §Phase recipe (0–9) (S2980 codified recipe with SUPERSEDES block ratified 2026-07-26); E6: `docs/handoffs/SESSION_2980_THEME_SIGNALS_UX_UPGRADE.md` §"What made this session unusual" (first-trigger execution record)]
+
+**[GR] PLAYBOOK-7.7.2** A T1 or A2 SIGN routing under the spec→ship contract MUST include tool-grounded verify instructions naming specific files at specific line ranges (or specific ORM queries, API probes, or ops-tool checks). The SIGN reviewer's verdict MUST include the `tool_runs` performed inline with the AGREE/DISAGREE attestation and MUST cite line numbers or query shapes for each verification. Empty `tool_runs` paired with a generic AGREE constitutes rubber-stamp signal and the routing MUST be re-issued with corrected verify instructions before Phase 4 verdict processing or Phase 8 ship proceeds. This rule EXTENDS PLAYBOOK-6.10.9 (fold-authoring evidence admission) to the SIGN-cycle verification scope; the evidence-admission discipline that governs fold authoring at 6.10.9 governs T1/A2 SIGN verification at 7.7.2. [E5: `MEMORY.md` `feedback_verify_rigby_tool_runs_before_trusting_sign`; E2: RATIFICATION_2026-07-22_PLAYBOOK_V0_9_0.md §4 (v0.9.0 T1 SIGN exercised 10 tool_runs across two response turns — precedent); E2: RATIFICATION_2026-07-26_PLAYBOOK_V0_10_0.md §4 (v0.10.0 T1 SIGN exercised 8 tool_runs across two response turns — corroboration)]
+
+**[GR] PLAYBOOK-7.7.3** A Phase 5 joint recommendation routed to Chris under the spec→ship contract MUST answer two questions in plain English BEFORE the yes/no ask: (a) "Do we lose anything?" (b) "Is it more work later?" The recommendation MUST route ≤1 decision at a time. Jargon (rule IDs, fold letters, trigger counts, phase numbers, SIGN cycle terminology) MUST stay in verifier SIGN cycles and session handoffs; Chris-facing routings under Phase 5 MUST use plain-English framing. This rule EXTENDS PLAYBOOK-5.2.2 (verification objective dispatch by the author to the PA) with a Chris-facing decision framing contract; it governs the Phase 5 output shape, not the Phase 3/7 verifier-dispatch shape 5.2.2 already governs. [E5: `MEMORY.md` `feedback_plain_english_decision_framing_for_chris`; E5: `MEMORY.md` `feedback_claude_rigby_agree_first_chris_yes_no`; E5: `MEMORY.md` `feedback_session_close_three_part_summary` (final-close variant of the framing discipline)]
+
+**[GR] PLAYBOOK-7.7.4** When the spec→ship contract is applied to a repository other than `unified-donkey-betz`, Phase 0 MUST detect the target repo's context-kit substrate: run `context-kit orient` and confirm `.context-kit/verify.yaml` exists at repo root. If either check fails, the first Phase-0 action MUST be `context-kit adopt` (dry-run default → review → `--write`). Verification in the target repo is layered: Layer 1 (context-kit primitives — `verify.yaml` + `context-kit verify` + `context-kit inventory --check` + `context-kit orient` + `context-kit inspect`) is the authoritative surface for documentation and inventory drift and MUST be treated as ground truth when doc claims disagree with runtime-derived facts. Layer 2 (repo-local unit tests, `http_smoke_test`, ops-tool checks, ORM shell probes, browser smokes) is the authoritative surface for runtime behavior verification and MUST NOT be substituted by Layer 1; Layer 1 does not verify runtime behavior. Every finding cited in a T1 or A2 SIGN routing MUST tag its verification surface as one of Layer 1, Layer 2, or Claude-local-shell (the last reserved for verifier-tool-inaccessible surfaces such as local CLI binaries). [E5: workspace deliverable `e8429049-300f-4725-8d02-a79c285ed720` §"Repo repointing — context-kit adapter contract (scalability) [REPLACEMENT]" (ratified 2026-07-26 S2981); E5: `.context-kit/verify.yaml` (canonical-docs contract file at repo root, 353 bytes, canonical_docs = 5); E5: `context-kit` CLI at `/Users/donkeyking/.local/bin/context-kit` (Claude-local-shell verified at S2981 — subcommands `orient`, `verify`, `inventory --write|--check|--json`, `adopt` (dry-run default; `--write` to apply), `inspect`, `doctor`)]
+
+## 7.8 Cross-references (informative)
 
 - `CLAUDE.md` — session-open contract at repository root.
 - `00-START-NEXT-SESSION.md` — per-session priorities.
 - `docs/handoffs/` — historical session record.
 - Chapter Evolution and Amendment §The Amendment Lifecycle.
 - Chapter Provenance and Evidence §6.10 (verification protocol) — PLAYBOOK-6.10.3 is the parent contract that §7.6.1 extends for the close-cycle scope.
+- Chapter Provenance and Evidence §6.10 — PLAYBOOK-6.10.9 is the parent contract that §7.7.2 extends for the SIGN-cycle verification scope.
+- Chapter PA / Rigby Collaboration §5.2 — PLAYBOOK-5.2.2 is the parent contract that §7.7.3 extends for the Chris-facing decision framing scope.
 - `docs/research/process/RESEARCH_OPERATING_SYSTEM.md` §2.7.1 — the ROS Rigby SIGN v2 fold that PLAYBOOK-6.10.3 inherits and §7.6.1 specializes.
+- Workspace deliverable `e8429049-300f-4725-8d02-a79c285ed720` — the S2980 workflow-shape source deliverable that §7.7 codifies.
 
-## 7.8 Extension points (informative)
+## 7.9 Extension points (informative)
 
 - Session-close handoff completeness discipline (remaining §7.3 deferral scope).
 - Session-open orientation extension for cross-repository work (remaining §7.3 deferral scope).
