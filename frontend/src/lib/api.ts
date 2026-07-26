@@ -665,8 +665,8 @@ export const signalsApi = {
     api.get('/signals/feed/', { params }),
   feedDetail: (rowId: string) =>
     api.get(`/signals/feed/${rowId}/`),
-  embeddingCoverage: () =>
-    api.get('/signals/embedding-coverage/'),
+  embeddingCoverage: (params?: { include_breakdown?: boolean | number; window?: 24 | 168 | 720 }) =>
+    api.get('/signals/embedding-coverage/', { params }),
   clusters: (params?: SignalClustersParams) =>
     api.get('/v1/signal-clusters/', { params }),
   clusterDetail: (clusterId: string) =>
