@@ -5603,6 +5603,20 @@ PA_TOOL_SCHEMAS = [
                         "returns status='budget_exceeded' with partial results."
                     ),
                 },
+                "engine_mode": {
+                    "type": "string",
+                    "enum": ["v1", "v2"],
+                    "description": (
+                        "Session 2968 PR-A. Selects the engineer implementation: "
+                        "'v1' (default) runs the homegrown LLM loop with 5 primitive "
+                        "tools; 'v2' subprocess-dispatches to the `claude` CLI (real "
+                        "coding tools + auto-CLAUDE.md read + resumable sessions). "
+                        "Omit to use the CLAUDE_CODE_ENGINE_MODE env default. Explicitly "
+                        "set 'v2' to A/B test the new path on a single dispatch. NOTE: "
+                        "v2 refuses max_cost_usd < $0.25 (CLI startup cache alone burns "
+                        "~$0.13); v2 caps max_iterations at 50 until PR-D validation."
+                    ),
+                },
             },
             "required": ["task"],
         },
