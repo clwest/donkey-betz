@@ -122,12 +122,26 @@ class Command(BaseCommand):
                 triggered += 1
             else:
                 try:
-                    task = generate_initiative_stage_document.delay(
-                        str(initiative.id),
-                        stage_num
+                    # S2981 follow-up: enqueue via helper for provenance + validation.
+                    from core.services.initiative_stage_dispatch import (
+                        queue_stage_document_generation,
                     )
-                    self.stdout.write(f"  🚀 Triggered: {initiative.name[:40]}... (task {task.id})")
-                    triggered += 1
+                    outcome = queue_stage_document_generation(
+                        str(initiative.id), stage_num,
+                        triggered_by='backfill_stage_documents.management_command',
+                    )
+                    if outcome['success']:
+                        self.stdout.write(
+                            f"  🚀 Triggered: {initiative.name[:40]}... "
+                            f"(task {outcome['task_id']})"
+                        )
+                        triggered += 1
+                    else:
+                        self.stdout.write(self.style.WARNING(
+                            f"  ⚠ Refused: {initiative.name[:40]}: "
+                            f"reason={outcome['reason']} error={outcome['error']}"
+                        ))
+                        errors += 1
                 except Exception as e:
                     self.stdout.write(self.style.ERROR(f"  ❌ Error: {initiative.name[:40]}: {e}"))
                     errors += 1
