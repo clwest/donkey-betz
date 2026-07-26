@@ -133,6 +133,31 @@ class QuerySpiderFeedTests(TestCase):
         assert result['total'] == 1
         assert result['items'][0]['embedding_status'] == 'empty'  # empty string in DB
 
+    def test_stale_sentinel_filters_as_marked_empty_not_present(self):
+        """S2975: stale ghost rows must bucket as `marked_empty` in the
+        Feed Explorer — else the UI would show them as `present` (they're
+        not; they have no embedding)."""
+        _make_spider_row(spider_name='legislation',
+                         embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]',
+                         raw_data={})
+
+        # `present` filter must NOT include stale rows.
+        present = query_spider_feed(embedding_status='present')
+        stale_ids_in_present = [
+            i for i in present['items']
+            if i['embedding_text'] == '[NO_ITEMS_STALE_EMPTY_RAW]'
+        ]
+        assert stale_ids_in_present == []
+
+        # `marked_empty` filter MUST include stale rows alongside real NO_ITEMS.
+        marked = query_spider_feed(embedding_status='marked_empty')
+        stale_ids_in_marked = [
+            i for i in marked['items']
+            if i['embedding_text'] == '[NO_ITEMS_STALE_EMPTY_RAW]'
+        ]
+        assert len(stale_ids_in_marked) == 1
+        assert stale_ids_in_marked[0]['embedding_status'] == 'marked_empty'
+
     def test_actionable_only(self):
         _make_spider_row(spider_name='reddit', is_actionable=False, days_ago=1)
         result = query_spider_feed(actionable_only=True)
@@ -151,6 +176,9 @@ class QuerySpiderFeedTests(TestCase):
         assert _embedding_status(None) == 'missing'
         assert _embedding_status('') == 'empty'
         assert _embedding_status('[NO_ITEMS]') == 'marked_empty'
+        # S2975: stale sentinel buckets as marked_empty (both are "processed,
+        # not embedded" from a feed-UI perspective).
+        assert _embedding_status('[NO_ITEMS_STALE_EMPTY_RAW]') == 'marked_empty'
         assert _embedding_status('real content') == 'present'
 
 
