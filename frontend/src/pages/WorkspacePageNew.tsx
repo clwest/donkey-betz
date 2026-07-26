@@ -52,6 +52,7 @@ import {
   Inbox,
   Wrench,
   Radar,
+  Sparkles,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { workspaceApi, workspaceOperationsApi, authApi } from '@/lib/api'
@@ -108,6 +109,7 @@ import { ZoomOutLedgerSection } from './workspace/tabs/ZoomOutLedgerSection'
 import { TenantBoundaryHealthSection } from './workspace/tabs/TenantBoundaryHealthSection'
 // S2971: Signal Intelligence UI sub-tab under Intelligence.
 import { SignalsTab } from './workspace/tabs/signals/SignalsTab'
+import { ThemeSignalsTab } from './workspace/tabs/theme-signals/ThemeSignalsTab'
 import { Toast } from './workspace/components'
 
 // ─── S2798: First-run onboarding banner (editable copy — Rigby F3) ───────────
@@ -171,6 +173,8 @@ const primaryTabs: PrimaryTab[] = [
       { id: 'rag-diagnostics', label: 'RAG Diagnostics', icon: Radar },
       // S2971: Signal Intelligence UI — deliverable ade9339f-...
       { id: 'signals', label: 'Signals', icon: Radar },
+      // S2978: Theme Signals v1 — deliverable 63ec4d1d-... (product-tier UI on SignalCluster)
+      { id: 'theme-signals', label: 'Theme Signals', icon: Sparkles },
     ],
   },
   {
@@ -1271,6 +1275,10 @@ export default function WorkspacePage() {
           {/* S2971: Signal Intelligence UI — deliverable ade9339f-... */}
           {activePrimary === 'intelligence' && activeSub === 'signals' && (
             <SignalsTab />
+          )}
+          {/* S2978: Theme Signals v1 — deliverable 63ec4d1d-... */}
+          {activePrimary === 'intelligence' && activeSub === 'theme-signals' && (
+            <ThemeSignalsTab />
           )}
 
           {/* SYSTEM */}
