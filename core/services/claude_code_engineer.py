@@ -28,7 +28,10 @@ Tools available to the engineer:
 import json
 import logging
 import os
+import shutil
 import subprocess
+import uuid as _uuid_mod
+from subprocess import TimeoutExpired
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -1424,3 +1427,342 @@ def _post_to_conversation(
             "see it until next poll",
             conversation_id, type(e).__name__, e,
         )
+
+
+# ── Session 2968 PR-A: Option β subprocess dispatch (execute_engineering_task_v2) ──
+#
+# Homegrown v1 (execute_engineering_task above) runs a custom LLM loop with 5
+# primitive tools — reimplementing what Anthropic's `claude` CLI already ships.
+# v2 delegates to the CLI as a subprocess: real coding tools (jump-to-definition,
+# semantic search, plan mode, sub-agents), automatic CLAUDE.md reading, mature
+# cost telemetry, resumable sessions via --session-id.
+#
+# Ships behind CLAUDE_CODE_ENGINE_MODE=v2 env flag (default v1). Both codepaths
+# return shape-compatible envelopes so claude_code_engineer_task
+# (core/tasks.py:11873) doesn't branch. Payload-level `engine_mode` override in
+# _handle_claude_code (td_handlers_codejobs.py) gives per-dispatch A/B control
+# without worker restarts — Rigby T1 SIGN refinement.
+#
+# Rigby T1 SIGN refinements folded into this build:
+#   - Refuse v2 if max_cost_usd < $0.25 (CLI startup cache alone can burn ~$0.13
+#     ephemeral cache creation observed in tonight's probe)
+#   - Hard-cap --max-turns at 50 until PR-D validates v2 quality
+#   - Envelope warning `startup_tax_dominated` when cost >= $0.10 AND num_turns <= 2
+#   - model_used = highest-cost modelUsage key; model_usage carries full dict
+#   - Carry is_error / api_error_status / permission_denials for diagnostics
+
+# Resolve the `claude` CLI at import time so missing-binary fails loud on module
+# load in v2-configured environments. v1 dispatches unaffected.
+_CLAUDE_CLI_BIN = shutil.which('claude')
+
+V2_HARD_MAX_TURNS_CEILING = 50
+V2_MIN_ACCEPTABLE_COST_CAP_USD = 0.25
+# Rigby A2 SIGN refinement: gate startup-tax warning on cost-per-turn rather
+# than absolute cost, so a 2-turn dispatch has to be materially expensive
+# (>= $0.20 total) to trigger. Reduces warning inflation on legitimate
+# small-but-not-tiny multi-turn ANSWER dispatches while still flagging the
+# "one turn, $0.13 startup, trivial output" pattern.
+V2_STARTUP_TAX_COST_PER_TURN_THRESHOLD_USD = 0.10
+V2_STARTUP_TAX_TURN_THRESHOLD = 2
+
+
+def _v2_pick_primary_model(model_usage: Optional[Dict[str, Any]]) -> Optional[str]:
+    """Return the highest-cost model key from the CLI's modelUsage dict.
+
+    CLI can invoke multiple models in one dispatch (subagents, plan mode).
+    Rigby SIGN refinement: single-key returns the only key; multi-key returns
+    whichever cost the most so "which model did this dispatch?" has a canonical
+    answer for audit.
+    """
+    if not model_usage or not isinstance(model_usage, dict):
+        return None
+    if len(model_usage) == 1:
+        return next(iter(model_usage))
+    return max(
+        model_usage.keys(),
+        key=lambda k: (model_usage.get(k) or {}).get('costUSD', 0.0),
+    )
+
+
+def _v2_startup_tax_warnings(cost_usd: Optional[float], num_turns: Optional[int]) -> List[str]:
+    """Return ['startup_tax_dominated'] if the run looks mostly-startup-cost.
+
+    Heuristic (Rigby A2 SIGN refinement): a dispatch is startup-tax-dominated
+    when total_cost / max(num_turns, 1) >= $0.10 AND num_turns <= 2. The
+    cost-per-turn gate means a 2-turn dispatch needs >= $0.20 total to fire,
+    which suppresses warnings on legitimate small-but-not-tiny multi-turn work
+    while still catching the "single turn + $0.13 startup + trivial output"
+    pattern that we saw in tonight's PR-A probe.
+    """
+    if cost_usd is None or num_turns is None:
+        return []
+    turns = max(num_turns, 1)
+    cost_per_turn = cost_usd / turns
+    if (cost_per_turn >= V2_STARTUP_TAX_COST_PER_TURN_THRESHOLD_USD
+            and num_turns <= V2_STARTUP_TAX_TURN_THRESHOLD):
+        return ['startup_tax_dominated']
+    return []
+
+
+def _v2_error_envelope(
+    *,
+    error_msg: str,
+    engine_mode: str,
+    repo_root: str,
+    effective_max_iterations: int,
+    effective_max_cost_usd: float,
+    session_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Uniform v2 error envelope so all failure paths return the same shape."""
+    return {
+        'status': 'error',
+        'error': error_msg,
+        'engine_mode': engine_mode,
+        'session_id': session_id,
+        'repo_root': repo_root,
+        'cost_usd': 0.0,
+        'iterations_used': 0,
+        'effective_max_iterations': effective_max_iterations,
+        'effective_max_cost_usd': effective_max_cost_usd,
+        'budget_exceeded': False,
+    }
+
+
+def execute_engineering_task_v2(
+    task_description: str,
+    conversation_id: Optional[str] = None,
+    requested_by: str = 'rigby',
+    max_iterations: Optional[int] = None,
+    request_mode: str = 'auto',
+    agent_execution_id: Optional[str] = None,
+    workspace_root_path: Optional[str] = None,
+    max_cost_usd: Optional[float] = None,
+    model: str = 'sonnet',
+    timeout_seconds: int = 1800,
+) -> Dict[str, Any]:
+    """Session 2968 PR-A: subprocess dispatch to the `claude` CLI.
+
+    Shape-compatible with v1 execute_engineering_task so claude_code_engineer_task
+    can call either without branching. v1 is preserved as the legacy path until
+    PR-D validation flips CLAUDE_CODE_ENGINE_MODE default to v2 + deletes v1.
+
+    Extra kwargs vs v1:
+        model: 'sonnet' (default), 'opus', 'haiku', or a full model ID.
+            Passed to `claude --model <value>`.
+        timeout_seconds: hard subprocess timeout (default 30 min). Rigby SIGN
+            noted this as the real safety net since v2 cannot stop mid-run on
+            per-iteration cost.
+
+    Rigby T1 SIGN refinements enforced:
+        - Refuse if max_cost_usd < V2_MIN_ACCEPTABLE_COST_CAP_USD ($0.25)
+        - Cap --max-turns at V2_HARD_MAX_TURNS_CEILING (50)
+        - Envelope warning `startup_tax_dominated` when cost >= $0.10 and turns <= 2
+    """
+    effective_max_iterations = (
+        max_iterations if max_iterations is not None else DEFAULT_MAX_ITERATIONS
+    )
+    effective_max_cost_usd = (
+        max_cost_usd if max_cost_usd is not None else DEFAULT_MAX_COST_USD
+    )
+    repo_root = _resolve_repo_root(workspace_root_path)
+
+    requested_mode = (request_mode or 'auto').strip().lower()
+    resolved_mode = (
+        _infer_request_mode(task_description)
+        if requested_mode == 'auto'
+        else requested_mode
+    )
+
+    if not _CLAUDE_CLI_BIN:
+        error_msg = (
+            "execute_engineering_task_v2: `claude` CLI not found on PATH. "
+            "Install via https://claude.com/claude-code or ensure shell PATH "
+            "includes the binary location. v2 dispatch cannot proceed — set "
+            "CLAUDE_CODE_ENGINE_MODE=v1 or unset it to use the legacy engine."
+        )
+        logger.error("[ClaudeEngineer:v2] %s", error_msg)
+        _post_to_conversation(
+            conversation_id, error_msg, [], None,
+            agent_execution_id=agent_execution_id,
+        )
+        return _v2_error_envelope(
+            error_msg=error_msg, engine_mode='v2', repo_root=repo_root,
+            effective_max_iterations=effective_max_iterations,
+            effective_max_cost_usd=effective_max_cost_usd,
+        )
+
+    # Rigby SIGN mitigation #1: v2 cannot stop mid-run on cost. If the caller's
+    # cap is below the observed startup floor (~$0.13 for ephemeral cache alone),
+    # refuse rather than accept a guaranteed-to-blow request.
+    if max_cost_usd is not None and max_cost_usd < V2_MIN_ACCEPTABLE_COST_CAP_USD:
+        error_msg = (
+            f"execute_engineering_task_v2: max_cost_usd=${max_cost_usd:.2f} is "
+            f"below v2 floor ${V2_MIN_ACCEPTABLE_COST_CAP_USD:.2f}. `claude` "
+            "CLI startup alone (ephemeral cache creation) can exceed this. Use "
+            "v1 for sub-quarter-dollar dispatches or raise the cap."
+        )
+        logger.warning("[ClaudeEngineer:v2] %s", error_msg)
+        _post_to_conversation(
+            conversation_id, error_msg, [], None,
+            agent_execution_id=agent_execution_id,
+        )
+        return _v2_error_envelope(
+            error_msg=error_msg, engine_mode='v2', repo_root=repo_root,
+            effective_max_iterations=effective_max_iterations,
+            effective_max_cost_usd=effective_max_cost_usd,
+        )
+
+    # Rigby SIGN mitigation #2: hard cap --max-turns until PR-D validation
+    effective_max_turns = min(effective_max_iterations, V2_HARD_MAX_TURNS_CEILING)
+    session_id = str(_uuid_mod.uuid4())
+
+    cmd = [
+        _CLAUDE_CLI_BIN,
+        '--print',
+        '--dangerously-skip-permissions',
+        '--session-id', session_id,
+        '--max-turns', str(effective_max_turns),
+        '--output-format', 'json',
+        '--model', model,
+        task_description,
+    ]
+
+    logger.info(
+        "[ClaudeEngineer:v2] dispatch: model=%s max_turns=%d timeout=%ds "
+        "cwd=%s session_id=%s task_chars=%d",
+        model, effective_max_turns, timeout_seconds, repo_root,
+        session_id, len(task_description or ''),
+    )
+
+    try:
+        completed = subprocess.run(
+            cmd,
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+            env={**os.environ},
+        )
+    except TimeoutExpired:
+        error_msg = (
+            f"execute_engineering_task_v2: subprocess timed out after "
+            f"{timeout_seconds}s (hard safety net). session_id={session_id}"
+        )
+        logger.error("[ClaudeEngineer:v2] %s", error_msg)
+        _post_to_conversation(
+            conversation_id, error_msg, [], None,
+            agent_execution_id=agent_execution_id,
+        )
+        return _v2_error_envelope(
+            error_msg=error_msg, engine_mode='v2', repo_root=repo_root,
+            effective_max_iterations=effective_max_iterations,
+            effective_max_cost_usd=effective_max_cost_usd,
+            session_id=session_id,
+        )
+    except FileNotFoundError as exc:
+        error_msg = (
+            f"execute_engineering_task_v2: `claude` CLI disappeared between "
+            f"import and dispatch ({exc}). session_id={session_id}"
+        )
+        logger.error("[ClaudeEngineer:v2] %s", error_msg)
+        _post_to_conversation(
+            conversation_id, error_msg, [], None,
+            agent_execution_id=agent_execution_id,
+        )
+        return _v2_error_envelope(
+            error_msg=error_msg, engine_mode='v2', repo_root=repo_root,
+            effective_max_iterations=effective_max_iterations,
+            effective_max_cost_usd=effective_max_cost_usd,
+            session_id=session_id,
+        )
+
+    stdout = completed.stdout or ''
+    stderr = completed.stderr or ''
+
+    try:
+        parsed = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        error_msg = (
+            f"execute_engineering_task_v2: CLI stdout is not valid JSON. "
+            f"rc={completed.returncode} decode_err={type(exc).__name__} "
+            f"stdout_head={stdout[:200]!r} stderr_head={stderr[:200]!r}"
+        )
+        logger.error("[ClaudeEngineer:v2] %s", error_msg)
+        _post_to_conversation(
+            conversation_id, error_msg, [], None,
+            agent_execution_id=agent_execution_id,
+        )
+        return _v2_error_envelope(
+            error_msg=error_msg, engine_mode='v2', repo_root=repo_root,
+            effective_max_iterations=effective_max_iterations,
+            effective_max_cost_usd=effective_max_cost_usd,
+            session_id=session_id,
+        )
+
+    # Map CLI JSON → envelope (shape verified against real probe 2026-07-25)
+    cli_cost = parsed.get('total_cost_usd', 0.0) or 0.0
+    cli_turns = parsed.get('num_turns', 0) or 0
+    cli_result = parsed.get('result', '') or ''
+    cli_session_id = parsed.get('session_id', session_id)
+    cli_is_error = bool(parsed.get('is_error', False))
+    cli_api_err = parsed.get('api_error_status')
+    cli_stop_reason = parsed.get('stop_reason')
+    cli_terminal_reason = parsed.get('terminal_reason')
+    cli_duration_ms = parsed.get('duration_ms')
+    cli_perm_denials = parsed.get('permission_denials', []) or []
+    cli_model_usage = parsed.get('modelUsage', {}) or {}
+    model_used = _v2_pick_primary_model(cli_model_usage)
+
+    # Rigby A2 SIGN F-BLOCKING fix: budget_exceeded reflects the cap that was
+    # actually in force (effective_max_cost_usd = caller cap OR default $5),
+    # not just the caller-specified cap. Prior guard `max_cost_usd is not None`
+    # meant a default-cap breach silently returned status='success'.
+    budget_exceeded = bool(cli_cost > effective_max_cost_usd)
+
+    if cli_is_error or completed.returncode != 0:
+        envelope_status = 'error'
+    elif budget_exceeded:
+        envelope_status = 'budget_exceeded'
+    else:
+        envelope_status = 'success'
+
+    warnings_list = _v2_startup_tax_warnings(cli_cost, cli_turns)
+
+    logger.info(
+        "[ClaudeEngineer:v2] complete: status=%s cost=$%.4f turns=%d "
+        "duration_ms=%s model_used=%s stop=%s terminal=%s warnings=%s",
+        envelope_status, cli_cost, cli_turns, cli_duration_ms,
+        model_used, cli_stop_reason, cli_terminal_reason, warnings_list,
+    )
+
+    _post_to_conversation(
+        conversation_id, cli_result, [], None,
+        agent_execution_id=agent_execution_id,
+    )
+
+    return {
+        'status': envelope_status,
+        'summary': cli_result[:2000],
+        'files_changed': [],
+        'pr_url': None,
+        'iterations': cli_turns,
+        'iterations_used': cli_turns,
+        'repo_root': repo_root,
+        'cost_usd': round(cli_cost, 4),
+        'effective_max_iterations': effective_max_iterations,
+        'effective_max_cost_usd': effective_max_cost_usd,
+        'budget_exceeded': budget_exceeded,
+        'engine_mode': 'v2',
+        'session_id': cli_session_id,
+        'model_used': model_used,
+        'model_usage': cli_model_usage,
+        'stop_reason': cli_stop_reason,
+        'terminal_reason': cli_terminal_reason,
+        'duration_ms': cli_duration_ms,
+        'is_error': cli_is_error,
+        'api_error_status': cli_api_err,
+        'permission_denials': cli_perm_denials,
+        'warnings': warnings_list,
+        'mode': resolved_mode,
+        'provider': 'claude-cli',
+    }

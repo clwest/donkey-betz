@@ -125,6 +125,27 @@ Provider is resolved at `execute_engineering_task:970`. Response envelope echoes
 
 ---
 
+## Engine mode (S2968 PR-A: Option β subprocess dispatch)
+
+Env var `CLAUDE_CODE_ENGINE_MODE` (default `'v1'`) selects the engine:
+
+- **`v1`** — homegrown LLM loop in `execute_engineering_task` (this file's original implementation). 5 primitive tools, custom Anthropic + OpenAI paths, per-iteration cost accounting.
+- **`v2`** — `execute_engineering_task_v2`: subprocess dispatch to the `claude` CLI (Anthropic's shipped coding agent). Uses the CLI's richer tools (jump-to-definition, semantic search, sub-agents), auto-reads `CLAUDE.md`, provides resumable sessions via `--session-id`.
+
+**Per-dispatch override:** payload key `engine_mode` on `claude_code_tool` (soft key, not in schema) wins over the env var. Lets Rigby A/B v1 vs v2 on individual dispatches without restarting the worker. Precedence resolved in `claude_code_engineer_task`: `payload > env > 'v1'`.
+
+**v2 limitations (current, S2968 PR-A):**
+- **No mid-run cost stop** — cost is only observable after the subprocess returns. `max_cost_usd < $0.25` is refused pre-flight because the CLI's startup cache creation alone can burn ~$0.13.
+- **`--max-turns` hard-capped at 50** regardless of caller's `max_iterations`, until PR-D validates v2 quality.
+- **`startup_tax_dominated` warning** fires in the envelope when `cost_per_turn ≥ $0.10 AND turns ≤ 2` — the "one turn, big cache creation, trivial output" pattern where subprocess overhead dominates.
+- **`files_changed` and `pr_url` are empty** because the CLI handles PR creation internally; future PR-B (Deliverable-as-spec) will surface these via the Deliverable status write-back.
+
+v2 requires the `claude` CLI installed on `$PATH` (checked at import via `shutil.which`; missing binary fails loud with a v1-fallback hint).
+
+PR-A ships v2 behind the env flag; PR-D (post-A/B validation) will flip default to `v2` and delete the ~600 LOC v1 loop.
+
+---
+
 ## Response envelope
 
 Dispatch response (from `_handle_claude_code`):

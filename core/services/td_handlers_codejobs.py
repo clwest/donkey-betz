@@ -400,6 +400,15 @@ class CodeJobHandlersMixin:
         max_iterations = payload.get('max_iterations')
         max_cost_usd = payload.get('max_cost_usd')
 
+        # Session 2968 PR-A — soft-key `engine_mode` for per-dispatch v1/v2
+        # A/B without worker restarts. Not in the tool schema yet (deferred to
+        # PR-D when v2 becomes default); Rigby T1 SIGN refinement noted this
+        # follows the existing "tolerate variant param names" pattern that
+        # _handle_claude_code already uses for task/task_description/prompt.
+        # Precedence resolved downstream in claude_code_engineer_task:
+        # payload override > env CLAUDE_CODE_ENGINE_MODE > default 'v1'.
+        engine_mode = payload.get('engine_mode')
+
         from core.tasks import claude_code_engineer_task
         task = claude_code_engineer_task.delay(
             task_description=task_description,
@@ -409,6 +418,7 @@ class CodeJobHandlersMixin:
             workspace_root_path=workspace_root_path,
             max_iterations=max_iterations,
             max_cost_usd=max_cost_usd,
+            engine_mode=engine_mode,
         )
 
         # Session 2728 F-CC-3 — surface whether the completion banner will fire.
