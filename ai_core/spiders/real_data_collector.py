@@ -9,6 +9,7 @@ It fetches actual data from configured targets using aiohttp and BeautifulSoup.
 import aiohttp
 import asyncio
 import logging
+import os
 import feedparser
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Any
@@ -16,6 +17,35 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 logger = logging.getLogger(__name__)
+
+
+def _use_threaded_dns_resolver() -> bool:
+    """Env flag: whether ``collect_spider_data`` swaps aiohttp's default
+    resolver for :class:`aiohttp.ThreadedResolver`.
+
+    Default **true**: aiodns 3.5.0 (aiohttp's default when installed)
+    fails with ``ClientConnectorDNSError: Could not contact DNS servers``
+    on macOS + certain Linux configurations where the system DNS is
+    mediated by a stub resolver aiodns/pycares does not read. Every
+    spider fetch then reports ``fetch_failed`` even though
+    ``socket.getaddrinfo`` + ``urllib`` + ``curl`` resolve the same host.
+
+    Set ``SPIDER_USE_THREADED_DNS_RESOLVER=false`` to fall back to
+    aiohttp's default (aiodns if installed) — expected in environments
+    where aiodns is known-good and thread-pool DNS is undesirable."""
+    return os.environ.get('SPIDER_USE_THREADED_DNS_RESOLVER', 'true').lower() == 'true'
+
+
+def _build_client_session_kwargs() -> Dict[str, Any]:
+    """Return kwargs for :class:`aiohttp.ClientSession` honoring the
+    threaded-resolver flag. Must be called from within a running asyncio
+    event loop when the flag is on, because
+    :class:`aiohttp.ThreadedResolver` binds the loop at construction."""
+    if _use_threaded_dns_resolver():
+        return {
+            'connector': aiohttp.TCPConnector(resolver=aiohttp.ThreadedResolver()),
+        }
+    return {}
 
 
 # Real target URLs for each spider (with proper full URLs)
@@ -2280,7 +2310,7 @@ async def collect_spider_data(spider_name: str) -> Dict[str, Any]:
         'failed_urls': [],
     }
 
-    async with aiohttp.ClientSession() as session:
+    async with aiohttp.ClientSession(**_build_client_session_kwargs()) as session:
         for url in urls:
             fetch_stats['attempts'] += 1
             result = await fetch_url(session, url)

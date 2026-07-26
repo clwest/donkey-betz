@@ -19,9 +19,11 @@ Covers:
 """
 
 import asyncio
+import os
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import aiohttp
 from django.test import SimpleTestCase
 
 
@@ -503,6 +505,87 @@ class DedupStabilityRssTests(SimpleTestCase):
             unique2, stats2 = svc.deduplicate_items('reddit', items, 'community')
             self.assertEqual(len(unique2), 0)
             self.assertEqual(stats2['duplicates'], 3)
+
+
+# ---------------------------------------------------------------------------
+# ThreadedResolver flag (PR-B.1 fold)
+# ---------------------------------------------------------------------------
+
+class ThreadedDnsResolverFlagTests(SimpleTestCase):
+    """PR-B.1: aiodns 3.5.0 fails on macOS + some Linux configs where the
+    system DNS is mediated by a stub the pycares backend does not read;
+    swap to :class:`aiohttp.ThreadedResolver` (sync ``getaddrinfo`` on a
+    thread pool) by default so ``collect_spider_data`` actually reaches
+    the network. Flag-gated so environments with a known-good aiodns
+    can flip it off."""
+
+    def test_flag_default_true(self):
+        from ai_core.spiders.real_data_collector import _use_threaded_dns_resolver
+        with patch.dict('os.environ', {}, clear=False):
+            os.environ.pop('SPIDER_USE_THREADED_DNS_RESOLVER', None)
+            self.assertTrue(_use_threaded_dns_resolver())
+
+    def test_flag_false_when_set_false(self):
+        from ai_core.spiders.real_data_collector import _use_threaded_dns_resolver
+        with patch.dict('os.environ', {'SPIDER_USE_THREADED_DNS_RESOLVER': 'false'}):
+            self.assertFalse(_use_threaded_dns_resolver())
+
+    def test_flag_true_when_set_true(self):
+        from ai_core.spiders.real_data_collector import _use_threaded_dns_resolver
+        with patch.dict('os.environ', {'SPIDER_USE_THREADED_DNS_RESOLVER': 'true'}):
+            self.assertTrue(_use_threaded_dns_resolver())
+
+    def test_client_session_kwargs_threaded_resolver_when_flag_on(self):
+        """Must be constructed inside a running loop — ThreadedResolver
+        binds the loop at ``__init__``."""
+        from ai_core.spiders.real_data_collector import _build_client_session_kwargs
+
+        async def _construct_and_check():
+            with patch.dict('os.environ', {'SPIDER_USE_THREADED_DNS_RESOLVER': 'true'}):
+                kwargs = _build_client_session_kwargs()
+            self.assertIn('connector', kwargs)
+            connector = kwargs['connector']
+            self.assertIsInstance(connector, aiohttp.TCPConnector)
+            self.assertIsInstance(connector._resolver, aiohttp.ThreadedResolver)
+            await connector.close()
+
+        asyncio.run(_construct_and_check())
+
+    def test_client_session_kwargs_empty_when_flag_off(self):
+        from ai_core.spiders.real_data_collector import _build_client_session_kwargs
+        with patch.dict('os.environ', {'SPIDER_USE_THREADED_DNS_RESOLVER': 'false'}):
+            kwargs = _build_client_session_kwargs()
+        self.assertEqual(kwargs, {})
+
+    def test_collect_spider_data_wires_threaded_resolver_when_flag_on(self):
+        """End-to-end: with flag on, ``collect_spider_data`` constructs
+        the aiohttp ClientSession with a TCPConnector whose resolver is
+        a ThreadedResolver. Verifies the wiring, not the network."""
+        from ai_core.spiders import real_data_collector
+
+        seen_connector_resolvers = []
+
+        original_client_session = aiohttp.ClientSession
+
+        def _spying_session(*args, **kwargs):
+            connector = kwargs.get('connector')
+            if connector is not None:
+                seen_connector_resolvers.append(type(connector._resolver))
+            return original_client_session(*args, **kwargs)
+
+        async def _fake_fetch(_session, _url, timeout=30):
+            return None
+
+        with patch.dict('os.environ', {'SPIDER_USE_THREADED_DNS_RESOLVER': 'true'}), \
+             patch.object(real_data_collector, 'aiohttp', new=SimpleNamespace(
+                 ClientSession=_spying_session,
+                 TCPConnector=aiohttp.TCPConnector,
+                 ThreadedResolver=aiohttp.ThreadedResolver,
+                 ClientTimeout=aiohttp.ClientTimeout,
+             )), \
+             patch.object(real_data_collector, 'fetch_url', side_effect=_fake_fetch):
+            asyncio.run(real_data_collector.collect_spider_data('reddit'))
+        self.assertEqual(seen_connector_resolvers, [aiohttp.ThreadedResolver])
 
 
 # ---------------------------------------------------------------------------
