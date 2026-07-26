@@ -34,6 +34,9 @@ from core.services.spider_feed import (
 User = get_user_model()
 
 
+_UNSET = object()
+
+
 def _make_spider_row(
     *,
     spider_name: str = 'reddit',
@@ -42,15 +45,20 @@ def _make_spider_row(
     days_ago: int = 1,
     embedding_text: str = 'sample embedding text',
     source_url: Optional[str] = None,
-    raw_data: Optional[dict] = None,
+    raw_data=_UNSET,
 ) -> LegacySpiderData:
     created_at = timezone.now() - timedelta(days=days_ago)
+    # `raw_data or {...}` would treat `{}` as unset — S2975 tests need to
+    # write literally-empty raw_data to model the ghost-row state, so use
+    # a sentinel to distinguish "caller passed nothing" from "caller passed {}".
+    if raw_data is _UNSET:
+        raw_data = {'title': f'{spider_name} item'}
     row = LegacySpiderData.objects.create(
         spider_name=spider_name,
         source_url=source_url or f'https://example.com/{uuid.uuid4().hex[:8]}',
         data_type=data_type,
         is_actionable=is_actionable,
-        raw_data=raw_data or {'title': f'{spider_name} item'},
+        raw_data=raw_data,
         processed_data={},
         embedding_text=embedding_text,
     )
@@ -282,8 +290,9 @@ class EmbeddingCoverageStatsTests(TestCase):
 
     def test_pending_invariant_equals_split_sum(self):
         """Rigby T1 fold invariant: legacy `pending` equals
-        `pending_eligible + ineligible_empty`. Locks the backward-compat
-        contract in place so future edits can't silently drift the sum."""
+        `pending_eligible + ineligible_empty + stale_empty_raw_data_total`.
+        Locks the backward-compat contract in place so future edits can't
+        silently drift the sum. S2975 extended the sum with a stale bucket."""
         from core.services.spider_semantic_search import get_spider_semantic_search
 
         _make_spider_row(embedding_text='real content')  # pending_eligible
@@ -291,10 +300,17 @@ class EmbeddingCoverageStatsTests(TestCase):
         _make_spider_row(embedding_text='[NO_ITEMS]')    # ineligible_empty
         _make_spider_row(embedding_text='[NO_ITEMS]')    # ineligible_empty
         _make_spider_row(embedding_text='[NO_ITEMS]')    # ineligible_empty
+        # S2975 stale-ghost rows
+        _make_spider_row(embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]', raw_data={})
+        _make_spider_row(embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]', raw_data={})
 
         stats = get_spider_semantic_search().get_embedding_stats()
 
-        assert stats['pending'] == stats['pending_eligible'] + stats['ineligible_empty']
+        assert stats['pending'] == (
+            stats['pending_eligible']
+            + stats['ineligible_empty']
+            + stats['stale_empty_raw_data_total']
+        )
         # Legacy fields still equal new ones exactly (no more sampling drift).
         assert stats['with_embedding'] == stats['present']
         assert stats['searchable'] == stats['present']
@@ -672,3 +688,260 @@ class GetSearchableTextExtractorTests(TestCase):
         # Per-item cap = 1000; global cap = 4000
         assert len(text) <= 4000
         assert len(text) <= 1000  # single item
+
+
+class StaleNoItemsPolicyTests(TestCase):
+    """S2975: stale-empty-raw-data sentinel handling.
+
+    Verifies that historical ghost rows flagged by cleanup_stale_no_items
+    are correctly bucketed as their own observable count (not NO_ITEMS)
+    and stay skipped by backfill.
+    """
+
+    def test_backfill_skip_sentinels_helper_covers_both(self):
+        """Centralized helper must contain both sentinels — this is the
+        single source of truth the coverage endpoint and backfill share
+        (Rigby T1 mitigation: no scattered string literals)."""
+        from core.services.no_items_policy import (
+            BACKFILL_SKIP_SENTINELS,
+            NO_ITEMS_SENTINEL,
+            STALE_EMPTY_SENTINEL,
+        )
+
+        assert NO_ITEMS_SENTINEL == '[NO_ITEMS]'
+        assert STALE_EMPTY_SENTINEL == '[NO_ITEMS_STALE_EMPTY_RAW]'
+        assert BACKFILL_SKIP_SENTINELS == frozenset({
+            '[NO_ITEMS]', '[NO_ITEMS_STALE_EMPTY_RAW]',
+        })
+
+    def test_stale_bucket_reported_separately_from_no_items(self):
+        """Stale rows are counted in `stale_empty_raw_data_total` and NOT
+        in `ineligible_empty`. This is the core observability contract."""
+        from core.services.spider_semantic_search import get_spider_semantic_search
+
+        # 2 legit NO_ITEMS + 3 stale ghosts
+        _make_spider_row(embedding_text='[NO_ITEMS]')
+        _make_spider_row(embedding_text='[NO_ITEMS]')
+        _make_spider_row(embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]', raw_data={})
+        _make_spider_row(embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]', raw_data={})
+        _make_spider_row(embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]', raw_data={})
+
+        stats = get_spider_semantic_search().get_embedding_stats()
+        assert stats['ineligible_empty'] == 2
+        assert stats['stale_empty_raw_data_total'] == 3
+
+    def test_stale_rows_do_not_pollute_pending_eligible(self):
+        """Stale rows have `embedding__isnull=True` but must NOT appear in
+        the backfill queue (pending_eligible) — else the next backfill
+        pass would re-mark them and undo cleanup."""
+        from core.services.spider_semantic_search import get_spider_semantic_search
+
+        _make_spider_row(embedding_text='real content')
+        _make_spider_row(embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]', raw_data={})
+        _make_spider_row(embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]', raw_data={})
+
+        stats = get_spider_semantic_search().get_embedding_stats()
+        assert stats['pending_eligible'] == 1  # only the real-content row
+        assert stats['stale_empty_raw_data_total'] == 2
+
+    def test_stale_rows_do_not_pollute_recent_still_pending(self):
+        """Same guarantee for the last-24h `still_pending` bucket."""
+        from core.services.spider_semantic_search import get_spider_semantic_search
+
+        _make_spider_row(embedding_text='fresh eligible', days_ago=0)
+        _make_spider_row(embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]',
+                         raw_data={}, days_ago=0)
+
+        r24 = get_spider_semantic_search().get_embedding_stats()['recent_24h']
+        assert r24['still_pending'] == 1
+
+    def test_breakdown_surfaces_stale_bucket(self):
+        """`no_items_breakdown` includes a `stale_empty_raw_data_total`
+        so dashboards can render 'N historical artifacts' alongside the
+        active NO_ITEMS rate."""
+        from core.services.spider_semantic_search import get_spider_semantic_search
+
+        _make_spider_row(spider_name='theodds', embedding_text='[NO_ITEMS]',
+                         days_ago=0)
+        _make_spider_row(spider_name='legislation',
+                         embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]',
+                         raw_data={}, days_ago=0)
+        _make_spider_row(spider_name='legislation',
+                         embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]',
+                         raw_data={}, days_ago=0)
+
+        b = get_spider_semantic_search().get_embedding_stats(
+            include_breakdown=True, breakdown_window_hours=24,
+        )['no_items_breakdown']
+
+        assert b['no_items_total'] == 1  # theodds only — stale excluded
+        assert b['stale_empty_raw_data_total'] == 2
+
+    def test_stale_sentinel_excluded_from_breakdown_by_spider(self):
+        """The `by_spider` ranking must NOT include stale-sentinel rows —
+        else legislation would still dominate the 30d breakdown after
+        cleanup, defeating the whole point."""
+        from core.services.spider_semantic_search import get_spider_semantic_search
+
+        # 50 legislation stale ghosts + 3 theodds real NO_ITEMS
+        for _ in range(50):
+            _make_spider_row(spider_name='legislation',
+                             embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]',
+                             raw_data={}, days_ago=0)
+        for _ in range(3):
+            _make_spider_row(spider_name='theodds', embedding_text='[NO_ITEMS]',
+                             days_ago=0)
+
+        b = get_spider_semantic_search().get_embedding_stats(
+            include_breakdown=True, breakdown_window_hours=24,
+        )['no_items_breakdown']
+
+        spiders = [r['spider_name'] for r in b['by_spider']]
+        assert 'legislation' not in spiders
+        assert spiders[0] == 'theodds'
+
+
+class CleanupStaleNoItemsCommandTests(TestCase):
+    """S2975: `cleanup_stale_no_items` management command."""
+
+    def _stale_row(self, *, days_ago: int, spider_name: str = 'legislation',
+                   raw_data: Optional[dict] = None, embedding_text: str = '[NO_ITEMS]'):
+        return _make_spider_row(
+            spider_name=spider_name,
+            days_ago=days_ago,
+            embedding_text=embedding_text,
+            raw_data=raw_data if raw_data is not None else {},
+        )
+
+    def test_dry_run_reports_candidates_without_modifying(self):
+        """Dry-run is the default. It must count matches but never write."""
+        from io import StringIO
+        from django.core.management import call_command
+
+        # 3 candidates (raw_data={} + NO_ITEMS + old) + 1 non-candidate (recent)
+        self._stale_row(days_ago=60)
+        self._stale_row(days_ago=45)
+        self._stale_row(days_ago=30)
+        self._stale_row(days_ago=1)  # too recent — excluded by default cutoff
+
+        buf = StringIO()
+        call_command('cleanup_stale_no_items', stdout=buf)
+        output = buf.getvalue()
+
+        assert 'DRY RUN' in output
+        assert 'candidates:  3' in output or 'candidates:  3\n' in output
+        # No modifications
+        stale_count = LegacySpiderData.objects.filter(
+            embedding_text='[NO_ITEMS_STALE_EMPTY_RAW]',
+        ).count()
+        assert stale_count == 0
+
+    def test_apply_bumps_sentinel(self):
+        """`--apply` bumps `embedding_text` to the stale sentinel."""
+        from io import StringIO
+        from django.core.management import call_command
+
+        rows = [self._stale_row(days_ago=45) for _ in range(3)]
+
+        buf = StringIO()
+        call_command('cleanup_stale_no_items', '--apply', stdout=buf)
+
+        for r in rows:
+            r.refresh_from_db()
+            assert r.embedding_text == '[NO_ITEMS_STALE_EMPTY_RAW]'
+
+    def test_excludes_recent_rows(self):
+        """Rows created AFTER the cutoff must not be touched — those are
+        current NO_ITEMS worth investigating, not historical ghosts."""
+        from django.core.management import call_command
+
+        old = self._stale_row(days_ago=60)
+        recent = self._stale_row(days_ago=1)  # after default cutoff
+
+        call_command('cleanup_stale_no_items', '--apply', verbosity=0)
+
+        old.refresh_from_db()
+        recent.refresh_from_db()
+        assert old.embedding_text == '[NO_ITEMS_STALE_EMPTY_RAW]'
+        assert recent.embedding_text == '[NO_ITEMS]'  # untouched
+
+    def test_excludes_rows_with_populated_raw_data(self):
+        """Rows with real `raw_data` are current [NO_ITEMS] (extractor
+        misses / rollups) — cleanup must not silently flag them."""
+        from django.core.management import call_command
+
+        empty = self._stale_row(days_ago=60, raw_data={})
+        populated = self._stale_row(days_ago=60, raw_data={'items': [{'title': 'x'}]})
+
+        call_command('cleanup_stale_no_items', '--apply', verbosity=0)
+
+        empty.refresh_from_db()
+        populated.refresh_from_db()
+        assert empty.embedding_text == '[NO_ITEMS_STALE_EMPTY_RAW]'
+        assert populated.embedding_text == '[NO_ITEMS]'
+
+    def test_spider_scope_filter(self):
+        """`--spider X` only touches rows for that spider."""
+        from django.core.management import call_command
+
+        leg = self._stale_row(days_ago=45, spider_name='legislation')
+        rok = self._stale_row(days_ago=45, spider_name='remoteok')
+
+        call_command('cleanup_stale_no_items', '--spider', 'legislation',
+                     '--apply', verbosity=0)
+
+        leg.refresh_from_db()
+        rok.refresh_from_db()
+        assert leg.embedding_text == '[NO_ITEMS_STALE_EMPTY_RAW]'
+        assert rok.embedding_text == '[NO_ITEMS]'  # untouched
+
+    def test_custom_before_cutoff_accepts_iso_date(self):
+        """`--before YYYY-MM-DD` overrides the default cutoff; qualifying set
+        is `created_at < cutoff`."""
+        from django.core.management import call_command
+
+        # Row 5 days old — AFTER the default cutoff (2026-07-19) so untouched
+        # by defaults, but qualifies under a wide-open override.
+        row = self._stale_row(days_ago=5)
+
+        # Cutoff before the row's created_at → row does NOT qualify.
+        strict_cutoff = (timezone.now() - timedelta(days=10)).strftime('%Y-%m-%d')
+        call_command('cleanup_stale_no_items', '--before', strict_cutoff,
+                     '--apply', verbosity=0)
+        row.refresh_from_db()
+        assert row.embedding_text == '[NO_ITEMS]'  # untouched
+
+        # Cutoff after the row's created_at → row DOES qualify.
+        wide_cutoff = (timezone.now() + timedelta(days=1)).strftime('%Y-%m-%d')
+        call_command('cleanup_stale_no_items', '--before', wide_cutoff,
+                     '--apply', verbosity=0)
+        row.refresh_from_db()
+        assert row.embedding_text == '[NO_ITEMS_STALE_EMPTY_RAW]'
+
+    def test_invalid_before_raises_command_error(self):
+        """Malformed --before must raise, not silently proceed."""
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+
+        try:
+            call_command('cleanup_stale_no_items', '--before', 'not-a-date',
+                         verbosity=0)
+        except CommandError as e:
+            assert 'YYYY-MM-DD' in str(e)
+        else:  # pragma: no cover
+            raise AssertionError('expected CommandError')
+
+    def test_limit_caps_flagged_count(self):
+        """`--limit N` caps how many rows get flagged; the rest stay [NO_ITEMS]."""
+        from django.core.management import call_command
+
+        rows = [self._stale_row(days_ago=45) for _ in range(5)]
+
+        call_command('cleanup_stale_no_items', '--apply', '--limit', '2',
+                     verbosity=0)
+
+        flagged = sum(
+            1 for r in rows
+            if LegacySpiderData.objects.get(pk=r.pk).embedding_text == '[NO_ITEMS_STALE_EMPTY_RAW]'
+        )
+        assert flagged == 2
