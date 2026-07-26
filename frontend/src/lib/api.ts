@@ -625,6 +625,54 @@ export const intelligenceApi = {
   predictions: () => api.get('/v1/intelligence/predictions/'),
 }
 
+// S2971: Signal Intelligence UI (Workspace → Intelligence → Signals sub-tab).
+// Backend: core/views/signals_ui.py + extended SignalClusterViewSet.
+// Deliverable: ade9339f-c41f-48a5-9ce8-fa8beee696cc.
+export interface SignalsAggregateParams {
+  days_back?: number
+  actionable_only?: boolean
+  data_types?: string[]
+  spider_names?: string[]
+  include_top_spiders?: boolean
+}
+
+export interface SignalsFeedParams {
+  query?: string
+  data_types?: string[]
+  spider_name?: string
+  actionable_only?: boolean
+  embedding_status?: 'all' | 'present' | 'missing' | 'marked_empty'
+  window_hours?: number
+  limit?: number
+  offset?: number
+}
+
+export interface SignalClustersParams {
+  window_hours?: number
+  min_confidence?: number
+  source_spider?: string[]
+  query?: string
+  pattern_type?: string
+  status?: string
+  page?: number
+  page_size?: number
+}
+
+export const signalsApi = {
+  aggregate: (params?: SignalsAggregateParams) =>
+    api.get('/signals/aggregate/', { params }),
+  feed: (params?: SignalsFeedParams) =>
+    api.get('/signals/feed/', { params }),
+  feedDetail: (rowId: string) =>
+    api.get(`/signals/feed/${rowId}/`),
+  embeddingCoverage: () =>
+    api.get('/signals/embedding-coverage/'),
+  clusters: (params?: SignalClustersParams) =>
+    api.get('/v1/signal-clusters/', { params }),
+  clusterDetail: (clusterId: string) =>
+    api.get(`/v1/signal-clusters/${clusterId}/`),
+}
+
 // Session 734: Income Builder API - Revenue generation and action plans
 export const incomeBuilderApi = {
   // Analysis and opportunities
