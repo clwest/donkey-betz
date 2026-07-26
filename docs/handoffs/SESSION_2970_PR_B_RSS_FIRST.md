@@ -174,3 +174,53 @@ New at S2970:
 - ⏭ Session lifecycle close + wrapper pin bump: this docs cascade PR
 - ⏭ Docs cascade PR: this handoff + 00-START refresh + wrapper pin bump
 - ⏭ Second `make recycle-all` after docs cascade merge (per PLAYBOOK-7.4.4)
+
+---
+
+## Post-close addendum — `backfill-spider-embeddings` PeriodicTask re-enabled
+
+After the S2970 close cascade merged (`25918ec91`), Rigby flagged that PeriodicTask `backfill-spider-embeddings` (task `core.tasks.backfill_spider_embeddings`, every 15 min, queue `ml`) was disabled and had never run in the current env.
+
+**Diagnostic findings (Rigby's report vs ground truth):**
+- ✅ `enabled=False` — correct
+- ✅ Task path / schedule / queue — correct
+- ❌ "Last run: null (has never run)" — **misleading**. `last_run_at=None` but `total_run_count=644`. Task ran 644 times historically; someone reset `last_run_at` when disabling. Not a discovery bug.
+
+**Why it was off (intentional, S1222):** PeriodicTask.description recorded the disable rationale at S1222 P6 audit B2: "Backfill is complete (644 historical runs). Re-enable on demand if a new embedding model warrants a fresh backfill — leave it off otherwise to keep the ml queue clear."
+
+**Why that rationale no longer holds:** current embedding coverage is **0 / 16,874 (0.0%)**. Sustained spider ingestion + S2969 diagnostic rows + S2970 RSS-first real items accumulated 16,874 pending rows since S1222. The "backfill complete" claim was true at the time but has been overtaken by new work.
+
+**Infrastructure health verified:**
+- Task at `core/tasks.py:1418` has full guardrail stack: `@singleton_task(ttl=600)` + fail-open ml-queue depth-gate (skip if depth > 50 msgs, per S1171 mitigation for the 06-14 → 06-19 533-msg accumulation incident) + `batch_size=500` with `.only()` column filter (S1083 mitigation for the 1.37GB memory spike incident).
+- `ml` queue drained by `long_running` worker per `Makefile:326` (`--queues=long_running,ml`). Verified via Rigby's `cockpit_tool queue_lengths`: all queues GREEN, depth=0.
+- S2969/S2970 diagnostic rows (`items: []`) handled correctly by `spider_semantic_search.backfill_embeddings`: first pass marks `embedding_text='[NO_ITEMS]'` and permanently short-circuits future runs.
+
+**Decision routing (Rigby-first per `feedback_claude_rigby_agree_first_chris_yes_no`):**
+- Routed A/B/C/D options to Rigby via `pa-ab10ffdb0e5f4597` with zoom-out ask
+- Rigby verdict: **Option A** — flip it on now. Rationale: "spider ingestion is working again; embeddings are the next hop that makes the data usable for semantic search + clustering. Old rationale no longer applies. Guardrails make re-enabling low-risk."
+- Chris ratified via terminal: `yes flip it on`
+
+**ORM operation executed:**
+```python
+from django_celery_beat.models import PeriodicTask
+pt = PeriodicTask.objects.get(name='backfill-spider-embeddings')
+pt.enabled = True
+pt.description = (
+    'Re-enabled Session 2970 (2026-07-25): 16,874 rows pending embedding vs 0 coverage — '
+    'the S1222 P6 "backfill complete" rationale no longer holds after sustained spider ingestion + '
+    'S2969 diagnostic rows + S2970 RSS-first real items. Guardrail stack still in place: '
+    '@singleton_task ttl=600 + fail-open ml-queue depth-gate (skip if depth > 50 msgs) + '
+    'batch_size=500 with .only() column filter for bounded memory (S1083 mitigation). '
+    'ml queue drained by long_running worker (Makefile queues=long_running,ml). '
+    'Route joint verdict: Claude+Rigby AGREE Option A / Chris ratified via terminal.\n\n'
+    '--- Prior description (S1222 P6 audit B2) ---\n'
+) + prior_description
+pt.save(update_fields=['enabled', 'description'])
+```
+
+Result: `enabled=True`, `total_run_count=644` preserved (unchanged), description now records both the S2970 re-enable rationale and the S1222 disable note appended.
+
+**Sanity-check window opens next Beat tick** (`*/15 * * * *` America/Denver). Expected trajectory: first cycle drains 500 rows → coverage moves off 0% within 15-30 min → steady-state drain of the remaining 16,874 within ~8-10 hours if batch_size holds.
+
+**S2971 first-action follow-up (see 00-START):** verify at least one cycle has run cleanly before opening any new arc.
+
