@@ -10,6 +10,27 @@
 
 ---
 
+## S2971 first-action — VERIFY BACKFILL DRAIN, THEN WAIT FOR CHRIS
+
+**Post-close addendum at S2970 (see handoff §"Post-close addendum"):** `backfill-spider-embeddings` PeriodicTask was re-enabled via ORM after the cascade merged. Coverage was 0 / 16,874 at flip time.
+
+**Before waiting for Chris's spec pointer, run one quick verify:**
+
+```bash
+python manage.py shell -c "
+import django; django.setup()
+from django_celery_beat.models import PeriodicTask
+from core.services.spider_semantic_search import get_spider_semantic_search
+pt = PeriodicTask.objects.get(name='backfill-spider-embeddings')
+print('enabled=', pt.enabled, 'last_run_at=', pt.last_run_at, 'total_run_count=', pt.total_run_count)
+print('coverage=', get_spider_semantic_search().get_embedding_stats())
+"
+```
+
+Expected (healthy): `enabled=True`, `last_run_at` updated to a recent timestamp, `total_run_count > 644`, coverage `with_embedding > 0`.
+
+If unhealthy (any of: still-null `last_run_at`, coverage still 0, ml-queue depth > 50): mention it to Chris in the readiness ping before waiting. Otherwise proceed with the standard wait-for-spec-pointer flow.
+
 ## S2971 first-action — WAIT FOR CHRIS (same as S2969, S2970)
 
 The reframe held for the second time. Same open shape:
