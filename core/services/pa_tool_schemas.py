@@ -5617,8 +5617,27 @@ PA_TOOL_SCHEMAS = [
                         "~$0.13); v2 caps max_iterations at 50 until PR-D validation."
                     ),
                 },
+                "deliverable_id": {
+                    "type": "string",
+                    "description": (
+                        "Session 2968 PR-B. UUID of a Deliverable (typically "
+                        "deliverable_type='engineering_spec') whose content becomes "
+                        "the spec for this dispatch. When provided, the handler "
+                        "resolves the Deliverable and constructs the engineer's task "
+                        "from its title + content — Chris can review the spec in the "
+                        "workspace UI BEFORE dispatch (catches scope creep + $-runaway "
+                        "risk at spec-review time). When BOTH `task` and "
+                        "`deliverable_id` are set, deliverable_id wins (spec beats "
+                        "free-form). When ONLY `deliverable_id` is set, `task` may be "
+                        "omitted. Not-found + workspace-mismatch return error envelopes "
+                        "without dispatch."
+                    ),
+                },
             },
-            "required": ["task"],
+            # S2968 PR-B: `task` is no longer strictly required — `deliverable_id`
+            # can satisfy the "give me work to do" gate. The dispatcher enforces
+            # at least one is present (see td_handlers_codejobs._handle_claude_code).
+            "required": [],
         },
     },
 
