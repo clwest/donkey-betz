@@ -1,22 +1,29 @@
 /**
  * Session 2978: Theme Signal card — 5-point contract per spec 63ec4d1d.
+ * Session 2979: Evidence-first UX per spec c4602ccd — top-3 default with
+ * View all expand, empty-state row, null-url safe rendering.
  *
  * Renders one SignalCluster shaped as a "theme signal":
  *   1. Title (blocked-title-filtered upstream)
  *   2. Why now (Phase A derived template + Phase B tooltip)
- *   3. Evidence (3-7 links)
+ *   3. Evidence (top 3 default; expandable to all; empty state if 0)
  *   4. So what (suggested action)
  *   5. Confidence + drivers
  * Investable variant adds:
  *   6. Who benefits / who loses (Coming in Phase B placeholder)
  */
 
-import { ExternalLink } from 'lucide-react'
+import { useState } from 'react'
+import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/cn'
+
+const DEFAULT_EVIDENCE_VISIBLE = 3
 
 export interface ThemeSignalEvidence {
   title: string
-  url: string
+  // Backend sanitizes to http(s); items that couldn't be sanitized come
+  // through with url=null and render as unclickable snippets.
+  url: string | null
   source: string
   published?: string | null
 }
@@ -61,7 +68,10 @@ export function ThemeSignalCard({
   tab: 'buildable' | 'investable'
 }) {
   const soWhatCls = SO_WHAT_STYLE[card.so_what] ?? SO_WHAT_STYLE['watch']
-  const evidence = card.evidence.slice(0, 7)
+  const [showAll, setShowAll] = useState(false)
+  const evidence = card.evidence
+  const hiddenCount = Math.max(0, evidence.length - DEFAULT_EVIDENCE_VISIBLE)
+  const visible = showAll ? evidence : evidence.slice(0, DEFAULT_EVIDENCE_VISIBLE)
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-gray-800 bg-gray-900/40 p-4 hover:border-gray-700 transition-colors">
@@ -92,27 +102,61 @@ export function ThemeSignalCard({
       </div>
 
       {/* 3 — Evidence */}
-      {evidence.length > 0 && (
-        <div className="space-y-1">
-          <div className="text-[10px] uppercase tracking-wide text-gray-500">Evidence</div>
-          <ul className="space-y-1">
-            {evidence.map((item, i) => (
-              <li key={`${card.id}-ev-${i}`} className="text-xs">
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group flex items-start gap-1.5 text-gray-300 hover:text-blue-300 min-w-0"
-                >
-                  <ExternalLink size={11} className="mt-0.5 shrink-0 opacity-60 group-hover:opacity-100" />
-                  <span className="line-clamp-2 break-words min-w-0">{item.title}</span>
-                </a>
-                <div className="ml-4 text-[10px] text-gray-500 truncate">{item.source}</div>
-              </li>
-            ))}
-          </ul>
+      <div className="space-y-1">
+        <div className="text-[10px] uppercase tracking-wide text-gray-500">
+          Evidence{evidence.length > 0 && ` (top ${Math.min(evidence.length, DEFAULT_EVIDENCE_VISIBLE)})`}
         </div>
-      )}
+        {evidence.length === 0 ? (
+          <div className="text-xs text-gray-600 italic">
+            No evidence items available yet.
+          </div>
+        ) : (
+          <>
+            <ul className="space-y-1">
+              {visible.map((item, i) => (
+                <li key={`${card.id}-ev-${i}`} className="text-xs">
+                  {item.url ? (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group flex items-start gap-1.5 text-gray-300 hover:text-blue-300 min-w-0"
+                    >
+                      <ExternalLink size={11} className="mt-0.5 shrink-0 opacity-60 group-hover:opacity-100" />
+                      <span className="line-clamp-2 break-words min-w-0">{item.title}</span>
+                    </a>
+                  ) : (
+                    <div className="flex items-start gap-1.5 text-gray-400 min-w-0">
+                      <span className="mt-0.5 shrink-0 opacity-40 w-[11px] text-center">·</span>
+                      <span className="line-clamp-2 break-words min-w-0">{item.title}</span>
+                    </div>
+                  )}
+                  <div className="ml-4 text-[10px] text-gray-500 truncate">{item.source}</div>
+                </li>
+              ))}
+            </ul>
+            {hiddenCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setShowAll(v => !v)}
+                className="mt-1 flex items-center gap-1 text-[10px] text-gray-500 hover:text-gray-300"
+              >
+                {showAll ? (
+                  <>
+                    <ChevronUp size={11} />
+                    Show less
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown size={11} />
+                    View all {evidence.length}
+                  </>
+                )}
+              </button>
+            )}
+          </>
+        )}
+      </div>
 
       {/* 5 — Confidence + drivers */}
       <div className="flex flex-wrap items-baseline justify-between gap-2 pt-2 border-t border-gray-800/60">

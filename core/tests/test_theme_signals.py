@@ -210,7 +210,114 @@ class EvidenceExtractionTests(TestCase):
         )
         c = _mk_cluster(spider_data_ids=[str(row.id)])
         evidence = extract_evidence_from_cluster(c)
-        self.assertEqual(evidence[0]["source"], "hackernews")
+        # S2979: source labels are formatted via evidence_display.format_source_label.
+        self.assertEqual(evidence[0]["source"], "Hacker News")
+
+    def test_primary_path_transforms_bluesky_at_uri_to_bsky_app(self):
+        row = _mk_legacy(
+            items=[{
+                "title": "@user.bsky.social: hello",
+                "url": "at://did:plc:abc/app.bsky.feed.post/xyz",
+                "source": "bluesky",
+            }],
+            spider_name="bluesky",
+        )
+        c = _mk_cluster(spider_data_ids=[str(row.id)])
+        evidence = extract_evidence_from_cluster(c)
+        self.assertEqual(len(evidence), 1)
+        self.assertEqual(
+            evidence[0]["url"],
+            "https://bsky.app/profile/did:plc:abc/post/xyz",
+        )
+
+    def test_primary_path_drops_unsafe_scheme_url_but_keeps_title(self):
+        row = _mk_legacy(
+            items=[{"title": "Kept", "url": "javascript:alert(1)"}],
+            spider_name="hackernews",
+        )
+        c = _mk_cluster(spider_data_ids=[str(row.id)])
+        evidence = extract_evidence_from_cluster(c)
+        self.assertEqual(len(evidence), 1)
+        self.assertEqual(evidence[0]["title"], "Kept")
+        self.assertIsNone(evidence[0]["url"])
+
+    def test_primary_path_formats_source_label(self):
+        row = _mk_legacy(
+            items=[{"title": "T", "url": "https://x", "source": "yahoo_finance"}],
+            spider_name="yahoo_finance",
+        )
+        c = _mk_cluster(spider_data_ids=[str(row.id)])
+        evidence = extract_evidence_from_cluster(c)
+        self.assertEqual(evidence[0]["source"], "Yahoo Finance")
+
+    def test_falls_back_to_sample_signals_when_spider_data_ids_yields_empty(self):
+        # Cluster has spider_data_ids pointing to a row whose items have neither
+        # title nor url — primary path yields []. sample_signals populated →
+        # fallback activates.
+        row = _mk_legacy(items=[{"summary": "no fields"}], spider_name="bluesky")
+        c = _mk_cluster(
+            spider_data_ids=[str(row.id)],
+            sample_signals=[
+                {"source": "bluesky", "text": "fallback item", "url": "https://ex.com/1"},
+                {"source": "producthunt", "text": "other", "url": "https://ex.com/2"},
+            ],
+        )
+        evidence = extract_evidence_from_cluster(c)
+        self.assertEqual(len(evidence), 2)
+        titles = {e["title"] for e in evidence}
+        self.assertEqual(titles, {"fallback item", "other"})
+        # Fallback path also formats labels
+        sources = {e["source"] for e in evidence}
+        self.assertEqual(sources, {"Bluesky", "Product Hunt"})
+
+    def test_falls_back_to_sample_signals_when_no_spider_data_ids(self):
+        c = _mk_cluster(
+            spider_data_ids=[],
+            sample_signals=[
+                {"source": "devto", "text": "solo", "url": "https://d.example"},
+            ],
+        )
+        evidence = extract_evidence_from_cluster(c)
+        self.assertEqual(len(evidence), 1)
+        self.assertEqual(evidence[0]["title"], "solo")
+        self.assertEqual(evidence[0]["source"], "DEV.to")
+
+    def test_spider_data_ids_preferred_over_sample_signals_when_both_populated(self):
+        # Regression guard: Chris ratified Option B at S2979 — spider_data_ids
+        # primary, sample_signals fallback. Never prefer sample_signals when
+        # primary yields items.
+        row = _mk_legacy(
+            items=[{"title": "primary", "url": "https://primary.example"}],
+            spider_name="hackernews",
+        )
+        c = _mk_cluster(
+            spider_data_ids=[str(row.id)],
+            sample_signals=[
+                {"source": "bluesky", "text": "fallback", "url": "https://fallback.example"},
+            ],
+        )
+        evidence = extract_evidence_from_cluster(c)
+        self.assertEqual(len(evidence), 1)
+        self.assertEqual(evidence[0]["title"], "primary")
+        # And no fallback contamination
+        self.assertNotIn("fallback", [e["title"] for e in evidence])
+
+    def test_evidence_relevance_sort_clickable_first(self):
+        # Primary path yields a mix: one item with valid https, one whose
+        # URL gets sanitized to None. The clickable one must come first.
+        row = _mk_legacy(
+            items=[
+                {"title": "unclickable", "url": "javascript:void(0)"},
+                {"title": "clickable", "url": "https://ok.example"},
+            ],
+            spider_name="devto",
+        )
+        c = _mk_cluster(spider_data_ids=[str(row.id)])
+        evidence = extract_evidence_from_cluster(c)
+        self.assertEqual(len(evidence), 2)
+        self.assertEqual(evidence[0]["title"], "clickable")
+        self.assertEqual(evidence[1]["title"], "unclickable")
+        self.assertIsNone(evidence[1]["url"])
 
 
 class CardShapeTests(TestCase):
