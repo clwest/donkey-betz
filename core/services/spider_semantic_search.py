@@ -26,7 +26,7 @@ Usage:
 
 import logging
 import hashlib
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, FrozenSet, List, Optional
 from dataclasses import dataclass
 from datetime import timedelta
 
@@ -682,7 +682,12 @@ class SpiderSemanticSearch:
 
     NO_ITEMS_SENTINEL = '[NO_ITEMS]'
 
-    def get_embedding_stats(self) -> Dict[str, Any]:
+    def get_embedding_stats(
+        self,
+        *,
+        include_breakdown: bool = False,
+        breakdown_window_hours: int = 24,
+    ) -> Dict[str, Any]:
         """
         Statistics about spider-data embedding coverage.
 
@@ -710,10 +715,23 @@ class SpiderSemanticSearch:
         from django.db.models import Count, Q
 
         from core.models_unified_system import LegacySpiderData
+        from core.services.no_items_policy import (
+            EXCLUDED_DATA_TYPES,
+            EXCLUDED_SPIDER_NAMES,
+        )
 
         # Whole-table buckets — one round-trip via .aggregate().
         # Q(embedding__isnull=False) captures "has a vector" (any length);
         # pgvector stores real vectors as non-null arrays.
+        # S2973: adds `policy_excluded_total` count so the UI can render
+        # "N rows excluded by policy (non-content producers)" alongside
+        # the coverage numbers without hardcoding the exclusion list.
+        policy_filter = Q()
+        if EXCLUDED_SPIDER_NAMES:
+            policy_filter |= Q(spider_name__in=EXCLUDED_SPIDER_NAMES)
+        if EXCLUDED_DATA_TYPES:
+            policy_filter |= Q(data_type__in=EXCLUDED_DATA_TYPES)
+
         buckets = LegacySpiderData.objects.aggregate(
             total=Count('id'),
             present=Count('id', filter=Q(embedding__isnull=False)),
@@ -725,11 +743,17 @@ class SpiderSemanticSearch:
                 'id',
                 filter=Q(embedding__isnull=True, embedding_text=self.NO_ITEMS_SENTINEL),
             ),
+            policy_excluded_total=(
+                Count('id', filter=policy_filter)
+                if (EXCLUDED_SPIDER_NAMES or EXCLUDED_DATA_TYPES)
+                else Count('id', filter=Q(pk__isnull=True))  # always 0
+            ),
         )
         total = buckets['total']
         present = buckets['present']
         pending_eligible = buckets['pending_eligible']
         ineligible_empty = buckets['ineligible_empty']
+        policy_excluded_total = buckets['policy_excluded_total']
         pending = pending_eligible + ineligible_empty  # legacy semantics
 
         # Embeddable denominator = rows worth counting for coverage
@@ -765,7 +789,7 @@ class SpiderSemanticSearch:
             if recent_total > 0 else 0.0
         )
 
-        return {
+        payload: Dict[str, Any] = {
             # New (S2972) — accurate bucket split.
             'total': total,
             'present': present,
@@ -773,6 +797,9 @@ class SpiderSemanticSearch:
             'ineligible_empty': ineligible_empty,
             'embeddable_total': embeddable_total,
             'embeddable_coverage_percent': embeddable_coverage_percent,
+            # New (S2973) — policy-exclusion context (denominator hint, not a
+            # separate percent — see docs in core/services/no_items_policy.py).
+            'policy_excluded_total': policy_excluded_total,
             # Legacy — same values, kept for backward compat.
             'total_entries': total,
             'with_embedding': present,
@@ -790,6 +817,71 @@ class SpiderSemanticSearch:
                 # Legacy alias.
                 'with_embedding': recent_embedded,
             },
+        }
+
+        if include_breakdown:
+            payload['no_items_breakdown'] = self._get_no_items_breakdown(
+                window_hours=breakdown_window_hours,
+                excluded_spider_names=EXCLUDED_SPIDER_NAMES,
+                excluded_data_types=EXCLUDED_DATA_TYPES,
+            )
+        return payload
+
+    def _get_no_items_breakdown(
+        self,
+        *,
+        window_hours: int,
+        excluded_spider_names: FrozenSet[str],
+        excluded_data_types: FrozenSet[str],
+    ) -> Dict[str, Any]:
+        """S2973: top NO_ITEMS producers within a rolling window.
+
+        Returns top 10 by spider_name and top 10 by data_type, plus the
+        window's total-vs-NO_ITEMS numbers, plus the currently-active
+        policy lists (so the UI can render "Policy excludes: X, Y" without
+        hardcoding). Direct COUNT queries — no sampling.
+        """
+        from django.db.models import Count, Q
+
+        from core.models_unified_system import LegacySpiderData
+
+        since = timezone.now() - timedelta(hours=window_hours)
+        window_qs = LegacySpiderData.objects.filter(created_at__gte=since)
+        no_items_qs = window_qs.filter(embedding_text=self.NO_ITEMS_SENTINEL)
+
+        window_totals = window_qs.aggregate(
+            total_rows=Count('id'),
+            no_items_total=Count(
+                'id', filter=Q(embedding_text=self.NO_ITEMS_SENTINEL),
+            ),
+        )
+        no_items_by_spider = list(
+            no_items_qs.values('spider_name')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:10]
+        )
+        no_items_by_data_type = list(
+            no_items_qs.values('data_type')
+            .annotate(count=Count('id'))
+            .order_by('-count')[:10]
+        )
+        window_rate = (
+            round(
+                window_totals['no_items_total'] / window_totals['total_rows'] * 100, 1
+            )
+            if window_totals['total_rows'] > 0 else 0.0
+        )
+        return {
+            'window_hours': window_hours,
+            'total_rows': window_totals['total_rows'],
+            'no_items_total': window_totals['no_items_total'],
+            'no_items_rate': window_rate,
+            'by_spider': no_items_by_spider,
+            'by_data_type': no_items_by_data_type,
+            # Policy reflection so the UI can render "Excludes: X, Y" without
+            # hardcoding (Rigby T1 refinement, S2973).
+            'excluded_spider_names': sorted(excluded_spider_names),
+            'excluded_data_types': sorted(excluded_data_types),
         }
 
 

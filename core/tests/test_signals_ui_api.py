@@ -345,6 +345,131 @@ class EmbeddingCoverageStatsTests(TestCase):
         assert r24['with_embedding'] == 1
 
 
+class NoItemsPolicyTests(TestCase):
+    """S2973: `no_items_policy` module + `get_embedding_stats` breakdown."""
+
+    def test_policy_defaults_are_conservative(self):
+        """The v1 policy list must stay small — false exclusions HIDE bugs.
+        Locks the conservative default so a bulk-add can't sneak through
+        without an explicit test update."""
+        from core.services.no_items_policy import (
+            EXCLUDED_DATA_TYPES,
+            EXCLUDED_SPIDER_NAMES,
+        )
+
+        # v1 is intentionally 2 spiders + 0 data_types (see module docstring).
+        assert EXCLUDED_SPIDER_NAMES == frozenset({'betting_coordinator', 'openmeteo'})
+        assert EXCLUDED_DATA_TYPES == frozenset()
+
+    def test_policy_excluded_total_counts_by_spider_name(self):
+        """`policy_excluded_total` counts rows whose spider is on the exclusion
+        list, regardless of embedding status."""
+        from core.services.spider_semantic_search import get_spider_semantic_search
+
+        # 3 rows from excluded spiders + 2 from non-excluded.
+        _make_spider_row(spider_name='betting_coordinator', embedding_text='rollup')
+        _make_spider_row(spider_name='betting_coordinator', embedding_text='[NO_ITEMS]')
+        _make_spider_row(spider_name='openmeteo', embedding_text='weather')
+        _make_spider_row(spider_name='reddit', embedding_text='real content')
+        _make_spider_row(spider_name='reddit', embedding_text='[NO_ITEMS]')
+
+        stats = get_spider_semantic_search().get_embedding_stats()
+        assert stats['policy_excluded_total'] == 3
+
+    def test_stats_shape_stable_when_breakdown_disabled(self):
+        """The legacy shape must not gain the breakdown block unless
+        `include_breakdown=True` is passed. Prevents accidental payload
+        bloat for callers that don't ask for it."""
+        from core.services.spider_semantic_search import get_spider_semantic_search
+
+        _make_spider_row(embedding_text='content')
+        stats = get_spider_semantic_search().get_embedding_stats()
+        assert 'no_items_breakdown' not in stats
+
+    def test_breakdown_ranks_no_items_by_spider_and_data_type(self):
+        """When `include_breakdown=True`, top 10 spiders + top 10 data_types
+        producing [NO_ITEMS] within the window are ranked descending by
+        count. Also asserts the policy-reflection fields are populated
+        for UI 'Excludes: X, Y' rendering (Rigby T1 refinement)."""
+        from core.services.spider_semantic_search import get_spider_semantic_search
+
+        # 3 theodds [NO_ITEMS] + 2 openmeteo [NO_ITEMS] + 1 reddit embeddable.
+        for _ in range(3):
+            _make_spider_row(spider_name='theodds', data_type='sports_odds',
+                             embedding_text='[NO_ITEMS]', days_ago=0)
+        for _ in range(2):
+            _make_spider_row(spider_name='openmeteo', data_type='weather',
+                             embedding_text='[NO_ITEMS]', days_ago=0)
+        _make_spider_row(spider_name='reddit', embedding_text='real', days_ago=0)
+
+        stats = get_spider_semantic_search().get_embedding_stats(
+            include_breakdown=True, breakdown_window_hours=24,
+        )
+        assert 'no_items_breakdown' in stats
+        b = stats['no_items_breakdown']
+        assert b['window_hours'] == 24
+        assert b['total_rows'] == 6
+        assert b['no_items_total'] == 5
+        assert b['no_items_rate'] == round(5 / 6 * 100, 1)
+        # Ranked descending
+        assert b['by_spider'][0] == {'spider_name': 'theodds', 'count': 3}
+        assert b['by_spider'][1] == {'spider_name': 'openmeteo', 'count': 2}
+        # Policy reflection (Rigby T1 refinement — UI reads these directly).
+        assert b['excluded_spider_names'] == ['betting_coordinator', 'openmeteo']
+        assert b['excluded_data_types'] == []
+
+    def test_breakdown_window_excludes_older_rows(self):
+        """The window filter correctly excludes rows outside the window
+        (e.g., a 24h breakdown does not count 7-day-old [NO_ITEMS])."""
+        from core.services.spider_semantic_search import get_spider_semantic_search
+
+        _make_spider_row(spider_name='theodds', embedding_text='[NO_ITEMS]', days_ago=0)
+        _make_spider_row(spider_name='theodds', embedding_text='[NO_ITEMS]', days_ago=10)
+
+        b24 = get_spider_semantic_search().get_embedding_stats(
+            include_breakdown=True, breakdown_window_hours=24,
+        )['no_items_breakdown']
+        b720 = get_spider_semantic_search().get_embedding_stats(
+            include_breakdown=True, breakdown_window_hours=720,  # 30d
+        )['no_items_breakdown']
+
+        assert b24['no_items_total'] == 1
+        assert b720['no_items_total'] == 2
+
+
+class SignalsBreakdownEndpointTests(TestCase):
+    """S2973: `?include_breakdown=1&window=N` param on embedding-coverage."""
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User.objects.create_user(username='breakdown_user', password='pw')  # type: ignore[attr-defined]
+
+    def setUp(self):
+        self.client = APIClient()
+        self.client.force_authenticate(user=self.user)
+
+    def test_include_breakdown_returns_new_block(self):
+        _make_spider_row(spider_name='theodds', embedding_text='[NO_ITEMS]', days_ago=0)
+        resp = self.client.get('/api/signals/embedding-coverage/',
+                               {'include_breakdown': '1', 'window': '24'})
+        assert resp.status_code == 200, resp.content
+        body = resp.json()
+        assert 'no_items_breakdown' in body
+        assert body['no_items_breakdown']['window_hours'] == 24
+
+    def test_default_omits_breakdown(self):
+        resp = self.client.get('/api/signals/embedding-coverage/')
+        assert resp.status_code == 200
+        assert 'no_items_breakdown' not in resp.json()
+
+    def test_invalid_window_clamps_to_default(self):
+        """Bogus window values fall back to 24h — no 400, no surprise."""
+        resp = self.client.get('/api/signals/embedding-coverage/',
+                               {'include_breakdown': '1', 'window': '999'})
+        assert resp.status_code == 200
+        assert resp.json()['no_items_breakdown']['window_hours'] == 24
+
+
 class SignalClusterFilterTests(TestCase):
     """S2971 extensions to SignalClusterViewSet.get_queryset()."""
 
