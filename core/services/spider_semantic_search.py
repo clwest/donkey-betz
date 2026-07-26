@@ -462,6 +462,34 @@ class SpiderSemanticSearch:
 
         stats = {'processed': 0, 'succeeded': 0, 'failed': 0, 'skipped': 0, 'marked_empty': 0}
 
+        # S2972: when we find no eligible rows, log the population split so
+        # a manual trigger returning `{processed: 0}` is self-explanatory
+        # in worker logs rather than looking like a no-op bug.
+        if not entries:
+            from django.db.models import Count, Q
+
+            snapshot = LegacySpiderData.objects.aggregate(
+                pending_null=Count('id', filter=Q(embedding__isnull=True)),
+                triaged_no_items=Count(
+                    'id',
+                    filter=Q(embedding__isnull=True, embedding_text='[NO_ITEMS]'),
+                ),
+            )
+            eligible = snapshot['pending_null'] - snapshot['triaged_no_items']
+            # Numbers-only wording so future pipeline shifts don't invalidate
+            # the message (per Rigby A2 SIGN feedback S2972).
+            logger.info(
+                "[backfill_embeddings] 0 eligible rows: "
+                "pending_null=%s, triaged_no_items=%s, eligible=%s, "
+                "batch_size=%s, hours=%s",
+                snapshot['pending_null'],
+                snapshot['triaged_no_items'],
+                eligible,
+                batch_size,
+                hours,
+            )
+            return stats
+
         # Phase 1: Collect texts, skip empties
         entries_with_text = []  # (entry, text) pairs
         for entry in entries:
@@ -652,66 +680,116 @@ class SpiderSemanticSearch:
         logger.info(f"DB semantic search: query='{query[:50]}', entries_checked={len(entries)}, results={len(results[:limit])}")
         return results[:limit]
 
+    NO_ITEMS_SENTINEL = '[NO_ITEMS]'
+
     def get_embedding_stats(self) -> Dict[str, Any]:
         """
-        Get statistics about spider data embeddings.
+        Statistics about spider-data embedding coverage.
 
-        Session 394: Updated to distinguish between:
-        - with_embedding: Has actual embedding vector (searchable)
-        - marked_empty: Has empty list [] (no content to embed)
-        - pending: Has NULL (needs processing)
+        S2972 rework: drop the 5,000-row sampling extrapolation (accurate at
+        pilot sizes, noisy past ~10k rows) and split "pending" into the two
+        buckets that actually matter for backfill triage:
+
+          - pending_eligible: embedding IS NULL AND embedding_text != '[NO_ITEMS]'
+              → real backfill queue; backfill_embeddings will process these.
+          - ineligible_empty: embedding IS NULL AND embedding_text == '[NO_ITEMS]'
+              → already visited by backfill and found to have no embeddable
+                content (aggregator rollups, metric-only responses, extractor
+                misses). Currently the entire "pending" bucket at HEAD.
+
+        Also exposes 24h intake-quality breakdown so the UI can answer
+        "is the backfill queue at 0 because the pipeline is healthy or
+        because everything is going straight to [NO_ITEMS]?".
+
+        Backward-compat: legacy fields (with_embedding, pending, marked_empty,
+        searchable, coverage_percent, recent_24h.with_embedding) preserved
+        with EXACT counts (no more sampling drift). Invariant asserted in
+        test_embedding_coverage_pending_eligible_split:
+            pending == pending_eligible + ineligible_empty
         """
+        from django.db.models import Count, Q
+
         from core.models_unified_system import LegacySpiderData
 
-        total = LegacySpiderData.objects.count()
+        # Whole-table buckets — one round-trip via .aggregate().
+        # Q(embedding__isnull=False) captures "has a vector" (any length);
+        # pgvector stores real vectors as non-null arrays.
+        buckets = LegacySpiderData.objects.aggregate(
+            total=Count('id'),
+            present=Count('id', filter=Q(embedding__isnull=False)),
+            pending_eligible=Count(
+                'id',
+                filter=Q(embedding__isnull=True) & ~Q(embedding_text=self.NO_ITEMS_SENTINEL),
+            ),
+            ineligible_empty=Count(
+                'id',
+                filter=Q(embedding__isnull=True, embedding_text=self.NO_ITEMS_SENTINEL),
+            ),
+        )
+        total = buckets['total']
+        present = buckets['present']
+        pending_eligible = buckets['pending_eligible']
+        ineligible_empty = buckets['ineligible_empty']
+        pending = pending_eligible + ineligible_empty  # legacy semantics
 
-        # Count entries with actual embeddings (not empty list)
-        # PostgreSQL: embedding is not null AND embedding != '{}'
-        with_embedding = 0
-        marked_empty = 0
-        pending = 0
+        # Embeddable denominator = rows worth counting for coverage
+        # (rules out [NO_ITEMS] rows so a healthy pipeline reads 100%).
+        embeddable_total = present + pending_eligible
+        embeddable_coverage_percent = (
+            round(present / embeddable_total * 100, 1)
+            if embeddable_total > 0 else 100.0
+        )
+        # Legacy coverage_percent = present / total (kept for existing callers).
+        coverage_percent = round(present / total * 100, 1) if total > 0 else 0
 
-        # Sample to count - for large datasets this is more efficient
-        # Session 736: pgvector returns numpy arrays, check size properly
-        sample_size = min(total, 5000)
-        for entry in LegacySpiderData.objects.order_by('-created_at')[:sample_size]:
-            if entry.embedding is None:
-                pending += 1
-            elif len(entry.embedding) == 0:
-                marked_empty += 1
-            else:
-                with_embedding += 1
-
-        # Extrapolate if sampling
-        if sample_size < total:
-            ratio = total / sample_size
-            with_embedding = int(with_embedding * ratio)
-            marked_empty = int(marked_empty * ratio)
-            pending = int(pending * ratio)
-
-        # Recent stats (last 24 hours)
+        # Last 24h intake quality — same bucketing, filtered to fresh rows.
         since = timezone.now() - timedelta(hours=24)
-        recent_total = LegacySpiderData.objects.filter(created_at__gte=since).count()
-        recent_with = 0
-        for entry in LegacySpiderData.objects.filter(created_at__gte=since):
-            # Session 736: pgvector returns numpy arrays, not lists
-            # Must use 'is not None' instead of truth check on numpy arrays
-            if entry.embedding is not None and len(entry.embedding) > 0:
-                recent_with += 1
-
-        searchable = with_embedding  # Only actual embeddings are searchable
+        recent = LegacySpiderData.objects.filter(created_at__gte=since).aggregate(
+            total=Count('id'),
+            embedded=Count('id', filter=Q(embedding__isnull=False)),
+            marked_no_items=Count(
+                'id',
+                filter=Q(embedding__isnull=True, embedding_text=self.NO_ITEMS_SENTINEL),
+            ),
+            still_pending=Count(
+                'id',
+                filter=Q(embedding__isnull=True) & ~Q(embedding_text=self.NO_ITEMS_SENTINEL),
+            ),
+        )
+        recent_total = recent['total']
+        recent_embedded = recent['embedded']
+        recent_marked_no_items = recent['marked_no_items']
+        recent_still_pending = recent['still_pending']
+        no_items_rate = (
+            round(recent_marked_no_items / recent_total * 100, 1)
+            if recent_total > 0 else 0.0
+        )
 
         return {
+            # New (S2972) — accurate bucket split.
+            'total': total,
+            'present': present,
+            'pending_eligible': pending_eligible,
+            'ineligible_empty': ineligible_empty,
+            'embeddable_total': embeddable_total,
+            'embeddable_coverage_percent': embeddable_coverage_percent,
+            # Legacy — same values, kept for backward compat.
             'total_entries': total,
-            'with_embedding': with_embedding,
-            'marked_empty': marked_empty,
+            'with_embedding': present,
+            'marked_empty': 0,  # empty-vector representation superseded by [NO_ITEMS]
             'pending': pending,
-            'searchable': searchable,
-            'coverage_percent': round(searchable / total * 100, 1) if total > 0 else 0,
+            'searchable': present,
+            'coverage_percent': coverage_percent,
             'recent_24h': {
+                # New (S2972).
                 'total': recent_total,
-                'with_embedding': recent_with,
-            }
+                'embedded': recent_embedded,
+                'marked_no_items': recent_marked_no_items,
+                'still_pending': recent_still_pending,
+                'no_items_rate': no_items_rate,
+                # Legacy alias.
+                'with_embedding': recent_embedded,
+            },
         }
 
 
