@@ -2,154 +2,125 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2967 CLOSED (three functional arcs, 10 PRs total across afternoon + evening + late-night). AFTERNOON ARC (Slice 7 tool-gap fixes, PR #3576): `workspace_tool action=update` (Ledger #22 discharge) + `claude_code_tool` auto-resolve-repo via `workspace_id → ProjectWorkspace.root_path`. EVENING ARC (safety batch, PRs #3578-#3582): Makefile openai override revert + 51-site Anthropic model ID refresh + `max_iterations` + `max_cost_usd` schema caps + persister allowlist fix. LATE-NIGHT ARC (PR-2 attempt + Option β pivot, PRs #3584-#3585 + docs #3583+cascade-amend): PR-2 context pre-injection shipped, A2 SIGN caught a real regression (T1 hit iteration cap without producing an answer on a small answer-mode task while T2 opt-out shipped in 14 iters — 10KB injected context distracted the model), Chris asked two reframing questions (are we using an actual coding model? / would Deliverable-as-spec be better than free-form prompt?), we identified that we're running a general chatbot model (Sonnet 4.6 + 5 primitive tools) as a homegrown reimplementation of what Anthropic's `claude` CLI already ships, ratified **Option β = replace homegrown engineer with subprocess dispatch to `claude` CLI + Deliverable-as-spec pattern**, reverted PR-2 as prerequisite (PR #3585), drafted S2968 arc-open doc `docs/research/platform/S2968_CLAUDE_CODE_TOOL_OPTION_BETA_ARC_OPEN.md` (Rigby T1 SIGN AGREE with 3 refinements incorporated: ship PR-A only tonight behind flag, don't assume deliverable_type='engineering_spec' passes tool allowlist without check, `claude` CLI availability + JSON schema stability = primary risk to prove BEFORE PR-B/C). **13 consecutive terminal ratifications S2957→S2967.** **S2968 first-action = PR-A: subprocess dispatch prototype behind `CLAUDE_CODE_ENGINE_MODE=v2` env flag** per arc-open doc §5.1. Both engines live in parallel; feature-flag flip after 3+ successful A/B pairs prove v2 ≥ v1 on cost + iterations + output quality.
+## READ THIS FIRST — SESSION 2968 CLOSED with a workflow reframe. Two code PRs shipped (#3588 PR-A v2 subprocess dispatch + #3589 PR-A schema follow-up), one code branch pushed-not-merged (`feat/s2968-pr-b-deliverable-as-spec`, local commit `1189232a6`). **The end-of-session reframe is the important artifact**: Rigby doesn't need her own coding agent inside the app. The user (Chris) works with Rigby → Rigby writes an engineering-spec Deliverable → the user hands the spec pointer to Claude Code → CC picks it up on orient → CC executes + SIGNs with Rigby + ships. Same workflow shape as tonight; the initiation direction flips (Chris→Rigby→CC instead of Chris→CC→Rigby). Full context: `docs/handoffs/SESSION_2968_OPTION_BETA_AND_REFRAME.md`.
 
-**Pre-flight state fix (S2967 open):** 4 ProjectWorkspace rows had stale `/Users/donkeyking/development/unified-donkey-betz` root_paths — Chris moved the tree without updating the DB. Fixed via ORM at S2967 open (before the tool-gap fix that would have enabled Rigby to self-serve). All 4 rows now on the correct `/Users/donkeyking/Donkey_Betz/unified-donkey-betz` prefix.
+**Session cost this session:** ~$0.51 (0.13 CLI probe + 0.17 in-process v2 + 0.02 v1 through worker + 0.19 v2 through worker). No further spend after Chris called timeout mid-PR-B live-verify prep.
 
-**End-to-end proof:** post-fix `claude_code_tool` dispatch with `workspace_id=b4503364-…` returned the exact single filename that exists in `docs/governance/` (`SYSTEM_OWNER.md`) — proving the engineer ran against the real working tree, not the pre-fix `/app`-fallback that produced generic "no repo detected" no-ops.
-
-**Governance:** Rigby T1 pre-code SIGN = 4 `repo_tool.read_file` verifications + 1 `deliverable_tool.append` for Ledger #22 + 2 REVISEs surfaced via mandatory open-ended zoom-out ask (both accepted pre-code). Chris D-verdict = joint Claude+Rigby recommendation via plain-English framing (Q1 "do we lose anything?" no / Q2 "is it more work later?" no). Rigby A2 post-code SIGN = 4 tool_run verifications + one real bug caught mid-verify (empty-string business_status regression) + patched + re-verified before AGREE.
-
-**Golden Evals arc status:**
-
-| Session | Phase | Ship | HEAD |
-|---------|-------|------|------|
-| S2954 | arc open | Tier-1 list + Day-1 scope | (arc-open doc) |
-| S2955-S2962 | Tier-1 spec-authoring (8/8) | 8 canon_v1 YAMLs | `6bf8d9a81` (S2962) |
-| S2963 | arc close | canon_v2 ratification (6 items) | `882626d8f` |
-| S2964 | harness PR-1 (foundation) | allowlist + EvalRunContext scaffold + skeleton adapters + mgmt cmd + `GoldenEvalRun` model | `137410e86` |
-| S2965 | harness PR-2a (executors + runners + --execute) | JSON Schema executor + fault-injection parser + universal runners + SIA canonicalizer + full adapter build-out + `--execute` flag + SIA end-to-end dogfood | `38ee09602` |
-| S2966 | harness PR-2b (Rigby runners + slice 8 dogfood + AgentRouter dispatch) | 6 Rigby fabrication predicates + one_of dispatcher + 7 canonicalizers + AgentRouter.route() dispatch + marker resolver + process_pa_chat_task synchronous dispatch + SIA/Rigby/Research end-to-end dogfood | `76710a425` |
-| **S2967** | **mid-session re-slate — Slice 7 tool-gap sweep** | **`workspace_tool.update` + `claude_code_tool` auto-resolve-repo (Ledger #22 discharged)** | **`acfea6972`** |
-| S2968 (next) | Path A — nightly beat + drift dashboard | scheduled runs + pass-rate telemetry (S2963 arc structure) | TBD |
-
-**PRs shipped this session (S2967):**
-- u-d-b PR **#3576** — S2967 Slice 7 tool-gap fixes (+256 / -33 across 5 files).
-- u-d-b PR **#TBD** — S2967 close cascade (handoff + this 00-START refresh + wrapper pin bump).
-
-**Post-merge:** `make recycle-all` executed per PLAYBOOK-7.4.4 (workers advanced to sha=`acfea6972cd9`).
-
-Full session context: `docs/handoffs/SESSION_2967_SLICE_7_TOOL_GAP_FIXES.md`.
+**HEAD at close:** `f3c62fbdc` (PR #3589 merged; docs cascade PR TBD). Workers recycled twice per PLAYBOOK-7.4.4.
 
 ---
 
-## S2968 open sequence
+## S2969 first-action — WAIT FOR CHRIS
 
-**S2968 first-action = PR-A (Option β subprocess dispatch prototype)** — ratified 2026-07-25 (Chris terminal, late-night). Original S2968 first-action (Path A: nightly beat + drift dashboard) DEFERRED to S2969+ because Chris's two reframing questions during S2967 close-cascade evening surfaced that the whole `claude_code_tool` engine needs architectural replacement, not further optimization.
+**Do NOT open the day with a code proposal.** The reframe says the workflow starts with Chris + Rigby, not Chris + CC. Your job at session open:
 
-**PR-A (RATIFIED S2968 first-action):** Ship `execute_engineering_task_v2` behind `CLAUDE_CODE_ENGINE_MODE=v2` env flag. Subprocess dispatch to `claude` CLI (`subprocess.run(['claude', '--print', '--dangerously-skip-permissions', '--max-turns', ..., '--output-format', 'json', task])`). Parses JSON output, maps to existing envelope shape. Both engines live in parallel (v1 legacy preserved as fallback). Feature-flag default flips to v2 only after 3+ successful A/B pairs. Estimated ~2-3h + tests + A2 SIGN. Full design at `docs/research/platform/S2968_CLAUDE_CODE_TOOL_OPTION_BETA_ARC_OPEN.md`.
+1. Run `context-kit orient` (auto-injected at session start; read the output).
+2. Absorb this file + MEMORY.md + CLAUDE.md (auto-injected).
+3. Read `docs/handoffs/SESSION_2968_OPTION_BETA_AND_REFRAME.md` in full — especially §"End-of-session reframe."
+4. **Report readiness in one short message and wait.** Something like: "Oriented. S2968 closed with a workflow reframe — you work with Rigby first, then hand me a spec pointer. Ready when you have one."
+5. **Do NOT propose engineering work. Do NOT dispatch anything to Rigby proactively.** Chris opens Rigby chat first; you wait for the handoff.
 
-**PR-B (S2968 follow-on, after PR-A A/B validates):** Deliverable-as-spec — add `deliverable_id` param to `claude_code_tool` schema; handler resolves Deliverable → constructs engineer prompt "read Deliverable <UUID> via deliverable_tool.get, execute per acceptance criteria." **Pre-work: verify `deliverable_type='engineering_spec'` passes tool + schema allowlists without diagnostic-flagging (per feedback_pa_deliverables_tool_flags_ratifications_as_diagnostic).**
+**When Chris hands you a Deliverable ID / title / spec pointer:**
 
-**PR-C (S2968 follow-on, after PR-B):** Deliverable status write-back. Engineer marks its own Deliverable `completed`/`partial`/`blocked`/`escalated` on ship. Full audit trail across dispatches.
-
-**PR-D (S2968 arc-close):** Flip default to v2 + delete ~600 LOC legacy engineer LLM loop + `_execute_tool` + 5 primitive tools + `CHANGE/ANSWER_SYSTEM_PROMPT` + `_infer_request_mode`.
-
-**Deferred to S2969+ (originally S2968 candidates before Option β re-slate):**
-- **Path A** — nightly beat + drift dashboard for Golden Evals. Uses `GoldenEvalRun` rows already persisting.
-- **Path B** — per-slice named predicate graduation.
-- **Path C** — Ledger #20 + #21 fix arc (ToolCallRecord.trace_id + PA write regression).
-
-### Universal open sequence
-
-1. **Live-verify S2967 fixes:**
-   - `bash tools/pa_local.sh "workspace_tool action=list"` — confirm all 4 formerly-stale workspaces show `/Users/donkeyking/Donkey_Betz/unified-donkey-betz` prefix.
-   - `bash tools/pa_local.sh "claude_code_tool task='ANSWER MODE: echo the current git HEAD SHA from the repo root' workspace_id=b4503364-2573-4401-9e28-61a739e0ce50 conversation_id=<S2968 pin>"` — smoke test auto-resolve-repo + follow-up wake.
-2. **Live-verify S2953 drift scanner:** `bash tools/pa_local.sh "run agent_capability_drift_tool action=summary"` — expect shape (83/92/59/1 → 77 active).
-3. **First-action lint pre-flight:** `python manage.py build_pa_tool_audit --gap-only --check` — confirm gap-map headline (`100 full / 2 untested` last observed at S2963).
-4. **Verify wrapper pin freshness:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2968 pin (retired at S2967 close cascade).
-5. **Read S2967 handoff + shipped code:** `docs/handoffs/SESSION_2967_SLICE_7_TOOL_GAP_FIXES.md` + `core/services/td_handlers_agents.py:2421` (workspace_tool.update handler) + `core/services/td_handlers_codejobs.py:330` (`_handle_claude_code` workspace_id resolver) + `core/services/claude_code_engineer.py:589` (`_execute_tool(..., repo_root)`) + `core/services/claude_code_engineer.py:626` (`_resolve_repo_root()`).
-6. **Read canon_v2 doc if not already loaded:** `docs/research/platform/S2963_GOLDEN_EVALS_ARC_CLOSE.md` (190 lines).
-7. **Verify Rigby Tool Gap Ledger:** deliverable `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` — **Ledger #22 discharged at S2967**; carry-forward candidates (Ledger #17 unchanged, #20 + #21 unchanged, Rigby outbound-messaging still un-logged with 2 triggers).
-
-### S2968 scope note
-
-**In scope for S2968 (Chris to pick path):** nightly beat + drift dashboard (Path A default) OR per-slice named predicate graduation (Path B) OR Ledger #20 + #21 fix arc (Path C).
-
-**Out of scope for S2968:** WorkflowOrchestrationAgent wrapper key-name mismatch (F1 from S2958). Latent migration drift remediation.
-
-### Capability Manifest — build spec (parallel-track from A1 Phase 1 start)
-
-_(unchanged — see prior S2953 close snapshots; not part of Golden Evals arc)_
-
-### A1 Phase 1 still ahead (after Path A ships)
-
-Chris's 4 open questions from scoping deliverable `7870eca9` still gate Phase 1 code:
-
-1. **Minimum evidence standard** we promise? (run IDs + failure signature samples vs metrics only)
-2. **Default turnaround SLA** we can consistently hit without heroics?
-3. Sell as **agent-system audit** (end-to-end) or **toolchain reliability audit** (tools/contracts) first?
-4. **Legal posture** for handling customer logs (retention window, deletion guarantee, allowed data types)?
-
-### Deferred queue (updated at S2967 close)
-
-**S2967 additions:**
-- **Claude Code auto-bind conversation_id at framework level** — Fix 3 cut from S2967; separate arc. Not urgent because `follow_up_will_fire` echo gives callers observability.
-
-**Carry forward from S2966:**
-- **Nightly beat + drift dashboard (S2968 Path A candidate).**
-- **Per-slice named predicate graduation (S2968 Path B candidate).**
-- **Ledger #20 + #21 fix arc (S2968 Path C candidate).**
-- **Rigby outbound-messaging gap** — SECOND TRIGGER OBSERVED S2966. Log as ledger entry at S2968.
-
-**Carry forward from S2965:**
-- S2965 known limitation CLOSED S2966.
-
-**Carry forward from S2964:**
-- Latent migration drift (Narrative* / HAIDispatchLog AlterField pile).
-- `claude_code_tool` stdout / duration_ms capture gap (Probe 3 caveat from S2964).
-- Complex-boolean-in-canon-doc misread pattern (one trigger observed).
-
-**Carry forward from S2963:**
-- Fold P2 / S1 / U1 / P1 / V1 / U2 — all DISCHARGED as canon_v2 Items 1/2/3/4/5/6 at S2963 arc-close.
-
-**Long-standing (carry forward):**
-- Docs restructuring arc (Chris-ratified S2800).
-- Slice 5-hardening executable invariants.
-- Tier 2 lint promotion.
-- Advanced paste-UUID fallback for cluster picker.
-- Server-side search + pagination on `/eligible/`.
-- Z1/Z2/Z4 signal-dispatch UI polish.
-- Rank + cap + paginate follow-ups.
-- Per-pattern-type diversity floors.
-- Ledger candidates backlog.
-- W2 #1 / #2b / #2c pending Chris re-slate.
-- LLMCallLog field splits.
-- Bulk `workspace_budget_tool` operations.
-- C4/C5/C6 character-os follow-ons.
+1. Read the spec: `bash tools/pa_local.sh "deliverable_tool action=get id=<UUID>"` (or read directly from ORM if faster).
+2. Confirm you understand: "Got it — spec title is X, acceptance criteria are Y, out of scope is Z. Starting."
+3. Execute the code per the spec's acceptance criteria.
+4. Ping Rigby for SIGN cycle(s) using the pattern from S2968 (T1 pre-code SIGN with tool-verify directives + mandatory zoom-out ask; A2 post-code SIGN with live verification evidence).
+5. On AGREE: commit + PR + merge with `--admin` + `make recycle-all` per PLAYBOOK-7.4.4.
+6. Report back to Chris with the per-PR three-part plain-English summary (per `feedback_session_close_three_part_summary` + `feedback_per_pr_summary_signals_close_readiness`).
 
 ---
 
-## What's forbidden at S2967 (D6 MORATORIUM still in force)
+## PR-B branch decision (defer to Chris)
 
-All prior forbidden entries carry forward. **S2967 new forbidden entries:** none.
+**Branch `feat/s2968-pr-b-deliverable-as-spec` is pushed to origin, no PR opened.** Contains ~470 LOC (deliverable-id resolution branch on `_handle_claude_code`, 10 tests, doc note). Under the reframe:
+
+- The **`engineering_spec` deliverable_type + `_TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT` addition** is still correct regardless of dispatch wiring — the spec IS the interchange format between Rigby and CC.
+- The **`deliverable_id` schema addition + resolution branch** is architecturally fine but wired for the wrong path (subprocess dispatch). Under the reframe, `deliverable_id` should route to a queue-for-pickup that CC-orient reads, not to a Celery `claude_code_engineer_task` dispatch.
+
+**Three options for PR-B (Chris picks):**
+
+| Option | What it does | Cost |
+|---|---|---|
+| **A. Rework** | Rip out the subprocess-dispatch wiring; keep the exempt-list addition + doc note. New PR ships as "engineering_spec type + doc" only. Minimum viable version of the reframe (Chris types deliverable UUID at session open; CC reads via `deliverable_tool.get`). | ~30 min rework + tests + SIGN |
+| **B. Push as draft** | Open PR-B as `[DRAFT — do not merge]` for visibility; note that dispatch wiring needs rework under reframe. Preserves work without acting. | ~2 min |
+| **C. Delete** | `git push origin --delete feat/s2968-pr-b-deliverable-as-spec` — throw it away. Rebuild from scratch when needed. | ~1 min |
+
+**Recommend A once Chris walks the new workflow once and confirms it feels right.** No urgency — the branch is safely on origin.
+
+---
+
+## What tonight's shipped code still earns under the reframe
+
+**PR #3588 (v2 subprocess dispatch) — DEMOTED but still real.** Not the primary path anymore, but real infrastructure for:
+- Scheduled/background dispatches (Rigby nightly evals, autonomous drift-remediation, incident response) where no human is at a terminal
+- The A/B validation trail toward eventual PR-D flip is still a valid future arc IF we decide autonomous dispatch matters as a product feature
+
+**PR #3589 (schema follow-up) — still needed.** Exposes `engine_mode` to LLM callers regardless of primary-vs-fallback status.
+
+**Reframe implication:** the S2968 arc's remaining planned PRs (PR-C = Deliverable status write-back, PR-D = v2 default flip + v1 deletion) become **optional / deferred** rather than automatic. Reconsider after walking the new workflow.
+
+---
+
+## Candidate folds surfaced this session (NOT codified)
+
+**Trigger count building toward Playbook rules — do NOT amend without a second trigger:**
+
+1. **Soft-key-vs-LLM-schema-gate.** When any param must be passed by an LLM caller, it MUST be declared in the tool schema. Soft-keys only work for internal Python callers. **Trigger count: 1** (PR #3589 was the manifestation).
+
+2. **"We're building a duplicate of a thing we already have" pattern.** Option β caught it once (homegrown coding loop reimplementing `claude` CLI). Chris's end-of-session reframe caught it again (Rigby-side coding agent reimplementing the user's CC terminal). **Trigger count: 2 within one session.** Cross-domain (code + orchestration); may warrant a rule about "before adding a new capability, ask what already provides it in the platform's actual usage shape."
+
+---
+
+## Universal open sequence (unchanged)
+
+1. `context-kit orient` — source-of-truth chain, latest handoff
+2. Absorb `MEMORY.md` + `CLAUDE.md` (both auto-injected)
+3. Read this `00-START-NEXT-SESSION.md` in full
+4. **Session-open atomic mint check:** `grep "^python tools/pa_chat.py" tools/pa_local.sh` — should show the S2969 pin minted at S2968 close cascade. If not fresh, run `python manage.py session_lifecycle close --label s2968-option-beta-reframe` first (per `feedback_session_open_atomic_mint_before_pa_dispatch`).
+5. Verify `claude` CLI availability (if v2 dispatches are on the day's plan): `which claude && claude --version` (should show 2.1.114+ at `~/.local/bin/claude`)
+6. Read `docs/handoffs/SESSION_2968_OPTION_BETA_AND_REFRAME.md` — full context on tonight's shipped code + the reframe
+7. **Wait for Chris to hand you a spec pointer via Rigby.** Do not proactively propose work.
+
+---
+
+## What's forbidden at S2969 (D6 MORATORIUM still in force)
+
+All prior forbidden entries carry forward. **S2968 new forbidden entries:**
+- **Do not automatically merge PR-B** — its dispatch wiring is architecturally stale under the reframe. Chris picks Option A/B/C above before any merge.
+- **Do not proactively dispatch v2 test runs at session open** — each burns ~$0.15-0.20. Only dispatch when Chris explicitly requests a v2 run.
 
 ---
 
 ## What's queued but deferred (do NOT open unless Chris directs)
 
-**S2967 additions:** see §Deferred queue above.
+**S2968 additions:**
+- **PR-C (Deliverable status write-back)** — reconsider after the reframe walk. May not be needed if pickup-queue design supplants dispatch-and-write-back.
+- **PR-D (v2 default flip + v1 deletion)** — deferred until we know whether autonomous dispatch is a keeper feature.
+- **Path A (nightly beat + drift dashboard for Golden Evals)** — deferred from S2968 first-action; still on the queue for whenever Chris wants it.
+- **Path B (per-slice named predicate graduation)** — Golden Evals arc follow-up.
+- **Path C (Ledger #20 + #21 fix arc)** — ToolCallRecord.trace_id + PA write regression.
 
-**Long-standing:**
-- Docs restructuring arc (Chris-ratified S2800).
-- Slice 5-hardening executable invariants.
-- Tier 2 lint promotion.
-- Advanced paste-UUID fallback for cluster picker.
-- Server-side search + pagination on `/eligible/`.
-- Z1/Z2/Z4 signal-dispatch UI polish.
-- Rank + cap + paginate follow-ups.
-- Per-pattern-type diversity floors.
-- Ledger candidates backlog.
-- W2 #1 / #2b / #2c pending Chris re-slate.
-- LLMCallLog field splits.
-- Bulk `workspace_budget_tool` operations.
-- C4/C5/C6 character-os follow-ons.
+**Long-standing (carry forward):**
+- Docs restructuring arc (Chris-ratified S2800)
+- Slice 5-hardening executable invariants
+- Tier 2 lint promotion
+- Advanced paste-UUID fallback for cluster picker
+- Server-side search + pagination on `/eligible/`
+- Z1/Z2/Z4 signal-dispatch UI polish
+- Rank + cap + paginate follow-ups
+- Per-pattern-type diversity floors
+- Ledger candidates backlog
+- W2 #1 / #2b / #2c pending Chris re-slate
+- LLMCallLog field splits
+- Bulk `workspace_budget_tool` operations
+- C4/C5/C6 character-os follow-ons
 
 ---
 
 ## Sweep progress tracker (Path B ratified S2892)
 
-**All ratified sweep scope discharged as of S2940.** Signal-dispatch (S2946-S2950) + A1 infra (S2951) + pre-A1 capability triage (S2952) + capability substrate (S2953) + Golden Evals arc (S2954-S2966) + Slice 7 tool-gap sweep (S2967) are adjacent-domain net-new engineering + arc substrate, not sweep work.
+**All ratified sweep scope discharged as of S2940.** Signal-dispatch (S2946-S2950) + A1 infra (S2951) + pre-A1 capability triage (S2952) + capability substrate (S2953) + Golden Evals arc (S2954-S2966) + Slice 7 tool-gap sweep (S2967) + Option β + reframe (S2968) are adjacent-domain net-new engineering + arc substrate, not sweep work.
 
 **Total remaining sweep tools: 0.**
 
@@ -178,24 +149,29 @@ _(unchanged — see prior 00-START snapshots)_
 
 ---
 
-## For fuller context (S2846 → S2966)
+## For fuller context (S2846 → S2968)
 
 See:
-- **S2967 handoff (current):** `docs/handoffs/SESSION_2967_SLICE_7_TOOL_GAP_FIXES.md`
-- **S2967 shipped code:**
-  - `core/services/pa_tool_schemas.py` (workspace_tool + claude_code_tool schemas)
-  - `core/services/td_handlers_agents.py:2421` (workspace_tool.update handler)
-  - `core/services/td_handlers_codejobs.py:330` (`_handle_claude_code` workspace resolver)
-  - `core/tasks.py:11873` (`claude_code_engineer_task` workspace_root_path kwarg)
-  - `core/services/claude_code_engineer.py` (REPO_ROOT refactor + `_resolve_repo_root` + `_execute_tool(..., repo_root)`)
+- **S2968 handoff (current):** `docs/handoffs/SESSION_2968_OPTION_BETA_AND_REFRAME.md`
+- **S2968 shipped code:**
+  - `core/services/claude_code_engineer.py` (v2 subprocess dispatch — `execute_engineering_task_v2` at line 1428+ + helpers)
+  - `core/services/pa_tool_schemas.py` (`engine_mode` schema addition on `claude_code_tool`)
+  - `core/tasks.py:11873` (`claude_code_engineer_task` router: payload > env > 'v1')
+  - `core/services/td_handlers_codejobs.py:330` (`engine_mode` payload soft-key passthrough — LLM callers still gated on schema)
+  - `docs/topics/claude-code-engineer.md` (`Engine mode` section)
+  - `core/tests/test_engineer_v2_subprocess.py` (13 tests)
+- **S2968 pushed-not-merged code** (branch `feat/s2968-pr-b-deliverable-as-spec`, commit `1189232a6`):
+  - `core/services/deliverable_factory.py` (+8: `'engineering_spec'` in exempt frozenset)
+  - `core/services/pa_tool_schemas.py` (+21: `deliverable_id` on `claude_code_tool`)
+  - `core/services/td_handlers_codejobs.py` (+121: `_handle_claude_code` deliverable_id branch)
+  - `docs/topics/claude-code-engineer.md` (+20: `Deliverable-as-spec` subsection)
+  - `core/tests/test_engineer_deliverable_spec.py` (NEW, 10 tests, all pass)
+- **S2968 design doc:** `docs/research/platform/S2968_CLAUDE_CODE_TOOL_OPTION_BETA_ARC_OPEN.md`
+- **S2967 handoff:** `docs/handoffs/SESSION_2967_SLICE_7_TOOL_GAP_FIXES.md`
 - **S2966 handoff:** `docs/handoffs/SESSION_2966_GOLDEN_EVALS_HARNESS_PR2B.md`
-- **S2965 handoff:** `docs/handoffs/SESSION_2965_GOLDEN_EVALS_HARNESS_PR2A.md`
-- **S2964 handoff:** `docs/handoffs/SESSION_2964_GOLDEN_EVALS_HARNESS_PR1.md`
-- **S2963 handoff:** `docs/handoffs/SESSION_2963_GOLDEN_EVALS_ARC_CLOSE_CANON_V2.md`
-- **S2963 canon_v2 ratification doc:** `docs/research/platform/S2963_GOLDEN_EVALS_ARC_CLOSE.md` (190 lines)
 - **A1 Wedge scoping deliverable (unchanged, S2951):** `7870eca9-2bcc-4cb4-a7e1-6c2de7697ec6`
 - **A1 Wedge ratification envelope (unchanged, S2951):** `3ad93ef9-48ef-4a3f-ac55-7678a9f5f28b`
-- **Rigby Tool Gap Ledger:** `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` (Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50`) — **Ledger #22 DISCHARGED at S2967**.
+- **Rigby Tool Gap Ledger:** `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0` (Donkey Betz workspace `b4503364-2573-4401-9e28-61a739e0ce50`) — Ledger #22 DISCHARGED at S2967; no S2968 additions.
 - **Ledger #17 (S2957):** `db316865-d08c-4cc1-9d8e-cfac249e8c89` — Chat UI response-relay gap (unchanged this session)
 - **Chat UI relay design task (S2957):** `f3f140f9-87bf-488b-8757-eab5d8058f45`
 - **Parent-workspace multi-Claude rulebook:** `/Users/donkeyking/Donkey_Betz/docs/MULTI_CLAUDE_COORDINATION.md`
