@@ -567,3 +567,108 @@ class SignalClusterFilterTests(TestCase):
     def test_invalid_min_confidence_ignored(self):
         resp = self.client.get('/api/v1/signal-clusters/', {'min_confidence': 'garbage'})
         assert resp.status_code == 200
+
+
+class GetSearchableTextExtractorTests(TestCase):
+    """S2974: extractor now supports wrapped-item shape (legislation) in
+    addition to flat huggingface/kaggle/rss shape without regression."""
+
+    def _row(self, raw_data):
+        return LegacySpiderData.objects.create(
+            spider_name='test',
+            source_url='https://example.com/x',
+            data_type='test',
+            raw_data=raw_data,
+            processed_data={},
+            embedding_text='',
+        )
+
+    def test_flat_huggingface_shape_still_extracts(self):
+        row = self._row({
+            'items': [
+                {'title': 'meta-llama/Llama-3.1-8B',
+                 'description': 'AI model for text-generation.',
+                 'tags': ['ai', 'llm']},
+                {'modelId': 'stabilityai/stable-diffusion-3',
+                 'description': 'AI model for text-to-image.'},
+            ]
+        })
+        text = row.get_searchable_text()
+        assert 'meta-llama/Llama-3.1-8B' in text
+        assert 'stabilityai/stable-diffusion-3' in text
+        assert 'text-generation' in text
+
+    def test_wrapped_legislation_shape_uses_item_embedding_text(self):
+        row = self._row({
+            'items': [{
+                'data_type': 'bill_summary',
+                'platform': 'legislation',
+                'tags': ['legislation', 'ri'],
+                'embedding_text': 'H7030. Establishes the healthcare worker platform '
+                                   'act requiring registration by 2027.',
+                'raw_data': {'bill_number': 'H7030', 'title': 'Healthcare Worker Platform Act'},
+            }]
+        })
+        text = row.get_searchable_text()
+        assert 'H7030' in text
+        assert 'healthcare worker platform' in text
+
+    def test_wrapped_shape_falls_back_to_nested_raw_data(self):
+        row = self._row({
+            'items': [{
+                'data_type': 'bill_summary',
+                'platform': 'legislation',
+                'raw_data': {
+                    'bill_number': 'S1234',
+                    'title': 'Some Bill Title',
+                    'description': 'A description of the bill contents here.',
+                },
+            }]
+        })
+        text = row.get_searchable_text()
+        assert 'Some Bill Title' in text
+        assert 'A description of the bill' in text
+
+    def test_item_embedding_text_sentinel_rejected(self):
+        row = self._row({
+            'items': [{
+                'embedding_text': '[NO_ITEMS]',
+                'raw_data': {'title': 'Fallback Title', 'description': 'Fallback desc.'},
+            }]
+        })
+        text = row.get_searchable_text()
+        assert '[NO_ITEMS]' not in text
+        assert 'Fallback Title' in text
+
+    def test_item_embedding_text_short_requires_title_fallback(self):
+        row = self._row({
+            'items': [
+                {'embedding_text': 'short', 'raw_data': {}},  # no title-like → dropped
+                {'embedding_text': 'short', 'title': 'X'},     # has title → kept
+            ]
+        })
+        text = row.get_searchable_text()
+        assert text.count('short') == 1
+
+    def test_flat_item_missing_title_contributes_zero_text(self):
+        row = self._row({
+            'items': [{'description': 'only description', 'tags': ['x']}]
+        })
+        assert row.get_searchable_text() == ''
+
+    def test_empty_items_returns_empty_string(self):
+        assert self._row({'items': []}).get_searchable_text() == ''
+        assert self._row({}).get_searchable_text() == ''
+
+    def test_non_dict_item_skipped_without_error(self):
+        row = self._row({'items': ['string_item', None, {'title': 'ok'}]})
+        text = row.get_searchable_text()
+        assert 'ok' in text
+
+    def test_per_item_text_length_capped(self):
+        long_text = 'a' * 5000
+        row = self._row({'items': [{'embedding_text': long_text}]})
+        text = row.get_searchable_text()
+        # Per-item cap = 1000; global cap = 4000
+        assert len(text) <= 4000
+        assert len(text) <= 1000  # single item
