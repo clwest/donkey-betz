@@ -34,12 +34,38 @@ no embeddable content.
   — 100% [NO_ITEMS] but likely extractor misses on real content.
 
 These are follow-up candidates, not exclusions.
+
+## S2975: stale-empty-raw-data sentinel
+
+Pre-2026-07-19, a cross-spider ingestion bug dropped response bodies,
+leaving ~10.7K rows with `raw_data={}` that got correctly marked
+`[NO_ITEMS]` but represent an artifact — the extractor is doing its
+job, the *data* is missing. These rows dominated the 30d NO_ITEMS
+rate (~89.5%) even though the bug fully self-resolved by 2026-07-19.
+
+`cleanup_stale_no_items` (S2975) bumps those rows to a distinct
+`[NO_ITEMS_STALE_EMPTY_RAW]` sentinel so they:
+  - stay skipped by backfill (via `BACKFILL_SKIP_SENTINELS`),
+  - stop being counted against operational NO_ITEMS metrics, and
+  - remain observable as a separate `stale_empty_raw_data_total`
+    bucket in `get_embedding_stats`.
+
+Centralize the sentinel set here (not string literals across
+callers) so predicate drift can't reintroduce the counting bug.
 """
 
 from __future__ import annotations
 
 from typing import FrozenSet
 
+
+NO_ITEMS_SENTINEL: str = '[NO_ITEMS]'
+STALE_EMPTY_SENTINEL: str = '[NO_ITEMS_STALE_EMPTY_RAW]'
+
+BACKFILL_SKIP_SENTINELS: FrozenSet[str] = frozenset({
+    NO_ITEMS_SENTINEL,
+    STALE_EMPTY_SENTINEL,
+})
 
 EXCLUDED_SPIDER_NAMES: FrozenSet[str] = frozenset({
     'betting_coordinator',
