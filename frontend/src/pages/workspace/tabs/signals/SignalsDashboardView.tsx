@@ -10,7 +10,8 @@
  */
 
 import { useQuery } from '@tanstack/react-query'
-import { Rss, Radar, Database, TrendingUp, Loader2, AlertCircle } from 'lucide-react'
+import { useState } from 'react'
+import { Rss, Radar, Database, TrendingUp, Loader2, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react'
 import { signalsApi } from '@/lib/api'
 import { formatMST, formatNumber, formatConfidence } from './formatters'
 import type { SignalsView, SignalsWindow } from './SignalsTab'
@@ -38,6 +39,17 @@ interface AggregateResponse {
   totals?: { total_count: number; actionable_count: number; distinct_data_types: number }
 }
 
+interface NoItemsBreakdown {
+  window_hours: number
+  total_rows: number
+  no_items_total: number
+  no_items_rate: number
+  by_spider: Array<{ spider_name: string; count: number }>
+  by_data_type: Array<{ data_type: string; count: number }>
+  excluded_spider_names: string[]
+  excluded_data_types: string[]
+}
+
 interface CoverageResponse {
   // S2972 accurate buckets (preferred).
   total: number
@@ -46,6 +58,8 @@ interface CoverageResponse {
   ineligible_empty: number
   embeddable_total: number
   embeddable_coverage_percent: number
+  // S2973 policy-exclusion context.
+  policy_excluded_total: number
   // Legacy fields (kept for backward compat with any older callers).
   total_entries: number
   with_embedding: number
@@ -63,6 +77,8 @@ interface CoverageResponse {
     // Legacy alias.
     with_embedding: number
   }
+  // S2973: present when include_breakdown=1.
+  no_items_breakdown?: NoItemsBreakdown
 }
 
 interface ClusterRow {
@@ -77,6 +93,8 @@ interface ClusterRow {
 }
 
 export function SignalsDashboardView({ windowHours, windowDays, onNavigate }: Props) {
+  const [showBreakdown, setShowBreakdown] = useState(false)
+
   const aggregateQ = useQuery({
     queryKey: ['signals-aggregate', windowDays],
     queryFn: async () => {
@@ -92,9 +110,13 @@ export function SignalsDashboardView({ windowHours, windowDays, onNavigate }: Pr
   })
 
   const coverageQ = useQuery({
-    queryKey: ['signals-embedding-coverage'],
+    // S2973: refetch when breakdown toggles so the extra payload lands
+    // only when the user opens the reveal.
+    queryKey: ['signals-embedding-coverage', showBreakdown ? 24 : 'baseline'],
     queryFn: async () => {
-      const resp = await signalsApi.embeddingCoverage()
+      const resp = await signalsApi.embeddingCoverage(
+        showBreakdown ? { include_breakdown: 1, window: 24 } : undefined,
+      )
       return resp.data as CoverageResponse
     },
     staleTime: 60_000,
@@ -118,7 +140,11 @@ export function SignalsDashboardView({ windowHours, windowDays, onNavigate }: Pr
   return (
     <div className="grid gap-4 lg:grid-cols-3">
       <IngestionSummaryCard query={aggregateQ} onGoToFeed={() => onNavigate('feed')} />
-      <CoverageCard query={coverageQ} />
+      <CoverageCard
+        query={coverageQ}
+        showBreakdown={showBreakdown}
+        onToggleBreakdown={() => setShowBreakdown(v => !v)}
+      />
       <ClusterSummaryCard query={clustersQ} onGoToClusters={() => onNavigate('clusters')} />
     </div>
   )
@@ -243,8 +269,12 @@ function IngestionSummaryCard({
 
 function CoverageCard({
   query,
+  showBreakdown,
+  onToggleBreakdown,
 }: {
   query: ReturnType<typeof useQuery<CoverageResponse>>
+  showBreakdown: boolean
+  onToggleBreakdown: () => void
 }) {
   const { data, isLoading, error } = query
   return (
@@ -327,6 +357,54 @@ function CoverageCard({
               )}
             </div>
           )}
+
+          {/* S2973: collapsible NO_ITEMS breakdown — inside the existing card
+              so it doesn't sprawl the dashboard. Fetches only when opened. */}
+          <div className="pt-2 border-t border-gray-800">
+            <button
+              onClick={onToggleBreakdown}
+              className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-gray-200"
+            >
+              {showBreakdown ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+              <span>Top no-items producers (24h)</span>
+            </button>
+            {showBreakdown && data.no_items_breakdown && (
+              <div className="mt-2 space-y-2">
+                <div className="text-[10px] text-gray-500">
+                  {formatNumber(data.no_items_breakdown.no_items_total)} /{' '}
+                  {formatNumber(data.no_items_breakdown.total_rows)} rows ={' '}
+                  {data.no_items_breakdown.no_items_rate.toFixed(1)}% no-items rate
+                </div>
+                {data.no_items_breakdown.by_spider.slice(0, 5).map(row => (
+                  <div
+                    key={row.spider_name}
+                    className="flex items-center justify-between text-[11px]"
+                  >
+                    <span className="text-gray-300 truncate">
+                      {row.spider_name}
+                      {data.no_items_breakdown!.excluded_spider_names.includes(row.spider_name) && (
+                        <span
+                          className="ml-1.5 text-[9px] text-emerald-500 uppercase"
+                          title="Excluded by policy — this spider writes structural non-content rows"
+                        >
+                          policy
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-yellow-400 font-mono">{formatNumber(row.count)}</span>
+                  </div>
+                ))}
+                {data.no_items_breakdown.excluded_spider_names.length > 0 && (
+                  <div className="pt-1 text-[10px] text-gray-500 border-t border-gray-800/40">
+                    Excludes: {data.no_items_breakdown.excluded_spider_names.join(', ')}
+                  </div>
+                )}
+              </div>
+            )}
+            {showBreakdown && !data.no_items_breakdown && (
+              <div className="mt-2 text-[10px] text-gray-500">Loading breakdown…</div>
+            )}
+          </div>
         </div>
       )}
     </CardShell>
