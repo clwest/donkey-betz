@@ -365,16 +365,23 @@ class NoItemsPolicyTests(TestCase):
     """S2973: `no_items_policy` module + `get_embedding_stats` breakdown."""
 
     def test_policy_defaults_are_conservative(self):
-        """The v1 policy list must stay small — false exclusions HIDE bugs.
+        """The policy list must stay small — false exclusions HIDE bugs.
         Locks the conservative default so a bulk-add can't sneak through
-        without an explicit test update."""
+        without an explicit test update.
+
+        S2975 added `discord_training` after sampling confirmed the
+        statistics-rollup shape.
+        """
         from core.services.no_items_policy import (
             EXCLUDED_DATA_TYPES,
             EXCLUDED_SPIDER_NAMES,
         )
 
-        # v1 is intentionally 2 spiders + 0 data_types (see module docstring).
-        assert EXCLUDED_SPIDER_NAMES == frozenset({'betting_coordinator', 'openmeteo'})
+        assert EXCLUDED_SPIDER_NAMES == frozenset({
+            'betting_coordinator',
+            'discord_training',
+            'openmeteo',
+        })
         assert EXCLUDED_DATA_TYPES == frozenset()
 
     def test_policy_excluded_total_counts_by_spider_name(self):
@@ -431,7 +438,9 @@ class NoItemsPolicyTests(TestCase):
         assert b['by_spider'][0] == {'spider_name': 'theodds', 'count': 3}
         assert b['by_spider'][1] == {'spider_name': 'openmeteo', 'count': 2}
         # Policy reflection (Rigby T1 refinement — UI reads these directly).
-        assert b['excluded_spider_names'] == ['betting_coordinator', 'openmeteo']
+        assert b['excluded_spider_names'] == [
+            'betting_coordinator', 'discord_training', 'openmeteo',
+        ]
         assert b['excluded_data_types'] == []
 
     def test_breakdown_window_excludes_older_rows(self):

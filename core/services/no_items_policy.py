@@ -23,11 +23,28 @@ issues (broken extractors, upstream auth failures, etc.). Extend only
 after sampling the target spider and confirming the shape genuinely has
 no embeddable content.
 
+## S2975 addition — discord_training
+
+Confirmed Class 1 (rollup by design) via S2975 sampling (25 most recent
+30d rows on 2026-07-26). Every hourly-ish row is either an empty run
+(`items=[]`, `empty_reason=no_items`) or a single-item statistics
+snapshot with keys `by_topic`, `high_quality_conversations`,
+`medium_quality_conversations`, `sample_formats`, `statistics` — a
+rollup of accumulated training data, not an embeddable content unit.
+Top NO_ITEMS producer by volume post-S2975 cleanup (31 rows/30d,
+30 rows/7d in the non-deferred set).
+
 ## Not in this policy (deliberately)
 
 - **theodds** — currently 100% [NO_ITEMS] over 7d, but sampled rows are
   `auth_failure_circuit_breaker` envelopes (upstream API auth issue,
   fixable). Excluding it would mask the auth failure.
+- **remoteok** — S2975 sampling confirmed the spider only saves the
+  remoteok API's legal preamble (`type: item, legal: API Terms of
+  Service...`) because that item's `last_updated` field mutates every
+  fetch and beats dedup while real jobs get deduped. Root cause is
+  spider-side, not a policy exclusion — needs a pre-dedup filter in
+  `ai_core/spiders/remoteok_spider.py`. Logged as follow-up seed.
 - **spotify / giphy / unsplash** — media APIs; probably don't fit text
   embedding, but need shape sampling before exclusion.
 - **legal spiders** (lii / findlaw / colorado_family_law / justia_family_law)
@@ -69,6 +86,7 @@ BACKFILL_SKIP_SENTINELS: FrozenSet[str] = frozenset({
 
 EXCLUDED_SPIDER_NAMES: FrozenSet[str] = frozenset({
     'betting_coordinator',
+    'discord_training',  # S2975: statistics-rollup shape, not embeddable content.
     'openmeteo',
 })
 
