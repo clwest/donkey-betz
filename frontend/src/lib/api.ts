@@ -672,7 +672,8 @@ export const signalsApi = {
   clusterDetail: (clusterId: string) =>
     api.get(`/v1/signal-clusters/${clusterId}/`),
   // S2978: Theme Signals v1 — tab-scoped Buildable/Investable cards.
-  themeSignals: (params?: { tab?: 'buildable' | 'investable'; days?: number; limit?: number; min_confidence?: number }) =>
+  // S2980: `build_only` filters Buildable to action==build cards only.
+  themeSignals: (params?: { tab?: 'buildable' | 'investable'; days?: number; limit?: number; min_confidence?: number; build_only?: boolean }) =>
     api.get('/theme-signals/', { params }),
 }
 

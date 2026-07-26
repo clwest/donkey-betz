@@ -7,7 +7,7 @@ spec deliverable `63ec4d1d-9425-468b-815c-b4e571e3fe44`):
 
 - Deterministic tab routing (Investable wins ties)
 - Strict quality gate: title-block regex + evidence density + confidence
-- Card contract: title / why_now / evidence / so_what / confidence(+drivers)
+- Card contract: title / why_now / evidence / action / confidence(+drivers)
 - Investable variant adds `who_benefits_who_loses` = Phase B placeholder
 
 TODO(Phase B): unify BUILDABLE_SOURCES + INVESTABLE_SOURCES with
@@ -83,19 +83,35 @@ MIN_CONFIDENCE_INVESTABLE = 0.65
 
 MAX_EVIDENCE = 7
 
-# Pattern-type → user-facing suggested action.
-_SO_WHAT_ACTION = {
+# Canonical action enum (S2980 spec deliverable f3cc9499). Collapses the
+# prior 5-value ``_SO_WHAT_ACTION`` (watch/research/build/trade/build-trade)
+# down to 3 values (build/research/watch) per Chris D-verdict — the
+# frontend Buildable tab needs an unambiguous "act on this now" chip, and
+# the Build-only toggle needs a clean predicate. `opportunity_window`
+# collapses to `build` (spec §Mapping); `market_movement` collapses to
+# `watch` (spec §Mapping — trade-classed clusters are Investable-tab
+# concerns, so they read as "watch" on the card chip).
+_PATTERN_TO_ACTION: Dict[str, str] = {
     "trend_emergence": "watch",
     "demand_spike": "research",
-    "opportunity_window": "build/trade",
+    "opportunity_window": "build",
     "knowledge_gap": "research",
     "skill_demand": "research",
     "content_gap": "build",
     "sentiment_shift": "watch",
-    "market_movement": "trade",
+    "market_movement": "watch",
     "competitive_signal": "research",
     "user_need": "build",
 }
+
+
+def pattern_type_to_action(pattern_type: Optional[str]) -> str:
+    """Map ``pattern_type`` → canonical action enum. Fallback: ``watch``.
+
+    Public so the ``build_only`` filter in ``get_theme_signals`` can reuse
+    the exact same mapping as ``cluster_to_card`` — one source of truth.
+    """
+    return _PATTERN_TO_ACTION.get(pattern_type or "", "watch")
 
 _PATTERN_TYPE_PROSE = {
     "trend_emergence": "Emerging trend",
@@ -215,15 +231,18 @@ def _items_from_row(row) -> List[Dict[str, Any]]:
     return items
 
 
-def _extract_evidence_from_row_items(row, items, out: List[Dict[str, Any]], max_items: int) -> bool:
-    """Append valid evidence entries from a row's items list.
+def _normalize_row_items(row, items, max_items: int) -> List[Dict[str, Any]]:
+    """Return a normalized evidence list for one row's items, capped at ``max_items``.
 
-    Each entry passes through ``normalize_evidence_row``, which applies
-    URL sanitization (Bluesky ``at://`` transform + http/https allowlist)
-    and source-label mapping (raw slug → display label). Rows where the
-    normalized title AND url are both empty are silently skipped. Returns
-    True when ``out`` is full.
+    Each entry passes through ``normalize_evidence_row``, which applies URL
+    sanitization (Bluesky ``at://`` transform + http/https allowlist) and
+    source-label mapping (raw slug → display label). Items where the
+    normalized title AND url are both empty are silently skipped. The
+    per-row cap bounds worst-case work when a single row carries many
+    items — the round-robin caller only needs at most ``max_items`` from
+    any one row anyway.
     """
+    out: List[Dict[str, Any]] = []
     for item in items:
         if not isinstance(item, dict):
             continue
@@ -241,48 +260,110 @@ def _extract_evidence_from_row_items(row, items, out: List[Dict[str, Any]], max_
             continue
         out.append(row_entry)
         if len(out) >= max_items:
-            return True
-    return False
+            break
+    return out
+
+
+def _round_robin_across_row_buckets(
+    row_buckets: List[List[Dict[str, Any]]], max_total: int
+) -> List[Dict[str, Any]]:
+    """Interleave evidence items across per-row buckets until ``max_total`` filled.
+
+    Emits one item per non-empty bucket per pass, preserving within-row
+    walk order (extractor relevance). Guarantees source diversity when
+    multiple rows have items: the second item from the first row never
+    ships before the first item from the second row. Deterministic across
+    runs for a given bucket order + contents.
+
+    S2980: fixes the item-level walk bias where a single row carrying
+    ≥MAX_EVIDENCE items would saturate the evidence list before the
+    extractor touched sibling rows from other sources.
+    """
+    out: List[Dict[str, Any]] = []
+    cursors = [0] * len(row_buckets)
+    while len(out) < max_total:
+        added_this_pass = False
+        for i, bucket in enumerate(row_buckets):
+            if cursors[i] >= len(bucket):
+                continue
+            out.append(bucket[cursors[i]])
+            cursors[i] += 1
+            added_this_pass = True
+            if len(out) >= max_total:
+                break
+        if not added_this_pass:
+            break
+    return out
+
+
+def _build_row_buckets_in_cluster_order(
+    spider_data_ids: List[Any], row_by_id: Dict[str, Any], max_items: int
+) -> List[List[Dict[str, Any]]]:
+    """Materialize per-row buckets in the cluster's stored ``spider_data_ids`` order.
+
+    Row iteration order is defined by the cluster's own ``spider_data_ids``
+    (deterministic per cluster), NOT by queryset order — ``filter(id__in=…)``
+    does not guarantee an ordering unless explicitly annotated. Rigby T1
+    SIGN F-BLOCKER: mirror this contract in both the single-cluster and
+    batch prefetch paths so behavior can't diverge.
+    """
+    buckets: List[List[Dict[str, Any]]] = []
+    for i in spider_data_ids or []:
+        row = row_by_id.get(str(i))
+        if row is None:
+            continue
+        bucket = _normalize_row_items(row, _items_from_row(row), max_items)
+        if bucket:
+            buckets.append(bucket)
+    return buckets
 
 
 def extract_evidence_from_cluster(cluster, max_items: int = MAX_EVIDENCE) -> List[Dict[str, Any]]:
-    """Flatten evidence for one cluster: primary spider_data_ids path,
-    with ``sample_signals`` as fallback when primary yields zero items.
+    """Flatten evidence for one cluster with source-diversified selection.
 
     Primary — ``LegacySpiderData.raw_data['items']`` across cluster rows:
       title: item.get('title') or item.get('headline') or item.get('name')
       url:   item.get('url')   or item.get('link')     or item.get('source_url')
 
-    Skip items where both title AND url are missing. Skip rows where
-    ``raw_data`` is not dict-shaped (defends against list-shaped payloads).
-    Fallback — ``SignalCluster.sample_signals`` (only when primary is empty):
+    Items are normalized per row (URL sanitize, source label map), then
+    round-robin'd across rows one-at-a-time so evidence reflects the
+    cluster's multi-source shape (S2980 spec deliverable f3cc9499).
+    Row iteration follows the cluster's stored ``spider_data_ids`` order
+    for determinism.
+
+    Fallback — ``SignalCluster.sample_signals`` (only when primary is empty).
     Chris ratified Option B at S2979 — sample_signals is lower-integrity
     (mixed source/url pairings, blobby text) so it stays a fallback, never
     preferred over the primary path.
-    Results are relevance-sorted (clickable before unclickable, real
-    titles before placeholders).
+
+    Results are relevance-sorted last (clickable before unclickable, real
+    titles before placeholders) — the stable sort preserves round-robin
+    order among items that tie on both binary keys.
     """
     from core.models_unified_system import LegacySpiderData
 
-    out: List[Dict[str, Any]] = []
     ids = cluster.spider_data_ids or []
+    row_by_id: Dict[str, Any] = {}
     if ids:
-        for row in LegacySpiderData.objects.filter(id__in=ids):
-            if _extract_evidence_from_row_items(row, _items_from_row(row), out, max_items):
-                break
-    if not out:
-        out = evidence_from_sample_signals(cluster.sample_signals, max_items)
-    return sort_evidence_by_relevance(out)
+        row_by_id = {
+            str(row.id): row
+            for row in LegacySpiderData.objects.filter(id__in=ids)
+        }
+
+    row_buckets = _build_row_buckets_in_cluster_order(ids, row_by_id, max_items)
+    diversified = _round_robin_across_row_buckets(row_buckets, max_items)
+    if not diversified:
+        diversified = evidence_from_sample_signals(cluster.sample_signals, max_items)
+    return sort_evidence_by_relevance(diversified)
 
 
 def _prefetch_evidence_for_clusters(clusters) -> Dict[str, List[Dict[str, Any]]]:
     """Batch-fetch evidence for all survivor clusters in one query.
 
-    Applies the same primary/fallback logic as ``extract_evidence_from_cluster``
-    but issues a single ``LegacySpiderData.objects.filter(id__in=...)`` for
-    the union of ``spider_data_ids`` across all survivors. Returns
-    ``{cluster_id: [evidence...]}`` pre-computed. Eliminates N+1 across the
-    survivors loop when rendering >1 card (A2 SIGN Z-A2 fold #1).
+    Same round-robin diversification as ``extract_evidence_from_cluster``,
+    with a single ``LegacySpiderData.objects.filter(id__in=…)`` for the
+    union of ``spider_data_ids`` across all survivors — eliminates N+1
+    across the survivors loop (A2 SIGN Z-A2 fold #1 from S2978).
     """
     from core.models_unified_system import LegacySpiderData
 
@@ -303,16 +384,13 @@ def _prefetch_evidence_for_clusters(clusters) -> Dict[str, List[Dict[str, Any]]]
     out: Dict[str, List[Dict[str, Any]]] = {}
     for c in clusters:
         cid = str(c.id)
-        evidence: List[Dict[str, Any]] = []
-        for i in per_cluster.get(cid, []):
-            row = row_by_id.get(i)
-            if row is None:
-                continue
-            if _extract_evidence_from_row_items(row, _items_from_row(row), evidence, MAX_EVIDENCE):
-                break
-        if not evidence:
-            evidence = evidence_from_sample_signals(c.sample_signals, MAX_EVIDENCE)
-        out[cid] = sort_evidence_by_relevance(evidence)
+        row_buckets = _build_row_buckets_in_cluster_order(
+            per_cluster.get(cid, []), row_by_id, MAX_EVIDENCE
+        )
+        diversified = _round_robin_across_row_buckets(row_buckets, MAX_EVIDENCE)
+        if not diversified:
+            diversified = evidence_from_sample_signals(c.sample_signals, MAX_EVIDENCE)
+        out[cid] = sort_evidence_by_relevance(diversified)
     return out
 
 
@@ -364,7 +442,7 @@ def cluster_to_card(
         "why_now": _derive_why_now(cluster),
         "why_now_note": "(Phase A template — expanded in Phase B)",
         "evidence": evidence,
-        "so_what": _SO_WHAT_ACTION.get(cluster.pattern_type or "", "watch"),
+        "action": pattern_type_to_action(cluster.pattern_type),
         "confidence": round(float(cluster.confidence or 0), 3),
         "confidence_drivers": _confidence_drivers(cluster),
         "pattern_type": cluster.pattern_type or "",
@@ -397,12 +475,21 @@ def get_theme_signals(
     days: int = DEFAULT_DAYS,
     limit: int = DEFAULT_LIMIT,
     min_confidence: Optional[float] = None,
+    build_only: bool = False,
 ) -> Dict[str, Any]:
     """Load recent clusters, apply routing + quality gate, shape into cards.
 
+    ``build_only`` (S2980) — when True, further filters survivors to cards
+    whose canonical ``action`` is ``build`` (per ``pattern_type_to_action``).
+    Applied AFTER routing + quality gate but BEFORE the ``limit`` cap, so
+    the caller gets up to ``limit`` build-only cards rather than
+    ``limit`` buildable-then-filtered-to-few. Intended for the Buildable
+    tab's `All | Build-only` toggle.
+
     Returns:
-      {tab, days, limit, cards, total_scanned, total_survived,
-       gate_reasons: {title_blocked, evidence_fail, conf_fail, routed_other_tab}}
+      {tab, days, limit, build_only, cards, total_scanned, total_survived,
+       gate_reasons: {title_blocked, evidence_fail, conf_fail,
+                      routed_other_tab, build_only_filtered}}
     """
     from core.models import SignalCluster
 
@@ -412,6 +499,7 @@ def get_theme_signals(
     conf_override: Optional[float] = None
     if min_confidence is not None:
         conf_override = max(0.0, min(1.0, float(min_confidence)))
+    build_only_c = bool(build_only)
 
     cutoff = timezone.now() - timedelta(days=days_c)
     qs = SignalCluster.objects.filter(detected_at__gte=cutoff).order_by("-detected_at")
@@ -422,6 +510,7 @@ def get_theme_signals(
         "evidence_fail": 0,
         "conf_fail": 0,
         "routed_other_tab": 0,
+        "build_only_filtered": 0,
     }
     survivors = []
     for cluster in qs.iterator():
@@ -440,6 +529,9 @@ def get_theme_signals(
         if route != tab_value:
             # Passed its own gate but not this tab; already counted above.
             continue
+        if build_only_c and pattern_type_to_action(cluster.pattern_type) != "build":
+            gate_reasons["build_only_filtered"] += 1
+            continue
         survivors.append(cluster)
         if len(survivors) >= limit_c:
             break
@@ -455,6 +547,7 @@ def get_theme_signals(
         "tab": tab_value,
         "days": days_c,
         "limit": limit_c,
+        "build_only": build_only_c,
         "min_confidence_applied": (
             conf_override if conf_override is not None
             else _confidence_threshold_for(tab_value)
