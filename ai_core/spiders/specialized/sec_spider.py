@@ -83,8 +83,14 @@ class SECSpider:
             except Exception as e:
                 logger.warning(f"Error fetching {form_type} filings: {e}")
 
-        # Sort by filed date (most recent first)
-        all_filings.sort(key=lambda x: x.get('filed_at', ''), reverse=True)
+        # S2977: Round-robin interleave by form_type so the top-N slice (the
+        # downstream extractor uses items[:20] to build embedding_text) always
+        # includes a mix of 8-K / 10-K / 10-Q when all three are present.
+        # Before this fix, 8-Ks (filed ~20x more frequently) dominated the
+        # top of a global filed_at desc sort — the extractor's [:20] cap
+        # dropped every 10-K / 10-Q, and searches for those form types
+        # returned zero real hits despite the raw_data containing them.
+        all_filings = self._interleave_by_form_type(all_filings)
 
         # If all feeds fail, use curated topics
         if len(all_filings) == 0:
@@ -92,6 +98,33 @@ class SECSpider:
 
         logger.info(f"SEC spider collected {len(all_filings)} filings")
         return all_filings[:max_results]
+
+    @staticmethod
+    def _interleave_by_form_type(filings: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Round-robin interleave filings by form_type, per-type filed_at desc.
+
+        Single form_type input degrades to the sorted single list (no-op vs
+        the prior global sort). Missing / empty filed_at strings retain the
+        prior string-sort fallback — no new datetime parsing introduced.
+        """
+        from collections import defaultdict
+
+        by_type: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
+        for f in filings:
+            by_type[f.get('form_type') or '?'].append(f)
+        for lst in by_type.values():
+            lst.sort(key=lambda x: x.get('filed_at', ''), reverse=True)
+
+        result: List[Dict[str, Any]] = []
+        lists = [lst for lst in by_type.values() if lst]
+        while lists:
+            remaining = []
+            for lst in lists:
+                result.append(lst.pop(0))
+                if lst:
+                    remaining.append(lst)
+            lists = remaining
+        return result
 
     def _parse_atom_feed(self, xml_content: str, form_type: str) -> List[Dict[str, Any]]:
         """Parse SEC EDGAR Atom feed into structured filings."""
