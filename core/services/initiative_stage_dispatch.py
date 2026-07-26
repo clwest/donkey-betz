@@ -230,13 +230,28 @@ def queue_stage_document_generation(
     from core.models_document_registry import Initiative
     try:
         initiative = Initiative.objects.get(id=initiative_id)
-    except (Initiative.DoesNotExist, ValidationError, ValueError, TypeError) as exc:
+    except Initiative.DoesNotExist as exc:
         result.update(
             error=f'{type(exc).__name__}: {exc}',
             reason='initiative_not_found',
         )
         logger.warning(
             "[STAGE-DISPATCH] Refusing enqueue: initiative %s not found "
+            "(stage=%s triggered_by=%s source_execution=%s trace=%s) — %s",
+            initiative_id, stage_num, triggered_by,
+            source_execution_id, trace_id, exc,
+        )
+        return result
+    except (ValidationError, ValueError, TypeError) as exc:
+        # S2982 T1 §4c mitigation: distinguish malformed-id from
+        # missing-id so operators can tell "caller passed junk" apart
+        # from "initiative was deleted between enqueue and lookup".
+        result.update(
+            error=f'{type(exc).__name__}: {exc}',
+            reason='invalid_initiative_id_format',
+        )
+        logger.warning(
+            "[STAGE-DISPATCH] Refusing enqueue: initiative_id %r malformed "
             "(stage=%s triggered_by=%s source_execution=%s trace=%s) — %s",
             initiative_id, stage_num, triggered_by,
             source_execution_id, trace_id, exc,
