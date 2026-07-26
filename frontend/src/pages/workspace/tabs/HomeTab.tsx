@@ -1,521 +1,570 @@
 /**
- * Session 1078: Home Tab — Platform dashboard
+ * Session 2983 — Workspace Home Tab (Legibility Overhaul v1)
  *
- * Uses /api/home/boot/ for greeting, while-away stats, active projects.
- * Uses /api/deliverables/stats/ for deliverable counts.
- * Uses /api/body/vitals/ for system health.
- * Uses /api/celery/breakdown/ for task throughput.
+ * Full redesign per ENGINEERING SPEC — Workspace Home v1 (deliverable
+ * `5e1c702f-c09e-4f10-b513-888f0784a81a`, initiative `1b9ef2c4-…`).
+ *
+ * Layout: single screen with four primary modules (2×2 desktop, stacked
+ * mobile):
+ *   1. NOW           — what changed in the last 24h
+ *   2. ACTIVE WORK   — initiatives / action items / needs review
+ *   3. LIBRARY       — pinned + recent (filters ship in PR3)
+ *   4. GUIDED ACTIONS— safe next-step buttons (wired in PR4; stub here)
+ *
+ * Data sources:
+ *   - `/api/workspaces/<id>/home/` — the workspace snapshot (PR1, S2983)
+ *   - `/api/home/boot/`            — greeting + since-last-visit only
+ *
+ * Design decision (S2983 PR2, Claude+Rigby joint agreement): the prior
+ * Session 1078 HomeTab was a global platform dashboard (vitals/celery/
+ * attention). Chris confirmed he wasn't using it yet, so we replaced it
+ * outright with the workspace-legibility shape the spec asked for and
+ * kept only the greeting band + a "hours since visit" chip (orthogonal
+ * value the spec doesn't cover).
  */
 
+import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  AlertTriangle, CheckCircle, Clock, Package, Target,
-  MessageSquare, ArrowRight, Loader2, Activity, Zap,
-  Bot, Search, Cpu, Database, Radio, TrendingUp,
-  Sparkles, Eye, BarChart3,
+  Activity, AlertTriangle, ArrowRight, BookOpen, ClipboardList,
+  Clock, FileText, Layers, Loader2, Package, Plus, Sparkles, Star,
+  Target, XCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { api } from '@/lib/api'
-import { usePAStore } from '@/stores/paStore'
-import DemoPipelineCard from '@/components/DemoPipelineCard'
-import { useAssistantContextStore } from '@/stores/assistantContextStore'
 
 interface HomeTabProps {
   activeWorkspace: { id: string; name: string } | null
   onNavigateTab: (tab: string) => void
 }
 
-function getAge(dateStr?: string): string {
-  if (!dateStr) return ''
-  const diff = Date.now() - new Date(dateStr).getTime()
-  const hours = Math.floor(diff / 3600000)
-  if (hours < 1) return 'just now'
+// --------------------------------------------------------------------- //
+// Types matching the backend response (spec §3.1)
+// --------------------------------------------------------------------- //
+
+interface TimelineEntry {
+  kind: 'deliverable_created' | 'deliverable_updated' | 'agent_run_failed'
+  id: string
+  title?: string
+  agent?: string
+  at: string | null
+}
+
+interface NowSection {
+  window_hours: number
+  runs_count: number
+  failures_count: number
+  new_deliverables_count: number
+  updated_deliverables_count: number
+  timeline: TimelineEntry[]
+}
+
+interface InitiativeCard {
+  id: string
+  name: string
+  status: string
+  stage: number
+  updated_at: string | null
+  next_action: string
+  action_items_count: number
+}
+
+interface ActionItemCard {
+  id: string
+  title: string
+  priority: 'critical' | 'high' | 'medium' | 'low'
+  status: 'pending' | 'in_progress'
+  initiative_id: string
+  initiative_name: string
+}
+
+interface DeliverableCard {
+  id: string
+  title: string
+  type: string
+  status: string
+  is_pinned: boolean
+  updated_at: string | null
+  initiative_id: string | null
+}
+
+interface ActiveWorkSection {
+  initiatives: InitiativeCard[]
+  action_items: ActionItemCard[]
+  needs_review: {
+    ready_deliverables: DeliverableCard[]
+    pending_decisions: unknown[]
+  }
+}
+
+interface LibrarySection {
+  pinned: DeliverableCard[]
+  recent: DeliverableCard[]
+}
+
+interface HomeSnapshot {
+  workspace: { id: string; name: string }
+  now: NowSection
+  active_work: ActiveWorkSection
+  library: LibrarySection
+}
+
+// --------------------------------------------------------------------- //
+// Helpers
+// --------------------------------------------------------------------- //
+
+function relativeTime(iso: string | null): string {
+  if (!iso) return '—'
+  const diffMs = Date.now() - new Date(iso).getTime()
+  if (diffMs < 60_000) return 'just now'
+  const mins = Math.floor(diffMs / 60_000)
+  if (mins < 60) return `${mins}m ago`
+  const hours = Math.floor(mins / 60)
   if (hours < 24) return `${hours}h ago`
   const days = Math.floor(hours / 24)
   return `${days}d ago`
 }
 
-export default function HomeTab({ activeWorkspace, onNavigateTab }: HomeTabProps) {
-  const wsId = activeWorkspace?.id
+const PRIORITY_STYLES: Record<ActionItemCard['priority'], { chip: string; label: string }> = {
+  critical: { chip: 'bg-accent-red/20 text-accent-red border-accent-red/30', label: 'Critical' },
+  high:     { chip: 'bg-accent-amber/20 text-accent-amber border-accent-amber/30', label: 'High' },
+  medium:   { chip: 'bg-primary-500/20 text-primary-400 border-primary-500/30', label: 'Medium' },
+  low:      { chip: 'bg-gray-500/20 text-gray-400 border-gray-500/30', label: 'Low' },
+}
 
-  // Primary data source — home boot endpoint
-  const bootQuery = useQuery({
-    queryKey: ['home-boot', wsId],
-    queryFn: () => api.get('/home/boot/', { params: wsId ? { workspace: wsId } : undefined }).then(r => r.data),
-    refetchInterval: 60000,
-  })
+const STATUS_STYLES: Record<string, string> = {
+  ready: 'bg-accent-green/20 text-accent-green border-accent-green/30',
+  draft: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+  published: 'bg-primary-500/20 text-primary-400 border-primary-500/30',
+  archived: 'bg-gray-700/40 text-gray-500 border-gray-700/40',
+  completed: 'bg-accent-green/20 text-accent-green border-accent-green/30',
+}
 
-  // Deliverable stats — scoped to active workspace
-  const delivStatsQuery = useQuery({
-    queryKey: ['home-deliv-stats', wsId],
-    queryFn: () => api.get('/deliverables/stats/', { params: wsId ? { workspace: wsId } : undefined }).then(r => r.data),
-    refetchInterval: 60000,
-  })
+function statusChipClass(status: string) {
+  return STATUS_STYLES[status] || 'bg-gray-500/20 text-gray-400 border-gray-500/30'
+}
 
-  // System vitals
-  const vitalsQuery = useQuery({
-    queryKey: ['home-vitals'],
-    queryFn: () => api.get('/body/vitals/', { params: { include_details: true } }).then(r => r.data),
-    refetchInterval: 30000,
-  })
+// --------------------------------------------------------------------- //
+// Section: NOW
+// --------------------------------------------------------------------- //
 
-  // Celery throughput
-  const celeryQuery = useQuery({
-    queryKey: ['home-celery'],
-    queryFn: () => api.get('/celery/breakdown/', { params: { window: '60m', limit: 10 } }).then(r => r.data),
-    refetchInterval: 30000,
-  })
-
-  // Attention items
-  const attentionQuery = useQuery({
-    queryKey: ['home-attention'],
-    queryFn: () => api.get('/human/attention/', { params: { limit: 6 } }).then(r => r.data),
-    refetchInterval: 30000,
-  })
-
-  const boot = bootQuery.data as Record<string, unknown> | undefined
-  const greeting = boot?.greeting as Record<string, string> | undefined
-  const whileAway = boot?.while_away as Record<string, number> | undefined
-  const activeProjects = (Array.isArray(boot?.active_projects) ? boot.active_projects : []) as Array<Record<string, unknown>>
-  const quickStats = boot?.quick_stats as Record<string, unknown> | undefined
-
-  const delivStats = delivStatsQuery.data as Record<string, number> | undefined
-  const vitals = vitalsQuery.data as Record<string, unknown> | undefined
-  const celery = celeryQuery.data as Record<string, unknown> | undefined
-
-  const rawAttention = attentionQuery.data?.results ?? attentionQuery.data
-  const attentionItems = (Array.isArray(rawAttention) ? rawAttention : []) as Array<Record<string, unknown>>
-
-  const healthScore = (vitals as Record<string, number>)?.health_score ?? null
-  const agentsActive = (quickStats?.agents_active as number) ?? 0
-  const totalDeliverables = delivStats?.total ?? 0
-  const savedDeliverables = delivStats?.saved ?? 0
-  const last7d = delivStats?.last_7_days ?? 0
-
-  // Celery stats
-  const celeryTotal = (celery as Record<string, number>)?.total_tasks ?? 0
-  const celerySuccess = (celery as Record<string, number>)?.success_rate ?? 0
-
-  const isLoading = bootQuery.isLoading
+function NowModule({ data }: { data: NowSection }) {
+  const chips = [
+    { label: 'Runs', value: data.runs_count, icon: Activity, tone: 'text-primary-400' },
+    { label: 'Failures', value: data.failures_count, icon: XCircle, tone: data.failures_count > 0 ? 'text-accent-red' : 'text-gray-400' },
+    { label: 'New', value: data.new_deliverables_count, icon: Plus, tone: 'text-accent-green' },
+    { label: 'Updated', value: data.updated_deliverables_count, icon: FileText, tone: 'text-primary-400' },
+  ]
 
   return (
-    <div className="space-y-6">
-      {/* Greeting */}
-      {greeting && (
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-white">
-              Good {greeting.time_of_day}, {greeting.user_name}
-            </h2>
-            {whileAway && whileAway.hours_since_visit > 1 && (
-              <p className="text-xs text-gray-500 mt-0.5">
-                {whileAway.hours_since_visit > 24
-                  ? `${Math.floor(whileAway.hours_since_visit / 24)}d since last visit`
-                  : `${Math.round(whileAway.hours_since_visit)}h since last visit`
-                }
-              </p>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            <a
-              href="/workspace/new"
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors text-sm text-white font-medium"
-            >
-              <Zap size={14} />
-              New Business
-            </a>
-            <button
-              onClick={() => {
-                usePAStore.getState().setCurrentInput("What should I focus on today?")
-                usePAStore.getState().openDock()
-              }}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-500/10 border border-primary-500/20 hover:bg-primary-500/20 transition-colors text-sm text-primary-400"
-            >
-              <MessageSquare size={14} />
-              Ask Rigby
-            </button>
-          </div>
+    <div className="card space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Activity size={18} className="text-primary-400" />
+          <h2 className="text-lg font-semibold">Now</h2>
+          <span className="text-xs text-gray-500">last {data.window_hours}h</span>
         </div>
-      )}
-
-      {/* First Win — demo pipeline for new users */}
-      <DemoPipelineCard />
-
-      {/* My Business Workspaces */}
-      <MyBusinessWorkspaces />
-
-      {/* Pulse Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-        <PulseCard label="Agents Active" value={agentsActive} icon={Bot} color="text-primary-400" onClick={() => onNavigateTab('system')} />
-        <PulseCard label="Deliverables" value={totalDeliverables} icon={Package} color="text-emerald-400" onClick={() => onNavigateTab('deliverables')} />
-        <PulseCard label="Saved" value={savedDeliverables} icon={CheckCircle} color="text-green-400" onClick={() => onNavigateTab('deliverables')} />
-        <PulseCard label="Last 7 Days" value={last7d} icon={TrendingUp} color="text-blue-400" onClick={() => onNavigateTab('deliverables')} />
-        <PulseCard label="Tasks/hr" value={celeryTotal} icon={Cpu} color="text-yellow-400" onClick={() => onNavigateTab('system')} />
-        <PulseCard
-          label="System Health"
-          value={healthScore !== null ? `${healthScore}%` : (quickStats?.system_health as string) || '--'}
-          icon={Activity}
-          color={healthScore !== null && healthScore >= 80 ? 'text-green-400' : 'text-yellow-400'}
-          onClick={() => onNavigateTab('system')}
-        />
       </div>
 
-      {/* While Away Stats (only show if meaningful) */}
-      {whileAway && (whileAway.spider_findings > 0 || whileAway.pending_decisions > 0 || whileAway.initiatives_progressed > 0 || whileAway.high_score_dreams > 0) && (
-        <div className="bg-dark-card border border-dark-border rounded-lg p-4">
-          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-            <Sparkles size={12} className="text-primary-400" /> While You Were Away
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {whileAway.spider_findings > 0 && (
-              <div className="flex items-center gap-2">
-                <Search size={14} className="text-blue-400" />
-                <div>
-                  <p className="text-sm font-medium text-white">{whileAway.spider_findings}</p>
-                  <p className="text-[10px] text-gray-500">spider findings</p>
-                </div>
-              </div>
-            )}
-            {whileAway.pending_decisions > 0 && (
-              <div className="flex items-center gap-2">
-                <AlertTriangle size={14} className="text-orange-400" />
-                <div>
-                  <p className="text-sm font-medium text-white">{whileAway.pending_decisions}</p>
-                  <p className="text-[10px] text-gray-500">pending decisions</p>
-                </div>
-              </div>
-            )}
-            {whileAway.initiatives_progressed > 0 && (
-              <div className="flex items-center gap-2">
-                <Target size={14} className="text-emerald-400" />
-                <div>
-                  <p className="text-sm font-medium text-white">{whileAway.initiatives_progressed}</p>
-                  <p className="text-[10px] text-gray-500">initiatives progressed</p>
-                </div>
-              </div>
-            )}
-            {whileAway.high_score_dreams > 0 && (
-              <div className="flex items-center gap-2">
-                <Sparkles size={14} className="text-purple-400" />
-                <div>
-                  <p className="text-sm font-medium text-white">{whileAway.high_score_dreams}</p>
-                  <p className="text-[10px] text-gray-500">high-score dreams</p>
-                </div>
-              </div>
-            )}
-            {whileAway.intelligence_desks_ready > 0 && (
-              <div className="flex items-center gap-2">
-                <Radio size={14} className="text-cyan-400" />
-                <div>
-                  <p className="text-sm font-medium text-white">{whileAway.intelligence_desks_ready}/4</p>
-                  <p className="text-[10px] text-gray-500">intel desks ready</p>
-                </div>
-              </div>
-            )}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        {chips.map((c) => (
+          <div key={c.label} className="rounded-lg bg-dark-bg/60 border border-dark-border p-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-400">{c.label}</span>
+              <c.icon size={14} className={c.tone} />
+            </div>
+            <div className={cn('text-2xl font-semibold mt-1', c.tone)}>{c.value}</div>
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left: Attention Queue + Active Projects (2 cols) */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Attention Queue */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-                <Zap size={14} className="text-orange-400" />
-                Attention Queue
-              </h2>
-              <button
-                onClick={() => onNavigateTab('work')}
-                className="text-[11px] text-gray-500 hover:text-primary-400 flex items-center gap-1"
-              >
-                View all <ArrowRight size={10} />
-              </button>
-            </div>
-
-            {isLoading ? (
-              <div className="flex items-center gap-2 text-gray-500 text-sm py-6 justify-center">
-                <Loader2 size={14} className="animate-spin" /> Loading...
-              </div>
-            ) : attentionItems.length === 0 ? (
-              <div className="text-center py-6 text-gray-500 text-sm bg-dark-card border border-dark-border rounded-lg">
-                <CheckCircle size={20} className="mx-auto mb-1.5 text-green-500/50" />
-                All clear — nothing needs your attention
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {attentionItems.slice(0, 6).map((item) => (
-                  <button
-                    key={item.id as string}
-                    onClick={() => {
-                      useAssistantContextStore.getState().setFocusedEntity({
-                        type: 'attention',
-                        id: item.id as string,
-                        title: (item.title || item.summary || 'Item') as string,
-                      })
-                      onNavigateTab('work')
-                    }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg bg-dark-card border border-dark-border hover:border-primary-500/30 transition-colors text-left group"
-                  >
-                    <div className={cn(
-                      'w-1.5 h-1.5 rounded-full flex-shrink-0',
-                      (item.urgency as string) === 'critical' ? 'bg-red-400' :
-                      (item.urgency as string) === 'high' ? 'bg-orange-400' :
-                      (item.urgency as string) === 'medium' ? 'bg-yellow-400' : 'bg-gray-500'
-                    )} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-gray-200 truncate group-hover:text-white">
-                        {(item.title || item.summary || 'Untitled') as string}
-                      </p>
-                      <p className="text-[11px] text-gray-500">
-                        {item.category && <span className="mr-2">{item.category as string}</span>}
-                        {item.created_at && <span>{getAge(item.created_at as string)}</span>}
-                      </p>
+      <div>
+        <h3 className="text-xs uppercase tracking-wide text-gray-500 mb-2">Timeline</h3>
+        {data.timeline.length === 0 ? (
+          <p className="text-sm text-gray-500 italic">Nothing has happened here in the last {data.window_hours} hours.</p>
+        ) : (
+          <ul className="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+            {data.timeline.map((entry) => {
+              const Icon = entry.kind === 'agent_run_failed' ? XCircle
+                : entry.kind === 'deliverable_created' ? Plus
+                : FileText
+              const tone = entry.kind === 'agent_run_failed' ? 'text-accent-red' : 'text-gray-400'
+              return (
+                <li key={`${entry.kind}-${entry.id}`} className="flex items-start gap-2 text-sm">
+                  <Icon size={14} className={cn('mt-0.5 flex-shrink-0', tone)} />
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate">
+                      {entry.title || entry.agent || 'Untitled'}
                     </div>
-                    <ArrowRight size={12} className="text-gray-600 group-hover:text-primary-400 flex-shrink-0" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Active Projects / Initiatives */}
-          {activeProjects.length > 0 && (
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-sm font-semibold text-gray-300 flex items-center gap-2">
-                  <Target size={14} className="text-emerald-400" />
-                  Active Initiatives
-                </h2>
-                <button
-                  onClick={() => onNavigateTab('initiatives')}
-                  className="text-[11px] text-gray-500 hover:text-primary-400 flex items-center gap-1"
-                >
-                  View all <ArrowRight size={10} />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {activeProjects.slice(0, 4).map((proj) => (
-                  <button
-                    key={proj.id as string}
-                    onClick={() => onNavigateTab('initiatives')}
-                    className="text-left px-4 py-3 rounded-lg bg-dark-card border border-dark-border hover:border-primary-500/30 transition-colors"
-                  >
-                    <p className="text-sm text-gray-200 truncate">{(proj.name || 'Untitled') as string}</p>
-                    <div className="flex items-center gap-3 mt-1.5">
-                      {proj.current_stage !== undefined && (
-                        <span className="text-[10px] text-gray-500">Stage {proj.current_stage as number}/5</span>
-                      )}
-                      {proj.completion_percentage !== undefined && (
-                        <div className="flex-1 flex items-center gap-2">
-                          <div className="flex-1 h-1 bg-gray-800 rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-emerald-500 rounded-full"
-                              style={{ width: `${proj.completion_percentage as number}%` }}
-                            />
-                          </div>
-                          <span className="text-[10px] text-emerald-400">{proj.completion_percentage as number}%</span>
-                        </div>
-                      )}
-                      {proj.status === 'decision_pending' && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">Needs Review</span>
-                      )}
+                    <div className="text-xs text-gray-500">
+                      {entry.kind.replace(/_/g, ' ')} · {relativeTime(entry.at)}
                     </div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right: System Status + Quick Actions */}
-        <div className="space-y-4">
-          {/* Body Systems Summary */}
-          {vitals && (
-            <div className="bg-dark-card border border-dark-border rounded-lg p-4">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                <Activity size={12} /> System Status
-              </h3>
-              <div className="space-y-2">
-                {Array.isArray((vitals as Record<string, unknown>)?.systems) &&
-                  ((vitals as Record<string, unknown>).systems as Array<Record<string, unknown>>).slice(0, 6).map((sys) => (
-                    <div key={sys.name as string} className="flex items-center justify-between text-xs">
-                      <span className="text-gray-400">{(sys.name as string || '').replace(/_/g, ' ')}</span>
-                      <span className={cn(
-                        'px-1.5 py-0.5 rounded text-[10px] font-medium',
-                        (sys.status as string) === 'healthy' || (sys.status as string) === 'breathing'
-                          ? 'bg-green-500/20 text-green-400'
-                          : (sys.status as string) === 'stressed' || (sys.status as string) === 'labored'
-                            ? 'bg-yellow-500/20 text-yellow-400'
-                            : 'bg-red-500/20 text-red-400'
-                      )}>
-                        {sys.status as string}
-                      </span>
-                    </div>
-                  ))
-                }
-              </div>
-              <button
-                onClick={() => onNavigateTab('system')}
-                className="mt-3 w-full text-center text-[11px] text-gray-500 hover:text-primary-400"
-              >
-                Full system details
-              </button>
-            </div>
-          )}
-
-          {/* Celery Throughput */}
-          {celery && celeryTotal > 0 && (
-            <div className="bg-dark-card border border-dark-border rounded-lg p-4">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 flex items-center gap-1.5">
-                <Cpu size={12} /> Task Engine (1hr)
-              </h3>
-              <div className="space-y-1.5 text-xs">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Tasks processed</span>
-                  <span className="text-white font-medium">{celeryTotal.toLocaleString()}</span>
-                </div>
-                {celerySuccess > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Success rate</span>
-                    <span className={cn('font-medium', celerySuccess >= 95 ? 'text-green-400' : 'text-yellow-400')}>
-                      {typeof celerySuccess === 'number' ? `${celerySuccess.toFixed(1)}%` : celerySuccess}
-                    </span>
                   </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Quick Actions */}
-          <div className="bg-dark-card border border-dark-border rounded-lg p-4">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Quick Actions</h3>
-            <div className="space-y-1.5">
-              <QuickAction label="View Work Queue" icon={Zap} onClick={() => onNavigateTab('work')} />
-              <QuickAction label="Browse Deliverables" icon={Package} onClick={() => onNavigateTab('deliverables')} />
-              <QuickAction label="Intelligence Feeds" icon={Radio} onClick={() => onNavigateTab('intelligence')} />
-              <QuickAction label="Content Studio" icon={Sparkles} onClick={() => onNavigateTab('build')} />
-            </div>
-          </div>
-
-          {/* Ask Rigby */}
-          <button
-            onClick={() => {
-              usePAStore.getState().setCurrentInput("What should I focus on today?")
-              usePAStore.getState().openDock()
-            }}
-            className="w-full flex items-center gap-2 px-3 py-2.5 rounded-lg bg-primary-500/10 border border-primary-500/20 hover:bg-primary-500/20 transition-colors text-sm text-primary-400"
-          >
-            <MessageSquare size={14} />
-            Ask Rigby what to focus on
-          </button>
-        </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </div>
     </div>
   )
 }
 
+// --------------------------------------------------------------------- //
+// Section: ACTIVE WORK
+// --------------------------------------------------------------------- //
 
-function PulseCard({
-  label, value, icon: Icon, color, onClick,
+function ActiveWorkModule({
+  data,
+  onNavigateTab,
 }: {
-  label: string
-  value: string | number
-  icon: React.ComponentType<{ size?: number; className?: string }>
-  color: string
-  onClick?: () => void
+  data: ActiveWorkSection
+  onNavigateTab: (tab: string) => void
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="flex items-center gap-3 px-3 py-3 rounded-lg bg-dark-card border border-dark-border hover:border-primary-500/30 transition-colors text-left"
-    >
-      <Icon size={16} className={color} />
-      <div>
-        <p className={cn('text-lg font-semibold', color)}>{value}</p>
-        <p className="text-[10px] text-gray-500">{label}</p>
+    <div className="card space-y-5">
+      <div className="flex items-center gap-2">
+        <Target size={18} className="text-primary-400" />
+        <h2 className="text-lg font-semibold">Active Work</h2>
       </div>
-    </button>
+
+      {/* Active initiatives */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs uppercase tracking-wide text-gray-500">Active Initiatives</h3>
+          <button
+            onClick={() => onNavigateTab('initiatives')}
+            className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+          >
+            View all <ArrowRight size={12} />
+          </button>
+        </div>
+        {data.initiatives.length === 0 ? (
+          <p className="text-sm text-gray-500 italic">No initiatives in this workspace yet.</p>
+        ) : (
+          <ul className="space-y-2">
+            {data.initiatives.slice(0, 5).map((init) => (
+              <li key={init.id} className="rounded-md bg-dark-bg/60 border border-dark-border p-3 hover:border-primary-500/50 transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <span className="font-medium truncate">{init.name}</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-primary-500/20 text-primary-400 border border-primary-500/30">
+                        {init.status}
+                      </span>
+                    </div>
+                    {init.next_action && (
+                      <p className="text-xs text-gray-400 truncate">Next: {init.next_action}</p>
+                    )}
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="text-xs text-gray-500">Stage {init.stage}</div>
+                    <div className="text-xs text-gray-500">{init.action_items_count} action{init.action_items_count === 1 ? '' : 's'}</div>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {/* Next actions */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs uppercase tracking-wide text-gray-500">My Next Actions</h3>
+        </div>
+        {data.action_items.length === 0 ? (
+          <p className="text-sm text-gray-500 italic">No pending action items.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {data.action_items.slice(0, 5).map((item) => {
+              const prio = PRIORITY_STYLES[item.priority]
+              return (
+                <li key={item.id} className="flex items-start gap-2 text-sm">
+                  <span className={cn('text-xs px-1.5 py-0.5 rounded border mt-0.5 flex-shrink-0', prio.chip)}>
+                    {prio.label}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate">{item.title}</div>
+                    <div className="text-xs text-gray-500 truncate">{item.initiative_name}</div>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </section>
+
+      {/* Needs review */}
+      <section>
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-xs uppercase tracking-wide text-gray-500 flex items-center gap-1.5">
+            <AlertTriangle size={12} className="text-accent-amber" />
+            Needs Review
+          </h3>
+        </div>
+        {data.needs_review.ready_deliverables.length === 0 ? (
+          <p className="text-sm text-gray-500 italic">Nothing waiting on review.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {data.needs_review.ready_deliverables.slice(0, 5).map((d) => (
+              <li key={d.id} className="flex items-start gap-2 text-sm">
+                <FileText size={14} className="text-accent-amber mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="truncate">{d.title}</div>
+                  <div className="text-xs text-gray-500">
+                    {d.type} · {relativeTime(d.updated_at)}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
   )
 }
 
+// --------------------------------------------------------------------- //
+// Section: LIBRARY
+// --------------------------------------------------------------------- //
 
-function QuickAction({
-  label, icon: Icon, onClick,
+function LibraryModule({
+  data,
+  onNavigateTab,
 }: {
-  label: string
-  icon: React.ComponentType<{ size?: number; className?: string }>
-  onClick: () => void
+  data: LibrarySection
+  onNavigateTab: (tab: string) => void
 }) {
   return (
-    <button
-      onClick={onClick}
-      className="w-full flex items-center gap-2 px-3 py-2 rounded text-xs text-gray-400 hover:text-white hover:bg-dark-border/50 transition-colors text-left"
-    >
-      <Icon size={12} />
-      {label}
-    </button>
+    <div className="card space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <BookOpen size={18} className="text-primary-400" />
+          <h2 className="text-lg font-semibold">Library</h2>
+        </div>
+        <button
+          onClick={() => onNavigateTab('deliverables')}
+          className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-1"
+        >
+          Browse all <ArrowRight size={12} />
+        </button>
+      </div>
+
+      <section>
+        <div className="flex items-center gap-1.5 mb-2">
+          <Star size={12} className="text-accent-amber" />
+          <h3 className="text-xs uppercase tracking-wide text-gray-500">Pinned</h3>
+        </div>
+        {data.pinned.length === 0 ? (
+          <p className="text-sm text-gray-500 italic">No pinned deliverables — pin work you want to return to.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {data.pinned.slice(0, 5).map((d) => (
+              <li key={d.id} className="flex items-start gap-2 text-sm">
+                <Star size={14} className="text-accent-amber mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="truncate">{d.title}</div>
+                  <div className="text-xs text-gray-500 flex items-center gap-1.5">
+                    <span>{d.type}</span>
+                    <span className={cn('text-xs px-1 py-0 rounded border', statusChipClass(d.status))}>{d.status}</span>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section>
+        <div className="flex items-center gap-1.5 mb-2">
+          <Clock size={12} className="text-gray-400" />
+          <h3 className="text-xs uppercase tracking-wide text-gray-500">Recently Updated</h3>
+        </div>
+        {data.recent.length === 0 ? (
+          <p className="text-sm text-gray-500 italic">No other deliverables in this workspace yet.</p>
+        ) : (
+          <ul className="space-y-1.5">
+            {data.recent.slice(0, 5).map((d) => (
+              <li key={d.id} className="flex items-start gap-2 text-sm">
+                <Package size={14} className="text-gray-400 mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="truncate">{d.title}</div>
+                  <div className="text-xs text-gray-500">
+                    {d.type} · {relativeTime(d.updated_at)}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <p className="text-xs text-gray-500 italic border-t border-dark-border pt-3">
+        Filters + Canonical view ship in the next round.
+      </p>
+    </div>
   )
 }
 
+// --------------------------------------------------------------------- //
+// Section: GUIDED ACTIONS (stub — PR4 wires the buttons)
+// --------------------------------------------------------------------- //
 
-function MyBusinessWorkspaces() {
-  const { data, isLoading } = useQuery({
-    queryKey: ['my-workspaces'],
+const GUIDED_ACTIONS = [
+  { id: 'create-spec', label: 'Create Engineering Spec', icon: FileText, hint: 'Draft a new spec deliverable with a template' },
+  { id: 'review-ready', label: 'Review Ready Items', icon: ClipboardList, hint: 'Filter deliverables where status = ready' },
+  { id: 'start-initiative', label: 'Start Initiative from Spec', icon: Target, hint: 'Wizard: pick a spec → create initiative → link' },
+  { id: 'shift-brief', label: 'Run Shift Brief', icon: Sparkles, hint: 'Rigby-generated summary of the workspace right now' },
+]
+
+function GuidedActionsModule() {
+  return (
+    <div className="card space-y-4">
+      <div className="flex items-center gap-2">
+        <Layers size={18} className="text-primary-400" />
+        <h2 className="text-lg font-semibold">Guided Actions</h2>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {GUIDED_ACTIONS.map((action) => (
+          <button
+            key={action.id}
+            type="button"
+            disabled
+            title={`${action.hint} (available in PR4)`}
+            className="flex items-start gap-2 text-left rounded-md border border-dark-border bg-dark-bg/40 p-3 opacity-60 cursor-not-allowed"
+          >
+            <action.icon size={16} className="text-primary-400 mt-0.5 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <div className="text-sm font-medium truncate">{action.label}</div>
+              <div className="text-xs text-gray-500 truncate">{action.hint}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <p className="text-xs text-gray-500 italic">
+        These will light up in an upcoming round.
+      </p>
+    </div>
+  )
+}
+
+// --------------------------------------------------------------------- //
+// Greeting band (kept from prior HomeTab per Rigby A-prime+ agreement)
+// --------------------------------------------------------------------- //
+
+interface BootData {
+  greeting?: { time_of_day?: string; user_name?: string; message?: string }
+  while_away?: { hours_since_visit?: number }
+}
+
+function GreetingBand({ workspaceName, boot }: { workspaceName: string; boot: BootData | undefined }) {
+  const greetingText = useMemo(() => {
+    const tod = boot?.greeting?.time_of_day || 'day'
+    const name = boot?.greeting?.user_name
+    const base = `Good ${tod}${name ? `, ${name}` : ''}`
+    return base
+  }, [boot])
+
+  const hoursSince = boot?.while_away?.hours_since_visit
+  const sinceLabel = typeof hoursSince === 'number' && hoursSince >= 1
+    ? `${hoursSince < 24 ? `${Math.round(hoursSince)}h` : `${Math.round(hoursSince / 24)}d`} since your last visit`
+    : null
+
+  return (
+    <div className="rounded-xl border border-dark-border bg-gradient-to-r from-primary-500/10 via-dark-card to-dark-card p-4 md:p-5">
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl md:text-2xl font-semibold">{greetingText}</h1>
+          <p className="text-sm text-gray-400 mt-0.5">
+            You're in <span className="text-primary-400 font-medium">{workspaceName}</span>.
+          </p>
+        </div>
+        {sinceLabel && (
+          <span className="text-xs px-2 py-1 rounded bg-dark-bg border border-dark-border text-gray-400 flex items-center gap-1.5">
+            <Clock size={12} />
+            {sinceLabel}
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// --------------------------------------------------------------------- //
+// Root component
+// --------------------------------------------------------------------- //
+
+export default function HomeTab({ activeWorkspace, onNavigateTab }: HomeTabProps) {
+  const wsId = activeWorkspace?.id
+
+  const snapshotQuery = useQuery<HomeSnapshot>({
+    queryKey: ['workspace-home-snapshot', wsId],
     queryFn: async () => {
-      const res = await api.get('/workspaces/')
-      return res.data
+      const res = await api.get(`/workspaces/${wsId}/home/`)
+      return res.data as HomeSnapshot
     },
-    refetchInterval: 30000,
+    enabled: !!wsId,
+    refetchInterval: 60_000,
+    retry: false,
   })
 
-  const workspaces = (data?.results || data || []) as Array<{
-    id: string
-    name: string
-    workspace_type: string
-    is_active: boolean
-    updated_at: string
-  }>
+  // Greeting-only fetch — kept from prior HomeTab per Rigby A-prime+ agreement.
+  const bootQuery = useQuery<BootData>({
+    queryKey: ['home-boot-greeting', wsId],
+    queryFn: async () => {
+      const res = await api.get('/home/boot/', { params: wsId ? { workspace: wsId } : undefined })
+      return res.data as BootData
+    },
+    refetchInterval: 5 * 60_000,
+    retry: false,
+  })
 
-  // Show recent workspaces — sort active first, then by updated_at
-  const bizWorkspaces = workspaces
-    .sort((a, b) => (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0) || new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-    .slice(0, 6)
-
-  if (isLoading || bizWorkspaces.length === 0) return null
-
-  const TYPE_COLORS: Record<string, string> = {
-    sandbox: 'bg-blue-900/30 text-blue-300',
-    production: 'bg-green-900/30 text-green-300',
-    default: 'bg-purple-900/30 text-purple-300',
+  if (!activeWorkspace) {
+    return (
+      <div className="card text-center py-12">
+        <BookOpen size={32} className="mx-auto text-gray-500 mb-3" />
+        <p className="text-sm text-gray-400">Select a workspace to see its Home view.</p>
+      </div>
+    )
   }
 
-  return (
-    <div>
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-sm font-medium text-gray-400 uppercase tracking-wide">My Workspaces</h3>
-        <a href="/workspace/new" className="text-xs text-blue-400 hover:text-blue-300">+ New</a>
+  if (snapshotQuery.isLoading) {
+    return (
+      <div className="card flex items-center justify-center py-16">
+        <Loader2 className="animate-spin text-primary-400" size={28} />
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {bizWorkspaces.map(ws => (
-          <a
-            key={ws.id}
-            href={`/workspace/${ws.id}`}
-            className="p-4 bg-dark-bg rounded-xl border border-dark-border hover:border-blue-800/50 hover:bg-dark-card transition-colors group"
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <Zap size={14} className="text-blue-400" />
-              <span className="font-medium text-white group-hover:text-blue-300 transition-colors">{ws.name}</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded ${TYPE_COLORS[ws.workspace_type] || TYPE_COLORS.default}`}>
-                {ws.workspace_type}
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span>Updated {new Date(ws.updated_at).toLocaleDateString()}</span>
-            </div>
-          </a>
-        ))}
+    )
+  }
+
+  if (snapshotQuery.isError || !snapshotQuery.data) {
+    return (
+      <div className="card border border-accent-red/30 p-6">
+        <div className="flex items-center gap-2 mb-2">
+          <XCircle size={18} className="text-accent-red" />
+          <h2 className="text-lg font-semibold">Home snapshot unavailable</h2>
+        </div>
+        <p className="text-sm text-gray-400">
+          Couldn't load the workspace snapshot. Try refreshing; the underlying data may still be reachable via
+          the individual tabs (Deliverables, Initiatives, Operations).
+        </p>
+      </div>
+    )
+  }
+
+  const snapshot = snapshotQuery.data
+
+  return (
+    <div className="space-y-5">
+      <GreetingBand workspaceName={snapshot.workspace.name} boot={bootQuery.data} />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <NowModule data={snapshot.now} />
+        <ActiveWorkModule data={snapshot.active_work} onNavigateTab={onNavigateTab} />
+        <LibraryModule data={snapshot.library} onNavigateTab={onNavigateTab} />
+        <GuidedActionsModule />
       </div>
     </div>
   )
