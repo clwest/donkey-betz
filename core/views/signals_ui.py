@@ -150,6 +150,9 @@ def signals_feed_detail(request: Request, row_id: str) -> Response:
     return Response(payload)
 
 
+SUPPORTED_BREAKDOWN_WINDOWS = frozenset({24, 168, 720})  # 1d / 7d / 30d
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def signals_embedding_coverage(request: Request) -> Response:
@@ -157,11 +160,23 @@ def signals_embedding_coverage(request: Request) -> Response:
 
     Wraps `SpiderSemanticSearch.get_embedding_stats()` — same numbers the
     backfill task drains against.
+
+    Query params (S2973):
+      include_breakdown (bool, default false) — include NO_ITEMS breakdown
+      window (int hours, default 24, clamped to {24,168,720}) — breakdown window
     """
     from core.services.spider_semantic_search import get_spider_semantic_search
 
+    include_breakdown = _parse_bool(request.query_params.get('include_breakdown'), False)
+    window = _parse_int(request.query_params.get('window'), 24) or 24
+    if window not in SUPPORTED_BREAKDOWN_WINDOWS:
+        window = 24
+
     try:
-        stats = get_spider_semantic_search().get_embedding_stats()
+        stats = get_spider_semantic_search().get_embedding_stats(
+            include_breakdown=include_breakdown,
+            breakdown_window_hours=window,
+        )
     except Exception as e:
         logger.exception("[signals_embedding_coverage] stats fetch failed: %s", e)
         return Response(
