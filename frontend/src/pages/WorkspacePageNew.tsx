@@ -106,6 +106,8 @@ import {
 } from './workspace/tabs'
 import { ZoomOutLedgerSection } from './workspace/tabs/ZoomOutLedgerSection'
 import { TenantBoundaryHealthSection } from './workspace/tabs/TenantBoundaryHealthSection'
+// S2971: Signal Intelligence UI sub-tab under Intelligence.
+import { SignalsTab } from './workspace/tabs/signals/SignalsTab'
 import { Toast } from './workspace/components'
 
 // ─── S2798: First-run onboarding banner (editable copy — Rigby F3) ───────────
@@ -167,6 +169,8 @@ const primaryTabs: PrimaryTab[] = [
       { id: 'knowledge', label: 'Knowledge', icon: BookOpen },
       { id: 'consciousness', label: 'AI Mind', icon: Brain },
       { id: 'rag-diagnostics', label: 'RAG Diagnostics', icon: Radar },
+      // S2971: Signal Intelligence UI — deliverable ade9339f-...
+      { id: 'signals', label: 'Signals', icon: Radar },
     ],
   },
   {
@@ -226,6 +230,8 @@ const legacyTabMapping: Record<string, { primary: string; sub?: string }> = {
   orchestration: { primary: 'system', sub: 'ops' },
   datasources: { primary: 'intelligence', sub: 'dataintel' },
   intelligence: { primary: 'intelligence', sub: 'dataintel' },
+  // S2971: Signal Intelligence UI shortcut — future top-level rail entry
+  signals: { primary: 'intelligence', sub: 'signals' },
   governance: { primary: 'system', sub: 'boardroom' },
   command: { primary: 'home' },
   // Cockpit migration aliases
@@ -1261,6 +1267,10 @@ export default function WorkspacePage() {
           {/* S2831: RAG intent-gate diagnostics — canary for S2830 registry */}
           {activePrimary === 'intelligence' && activeSub === 'rag-diagnostics' && (
             <RagDiagnosticsTab />
+          )}
+          {/* S2971: Signal Intelligence UI — deliverable ade9339f-... */}
+          {activePrimary === 'intelligence' && activeSub === 'signals' && (
+            <SignalsTab />
           )}
 
           {/* SYSTEM */}
