@@ -80,11 +80,18 @@ class ToolCallAggregateSerializer(serializers.ModelSerializer):
 # ── SignalCluster ──
 
 class SignalClusterListSerializer(serializers.ModelSerializer):
+    # S2971: Signal Intelligence UI Cluster Explorer table needs these fields
+    # inline so it doesn't N+1 into the detail endpoint per row.
+    signal_count = serializers.IntegerField(source='total_signals', read_only=True)
+    total_signals = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = SignalCluster
         fields = [
             'id', 'name', 'pattern_type', 'strength', 'novelty',
             'confidence', 'urgency', 'status', 'detected_at',
+            'signal_count', 'total_signals',
+            'source_breakdown', 'keywords',
         ]
 
 

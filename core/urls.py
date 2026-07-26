@@ -1611,6 +1611,15 @@ from core.views_project_intelligence import (
     post_project_slack_message,
 )
 
+# S2971: Signal Intelligence UI backend endpoints (aliased with underscore
+# prefix to avoid shadowing the module namespace).
+from core.views.signals_ui import (
+    signals_aggregate as _signals_aggregate,
+    signals_feed as _signals_feed,
+    signals_feed_detail as _signals_feed_detail,
+    signals_embedding_coverage as _signals_embedding_coverage,
+)
+
 urlpatterns = [
     # UNIFIED FRONTEND - Primary routing (Session 31: Consolidated to root routes)
     # Removed duplicate /v2/ namespace - see docs/debugging-sessions/SESSION_31_URL_CONSOLIDATION_PLAN.md
@@ -2737,6 +2746,13 @@ urlpatterns = [
     
     # API router
     path('api/v1/', include(router.urls)),
+
+    # S2971: Signal Intelligence UI — thin HTTP wrappers over existing service
+    # functions. See core/views/signals_ui.py + deliverable ade9339f-....
+    path('api/signals/aggregate/', _signals_aggregate, name='signals-aggregate'),
+    path('api/signals/feed/', _signals_feed, name='signals-feed'),
+    path('api/signals/feed/<uuid:row_id>/', _signals_feed_detail, name='signals-feed-detail'),
+    path('api/signals/embedding-coverage/', _signals_embedding_coverage, name='signals-embedding-coverage'),
     
     # ===== MIGRATED API ENDPOINTS =====
     
