@@ -5,20 +5,20 @@ authority: ratification-record
 session_added: 2981
 ratification_date: 2026-07-26
 ratifier: chris
-ratifier_verdict: PENDING_D_VERDICT_AT_PR_MERGE
+ratifier_verdict: "proceed"
 routing: rigby-pa-chat joint SIGN (T1 tool-grounded verification loop with zoom-out ask per PLAYBOOK-6.10.7; all 4 rules AGREE with three zoom-out folds classified `same_pr_mitigatable` and applied at §2 revision before Chris D-verdict) + Chris D-verdict via terminal (scope: Path A + CLAUDE.md refresh — ratified at Phase 5 routing; final PR-merge D-verdict pending at Phase 8)
 amendment_scope: playbook-minor-v0.10.0
 amendment_class: MINOR (per PLAYBOOK-10.5.1 — 4 additions, 0 modifications, 0 removals; per PLAYBOOK-10.3.3 the strongest applicable trigger is MINOR)
 parent_version: v0.9.0
 parent_version_git_tag: playbook-v0.9.0
-parent_version_commit_sha: PLACEHOLDER_FILLED_AT_MERGE
+parent_version_commit_sha: 147dcc9cc
 parent_version_ratification: RATIFICATION_2026-07-22_PLAYBOOK_V0_9_0
 proposed_version: v0.10.0
 proposed_git_tag: playbook-v0.10.0
 predecessor_candidacy: single-session codification per Chris directive at S2981 open ("open the amendment PR"). Two-trigger corpus surfaced across S2980 (in-wild first exercise via Theme Signals UX PR #3615, recipe drafted mid-session as workspace deliverable `e8429049`) + S2981 (second exercise applied to update `e8429049` with SUPERSEDES block ratified at Chris D-verdict, then applied a second time to walk this amendment envelope through Phases 1–9).
 head_at_amendment_draft: f55a28fcee8f0729401f20efc505b67c9bfb124c
-head_at_ratification: PLACEHOLDER_FILLED_AT_MERGE
-close_pr: PLACEHOLDER_FILLED_AT_MERGE
+head_at_ratification: 49b936342a85f2766a6e3eed8790ce6e19ad82f1
+close_pr: 3617
 cascade_pr: PLACEHOLDER_FILLED_AT_CASCADE
 cascade_pr_merge_sha: PLACEHOLDER_FILLED_AT_CASCADE
 sign_sessions:
@@ -39,7 +39,7 @@ superseded_by: (open; not expected — ratification records are frozen historica
 frozen: true
 workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
 workspace_name: "Architecture & Research"
-workspace_ratification_deliverable_id: PLACEHOLDER_FILLED_POST_MERGE
+workspace_ratification_deliverable_id: 2437c214-44fd-42f7-a2b9-fc1cc016cc6f
 d_verdicts:
   - D1 Amendment scope — Path A (small, 4 rules, single-session shape) over Path B (bigger MINOR fully activating Chapter 5/7) or Path C (defer). RATIFIED 2026-07-26 S2981 (Chris single-word "Path A, include the CLAUDE.md refresh" at Phase 2 routing).
   - D2 CLAUDE.md refresh inclusion — YES, refresh v0.8.0 constitutional blockquote to v0.10.0 in same PR. RATIFIED 2026-07-26 S2981 (Chris compound directive same message as D1).
