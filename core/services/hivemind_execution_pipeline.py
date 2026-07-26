@@ -546,10 +546,27 @@ Initiative created from HiveMind brainstorm session.
         )
 
         # Session 915: Trigger Stage 1 document generation
+        # S2981 follow-up: routed through queue_stage_document_generation for
+        # enqueue-time validation + durable provenance.
         try:
-            from core.tasks import generate_initiative_stage_document
-            task = generate_initiative_stage_document.delay(str(initiative.id), 1)
-            logger.info(f"[Session 915] Triggered Stage 1 document generation: task {task.id}")
+            from core.services.initiative_stage_dispatch import (
+                queue_stage_document_generation,
+            )
+            outcome = queue_stage_document_generation(
+                str(initiative.id), 1,
+                triggered_by='hivemind_execution_pipeline',
+            )
+            if outcome['success']:
+                logger.info(
+                    "[Session 915] Triggered Stage 1 document generation: "
+                    "task %s provenance=%s",
+                    outcome['task_id'], outcome['provenance_execution_id'],
+                )
+            else:
+                logger.warning(
+                    "[Session 915] Stage 1 enqueue refused: reason=%s error=%s",
+                    outcome['reason'], outcome['error'],
+                )
         except Exception as e:
             logger.warning(f"[Session 915] Could not trigger Stage 1 generation: {e}")
 

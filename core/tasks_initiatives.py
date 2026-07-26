@@ -2527,11 +2527,29 @@ def _impl_process_initiative_auto_progression(self):
                     initiative=init, stage=sn, document__isnull=True
                 ).first()
                 if stage and stage.status in ('PENDING', 'DRAFT'):
-                    generate_initiative_stage_document.delay(str(init.id), sn)
-                    regen_count += 1
-                    logger.info(
-                        f"[AUTO-PROGRESSION] Queued doc regen for '{init.name[:50]}' Stage {sn}"
+                    # S2981 follow-up: enqueue via helper for provenance +
+                    # validation. Silently drops rows with a missing/invalid
+                    # initiative_id instead of blowing up the sweep.
+                    from core.services.initiative_stage_dispatch import (
+                        queue_stage_document_generation,
                     )
+                    _regen = queue_stage_document_generation(
+                        str(init.id), sn,
+                        triggered_by='auto_progression.regen_sweep',
+                    )
+                    if _regen['success']:
+                        regen_count += 1
+                        logger.info(
+                            f"[AUTO-PROGRESSION] Queued doc regen for "
+                            f"'{init.name[:50]}' Stage {sn} "
+                            f"(task={_regen['task_id']})"
+                        )
+                    else:
+                        logger.warning(
+                            f"[AUTO-PROGRESSION] Regen refused for "
+                            f"'{init.name[:50]}' Stage {sn}: "
+                            f"reason={_regen['reason']} error={_regen['error']}"
+                        )
         if regen_count:
             logger.info(f"[AUTO-PROGRESSION] Queued {regen_count} missing stage doc regenerations")
     except Exception as e:
@@ -2619,17 +2637,60 @@ def _impl_generate_initiative_stage_document(self, initiative_id: str, stage_num
     - Stage 3: ThinkingAgent (Evaluation Protocol)
     - Stage 4: FullStackDeveloperAgent (Technical Design)
     - Stage 5: ThinkingAgent (Pilot Execution Plan)
+
+    S2981 follow-up (spec deliverable 2a196415-19cf-4bda-87b5-1c4233a5cd9d):
+    guardrail against missing/invalid ``initiative_id`` — return a typed
+    no-op outcome without retrying, and reconcile the enqueue provenance
+    row (see ``core.services.initiative_stage_dispatch``) so a Celery
+    FAILURE never leaves a stale in_progress AgentExecution behind.
     """
+    from django.core.exceptions import ValidationError
     from core.models_document_registry import Initiative, InitiativeStage
     from core.models_unified_system import SelfBlog, Agent
+    from core.services.initiative_stage_dispatch import mark_task_outcome
 
-    logger.info(f"📝 [STAGE-GEN] Generating Stage {stage_num} document for initiative {initiative_id}")
+    _request = getattr(self, 'request', None)
+    _celery_task_id = getattr(_request, 'id', None) if _request is not None else None
+
+    logger.info(
+        f"📝 [STAGE-GEN] Generating Stage {stage_num} document for "
+        f"initiative {initiative_id} (celery_task_id={_celery_task_id})"
+    )
 
     try:
         initiative = Initiative.objects.get(id=initiative_id)
-    except Initiative.DoesNotExist:
-        logger.error(f"📝 [STAGE-GEN] Initiative {initiative_id} not found")
-        return {'success': False, 'error': 'Initiative not found'}
+    except (Initiative.DoesNotExist, ValidationError, ValueError, TypeError) as exc:
+        # S2981 follow-up: unresolvable initiative_id is a caller bug (bad
+        # binding directive, deleted initiative, malformed UUID) — a retry
+        # cannot fix it. Return a typed no-op outcome, reconcile the queue
+        # provenance row, and don't raise.
+        # S2982 T1 §4c mitigation: distinguish malformed-UUID/type-error
+        # (caller passed junk) from DoesNotExist (initiative was deleted
+        # between enqueue and task start) so operators can triage each
+        # differently in the post-mortem.
+        if isinstance(exc, Initiative.DoesNotExist):
+            reason = 'initiative_not_found'
+        else:
+            reason = 'invalid_initiative_id_format'
+        error_msg = f"Initiative not found: {type(exc).__name__}: {exc}"
+        logger.warning(
+            f"📝 [STAGE-GEN] {error_msg} "
+            f"(initiative_id={initiative_id!r} stage={stage_num} "
+            f"celery_task_id={_celery_task_id} reason={reason}) — no-op, no retry"
+        )
+        mark_task_outcome(
+            celery_task_id=_celery_task_id,
+            status='failed',
+            error=error_msg,
+        )
+        return {
+            'success': False,
+            'error': 'Initiative not found',
+            'reason': reason,
+            'initiative_id': str(initiative_id) if initiative_id is not None else '',
+            'stage': stage_num,
+            'celery_task_id': _celery_task_id,
+        }
 
     # Get or create stage record
     stage, created = InitiativeStage.objects.get_or_create(
@@ -2954,6 +3015,10 @@ Stage {stage_num} ({config['template']}) should include:
 
         logger.info(f"[STAGE-GEN] Created document {document.id} for Stage {stage_num}")
 
+        mark_task_outcome(
+            celery_task_id=_celery_task_id,
+            status='completed',
+        )
         return {
             'success': True,
             'document_id': str(document.id),
@@ -2961,6 +3026,7 @@ Stage {stage_num} ({config['template']}) should include:
             'initiative_id': str(initiative_id),
             'initiative_name': initiative.name,
             'drift_checked': True,
+            'celery_task_id': _celery_task_id,
         }
 
     except SoftTimeLimitExceeded:
@@ -2977,12 +3043,33 @@ Stage {stage_num} ({config['template']}) should include:
                 "tasks_initiatives.is_name_incomplete: swallowed (%s: %s) — degraded",
                 type(_e).__name__, _e,
             )
-        return {'success': False, 'error': f'Stage {stage_num} generation timed out (600s)'}
+        mark_task_outcome(
+            celery_task_id=_celery_task_id,
+            status='failed',
+            error=f'Stage {stage_num} generation timed out (600s)',
+        )
+        return {
+            'success': False,
+            'error': f'Stage {stage_num} generation timed out (600s)',
+            'reason': 'soft_time_limit',
+            'celery_task_id': _celery_task_id,
+        }
 
     except Exception as e:
         logger.error(f"📝 [STAGE-GEN] ❌ Error generating Stage {stage_num}: {e}")
-        stage.status = 'PENDING'  # Reset to pending for retry
-        stage.save()
+        try:
+            stage.status = 'PENDING'  # Reset to pending for retry
+            stage.save()
+        except Exception as _stage_err:
+            logger.warning(
+                "[STAGE-GEN] Failed to reset stage status after error: %s",
+                _stage_err,
+            )
+        mark_task_outcome(
+            celery_task_id=_celery_task_id,
+            status='failed',
+            error=f'{type(e).__name__}: {e}',
+        )
         raise self.retry(exc=e, countdown=300)
 
 

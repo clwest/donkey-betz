@@ -4621,10 +4621,27 @@ def _impl_backfill_stage_documents(self, stage_num: int = 1, limit: int = 50):
         for initiative in initiatives_to_backfill:
             try:
                 # Trigger document generation for this initiative
-                from core.tasks import generate_initiative_stage_document
-                generate_initiative_stage_document.delay(str(initiative.id), stage_num)
-                triggered += 1
-                logger.info(f"[Session 915] 🚀 Triggered: {initiative.name[:50]}...")
+                # S2981 follow-up: enqueue via helper for validation + provenance.
+                from core.services.initiative_stage_dispatch import (
+                    queue_stage_document_generation,
+                )
+                outcome = queue_stage_document_generation(
+                    str(initiative.id), stage_num,
+                    triggered_by='backfill_stage_documents.beat_task',
+                )
+                if outcome['success']:
+                    triggered += 1
+                    logger.info(
+                        f"[Session 915] 🚀 Triggered: {initiative.name[:50]}... "
+                        f"(task={outcome['task_id']})"
+                    )
+                else:
+                    errors += 1
+                    logger.warning(
+                        f"[Session 915] ⚠ Enqueue refused for "
+                        f"{initiative.name[:50]}: reason={outcome['reason']} "
+                        f"error={outcome['error']}"
+                    )
             except Exception as e:
                 errors += 1
                 logger.error(f"[Session 915] ❌ Error triggering for {initiative.name[:50]}: {e}")

@@ -90,13 +90,26 @@ class Command(BaseCommand):
                         ))
                 else:
                     # Run async via Celery
+                    # S2981 follow-up: enqueue via helper for provenance + validation.
                     try:
-                        from core.tasks import generate_initiative_stage_document
-                        task = generate_initiative_stage_document.delay(str(init.id), 2)
-                        success_count += 1
-                        self.stdout.write(self.style.SUCCESS(
-                            f"📤 QUEUED: {init.name[:50]} | Task: {task.id}"
-                        ))
+                        from core.services.initiative_stage_dispatch import (
+                            queue_stage_document_generation,
+                        )
+                        outcome = queue_stage_document_generation(
+                            str(init.id), 2,
+                            triggered_by='trigger_stage2_generation.management_command',
+                        )
+                        if outcome['success']:
+                            success_count += 1
+                            self.stdout.write(self.style.SUCCESS(
+                                f"📤 QUEUED: {init.name[:50]} | Task: {outcome['task_id']}"
+                            ))
+                        else:
+                            error_count += 1
+                            self.stdout.write(self.style.WARNING(
+                                f"⚠ REFUSED: {init.name[:50]} - "
+                                f"reason={outcome['reason']} error={outcome['error']}"
+                            ))
                     except Exception as e:
                         error_count += 1
                         self.stdout.write(self.style.ERROR(

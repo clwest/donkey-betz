@@ -325,11 +325,34 @@ def on_agent_execution_completed(sender, instance, created, **kwargs):
     that can hit OpenAI. Test suites that create many AgentExecution rows
     (e.g. `test_agent_runs_list_endpoint.py`: 7 tests × ~11 rows = ~77 calls)
     burn real API spend on every run. Gate on `settings.TESTING`.
+
+    S2982 (spec 2a196415-…): skip system-provenance rows (e.g. the
+    ``InitiativeStageDispatch`` queue receipts introduced by the stage-doc
+    dispatch helper). Those are not agent executions in the analytics sense
+    — they're bookkeeping — and letting them fan out through the learning
+    bridge would (a) increment ``Agent.total_executions`` for the synthetic
+    dispatch agent and pollute top-performer dashboards; (b) generate
+    UserAgentLearning rows and task-type patterns keyed to a non-agent.
+    Gate via ``execution_kind`` in ``input_data`` OR the agent's
+    ``agent_type='system'`` classification.
     """
     if getattr(settings, 'TESTING', False):
         return
-    if instance.status in ['completed', 'failed']:
-        try:
-            agent_execution_learning.process_execution(instance)
-        except Exception as e:
-            logger.error(f"Error in agent execution learning signal: {e}", exc_info=True)
+    if instance.status not in ['completed', 'failed']:
+        return
+    # S2982: skip system-provenance rows (see docstring above).
+    try:
+        input_data = instance.input_data or {}
+        if input_data.get('execution_kind') == 'stage_doc_enqueue':
+            return
+        agent = instance.agent
+        if agent is not None and getattr(agent, 'agent_type', '') == 'system':
+            return
+    except Exception:
+        # Never let the exclusion check block a legitimate learning cycle —
+        # fail open, the downstream try/except catches real errors.
+        pass
+    try:
+        agent_execution_learning.process_execution(instance)
+    except Exception as e:
+        logger.error(f"Error in agent execution learning signal: {e}", exc_info=True)
