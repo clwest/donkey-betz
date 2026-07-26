@@ -2,15 +2,17 @@
  * Session 2978: Theme Signal card — 5-point contract per spec 63ec4d1d.
  * Session 2979: Evidence-first UX per spec c4602ccd — top-3 default with
  * View all expand, empty-state row, null-url safe rendering.
+ * Session 2980: Canonical `action` enum (build/research/watch) per spec
+ * f3cc9499 — replaces the prior 5-value `so_what` field; chip and
+ * Build-only filter both read from the same field.
  *
  * Renders one SignalCluster shaped as a "theme signal":
- *   1. Title (blocked-title-filtered upstream)
+ *   1. Title + Action chip (Build / Research / Watch)
  *   2. Why now (Phase A derived template + Phase B tooltip)
  *   3. Evidence (top 3 default; expandable to all; empty state if 0)
- *   4. So what (suggested action)
- *   5. Confidence + drivers
+ *   4. Confidence + drivers
  * Investable variant adds:
- *   6. Who benefits / who loses (Coming in Phase B placeholder)
+ *   5. Who benefits / who loses (Coming in Phase B placeholder)
  */
 
 import { useState } from 'react'
@@ -18,6 +20,8 @@ import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { cn } from '@/lib/cn'
 
 const DEFAULT_EVIDENCE_VISIBLE = 3
+
+export type ThemeSignalAction = 'build' | 'research' | 'watch'
 
 export interface ThemeSignalEvidence {
   title: string
@@ -34,7 +38,7 @@ export interface ThemeSignalCardData {
   why_now: string
   why_now_note: string
   evidence: ThemeSignalEvidence[]
-  so_what: string
+  action: ThemeSignalAction
   confidence: number
   confidence_drivers: string
   pattern_type: string
@@ -45,12 +49,10 @@ export interface ThemeSignalCardData {
   }
 }
 
-const SO_WHAT_STYLE: Record<string, string> = {
-  'watch': 'bg-slate-500/20 text-slate-300 border-slate-500/30',
-  'research': 'bg-blue-500/20 text-blue-300 border-blue-500/30',
-  'build': 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-  'trade': 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-  'build/trade': 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
+const ACTION_STYLE: Record<ThemeSignalAction, string> = {
+  build: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+  research: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+  watch: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
 }
 
 function confidenceColor(confidence: number): string {
@@ -67,7 +69,7 @@ export function ThemeSignalCard({
   card: ThemeSignalCardData
   tab: 'buildable' | 'investable'
 }) {
-  const soWhatCls = SO_WHAT_STYLE[card.so_what] ?? SO_WHAT_STYLE['watch']
+  const actionCls = ACTION_STYLE[card.action] ?? ACTION_STYLE.watch
   const [showAll, setShowAll] = useState(false)
   const evidence = card.evidence
   const hiddenCount = Math.max(0, evidence.length - DEFAULT_EVIDENCE_VISIBLE)
@@ -75,7 +77,7 @@ export function ThemeSignalCard({
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border border-gray-800 bg-gray-900/40 p-4 hover:border-gray-700 transition-colors">
-      {/* 1 — Title + so-what badge */}
+      {/* 1 — Title + Action chip (Build / Research / Watch) */}
       <div className="flex items-start justify-between gap-3">
         <h3 className="text-sm font-semibold text-gray-100 leading-snug break-words min-w-0 flex-1">
           {card.title}
@@ -83,10 +85,10 @@ export function ThemeSignalCard({
         <span
           className={cn(
             'shrink-0 px-2 py-0.5 text-[10px] uppercase tracking-wide rounded border',
-            soWhatCls,
+            actionCls,
           )}
         >
-          {card.so_what}
+          {card.action}
         </span>
       </div>
 
