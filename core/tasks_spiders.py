@@ -24,6 +24,7 @@ from core.tasks import (  # noqa: F401 — private helpers from tasks.py
     _create_spider_instance,
     _run_spider_adapter,
 )
+from core.services import spider_diagnostic  # S2969 Phase 1
 
 
 
@@ -433,6 +434,48 @@ def _impl_run_spider_network(self):
         try:
             logger.info(f"🕷️ Running spider: {spider_name}")
 
+            # S2969 Phase 1B: preflight credentials check. If this spider
+            # declares required env keys and any are unset, persist a
+            # skipped_missing_credentials diagnostic row and skip fetch.
+            missing_keys = spider_diagnostic.check_missing_credentials(spider_name)
+            if missing_keys and spider_diagnostic.get_skip_missing_creds_loudly():
+                empty_mode = spider_diagnostic.get_empty_run_persistence_mode()
+                ephemeral = empty_mode == spider_diagnostic.EMPTY_RUN_MODE_DIAGNOSTIC_7D
+                spider_data = spider_diagnostic.persist_diagnostic_row(
+                    spider_name=spider_name,
+                    category=category,
+                    diagnostic=spider_diagnostic.build_missing_creds_diagnostic(
+                        missing_keys=missing_keys,
+                        execution_log_id=execution_log.id if execution_log else None,
+                        ephemeral=ephemeral,
+                    ),
+                    source_url='skipped',
+                )
+                results['spiders_run'] += 1
+                results['data_collected'] += 1
+                results['spider_results'].append({
+                    'spider': spider_name,
+                    'success': True,
+                    'item_count': 0,
+                    'data_id': str(spider_data.id),
+                    'status': spider_diagnostic.STATUS_SKIPPED_MISSING_CREDS,
+                    'missing_keys': missing_keys,
+                    'items_before_dedup': 0,
+                    'unique_after_dedup': 0,
+                    'duplicates': 0,
+                    'persisted_row': True,
+                    'failure_type': None,
+                    'error': None,
+                    'error_type': None,
+                })
+                results['all_topics'].append(category)
+                execution_log.source_urls_attempted = ['skipped']
+                execution_log.complete_success(
+                    items_collected=0,
+                    duration_seconds=time.time() - spider_start_time,
+                )
+                continue
+
             # Session 221: Use real data collector for spiders with configured URLs
             if spider_name in SPIDER_TARGET_URLS:
                 source_urls = SPIDER_TARGET_URLS.get(spider_name, [])
@@ -481,6 +524,13 @@ def _impl_run_spider_network(self):
             items = data.get('items', []) if isinstance(data, dict) else []
             unique_items, dedup_stats = deduplicate_spider_items(spider_name, items, category)
 
+            items_before_dedup = len(items)
+            source_url_for_row = (
+                SPIDER_TARGET_URLS.get(spider_name, ['internal'])[0]
+                if spider_name in SPIDER_TARGET_URLS
+                else 'internal'
+            )
+
             if unique_items:
                 if isinstance(data, dict):
                     data['items'] = unique_items
@@ -490,15 +540,38 @@ def _impl_run_spider_network(self):
                     spider_name=spider_name,
                     data_type=category,
                     raw_data=data if isinstance(data, dict) else {'data': str(data)},
-                    source_url=SPIDER_TARGET_URLS.get(spider_name, ['internal'])[0] if spider_name in SPIDER_TARGET_URLS else 'internal',
+                    source_url=source_url_for_row,
                     relevance_score=70 if len(unique_items) > 0 else 30
                 )
                 item_count = len(unique_items)
+                spider_status = spider_diagnostic.STATUS_SUCCESS
             else:
-                spider_data = None
+                # S2969 Phase 1A: persist a diagnostic row so dashboards that
+                # read LegacySpiderData row counts stop reporting "never_run"
+                # for spiders that DID run but yielded no unique items.
+                empty_mode = spider_diagnostic.get_empty_run_persistence_mode()
+                if empty_mode != spider_diagnostic.EMPTY_RUN_MODE_OFF:
+                    ephemeral = empty_mode == spider_diagnostic.EMPTY_RUN_MODE_DIAGNOSTIC_7D
+                    spider_data = spider_diagnostic.persist_diagnostic_row(
+                        spider_name=spider_name,
+                        category=category,
+                        diagnostic=spider_diagnostic.build_empty_run_diagnostic(
+                            items_before_dedup=items_before_dedup,
+                            unique_after_dedup=0,
+                            duplicates=dedup_stats.get('duplicates', 0),
+                            execution_log_id=execution_log.id if execution_log else None,
+                            ephemeral=ephemeral,
+                        ),
+                        source_url=source_url_for_row,
+                    )
+                else:
+                    spider_data = None
                 item_count = 0
+                spider_status = spider_diagnostic.STATUS_SUCCESS_EMPTY
 
             spider_success = not data.get('failure_type') if isinstance(data, dict) else True
+            if not spider_success:
+                spider_status = spider_diagnostic.STATUS_FAILURE
             results['spiders_run'] += 1 if spider_success else 0
             if spider_data:
                 results['data_collected'] += 1
@@ -508,6 +581,11 @@ def _impl_run_spider_network(self):
                 'success': spider_success,
                 'item_count': item_count,
                 'data_id': str(spider_data.id) if spider_data else None,
+                'status': spider_status,
+                'items_before_dedup': items_before_dedup,
+                'unique_after_dedup': len(unique_items),
+                'duplicates': dedup_stats.get('duplicates', 0),
+                'persisted_row': spider_data is not None,
                 'dedup_stats': dedup_stats,
                 'failure_type': data.get('failure_type') if isinstance(data, dict) else None,
                 'error': data.get('error') if isinstance(data, dict) else None,
@@ -553,7 +631,16 @@ def _impl_run_spider_network(self):
             results['spider_results'].append({
                 'spider': spider_name,
                 'success': False,
-                'error': str(e)
+                'error': str(e),
+                'status': spider_diagnostic.STATUS_FAILURE,
+                'error_type': type(e).__name__,
+                'items_before_dedup': 0,
+                'unique_after_dedup': 0,
+                'duplicates': 0,
+                'persisted_row': False,
+                'item_count': 0,
+                'data_id': None,
+                'failure_type': 'runner_exception',
             })
 
             # Session 484: Mark execution as failed with full error details
@@ -710,7 +797,28 @@ def _impl_execute_single_spider_lightweight(spider_name: str):
             )
             item_count = len(unique_items)
         else:
-            spider_data = None
+            # S2969 Phase 1A parity (Rigby A2 SIGN #2): the dashboard
+            # Execute button is a primary operator surface. If it
+            # continues silently no-op'ing on empty runs, the operator
+            # hits Execute expecting the "never_run" bug to clear and
+            # sees no change. Persist an empty-run diagnostic here too.
+            empty_mode = spider_diagnostic.get_empty_run_persistence_mode()
+            if empty_mode != spider_diagnostic.EMPTY_RUN_MODE_OFF:
+                ephemeral = empty_mode == spider_diagnostic.EMPTY_RUN_MODE_DIAGNOSTIC_7D
+                spider_data = spider_diagnostic.persist_diagnostic_row(
+                    spider_name=spider_name,
+                    category=category,
+                    diagnostic=spider_diagnostic.build_empty_run_diagnostic(
+                        items_before_dedup=len(items),
+                        unique_after_dedup=0,
+                        duplicates=dedup_stats.get('duplicates', 0),
+                        execution_log_id=None,
+                        ephemeral=ephemeral,
+                    ),
+                    source_url='on-demand-execution',
+                )
+            else:
+                spider_data = None
             item_count = 0
 
         # Session 423: Calculate duration and send Discord notification
@@ -729,8 +837,10 @@ def _impl_execute_single_spider_lightweight(spider_name: str):
         except Exception as e:
             logger.warning(f"Failed to create execution log for {spider_name}: {e}")
 
-        if spider_data:
+        if spider_data and item_count > 0:
             logger.info(f"✅ Spider {spider_name} executed: {item_count} unique items (dedup: {dedup_stats['duplicates']} removed)")
+        elif spider_data:
+            logger.info(f"⏭️ Spider {spider_name}: 0 unique items, persisted diagnostic row {spider_data.id}")
         else:
             logger.info(f"⏭️ Spider {spider_name}: all {dedup_stats['total']} items already seen")
 

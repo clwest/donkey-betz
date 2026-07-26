@@ -1524,6 +1524,74 @@ def backfill_signal_scores():
     return f"Scored {updated} clusters"
 
 
+@shared_task(name='cleanup_empty_spider_runs')
+def cleanup_empty_spider_runs(days: int = 7, batch_cap: int = 5000):
+    """S2969 Phase 1D: prune ``LegacySpiderData`` rows marked as ephemeral
+    diagnostic empty-runs older than ``days``.
+
+    Diagnostic rows carry ``raw_data.diagnostic.ephemeral_empty_run=True``
+    (set by ``core.services.spider_diagnostic.persist_diagnostic_row`` when
+    the runner is in ``SPIDER_EMPTY_RUN_PERSISTENCE_MODE=diagnostic_7d``).
+    They exist to make ``never_run`` dashboards honest — after the
+    diagnostic window they carry no signal and can be deleted.
+
+    Uses ``_raw_delete()`` (folded from Rigby A2 SIGN) to bypass the
+    ``SET_NULL`` cascade to ``NarrativeEvidence``. Ephemeral diagnostic
+    rows are created and swept without touching signal pipelines, so
+    downstream NarrativeEvidence references are structurally impossible
+    within the 7d window — and raw-delete keeps daily retention off the
+    NarrativeEvidence write path entirely. ``batch_cap`` bounds the
+    per-run delete so a first fire with accumulated backlog can't spike
+    a long DB transaction.
+
+    Ships un-scheduled per Rigby T1 SIGN — invoke manually or via
+    beat once we see accumulation rates.
+    """
+    from core.models_unified_system import LegacySpiderData
+    from django.utils import timezone
+    from datetime import timedelta
+
+    cutoff = timezone.now() - timedelta(days=days)
+    qs = LegacySpiderData.objects.filter(
+        raw_data__diagnostic__ephemeral_empty_run=True,
+        created_at__lt=cutoff,
+    )
+    total_matched = qs.count()
+    if total_matched == 0:
+        logger.info(
+            "[cleanup_empty_spider_runs] no rows matched days=%s cutoff=%s",
+            days, cutoff.isoformat(),
+        )
+        return {
+            'deleted': 0,
+            'matched': 0,
+            'days': days,
+            'batch_cap': batch_cap,
+            'cutoff': cutoff.isoformat(),
+        }
+
+    # Cap the batch to avoid long transactions on first fire with backlog.
+    if total_matched > batch_cap:
+        pks = list(qs.values_list('pk', flat=True)[:batch_cap])
+        batch_qs = LegacySpiderData.objects.filter(pk__in=pks)
+    else:
+        batch_qs = qs
+
+    deleted = batch_qs._raw_delete(batch_qs.db)
+    logger.info(
+        "[cleanup_empty_spider_runs] deleted=%s matched=%s days=%s "
+        "batch_cap=%s cutoff=%s (raw_delete)",
+        deleted, total_matched, days, batch_cap, cutoff.isoformat(),
+    )
+    return {
+        'deleted': deleted,
+        'matched': total_matched,
+        'days': days,
+        'batch_cap': batch_cap,
+        'cutoff': cutoff.isoformat(),
+    }
+
+
 @shared_task
 def execute_single_spider_lightweight(spider_name: str):
     from core.tasks_spiders import _impl_execute_single_spider_lightweight
