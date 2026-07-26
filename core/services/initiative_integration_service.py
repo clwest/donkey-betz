@@ -22,7 +22,7 @@ ChatGPT Feedback (Session 847):
 """
 
 import logging
-from typing import Dict, Any, Optional, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from django.utils import timezone
 from django.db import transaction
 
@@ -105,6 +105,7 @@ class InitiativeIntegrationService:
         source_decision_id: str = None,
         created_by: str = "ThinkingAgent",
         bypass_circuit_breaker: bool = False,
+        owner_user_id: Any = None,
     ) -> Tuple['Initiative', bool]:
         """
         Get or create an Initiative for a given topic.
@@ -115,18 +116,29 @@ class InitiativeIntegrationService:
         Session 994: Circuit breaker enforced at this layer so no caller can bypass it.
         Exception: bypass_circuit_breaker=True for explicit human-initiated creation via PA.
 
+        S2977 follow-up: `Initiative.owner` is NOT NULL (I-0302 Phase 3 A1,
+        migrations 0381 + 0382). Callers must resolve an owner before create.
+        Priority: explicit `owner_user_id` → canonical primary superuser
+        (matches migration 0381 backfill logic). Hard-fail if neither exists
+        rather than crash on the NOT NULL constraint.
+
         Args:
             topic: The topic/name for the initiative
             description: Optional description
             source_decision_id: Optional ID of the decision that triggered this
             created_by: Who/what created this initiative
             bypass_circuit_breaker: If True, skip circuit breaker (for human PA requests)
+            owner_user_id: pk of the acting user (from PA `user_id`). If None,
+                falls back to the canonical primary superuser (single-tenant
+                pre-prod default; see migration 0381).
 
         Returns:
             Tuple of (Initiative, created_bool)
 
         Raises:
             InitiativeCreationBlocked: When circuit breaker is tripped
+            RuntimeError: When no owner can be resolved (no explicit user_id
+                AND no superuser exists to fall back on).
         """
         from core.models_document_registry import Initiative
 
@@ -162,6 +174,9 @@ class InitiativeIntegrationService:
                     f"Initiative creation blocked by circuit breaker (source: {created_by})"
                 )
 
+            # S2977 follow-up: resolve owner BEFORE create — column is NOT NULL.
+            resolved_owner_id = self._resolve_owner_user_id(owner_user_id, created_by)
+
             # Session 994: Auto-created initiatives land in TRIAGE, not ACTIVE.
             # Only human-confirmed or manually promoted initiatives become ACTIVE.
             initiative = Initiative.objects.create(
@@ -172,6 +187,7 @@ class InitiativeIntegrationService:
                 source_decision_id=source_decision_id,
                 status=Initiative.Status.TRIAGE,
                 current_stage=1,
+                owner_id=resolved_owner_id,
             )
 
             # Session 1003: Auto-set founder intent so auto-progression works
@@ -201,6 +217,39 @@ class InitiativeIntegrationService:
         except Exception as e:
             self.logger.error(f"[Session 847] Error creating initiative for '{topic}': {e}")
             raise
+
+    def _resolve_owner_user_id(
+        self, owner_user_id: Any, created_by: str
+    ) -> Any:
+        """S2977 follow-up: resolve the acting user for Initiative.owner (NOT NULL).
+
+        `UnifiedUser.pk` is a UUID in this project; accept and return the
+        caller's value unmodified (str, UUID, or legacy int) — do NOT cast.
+
+        Priority:
+          1. Explicit ``owner_user_id`` (from PA ``user_id``) — trusted; returned as-is.
+          2. Canonical primary superuser — mirrors migration 0381 backfill
+             (``User.objects.filter(is_superuser=True).order_by('pk').first()``).
+             Pre-prod single-tenant default; revisit when Phase 0 multi-tenant lands.
+
+        Hard-fails with a clear message if neither path resolves — prevents a
+        silent DB IntegrityError on the NOT NULL constraint (which was the
+        pre-fix symptom).
+        """
+        if owner_user_id:
+            return owner_user_id
+
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        fallback = User.objects.filter(is_superuser=True).order_by('pk').first()
+        if fallback is None:
+            raise RuntimeError(
+                "InitiativeIntegrationService.get_or_create_initiative: no "
+                f"explicit owner_user_id was supplied (created_by={created_by!r}) "
+                "AND no superuser exists to fall back on. Cannot satisfy the "
+                "NOT NULL constraint on Initiative.owner (I-0302 Phase 3 A1)."
+            )
+        return fallback.pk
 
     def _normalize_topic(self, topic: str) -> str:
         """
