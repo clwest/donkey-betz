@@ -166,3 +166,44 @@ As of Session 998B, `fetch_scores()` returns both completed (`completed: True`) 
 ## Odds-Consensus Predictions (Session 998B — Superseded by Session 1010)
 
 Previously, `get_todays_games()` generated predictions from moneyline odds consensus. Session 1010 replaced this with persistent `MLPrediction` records stored by `GamePredictor` via `SPORT_KEY_LEAGUE` mapping.
+
+## Extractor / embedding_text maintenance (S2974–S2977)
+
+Three related commands manage the intersection of the raw_data payload, the searchable `embedding_text` column, and the `[NO_ITEMS]` sentinel state. They target `LegacySpiderData` and are all dry-run by default with a required `--apply` to write. Choose by intent:
+
+| Intent | Command | Touches | Rollback |
+|---|---|---|---|
+| Historical ghost rows dominate the 30d NO_ITEMS rate | `python manage.py cleanup_stale_no_items --apply` | Bumps `embedding_text` from `[NO_ITEMS]` to `[NO_ITEMS_STALE_EMPTY_RAW]` for `raw_data={}` + old rows | Bump back via ORM |
+| Extractor was fixed so previously-`[NO_ITEMS]` rows now yield text | `python manage.py retriage_no_items --spider X --apply` | Clears the `[NO_ITEMS]` sentinel so backfill re-embeds | Backfill re-marks `[NO_ITEMS]` if extractor still returns empty |
+| Extractor was fixed to produce **different** text for already-embedded rows | `python manage.py rebuild_embedding_text --spider X --apply` (S2977) | Recomputes `embedding_text` via current `get_searchable_text` (spider-aware — sec_edgar re-interleaves by form_type); **never touches the stored embedding vector** | Deterministic: revert extractor code + re-run command |
+
+### `rebuild_embedding_text` (S2977) — runbook
+
+**When to run**: after shipping an extractor / spider fix that would change what `get_searchable_text()` returns for existing rows (e.g. S2977 sec_edgar form_type interleave). Feed Explorer keyword search hits `embedding_text__icontains` directly (see `core/services/spider_feed.query_spider_feed`), so stale text = stale hits.
+
+**Why vectors are safe to skip**: no real search path depends on the persisted `embedding` vector matching the current `embedding_text`. `SpiderSemanticSearch.semantic_search` regenerates candidate embeddings on-the-fly from `raw_data`, and Feed Explorer is substring-only.
+
+**Verification pattern** (before + after):
+```python
+from core.services.spider_feed import query_spider_feed
+for q in ['10-K', '10-Q', '8-K']:
+    r = query_spider_feed(query=q, spider_name='sec_edgar', embedding_status='present', limit=5)
+    print(f'{q}: {r["total"]} hits')
+```
+
+**Usage**:
+```bash
+# Dry-run 7d default, prints diff samples
+python manage.py rebuild_embedding_text --spider sec_edgar
+
+# Apply
+python manage.py rebuild_embedding_text --spider sec_edgar --apply
+
+# Wider window / staged rollout
+python manage.py rebuild_embedding_text --spider sec_edgar --days 30 --limit 50 --apply
+```
+
+**Semantics preserved**:
+- Sentinels (`[NO_ITEMS]`, `[NO_ITEMS_STALE_EMPTY_RAW]`) are skipped — those are owned by `retriage_no_items` / `cleanup_stale_no_items`.
+- If the current extractor returns empty for a row that currently has real text, the row is **left untouched** (would look like data loss).
+- Text is truncated to 1000 chars to match `generate_entry_embedding` semantics so future re-embed cycles don't churn.
