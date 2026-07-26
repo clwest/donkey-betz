@@ -2664,11 +2664,19 @@ def _impl_generate_initiative_stage_document(self, initiative_id: str, stage_num
         # binding directive, deleted initiative, malformed UUID) — a retry
         # cannot fix it. Return a typed no-op outcome, reconcile the queue
         # provenance row, and don't raise.
+        # S2982 T1 §4c mitigation: distinguish malformed-UUID/type-error
+        # (caller passed junk) from DoesNotExist (initiative was deleted
+        # between enqueue and task start) so operators can triage each
+        # differently in the post-mortem.
+        if isinstance(exc, Initiative.DoesNotExist):
+            reason = 'initiative_not_found'
+        else:
+            reason = 'invalid_initiative_id_format'
         error_msg = f"Initiative not found: {type(exc).__name__}: {exc}"
         logger.warning(
             f"📝 [STAGE-GEN] {error_msg} "
             f"(initiative_id={initiative_id!r} stage={stage_num} "
-            f"celery_task_id={_celery_task_id}) — no-op, no retry"
+            f"celery_task_id={_celery_task_id} reason={reason}) — no-op, no retry"
         )
         mark_task_outcome(
             celery_task_id=_celery_task_id,
@@ -2678,7 +2686,7 @@ def _impl_generate_initiative_stage_document(self, initiative_id: str, stage_num
         return {
             'success': False,
             'error': 'Initiative not found',
-            'reason': 'initiative_not_found',
+            'reason': reason,
             'initiative_id': str(initiative_id) if initiative_id is not None else '',
             'stage': stage_num,
             'celery_task_id': _celery_task_id,

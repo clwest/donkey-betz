@@ -31,6 +31,16 @@ from core.security.object_authz import scope_queryset_agent_execution
 
 logger = logging.getLogger(__name__)
 
+# S2982 (spec 2a196415-…): system-provenance agents are bookkeeping rows —
+# not real agents whose success/failure rates operators care about. Exclude
+# them from analytics aggregates so the dispatch helper's synthetic
+# ``InitiativeStageDispatch`` agent (and any future system-provenance
+# agents that share ``agent_type='system'``) never appears in top-performer
+# lists or contaminates system-wide execution counters. The learning bridge
+# already skips these rows at the source (``on_agent_execution_completed``);
+# this is a defense-in-depth safety net at the read layer.
+_ANALYTICS_EXCLUDED_AGENT_TYPES = ('system',)
+
 
 @require_http_methods(["GET"])
 @cache_page(30)  # 30s — system-wide agent stats (8 queries)
@@ -40,7 +50,9 @@ def agent_analytics_stats(request):
     Returns overall agent statistics for the dashboard hero section.
     """
     try:
-        agents = Agent.objects.all()
+        agents = Agent.objects.exclude(
+            agent_type__in=_ANALYTICS_EXCLUDED_AGENT_TYPES,
+        )
         total_agents = agents.count()
         active_agents = agents.filter(is_active=True).count()
 
@@ -98,6 +110,8 @@ def agent_analytics_top_performers(request):
         # Get agents with executions, sorted by success rate
         agents = Agent.objects.filter(
             total_executions__gt=0
+        ).exclude(
+            agent_type__in=_ANALYTICS_EXCLUDED_AGENT_TYPES,
         ).order_by('-successful_executions', '-effectiveness_score')[:limit]
 
         top_performers = []
@@ -134,7 +148,9 @@ def agent_analytics_needs_attention(request):
         # Find agents with low effectiveness score
         low_effectiveness = Agent.objects.filter(
             effectiveness_score__lt=70,
-            is_active=True
+            is_active=True,
+        ).exclude(
+            agent_type__in=_ANALYTICS_EXCLUDED_AGENT_TYPES,
         ).order_by('effectiveness_score')[:limit]
 
         for agent in low_effectiveness:

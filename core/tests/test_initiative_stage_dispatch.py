@@ -114,12 +114,15 @@ class QueueStageDocumentGenerationValidationTests(TestCase):
         fake_task.delay.assert_not_called()
 
     def test_malformed_uuid_refuses_enqueue(self):
+        # S2982 T1 §4c mitigation: malformed UUID is a distinct reason
+        # code from initiative_not_found so operators can triage them
+        # differently in the post-mortem.
         with _patched_delay() as fake_task:
             outcome = dispatch.queue_stage_document_generation(
                 'not-a-uuid-at-all', 1, triggered_by='unit-test',
             )
         self.assertFalse(outcome['success'])
-        self.assertEqual(outcome['reason'], 'initiative_not_found')
+        self.assertEqual(outcome['reason'], 'invalid_initiative_id_format')
         fake_task.delay.assert_not_called()
         # No provenance row for refused enqueues — the Initiative wasn't real,
         # so we have no valid parent_object_id to hang the receipt off.
@@ -413,6 +416,9 @@ class StageDocumentTaskMissingInitiativeGuardrailTests(TestCase):
         self.assertIsNotNone(provenance_row.completed_at)
 
     def test_malformed_uuid_returns_typed_no_op_without_retry(self):
+        # S2982 T1 §4c mitigation: malformed UUID surfaces as a distinct
+        # reason so operators can distinguish "caller passed junk" from
+        # "initiative was deleted".
         from core.tasks_initiatives import _impl_generate_initiative_stage_document
 
         celery_task_id = f'guardrail-task-{uuid.uuid4()}'
@@ -423,5 +429,5 @@ class StageDocumentTaskMissingInitiativeGuardrailTests(TestCase):
         )
 
         self.assertFalse(result['success'])
-        self.assertEqual(result['reason'], 'initiative_not_found')
+        self.assertEqual(result['reason'], 'invalid_initiative_id_format')
         self_double.retry.assert_not_called()
