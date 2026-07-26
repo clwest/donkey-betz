@@ -16,12 +16,16 @@ from rest_framework.test import APIClient
 from core.models import SignalCluster
 from core.models_unified_system import LegacySpiderData
 from core.services.theme_signals_service import (
+    MAX_EVIDENCE,
     MIN_CONFIDENCE_BUILDABLE,
     MIN_CONFIDENCE_INVESTABLE,
+    _PATTERN_TO_ACTION,
+    _round_robin_across_row_buckets,
     cluster_to_card,
     extract_evidence_from_cluster,
     get_theme_signals,
     passes_quality_gate,
+    pattern_type_to_action,
     route_cluster,
 )
 
@@ -346,10 +350,25 @@ class CardShapeTests(TestCase):
         card = cluster_to_card(c, "buildable")
         self.assertIn("hackernews", card["why_now"])
 
-    def test_so_what_action_mapped_from_pattern_type(self):
+    def test_action_mapped_from_pattern_type(self):
+        # S2980: opportunity_window collapses to canonical "build" (was "build/trade").
         c = _mk_cluster(pattern_type="opportunity_window")
         card = cluster_to_card(c, "buildable")
-        self.assertEqual(card["so_what"], "build/trade")
+        self.assertEqual(card["action"], "build")
+
+    def test_card_contract_does_not_emit_so_what(self):
+        # S2980 Chris D-verdict: regression guard against reintroducing the
+        # legacy 5-value `so_what` field. `action` is the sole canonical
+        # action field on the card contract now.
+        c = _mk_cluster(pattern_type="opportunity_window")
+        card = cluster_to_card(c, "buildable")
+        self.assertNotIn("so_what", card)
+        self.assertIn("action", card)
+
+    def test_action_defaults_to_watch_for_unknown_pattern_type(self):
+        c = _mk_cluster(pattern_type="totally_novel_pattern_type_xyz")
+        card = cluster_to_card(c, "buildable")
+        self.assertEqual(card["action"], "watch")
 
 
 class GetThemeSignalsTests(TestCase):
@@ -469,5 +488,244 @@ class ThemeSignalsEndpointTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         payload = resp.data
         for k in ("tab", "days", "limit", "cards", "total_scanned",
-                  "total_survived", "gate_reasons", "min_confidence_applied"):
+                  "total_survived", "gate_reasons", "min_confidence_applied",
+                  "build_only"):
             self.assertIn(k, payload)
+
+    def test_endpoint_accepts_build_only_query_param(self):
+        # S2980: `?build_only=true` should be reflected in the payload's
+        # `build_only` echo, regardless of whether any cards survive.
+        resp = self.client.get(
+            "/api/theme-signals/", {"tab": "buildable", "build_only": "true"}
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.data["build_only"])
+        # build_only_filtered counter present in gate_reasons
+        self.assertIn("build_only_filtered", resp.data["gate_reasons"])
+
+
+# -- S2980 additions ------------------------------------------------------
+
+
+class PatternToActionMappingTests(TestCase):
+    """S2980 spec f3cc9499 §Mapping — canonical 3-value action enum."""
+
+    def test_all_ten_pattern_types_map_to_canonical_enum(self):
+        # Every pattern_type in the map must resolve to one of {build, research, watch}.
+        allowed = {"build", "research", "watch"}
+        self.assertEqual(len(_PATTERN_TO_ACTION), 10)
+        for pt, action in _PATTERN_TO_ACTION.items():
+            self.assertIn(action, allowed, f"pattern_type {pt} maps to non-canonical {action}")
+
+    def test_opportunity_window_collapses_to_build(self):
+        # S2979 shipped "build/trade" here; S2980 collapses to canonical "build".
+        self.assertEqual(pattern_type_to_action("opportunity_window"), "build")
+
+    def test_market_movement_collapses_to_watch(self):
+        # S2979 shipped "trade" here; S2980 collapses to canonical "watch".
+        self.assertEqual(pattern_type_to_action("market_movement"), "watch")
+
+    def test_knowledge_gap_stays_research(self):
+        self.assertEqual(pattern_type_to_action("knowledge_gap"), "research")
+
+    def test_user_need_stays_build(self):
+        self.assertEqual(pattern_type_to_action("user_need"), "build")
+
+    def test_trend_emergence_stays_watch(self):
+        self.assertEqual(pattern_type_to_action("trend_emergence"), "watch")
+
+    def test_unknown_pattern_type_falls_back_to_watch(self):
+        self.assertEqual(pattern_type_to_action("some_novel_pattern"), "watch")
+        self.assertEqual(pattern_type_to_action(""), "watch")
+        self.assertEqual(pattern_type_to_action(None), "watch")
+
+
+class RoundRobinBucketTests(TestCase):
+    """S2980 spec f3cc9499 §Backend §Source-diversified evidence selection.
+
+    Direct unit tests on the pure helper — no DB required.
+    """
+
+    def _mk_row(self, prefix: str, count: int) -> list:
+        return [{"title": f"{prefix}{i}", "url": f"https://{prefix}.example/{i}", "source": prefix} for i in range(count)]
+
+    def test_interleaves_across_two_full_buckets(self):
+        b1 = self._mk_row("a", 3)
+        b2 = self._mk_row("b", 3)
+        out = _round_robin_across_row_buckets([b1, b2], max_total=6)
+        titles = [r["title"] for r in out]
+        self.assertEqual(titles, ["a0", "b0", "a1", "b1", "a2", "b2"])
+
+    def test_preserves_within_bucket_walk_order(self):
+        # Within one bucket, items must come out in the input order.
+        b1 = self._mk_row("a", 4)
+        b2 = self._mk_row("b", 2)
+        out = _round_robin_across_row_buckets([b1, b2], max_total=6)
+        a_titles = [r["title"] for r in out if r["title"].startswith("a")]
+        self.assertEqual(a_titles, ["a0", "a1", "a2", "a3"])
+        b_titles = [r["title"] for r in out if r["title"].startswith("b")]
+        self.assertEqual(b_titles, ["b0", "b1"])
+
+    def test_respects_max_total_cap(self):
+        b1 = self._mk_row("a", 10)
+        b2 = self._mk_row("b", 10)
+        out = _round_robin_across_row_buckets([b1, b2], max_total=5)
+        self.assertEqual(len(out), 5)
+
+    def test_drains_remaining_buckets_when_one_empties(self):
+        # If bucket b runs out first, the rest of a should fill.
+        b1 = self._mk_row("a", 5)
+        b2 = self._mk_row("b", 1)
+        out = _round_robin_across_row_buckets([b1, b2], max_total=6)
+        titles = [r["title"] for r in out]
+        # First pass gets a0, b0. Then b is exhausted; remaining passes just take a.
+        self.assertEqual(titles, ["a0", "b0", "a1", "a2", "a3", "a4"])
+
+    def test_stable_across_runs(self):
+        b1 = self._mk_row("a", 3)
+        b2 = self._mk_row("b", 3)
+        b3 = self._mk_row("c", 3)
+        first = _round_robin_across_row_buckets([b1, b2, b3], max_total=9)
+        second = _round_robin_across_row_buckets([b1, b2, b3], max_total=9)
+        self.assertEqual([r["title"] for r in first], [r["title"] for r in second])
+
+    def test_empty_buckets_returns_empty(self):
+        self.assertEqual(_round_robin_across_row_buckets([], max_total=7), [])
+        self.assertEqual(_round_robin_across_row_buckets([[], []], max_total=7), [])
+
+    def test_single_bucket_behaves_like_pass_through(self):
+        b1 = self._mk_row("a", 4)
+        out = _round_robin_across_row_buckets([b1], max_total=7)
+        self.assertEqual([r["title"] for r in out], ["a0", "a1", "a2", "a3"])
+
+
+class EvidenceDiversificationE2ETests(TestCase):
+    """S2980: verify diversification through the real cluster extractor —
+    the failure mode from live data (Bluesky row with many items short-
+    circuiting other rows) must not reoccur.
+    """
+
+    def test_multi_row_cluster_diversifies_evidence(self):
+        # 3 rows, one per source. Bluesky row has 7+ items (the actual live
+        # failure shape). Expect round-robin: 3 bluesky, 2 kickstarter, 2 producthunt.
+        bluesky_row = _mk_legacy(
+            items=[{"title": f"bsky {i}", "url": f"https://bsky.example/{i}"} for i in range(8)],
+            spider_name="bluesky",
+        )
+        kickstarter_row = _mk_legacy(
+            items=[
+                {"title": "ks0", "url": "https://ks.example/0"},
+                {"title": "ks1", "url": "https://ks.example/1"},
+                {"title": "ks2", "url": "https://ks.example/2"},
+            ],
+            spider_name="kickstarter",
+        )
+        producthunt_row = _mk_legacy(
+            items=[
+                {"title": "ph0", "url": "https://ph.example/0"},
+                {"title": "ph1", "url": "https://ph.example/1"},
+            ],
+            spider_name="producthunt",
+        )
+        c = _mk_cluster(
+            spider_data_ids=[
+                str(bluesky_row.id), str(kickstarter_row.id), str(producthunt_row.id),
+            ],
+        )
+        ev = extract_evidence_from_cluster(c)
+        sources = [e["source"] for e in ev]
+        # MAX_EVIDENCE=7; round-robin: bsky, ks, ph, bsky, ks, ph, bsky = 3/2/2 mix.
+        self.assertEqual(len(ev), MAX_EVIDENCE)
+        self.assertEqual(sources.count("Bluesky"), 3)
+        self.assertEqual(sources.count("Kickstarter"), 2)
+        self.assertEqual(sources.count("Product Hunt"), 2)
+
+    def test_single_source_cluster_still_returns_full_evidence(self):
+        # When only one source exists in the cluster, evidence is 100%
+        # single-source — round-robin degrades gracefully to pass-through.
+        row = _mk_legacy(
+            items=[{"title": f"only {i}", "url": f"https://x.example/{i}"} for i in range(9)],
+            spider_name="hackernews",
+        )
+        c = _mk_cluster(spider_data_ids=[str(row.id)])
+        ev = extract_evidence_from_cluster(c)
+        self.assertEqual(len(ev), MAX_EVIDENCE)
+        self.assertTrue(all(e["source"] == "Hacker News" for e in ev))
+
+    def test_row_iteration_order_follows_spider_data_ids(self):
+        # Rigby T1 F-BLOCKER: row order must be deterministic per cluster's
+        # own spider_data_ids list, not Django `filter(id__in=…)` order.
+        # Give two rows identical item counts but different sources; the
+        # first item in the output must come from the row listed first in
+        # spider_data_ids.
+        row_a = _mk_legacy(
+            items=[{"title": "a0", "url": "https://a.example/0"}],
+            spider_name="devto",
+        )
+        row_b = _mk_legacy(
+            items=[{"title": "b0", "url": "https://b.example/0"}],
+            spider_name="hackernews",
+        )
+        # spider_data_ids explicitly puts row_b first.
+        c = _mk_cluster(spider_data_ids=[str(row_b.id), str(row_a.id)])
+        ev = extract_evidence_from_cluster(c)
+        # After sort_evidence_by_relevance (stable, both items tie on binary
+        # keys) round-robin order is preserved: b0 before a0.
+        self.assertEqual(ev[0]["title"], "b0")
+        self.assertEqual(ev[1]["title"], "a0")
+
+
+class BuildOnlyFilterTests(TestCase):
+    """S2980 spec f3cc9499 §Server-side build_only filter."""
+
+    @classmethod
+    def setUpTestData(cls):
+        # Two buildable-routed clusters: one Build (opportunity_window),
+        # one Research (knowledge_gap).
+        build_row = _mk_legacy(
+            items=[{"title": "opp", "url": "https://o.example"}],
+            spider_name="hackernews",
+        )
+        _mk_cluster(
+            name="Build cluster opp",
+            pattern_type="opportunity_window",
+            source_breakdown={"hackernews": 3, "devto": 2, "github": 1},
+            confidence=0.75,
+            spider_data_ids=[str(build_row.id)],
+        )
+        research_row = _mk_legacy(
+            items=[{"title": "kg", "url": "https://k.example"}],
+            spider_name="hackernews",
+        )
+        _mk_cluster(
+            name="Research cluster kg",
+            pattern_type="knowledge_gap",
+            source_breakdown={"hackernews": 3, "devto": 2, "github": 1},
+            confidence=0.75,
+            spider_data_ids=[str(research_row.id)],
+        )
+
+    def test_default_returns_both_build_and_research(self):
+        payload = get_theme_signals(tab="buildable")
+        actions = [c["action"] for c in payload["cards"]]
+        self.assertIn("build", actions)
+        self.assertIn("research", actions)
+        self.assertFalse(payload["build_only"])
+
+    def test_build_only_true_returns_only_build_cards(self):
+        payload = get_theme_signals(tab="buildable", build_only=True)
+        self.assertTrue(payload["build_only"])
+        for card in payload["cards"]:
+            self.assertEqual(card["action"], "build")
+        # At least the opportunity_window cluster should survive.
+        self.assertGreaterEqual(len(payload["cards"]), 1)
+
+    def test_build_only_records_filtered_count(self):
+        payload = get_theme_signals(tab="buildable", build_only=True)
+        # The knowledge_gap cluster should be counted as filtered out.
+        self.assertGreaterEqual(payload["gate_reasons"]["build_only_filtered"], 1)
+
+    def test_build_only_false_matches_default(self):
+        default = get_theme_signals(tab="buildable")
+        explicit = get_theme_signals(tab="buildable", build_only=False)
+        self.assertEqual(len(default["cards"]), len(explicit["cards"]))
