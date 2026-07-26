@@ -61,6 +61,28 @@ STATUS_FAILURE = 'failure'
 
 EMPTY_REASON_NO_ITEMS = 'no_items'
 EMPTY_REASON_ALL_DEDUPED = 'all_deduped'
+EMPTY_REASON_FETCH_FAILED = 'fetch_failed'
+
+
+def derive_empty_reason(
+    items_before_dedup: int,
+    unique_after_dedup: int,
+    fetch_stats: Optional[Dict[str, Any]] = None,
+) -> str:
+    """Precedence: ``fetch_failed`` > ``no_items`` > ``all_deduped``.
+
+    ``fetch_failed`` requires ``fetch_stats`` to indicate at least one
+    fetch attempt was made and none succeeded. Otherwise ``no_items``
+    covers the empty-parse case, and ``all_deduped`` is only chosen when
+    items existed pre-dedup but nothing survived dedup."""
+    if fetch_stats:
+        attempts = int(fetch_stats.get('attempts', 0) or 0)
+        successes = int(fetch_stats.get('successes', 0) or 0)
+        if attempts > 0 and successes == 0:
+            return EMPTY_REASON_FETCH_FAILED
+    if items_before_dedup > 0 and unique_after_dedup == 0:
+        return EMPTY_REASON_ALL_DEDUPED
+    return EMPTY_REASON_NO_ITEMS
 
 
 def get_empty_run_persistence_mode() -> str:
@@ -95,12 +117,21 @@ def build_empty_run_diagnostic(
     duplicates: int,
     execution_log_id: Optional[Any] = None,
     ephemeral: bool = True,
+    fetch_stats: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Build the diagnostic dict for a ``success_empty`` run."""
-    empty_reason = (
-        EMPTY_REASON_NO_ITEMS if items_before_dedup == 0 else EMPTY_REASON_ALL_DEDUPED
+    """Build the diagnostic dict for a ``success_empty`` run.
+
+    When ``fetch_stats`` is provided and indicates every URL fetch failed,
+    ``empty_reason`` is set to ``fetch_failed`` and the diagnostic also
+    carries ``urls_attempted`` + ``failed_urls`` for operators.
+    Falls back to ``no_items`` / ``all_deduped`` per
+    :func:`derive_empty_reason`."""
+    empty_reason = derive_empty_reason(
+        items_before_dedup=items_before_dedup,
+        unique_after_dedup=unique_after_dedup,
+        fetch_stats=fetch_stats,
     )
-    return {
+    payload: Dict[str, Any] = {
         'status': STATUS_SUCCESS_EMPTY,
         'empty_reason': empty_reason,
         'items_before_dedup': int(items_before_dedup),
@@ -109,6 +140,10 @@ def build_empty_run_diagnostic(
         'ephemeral_empty_run': bool(ephemeral),
         'execution_log_id': str(execution_log_id) if execution_log_id else None,
     }
+    if empty_reason == EMPTY_REASON_FETCH_FAILED and fetch_stats:
+        payload['urls_attempted'] = list(fetch_stats.get('urls_attempted', []) or [])
+        payload['failed_urls'] = list(fetch_stats.get('failed_urls', []) or [])
+    return payload
 
 
 def build_missing_creds_diagnostic(

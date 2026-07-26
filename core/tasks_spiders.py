@@ -549,6 +549,12 @@ def _impl_run_spider_network(self):
                 # S2969 Phase 1A: persist a diagnostic row so dashboards that
                 # read LegacySpiderData row counts stop reporting "never_run"
                 # for spiders that DID run but yielded no unique items.
+                # S2970: pass fetch_stats so empty_reason can resolve to
+                # 'fetch_failed' when every URL attempt failed (vs
+                # 'no_items' for an actually-empty feed).
+                fetch_stats_data = (
+                    data.get('fetch_stats') if isinstance(data, dict) else None
+                )
                 empty_mode = spider_diagnostic.get_empty_run_persistence_mode()
                 if empty_mode != spider_diagnostic.EMPTY_RUN_MODE_OFF:
                     ephemeral = empty_mode == spider_diagnostic.EMPTY_RUN_MODE_DIAGNOSTIC_7D
@@ -561,6 +567,7 @@ def _impl_run_spider_network(self):
                             duplicates=dedup_stats.get('duplicates', 0),
                             execution_log_id=execution_log.id if execution_log else None,
                             ephemeral=ephemeral,
+                            fetch_stats=fetch_stats_data,
                         ),
                         source_url=source_url_for_row,
                     )
@@ -576,6 +583,19 @@ def _impl_run_spider_network(self):
             if spider_data:
                 results['data_collected'] += 1
             results['items_collected'] += item_count
+            # S2970: derive empty_reason for reporting so the tool surface
+            # (spider_status_tool) can show fetch_failed vs no_items vs
+            # all_deduped alongside the row it just persisted.
+            reported_empty_reason: Optional[str] = None
+            if not unique_items:
+                fetch_stats_for_report = (
+                    data.get('fetch_stats') if isinstance(data, dict) else None
+                )
+                reported_empty_reason = spider_diagnostic.derive_empty_reason(
+                    items_before_dedup=items_before_dedup,
+                    unique_after_dedup=0,
+                    fetch_stats=fetch_stats_for_report,
+                )
             results['spider_results'].append({
                 'spider': spider_name,
                 'success': spider_success,
@@ -586,6 +606,7 @@ def _impl_run_spider_network(self):
                 'unique_after_dedup': len(unique_items),
                 'duplicates': dedup_stats.get('duplicates', 0),
                 'persisted_row': spider_data is not None,
+                'empty_reason': reported_empty_reason,
                 'dedup_stats': dedup_stats,
                 'failure_type': data.get('failure_type') if isinstance(data, dict) else None,
                 'error': data.get('error') if isinstance(data, dict) else None,
@@ -802,6 +823,11 @@ def _impl_execute_single_spider_lightweight(spider_name: str):
             # continues silently no-op'ing on empty runs, the operator
             # hits Execute expecting the "never_run" bug to clear and
             # sees no change. Persist an empty-run diagnostic here too.
+            # S2970: forward fetch_stats so the operator sees fetch_failed
+            # vs no_items when the on-demand run's URLs all fail.
+            fetch_stats_data = (
+                data.get('fetch_stats') if isinstance(data, dict) else None
+            )
             empty_mode = spider_diagnostic.get_empty_run_persistence_mode()
             if empty_mode != spider_diagnostic.EMPTY_RUN_MODE_OFF:
                 ephemeral = empty_mode == spider_diagnostic.EMPTY_RUN_MODE_DIAGNOSTIC_7D
@@ -814,6 +840,7 @@ def _impl_execute_single_spider_lightweight(spider_name: str):
                         duplicates=dedup_stats.get('duplicates', 0),
                         execution_log_id=None,
                         ephemeral=ephemeral,
+                        fetch_stats=fetch_stats_data,
                     ),
                     source_url='on-demand-execution',
                 )
