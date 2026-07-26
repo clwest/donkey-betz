@@ -11870,7 +11870,7 @@ def enforce_db_retention():
     max_retries=0,
     acks_late=False,
 )
-def claude_code_engineer_task(self, task_description, conversation_id=None, requested_by='rigby', request_mode='auto', workspace_root_path=None, max_iterations=None, max_cost_usd=None):
+def claude_code_engineer_task(self, task_description, conversation_id=None, requested_by='rigby', request_mode='auto', workspace_root_path=None, max_iterations=None, max_cost_usd=None, engine_mode=None):
     """Autonomous Claude Code engineering session — reads files, writes code, creates PRs.
 
     Session 1230 P4: ``request_mode`` ('answer' | 'change' | 'auto', default
@@ -11909,6 +11909,7 @@ def claude_code_engineer_task(self, task_description, conversation_id=None, requ
         _create_engineer_execution_record,
         _persist_engineer_terminal_state,
         execute_engineering_task,
+        execute_engineering_task_v2,
     )
 
     celery_task_id = str(self.request.id) if self.request and self.request.id else ''
@@ -11923,9 +11924,32 @@ def claude_code_engineer_task(self, task_description, conversation_id=None, requ
         str(execution_record.id) if execution_record is not None else None
     )
 
+    # Session 2968 PR-A: engine_mode routing. Precedence per Rigby T1 SIGN
+    # refinement — explicit payload override wins over env default so operators
+    # can A/B on a per-dispatch basis without restarting the code_jobs worker.
+    #   1. payload `engine_mode` (from _handle_claude_code)
+    #   2. env `CLAUDE_CODE_ENGINE_MODE`
+    #   3. default 'v1' (legacy loop preserved through PR-D)
+    resolved_engine_mode = (
+        engine_mode or os.environ.get('CLAUDE_CODE_ENGINE_MODE', 'v1')
+    ).strip().lower()
+
+    if resolved_engine_mode == 'v2':
+        engine_fn = execute_engineering_task_v2
+    else:
+        engine_fn = execute_engineering_task
+        resolved_engine_mode = 'v1'
+
+    logger.info(
+        "[claude_code_engineer_task] engine_mode=%s (payload=%r env=%r) "
+        "conversation_id=%s",
+        resolved_engine_mode, engine_mode,
+        os.environ.get('CLAUDE_CODE_ENGINE_MODE'), conversation_id,
+    )
+
     result = None
     try:
-        result = execute_engineering_task(
+        result = engine_fn(
             task_description,
             conversation_id=conversation_id,
             requested_by=requested_by,
