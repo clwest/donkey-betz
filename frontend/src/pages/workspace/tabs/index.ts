@@ -82,3 +82,6 @@ export { AgentRunsTab } from './AgentRunsTab'
 
 // S2934: Signal Dispatches — observability for S2933 A3 auto-dispatch pipeline
 export { SignalDispatchesTab } from './SignalDispatchesTab'
+
+// S2978: Theme Signals v1 — Buildable/Investable tab-scoped cards (product-tier UI on SignalCluster)
+export { ThemeSignalsTab } from './theme-signals/ThemeSignalsTab'
