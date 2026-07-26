@@ -36,10 +36,17 @@ def _clamp(value: int, low: int, high: int) -> int:
 
 
 def _embedding_status(text: Optional[str]) -> str:
-    """Bucket a row's embedding_text into 3 states matching backfill semantics."""
+    """Bucket a row's embedding_text into 3 states matching backfill semantics.
+
+    S2975: both the actionable `[NO_ITEMS]` sentinel AND the historical
+    `[NO_ITEMS_STALE_EMPTY_RAW]` variant bucket as `marked_empty` so the
+    feed UI never treats a stale ghost row as `present`.
+    """
+    from core.services.no_items_policy import BACKFILL_SKIP_SENTINELS
+
     if text is None:
         return 'missing'
-    if text == '[NO_ITEMS]':
+    if text in BACKFILL_SKIP_SENTINELS:
         return 'marked_empty'
     if text.strip():
         return 'present'
@@ -106,12 +113,20 @@ def query_spider_feed(
         qs = qs.filter(Q(embedding_text__icontains=q) | Q(source_url__icontains=q))
 
     # Embedding-status buckets align with `spider_semantic_search.get_embedding_stats`.
+    # S2975: use BACKFILL_SKIP_SENTINELS so stale ghost rows bucket the same
+    # way real [NO_ITEMS] does — else they'd leak into 'present' results.
+    from core.services.no_items_policy import BACKFILL_SKIP_SENTINELS
+
     if embedding_status == 'present':
-        qs = qs.exclude(Q(embedding_text__isnull=True) | Q(embedding_text='') | Q(embedding_text='[NO_ITEMS]'))
+        qs = qs.exclude(
+            Q(embedding_text__isnull=True)
+            | Q(embedding_text='')
+            | Q(embedding_text__in=BACKFILL_SKIP_SENTINELS)
+        )
     elif embedding_status == 'missing':
         qs = qs.filter(Q(embedding_text__isnull=True) | Q(embedding_text=''))
     elif embedding_status == 'marked_empty':
-        qs = qs.filter(embedding_text='[NO_ITEMS]')
+        qs = qs.filter(embedding_text__in=BACKFILL_SKIP_SENTINELS)
     # 'all' or unknown = no filter
 
     total = qs.count()
