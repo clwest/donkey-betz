@@ -4202,6 +4202,7 @@ from core.views_workspace_templates import (
     trigger_pipeline, pipeline_status, pipeline_history, pipeline_stage_detail, workspace_packets,
     add_workspace_member,
 )
+from core.views_workspace_home import workspace_home_snapshot
 urlpatterns += [
     # Specific Workspace Endpoints (must come BEFORE router to avoid {pk} pattern matching)
     path('api/workspaces/dashboard/', workspace_dashboard, name='workspace-dashboard'),
@@ -4220,6 +4221,7 @@ urlpatterns += [
     path('api/workspaces/<uuid:workspace_id>/pipeline/<uuid:run_id>/stage/<int:stage_index>/', pipeline_stage_detail, name='workspace-pipeline-stage-detail'),
     path('api/workspaces/<uuid:workspace_id>/packets/', workspace_packets, name='workspace-packets'),
     path('api/workspaces/<uuid:workspace_id>/members/', add_workspace_member, name='workspace-add-member'),
+    path('api/workspaces/<uuid:workspace_id>/home/', workspace_home_snapshot, name='workspace-home-snapshot'),
 
     # Workspace Router URLs (generic patterns last)
     path('api/', include(workspace_router.urls)),
