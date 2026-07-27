@@ -104,6 +104,7 @@ import {
   RagDiagnosticsTab,
   AgentRunsTab,
   SignalDispatchesTab,
+  FindingsTab,
 } from './workspace/tabs'
 import { ZoomOutLedgerSection } from './workspace/tabs/ZoomOutLedgerSection'
 import { TenantBoundaryHealthSection } from './workspace/tabs/TenantBoundaryHealthSection'
@@ -175,6 +176,8 @@ const primaryTabs: PrimaryTab[] = [
       { id: 'signals', label: 'Signals', icon: Radar },
       // S2978: Theme Signals v1 — deliverable 63ec4d1d-... (product-tier UI on SignalCluster)
       { id: 'theme-signals', label: 'Theme Signals', icon: Sparkles },
+      // S2989 Phase B: Audit Findings from docs/research/ — mark + send-to-rigby
+      { id: 'findings', label: 'Findings', icon: ClipboardList },
     ],
   },
   {
@@ -1279,6 +1282,10 @@ export default function WorkspacePage() {
           {/* S2978: Theme Signals v1 — deliverable 63ec4d1d-... */}
           {activePrimary === 'intelligence' && activeSub === 'theme-signals' && (
             <ThemeSignalsTab />
+          )}
+          {/* S2989 Phase B: Audit Findings from docs/research/ */}
+          {activePrimary === 'intelligence' && activeSub === 'findings' && (
+            <FindingsTab />
           )}
 
           {/* SYSTEM */}
