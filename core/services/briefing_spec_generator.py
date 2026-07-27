@@ -467,6 +467,22 @@ def _render_spec_markdown(
     lines: List[str] = []
     lines.append(f"## Goal\n{spec.goal}\n")
     lines.append(f"## Context\n{spec.context or '(empty)'}\n")
+
+    # S2997 A2 SIGN fold: Staleness note moved to sit BEFORE Files
+    # implicated / Acceptance criteria so it influences AC scanning
+    # instead of reading as an audit appendix at the bottom. Per Rigby
+    # A2 zoom-out (b) — reader should know "this finding's refs are
+    # suspect" BEFORE they scan what to do about it.
+    if staleness_failed_refs:
+        lines.append("## Staleness note")
+        lines.append(
+            "The source finding was flagged `staleness=suspected` at ingest — "
+            "the following file:line refs failed re-verification at HEAD:"
+        )
+        for ref in staleness_failed_refs:
+            lines.append(f"- `{ref}`")
+        lines.append("")
+
     lines.append(f"## Open question\n{spec.open_question}\n")
 
     lines.append("## Files implicated")
@@ -487,16 +503,6 @@ def _render_spec_markdown(
         lines.append("## Warnings")
         for w in spec.warnings:
             lines.append(f"- `{w}`")
-        lines.append("")
-
-    if staleness_failed_refs:
-        lines.append("## Staleness note")
-        lines.append(
-            "The source finding was flagged `staleness=suspected` at ingest — "
-            "the following file:line refs failed re-verification at HEAD:"
-        )
-        for ref in staleness_failed_refs:
-            lines.append(f"- `{ref}`")
         lines.append("")
 
     lines.append("## Evidence")
