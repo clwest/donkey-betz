@@ -229,21 +229,94 @@ def _resolve_prompt_shape(finding_type: Optional[str]) -> str:
     return _FINDING_TYPE_TO_PROMPT_SHAPE.get(finding_type.strip().lower(), PROMPT_SHAPE_ENGINEERING)
 
 
+# S2997 v2 item #8: stale-ref AC injection.
+# When the finding was flagged staleness=suspected at ingest (S2995), the
+# send-to-rigby view passes the failed refs through. We prepend one
+# verification AC per failed ref so downstream executors see the drift
+# call-out even if the LLM ignores the prompt hint. Wording differs per
+# prompt shape (evidence findings assert an evidence record; engineering
+# findings assert a claim about code) per Rigby T1 SIGN Ask #3(a).
+_STALENESS_AC_TEMPLATE_ENGINEERING = (
+    "Open `{ref}` at HEAD and confirm it supports the claim in the "
+    "finding text; if not, update the spec with the correct file:line "
+    "citation (or revise the claim)."
+)
+_STALENESS_AC_TEMPLATE_EVIDENCE = (
+    "Open `{ref}` at HEAD and confirm it still supports the evidence "
+    "assertion; if not, update the citation (or revise the decision record)."
+)
+
+
+def _staleness_ac_for(ref: str, prompt_shape: str) -> str:
+    """Return the deterministic verification AC line for a stale ref."""
+    tmpl = (
+        _STALENESS_AC_TEMPLATE_EVIDENCE
+        if prompt_shape == PROMPT_SHAPE_EVIDENCE
+        else _STALENESS_AC_TEMPLATE_ENGINEERING
+    )
+    return tmpl.format(ref=ref)
+
+
+def _staleness_prompt_hint(failed_refs: List[str]) -> str:
+    """One-line system-prompt addendum telling the LLM the finding is suspect."""
+    joined = ", ".join(f"`{r}`" for r in failed_refs[:8])
+    return (
+        "\n\nSTALENESS NOTE: this finding's cited refs failed re-verification "
+        f"at HEAD: {joined}. Treat these as suspect; the spec MUST include "
+        "verification steps for each failed ref (open at HEAD and confirm "
+        "the citation still supports the finding, or update it)."
+    )
+
+
+def _inject_staleness_acs(
+    spec: BriefingSpec,
+    failed_refs: List[str],
+    prompt_shape: str,
+) -> BriefingSpec:
+    """Prepend one verification AC per failed ref; dedupe against LLM output.
+
+    Cap the resulting acceptance_criteria at MAX_ACCEPTANCE_CRITERIA — prepended
+    verification steps push out later LLM ACs if we'd overflow.
+    """
+    if not failed_refs:
+        return spec
+    injected = [_staleness_ac_for(ref, prompt_shape) for ref in failed_refs]
+    # Dedupe: skip any injected AC whose exact text already appears in the
+    # LLM output (defensive against the LLM having taken the prompt hint
+    # and produced the same line).
+    existing = set(spec.acceptance_criteria)
+    prepended = [ac for ac in injected if ac not in existing]
+    combined = prepended + list(spec.acceptance_criteria)
+    if len(combined) > MAX_ACCEPTANCE_CRITERIA:
+        combined = combined[:MAX_ACCEPTANCE_CRITERIA]
+    spec.acceptance_criteria = combined
+    return spec
+
+
 def _build_spec_prompt(
     bullet_text: str,
     section_title: str,
     anchor_path: str,
     citations: List[Dict[str, Any]],
     prompt_shape: str = PROMPT_SHAPE_ENGINEERING,
+    staleness_failed_refs: Optional[List[str]] = None,
 ) -> Tuple[str, str]:
     """Route to the prompt builder for the given shape.
 
     Kept as the single public callsite so callers stay stable; internal
     branch selects engineering vs evidence-capture per S2993 item #3.
+    When `staleness_failed_refs` is non-empty (S2997 item #8), a hint
+    line is appended to the system prompt so the LLM naturally weaves
+    verification steps into its output. Deterministic prepend of
+    verification ACs still happens post-validation as belt-and-suspenders.
     """
     if prompt_shape == PROMPT_SHAPE_EVIDENCE:
-        return _build_spec_prompt_evidence(bullet_text, section_title, anchor_path, citations)
-    return _build_spec_prompt_engineering(bullet_text, section_title, anchor_path, citations)
+        system, user = _build_spec_prompt_evidence(bullet_text, section_title, anchor_path, citations)
+    else:
+        system, user = _build_spec_prompt_engineering(bullet_text, section_title, anchor_path, citations)
+    if staleness_failed_refs:
+        system = system + _staleness_prompt_hint(staleness_failed_refs)
+    return system, user
 
 
 def _call_spec_llm(system_prompt: str, user_prompt: str, model: str) -> str:
@@ -383,8 +456,14 @@ def _render_spec_markdown(
     anchor_path: str,
     section_title: str,
     citations: List[Dict[str, Any]],
+    staleness_failed_refs: Optional[List[str]] = None,
 ) -> str:
-    """Same section headers whether spec succeeded or fell open — F-A1."""
+    """Same section headers whether spec succeeded or fell open — F-A1.
+
+    S2997 v2 item #8: when `staleness_failed_refs` is present + non-empty,
+    a "Staleness note" section is rendered between Warnings and Evidence
+    so the drift call-out is visually distinct from the LLM-generated body.
+    """
     lines: List[str] = []
     lines.append(f"## Goal\n{spec.goal}\n")
     lines.append(f"## Context\n{spec.context or '(empty)'}\n")
@@ -408,6 +487,16 @@ def _render_spec_markdown(
         lines.append("## Warnings")
         for w in spec.warnings:
             lines.append(f"- `{w}`")
+        lines.append("")
+
+    if staleness_failed_refs:
+        lines.append("## Staleness note")
+        lines.append(
+            "The source finding was flagged `staleness=suspected` at ingest — "
+            "the following file:line refs failed re-verification at HEAD:"
+        )
+        for ref in staleness_failed_refs:
+            lines.append(f"- `{ref}`")
         lines.append("")
 
     lines.append("## Evidence")
@@ -437,6 +526,7 @@ def generate_spec_body(
     citations: List[Dict[str, Any]],
     model: Optional[str] = None,
     finding_type: Optional[str] = None,
+    staleness_failed_refs: Optional[List[str]] = None,
 ) -> Tuple[str, Dict[str, Any]]:
     """Return (markdown_body, metadata_extras).
 
@@ -448,9 +538,16 @@ def generate_spec_body(
     `decision_evidence` → evidence-capture prompt (records the boundary/verdict).
     Everything else (`executable`, `unknown`, None, unrecognized) → the
     existing engineering-spec prompt.
+
+    S2997 item #8: when `staleness_failed_refs` is non-empty, a hint is
+    passed to the LLM AND verification ACs are deterministically prepended
+    to the produced spec (belt-and-suspenders per Rigby T1 SIGN Ask #2).
+    A "Staleness note" section is added to the rendered markdown listing
+    the failed refs so the drift call-out is visually distinct.
     """
     chosen_model = model or DEFAULT_SPEC_MODEL
     prompt_shape = _resolve_prompt_shape(finding_type)
+    refs = [r for r in (staleness_failed_refs or []) if isinstance(r, str) and r.strip()]
     citation_paths = {
         (c.get("path") or "").strip()
         for c in citations
@@ -463,6 +560,7 @@ def generate_spec_body(
         anchor_path=anchor_path,
         citations=citations,
         prompt_shape=prompt_shape,
+        staleness_failed_refs=refs or None,
     )
 
     llm_success = True
@@ -481,12 +579,16 @@ def generate_spec_body(
         failure_reason = str(exc)[:200]
         spec = _placeholder_spec(bullet_text, failure_reason or "unknown", prompt_shape)
 
+    if refs:
+        spec = _inject_staleness_acs(spec, refs, prompt_shape)
+
     body = _render_spec_markdown(
         spec=spec,
         bullet_text=bullet_text,
         anchor_path=anchor_path,
         section_title=section_title,
         citations=citations,
+        staleness_failed_refs=refs or None,
     )
 
     extras: Dict[str, Any] = {
@@ -495,6 +597,7 @@ def generate_spec_body(
         "spec_model": chosen_model,
         "spec_prompt_shape": prompt_shape,
         "finding_type_used": (finding_type or "").strip().lower() or None,
+        "staleness_failed_refs_injected": bool(refs),
         "llm_success": llm_success,
         "spec_warnings": list(spec.warnings),
     }
