@@ -2240,15 +2240,21 @@ RESEARCH DATA:
             max_items = int(os.environ.get('MEMORY_MAX_ITEMS', '200'))
             current_count = UserMemoryContext.objects.filter(user=user).count()
             if current_count >= max_items:
-                return {
-                    'error': f'Memory limit reached ({max_items} items). Delete old memories first.',
-                    'current_count': current_count,
-                    'max_items': max_items,
-                }
+                return _handler_error(
+                    'save', 'cap_hit',
+                    f'Memory limit reached ({max_items} items). Delete old memories first.',
+                    current_count=current_count,
+                    max_items=max_items,
+                )
 
-            # Deduplication: hash of normalized content + memory_type
+            # Truncation: clamp content to 500 chars, signal to caller
+            original_len = len(content)
+            truncated = original_len > 500
+            stored_content = content[:500]
+
+            # Deduplication: hash of normalized stored content + memory_type
             content_hash = hashlib.sha256(
-                f"{content.lower().strip()}:{memory_type}".encode()
+                f"{stored_content.lower().strip()}:{memory_type}".encode()
             ).hexdigest()[:16]
 
             existing = UserMemoryContext.objects.filter(
@@ -2257,7 +2263,7 @@ RESEARCH DATA:
                 context_metadata__content_hash=content_hash,
             ).first()
             if existing:
-                # Update importance if higher, bump timestamp
+                # Update importance if higher; bump timestamp only if changed
                 if importance > existing.importance:
                     existing.importance = importance
                     existing.save(update_fields=['importance'])
@@ -2265,6 +2271,10 @@ RESEARCH DATA:
                     'action': 'save',
                     'status': 'duplicate_updated',
                     'memory_id': existing.id,
+                    'memory_type': memory_type,
+                    'importance': max(importance, existing.importance),
+                    'truncated': truncated,
+                    'original_len': original_len,
                     'message': f'Memory already exists (updated importance to {max(importance, existing.importance)})',
                 }
 
@@ -2274,7 +2284,7 @@ RESEARCH DATA:
                 user=user,
                 profile=profile,
                 memory_type=memory_type,
-                content=content[:500],
+                content=stored_content,
                 importance=importance,
                 source='remember_tool',
                 tags=tags,
@@ -2296,14 +2306,19 @@ RESEARCH DATA:
                     'memory_id': memory.id,
                     'memory_type': memory_type,
                     'importance': importance,
+                    'truncated': truncated,
+                    'original_len': original_len,
                 })
 
             return {
                 'action': 'save',
+                'status': 'created',
                 'memory_id': memory.id,
                 'memory_type': memory_type,
                 'importance': importance,
-                'message': f'Remembered: "{content[:80]}"',
+                'truncated': truncated,
+                'original_len': original_len,
+                'message': f'Remembered: "{stored_content[:80]}"',
             }
 
         elif action == 'list':
