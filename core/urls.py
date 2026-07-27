@@ -4203,7 +4203,11 @@ from core.views_workspace_templates import (
     add_workspace_member,
 )
 from core.views_workspace_home import workspace_home_snapshot
+from core.views_repo_research import research_arcs
 urlpatterns += [
+    # Repo Research Arcs — Session 2984 / PR3 spec be68f1d1-…
+    path('api/repo/research/arcs/', research_arcs, name='repo-research-arcs'),
+
     # Specific Workspace Endpoints (must come BEFORE router to avoid {pk} pattern matching)
     path('api/workspaces/dashboard/', workspace_dashboard, name='workspace-dashboard'),
     path('api/workspaces/<uuid:workspace_id>/file-history/', file_history, name='workspace-file-history'),
