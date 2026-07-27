@@ -44,6 +44,8 @@ VALID_MARK_STATUSES = {
     DocResearchFinding.STATUS_DISMISSED,
 }
 
+VALID_CLOSE_MODES = {choice for choice, _ in DocResearchFinding.CLOSE_MODE_CHOICES}
+
 
 def _serialize_finding(f: DocResearchFinding) -> Dict[str, Any]:
     return {
@@ -61,6 +63,7 @@ def _serialize_finding(f: DocResearchFinding) -> Dict[str, Any]:
             f.resolved_by.username if f.resolved_by is not None else None
         ),
         "resolution_note": f.resolution_note,
+        "close_mode": f.close_mode,
         "deliverable_id": f.deliverable_id or None,
         "first_seen_at": f.first_seen_at.isoformat() if f.first_seen_at else None,
         "last_seen_at": f.last_seen_at.isoformat() if f.last_seen_at else None,
@@ -151,6 +154,19 @@ def doc_research_findings_mark_view(request, finding_id: str):
         )
     note = str(body.get("note") or "").strip()[:2000]
 
+    close_mode_raw = body.get("close_mode")
+    if close_mode_raw is None or close_mode_raw == "":
+        close_mode_new = None
+        close_mode_provided = "close_mode" in body
+    else:
+        close_mode_new = str(close_mode_raw).strip().lower()
+        close_mode_provided = True
+        if close_mode_new not in VALID_CLOSE_MODES:
+            return DRFResponse(
+                {"error": f"close_mode must be one of {sorted(VALID_CLOSE_MODES)} or null"},
+                status=400,
+            )
+
     try:
         finding = DocResearchFinding.objects.get(id=finding_id)
     except DocResearchFinding.DoesNotExist:
@@ -158,6 +174,10 @@ def doc_research_findings_mark_view(request, finding_id: str):
 
     finding.status = new_status
     finding.resolution_note = note or finding.resolution_note
+    update_fields = ["status", "resolution_note", "resolved_at", "resolved_by", "last_seen_at"]
+    if close_mode_provided:
+        finding.close_mode = close_mode_new
+        update_fields.append("close_mode")
     if new_status in (DocResearchFinding.STATUS_FIXED, DocResearchFinding.STATUS_DISMISSED):
         finding.resolved_at = timezone.now()
         if request.user.is_authenticated:
@@ -165,11 +185,7 @@ def doc_research_findings_mark_view(request, finding_id: str):
     else:
         finding.resolved_at = None
         finding.resolved_by = None
-    finding.save(
-        update_fields=[
-            "status", "resolution_note", "resolved_at", "resolved_by", "last_seen_at",
-        ]
-    )
+    finding.save(update_fields=update_fields)
     return DRFResponse({"finding": _serialize_finding(finding)})
 
 
