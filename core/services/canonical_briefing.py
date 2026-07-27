@@ -132,7 +132,7 @@ def retrieve_scoped_chunks(
         .filter(document__file_path__isnull=False)
         .exclude(document__file_path="")
         .filter(document__file_path__startswith=scope_root)
-        .annotate(distance=CosineDistance("embedding", query_embedding))
+        .annotate(distance=CosineDistance("embedding_vector", query_embedding))
         .filter(distance__lte=1.0 - similarity_threshold)
         .select_related("document")
         .order_by("distance")[:limit]
