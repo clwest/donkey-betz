@@ -4202,11 +4202,13 @@ from core.views_workspace_templates import (
     trigger_pipeline, pipeline_status, pipeline_history, pipeline_stage_detail, workspace_packets,
     add_workspace_member,
 )
-from core.views_workspace_home import workspace_home_snapshot
+from core.views_workspace_home import workspace_home_snapshot, workspace_shift_brief
 from core.views_repo_research import research_arcs
 urlpatterns += [
     # Repo Research Arcs — Session 2984 / PR3 spec be68f1d1-…
     path('api/repo/research/arcs/', research_arcs, name='repo-research-arcs'),
+    # S2984 PR4: Guided Action "Run Shift Brief"
+    path('api/workspaces/<uuid:workspace_id>/shift-brief/', workspace_shift_brief, name='workspace-shift-brief'),
 
     # Specific Workspace Endpoints (must come BEFORE router to avoid {pk} pattern matching)
     path('api/workspaces/dashboard/', workspace_dashboard, name='workspace-dashboard'),
@@ -4814,10 +4816,12 @@ urlpatterns += [
 # =========================================================================
 # Session 971b: Page-View Telemetry
 # =========================================================================
-from core.views_telemetry import page_view_api
+from core.views_telemetry import page_view_api, event_api
 
 urlpatterns += [
     path('api/v1/telemetry/page-view/', page_view_api, name='telemetry-page-view'),
+    # S2984 PR4: generic event telemetry (guided_action_clicked etc.)
+    path('api/v1/telemetry/event/', event_api, name='telemetry-event'),
 ]
 
 # =========================================================================
