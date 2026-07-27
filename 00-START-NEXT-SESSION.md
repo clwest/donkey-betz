@@ -2,83 +2,90 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2996 CLOSED. FindingsTab staleness surface shipped end-to-end.
+## READ THIS FIRST — SESSION 2997 CLOSED. Findings-surface v2 item #8 shipped + A2 polish.
 
-**One feature PR merged this session** (Flow B — Option A from S2995 close; frontend-only).
+**Two feature PRs merged this session** (Option B from S2996 close + Rigby A2 SIGN fold polish, both backend-only).
 
-**PR #3661 (`12e5400a2`) — v2 Option A: FindingsTab surfaces staleness (badge + filter + failed-refs).** Extends the S2994 UI treatment to the S2995 staleness axis. Chris can now visually spot the 4 currently-suspected findings without needing the API param detour. New `StalenessBadge` (orange Clock icon + "Stale" text; hidden for `fresh` per hidden-for-default pattern). Filter dropdown "Staleness: Any / Fresh / Suspected stale" wires the S2995 `?staleness=` backend param. Expanded-row detail lists `metadata.staleness_failed_refs` as orange monospace chips (plain list, no clickable-URL coupling). Rigby T1 SIGN confirmed via `orm_inspect_tool` that all 4 suspected rows are `finding_type=executable` — informed color choice (orange stays distinguishable from amber Evidence + blue Executable). Rigby A2 SIGN verified substrate + additionally surfaced the deferred v2 item #5 half as a real ops gap (`web_fetch_tool` 401 on HTTP verify — expected; that gap now has 2nd trigger evidence).
+**PR #3663 (`c315aa4fc`) — v2 item #8: stale-ref AC injection at spec generation.** When a finding has `staleness=suspected` per S2995, `send-to-rigby` now produces a spec deliverable that surfaces the drift call-out. Belt-and-suspenders per Rigby T1 SIGN Ask #2: LLM prompt hint AND deterministic AC prepend. `generate_spec_body` accepts new `staleness_failed_refs` kwarg; `_inject_staleness_acs` prepends one verification AC per failed ref (deduped against LLM output; capped at 8); `_render_spec_markdown` adds a `## Staleness note` section. AC wording differs per prompt_shape (engineering: "supports the claim" / evidence: "supports the evidence assertion"). Extras metadata carries `staleness_failed_refs_injected: bool`. View forwards refs ONLY when `staleness=suspected` — fresh findings don't get spurious injection. 17 new tests + 67 pre-existing green. Rigby A2 SIGN dispatched the real `executor/models.py:271` stale finding via APIClient — produced deliverable `1060ab68-...` with first AC being the prepended verification line, LLM naturally wove complementary verification ACs (belt-and-suspenders paid off), Context section explicitly notes "the citation … failed re-verification at HEAD and must be checked."
 
-**HEAD at close:** `12e5400a2` + docs cascade PR (this file + handoff + wrapper pin bump per `feedback_commit_wrapper_pin_bump_at_close`). Recycle-all clean at `sha=12e5400a222a` post-PR-#3661 (frontend rebuild included per `feedback_recycle_after_merge` — 2303 modules transformed).
+**PR #3664 (`28c8547b0`) — Staleness note placement polish (A2 SIGN fold).** Rigby A2 zoom-out (b) flagged that `## Staleness note` rendered AFTER `## Acceptance criteria`, reading as an audit appendix rather than operational context. Moved to sit between `## Context` and `## Open question` so the reader knows "this finding's refs are suspect" BEFORE scanning ACs. Same-session polish PR (S2994→S2995 hotfix precedent).
+
+**HEAD at close:** `28c8547b0` + docs cascade PR (this file + handoff + wrapper pin bump per `feedback_commit_wrapper_pin_bump_at_close`). Recycle-all clean at `sha=28c8547b086a` post-both-PRs (backend-only, frontend rebuild skipped correctly).
 
 Full context:
-- `docs/handoffs/SESSION_2996_FINDINGS_TAB_STALENESS_SURFACE.md`
-- `docs/handoffs/SESSION_2995_STALENESS_DETECTOR_V2_ITEM_4.md` (prior)
+- `docs/handoffs/SESSION_2997_STALENESS_AC_INJECTION_V2_ITEM_8.md`
+- `docs/handoffs/SESSION_2996_FINDINGS_TAB_STALENESS_SURFACE.md` (prior)
 
 ---
 
-## S2997 primary directive — v2 arc UI-side is functionally done; pick a substrate direction
+## S2998 primary directive — v2 arc is 8-of-8 done except #5-cookies + #7
 
-**The findings-surface v2 UI-side is fully shipped.** All four axes (status/close_mode/finding_type/staleness) exist on the backend AND have visual surfaces on FindingsTab (badges hidden-for-default, filters, targeted CTAs). This is a natural arc-closure point.
+**The findings-surface v2 arc is functionally complete for daily use.** Chris can audit → ingest classifies + staleness-checks → FindingsTab shows badges/filters → Send to Rigby produces spec with injected verification ACs and Staleness note. Full loop.
 
-Three remaining v2 items + three next-arc candidates:
+Four natural next paths — three "close the last v2 items" + one "pivot":
 
 ### Option A — v2 item #7: F-A2-equivalent for downstream consumers (~30–60 min, backend)
 
-Verify that consumers referenced in Deliverable acceptance criteria actually exist. Similar shape to the S2989 F-A2 fold (citation-path allowlist) but for the downstream side: when a spec deliverable lists "consumer X should be updated," verify X is a real code path before accepting the spec. Consumes the S2995 `_check_staleness_at_head` helper directly (same file-existence-at-HEAD pattern).
+Verify that consumers referenced in Deliverable acceptance criteria actually exist (mirrors the S2989 F-A2 citation-path allowlist but for the downstream side). Consumes the S2995 `_check_staleness_at_head` helper directly. Same file-existence-at-HEAD pattern.
 
-### Option B — v2 item #8: wire-through smoke-check AC for half-wired findings (~30 min, backend)
+### Option B — v2 item #5 cookies half: `web_fetch_tool` session cookies (~1 session, backend + security)
 
-Auto-add browser-session verification steps to spec deliverables whose findings have `staleness_failed_refs`. Directly consumes the S2995 failed-refs output — for each stale ref, add an AC line like "Verify path X still exists at HEAD or update the citation."
+Rigby A2 SIGN this session AND S2996 both hit 401s trying to verify backend endpoints. 2nd + 3rd trigger of a growing pain. Larger design change; needs security review (how to safely pass session cookies to a PA tool).
 
-### Option C — v2 item #5 (deferred half): `web_fetch_tool` session cookies (~1 session, backend + security)
+### Option C — Fold D from S2997: send-to-rigby re-dispatch guard (~30 min, backend)
 
-Rigby's A2 SIGN this session hit 401 on `web_fetch_tool` HTTP verification of a backend endpoint — 2nd trigger of a known gap. Larger design change; needs security review (how to safely pass session cookies to a PA tool). Not blocking but the trigger count is climbing.
+Rigby A2 zoom-out (c). Endpoint currently allows re-dispatch when `deliverable_id` is already set — I had to manually clear it during A2 dispatch, sharp edge. Should refuse by default with a `force=true` escape hatch. Small backend PR.
 
-### Option D — Rigby Tool Gap Ledger: staleness recheck action (~30 min, frontend + endpoint)
+### Option D — Pivot to fresh arc
 
-S2996 Fold E ledger candidate. Add an authenticated "Recheck" button on `staleness=suspected` rows that calls a new endpoint wrapping the S2995 `--recheck-staleness --apply` mode scoped to a single finding. Sharpens the S2996 badge → action loop.
-
-### Option E — Pivot to fresh arc
-
-The v2 arc is functionally complete for daily use. Chris may want to open a new arc (see MEMORY `project_2100_plus_queue_ranking` — proposed queue includes 2100 RAG / 2200 Frontend / 2300 Mobile / 2400 Auth / 2500 API / 2600 PA).
+The v2 arc's daily loop is complete. Chris may want to open a new arc (see MEMORY `project_2100_plus_queue_ranking` — 2100 RAG / 2200 Frontend / 2300 Mobile / 2400 Auth / 2500 API / 2600 PA).
 
 ### Ordered follow-on priorities (dependency-aware) after choice
-5. **Executable-prompt tightening (S2993 Fold C future_trigger).**
-6. **Rigby Tool Gap Ledger — dry-run preview endpoint for send-to-rigby (S2993 Fold B).**
-7. **Rigby Tool Gap Ledger — backend-ahead-of-UI pattern watch (S2994 Fold D).**
-8. **Rigby Tool Gap Ledger — metadata accretion governance (S2995 Fold E).** Reserve `metadata.detectors.*` / `metadata.sign.*` namespace convention.
-9. **Toast staleness reinforcement (S2996 Fold C future_trigger).**
-10. **Deliverables-tab type badge (S2994 Fold C future_trigger).**
-11. **Staleness metadata → dedicated `staleness_detail` JSONField (S2995 Fold C future_trigger).** Trigger: metadata grows beyond one list of refs.
-12. **Periodic staleness beat schedule (S2995 Fold D future_trigger).** Trigger: UI surface for stale findings exists — **now met at S2996**, so this is more actionable.
-13. **WorkspacePageNew param preservation (S2995 hotfix Fold F future_trigger).** Merge instead of replace on tab/sub setSearchParams.
+5. **Fold F (S2997) — `orm_inspect_tool` JSON-path lookup support.** Rigby hit `metadata__<key>=value` unsupported; only `metadata__has_key` works. Rigby Tool Gap Ledger entry.
+6. **Executable-prompt tightening (S2993 Fold C future_trigger).**
+7. **Rigby Tool Gap Ledger — dry-run preview endpoint for send-to-rigby (S2993 Fold B).**
+8. **Rigby Tool Gap Ledger — backend-ahead-of-UI pattern watch (S2994 Fold D).**
+9. **Rigby Tool Gap Ledger — metadata accretion governance (S2995 Fold E).**
+10. **Rigby Tool Gap Ledger — per-row Recheck button on FindingsTab (S2996 Fold E).**
+11. **Toast staleness reinforcement (S2996 Fold C future_trigger).**
+12. **Deliverables-tab type badge (S2994 Fold C future_trigger).**
+13. **Staleness metadata → dedicated `staleness_detail` JSONField (S2995 Fold C future_trigger).** Trigger: metadata grows beyond one list of refs.
+14. **Periodic staleness beat schedule (S2995 Fold D future_trigger).** Trigger: UI surface exists — now met.
+15. **WorkspacePageNew param preservation (S2995 hotfix Fold F future_trigger).**
 
 **Standard opener:**
 1. Run `context-kit orient` (auto-injected).
 2. Absorb this file + MEMORY.md + CLAUDE.md.
-3. Read the S2996 handoff in full — especially the fold classification section.
+3. Read the S2997 handoff in full — especially the 6-fold classification block + real-dispatch A2 SIGN evidence.
 4. Optional pre-response state probes:
-   - `git log --oneline -6` — should show docs cascade → `12e5400a2` (PR #3661) → `7b4b4adec` (S2995 close) → `85d37d0fc` (PR #3659) → `c4c814f27` (PR #3658) → `2b9ba90cc` (PR #3657).
-   - Rigby ORM-verify: `orm_inspect_tool action=filter model=DocResearchFinding filters={"staleness":"suspected"} limit=5 fields=id,staleness,metadata` — should return the 4 rows with `staleness_failed_refs` populated.
-   - Chris browser smoke: open FindingsTab, set filter Staleness=Suspected, confirm 4 orange "Stale" badges visible + expanding one shows failed-refs chip.
+   - `git log --oneline -6` — should show docs cascade → `28c8547b0` (PR #3664) → `c315aa4fc` (PR #3663) → `060cc49fb` (S2996 close) → `12e5400a2` (PR #3661) → `7b4b4adec` (S2995 close).
+   - Rigby ORM-verify: `deliverable_tool action=detail id=1060ab68-3dd4-427b-9000-f62e9a615510` — the A2 SIGN evidence deliverable; should show `metadata.staleness_failed_refs_injected: true`, `## Staleness note` section between Context and Open question, first AC = prepended verification line.
+   - Chris browser smoke: open FindingsTab, click "Verify evidence" on one of the 4 stale rows, see toast "Evidence-capture deliverable created (…)", then click "View deliverable" — should see `## Staleness note` section BEFORE `## Acceptance criteria` and the first AC = verification line.
 
-**Suggested first-turn shape for S2997:** ask Chris "A / B / C / D / E?" — B is smallest and directly consumes S2995 output; A is next-smallest and reuses S2995 helper; D closes the S2996 loop tighter; C is bigger but addresses a growing pain (2nd trigger). Recommendation weight: B > A > D > C > E (unless Chris signals fresh-arc pivot).
+**Suggested first-turn shape for S2998:** ask Chris "A / B / C / D?" — C is smallest and closes a real footgun; A is next-smallest and closes the last non-cookie v2 item; B is bigger but the pain is real (3rd trigger); D depends on Chris's readiness to open a new arc. Recommendation weight: C > A > B > D.
 
 ---
 
-## S2997 carry-forward seeds (Chris picks whether to open — not gated on the v2 arc)
+## S2998 carry-forward seeds (Chris picks whether to open — not gated on the v2 arc)
 
-### New carry-forward from S2996
+### New carry-forward from S2997
 
-- **Fold A `informational` — 2nd trigger on v2 item #5 (`web_fetch_tool` cookies).** Rigby A2 hit 401 verifying backend endpoint. 2nd concrete occurrence; Rigby's HTTP-shape verification of backend endpoints is blocked by auth. Bumps priority of Option C above.
-- **Fold C `future_trigger` — staleness toast reinforcement.** Toast copy for suspected findings could read "Evidence-capture created (staleness suspected)". Optional polish; watch for Chris signal.
-- **Fold E — Rigby Tool Gap Ledger (sharpened).** No in-UI action to re-run staleness verification for a single finding from FindingsTab. Clear next-increment shape (Option D above).
+- **Fold B `future_trigger` — dedupe strictness.** Exact-string dedupe against LLM output is right for MVP. If we see repeated noise, dedupe by `(ref, verb)` deterministic key rather than fuzzy text similarity.
+- **Fold D `future_trigger` — send-to-rigby re-dispatch guard.** Option C above. Endpoint should refuse re-dispatch by default with `force=true` escape hatch.
+- **Fold E — Rigby Tool Gap Ledger (closed).** "Finding→spec pipeline needs staleness refs to survive into executor-facing ACs + rendered note" — deterministic injection fixed it.
+- **Fold F — Rigby Tool Gap Ledger.** `orm_inspect_tool` doesn't support `metadata__<key>=value` JSON-path lookups (only `metadata__has_key`).
+
+### Carry-forward from S2996 (STILL OPEN)
+
+- **Fold A `informational` — 2nd trigger on v2 item #5 (`web_fetch_tool` cookies)** — now **3rd trigger** with S2997 A2 dispatch (I had to use APIClient because Rigby can't hit backend endpoints with auth). Priority climbing.
+- **Fold C `future_trigger` — staleness toast reinforcement.**
+- **Fold E — Rigby Tool Gap Ledger (sharpened).** No in-UI action to re-run staleness verification for a single finding from FindingsTab.
 
 ### Carry-forward from S2995 (STILL OPEN)
 
 - **Fold C `future_trigger` — staleness metadata → dedicated JSONField.** Watch for 2nd trigger.
-- **Fold D `future_trigger` — periodic staleness beat.** **S2996 satisfies the "UI surface exists" precondition** so this is now actionable if daily continuous-freshness matters.
-- **Fold E — Rigby Tool Gap Ledger.** Metadata accretion governance (namespace convention).
+- **Fold D `future_trigger` — periodic staleness beat.** UI surface exists (S2996) so now actionable.
+- **Fold E — Rigby Tool Gap Ledger.** Metadata accretion governance.
 - **Fold F `future_trigger` (S2994 hotfix) — WorkspacePageNew param preservation.**
 
 ### Carry-forward from S2994 (STILL OPEN)
@@ -100,12 +107,12 @@ The v2 arc is functionally complete for daily use. Chris may want to open a new 
 ### Carry-forward from S2991 (STILL OPEN)
 
 - **Dry-run counts pattern for future bulk-write migrations** (3rd-trigger check).
-- **Contract-lock-in guardrail** on `close_mode`, `finding_type`, `spec_prompt_shape`, `finding_type_used`, `staleness`, `metadata.staleness_failed_refs`.
+- **Contract-lock-in guardrail** on `close_mode`, `finding_type`, `spec_prompt_shape`, `finding_type_used`, `staleness`, `metadata.staleness_failed_refs`, `metadata.staleness_failed_refs_injected`.
 - **Freshness axis 2nd-trigger clause** (still no 2nd trigger).
 
 ### Carry-forward from S2989-S2990 (STILL OPEN)
 
-- **`web_fetch_tool` session cookies** — see Option C above (2nd trigger this session).
+- **`web_fetch_tool` session cookies** — see Option B above (3rd trigger this session).
 - **F-D3-tracker-scope wire-up** — activate OpsRun tracker for PA turns. ~1 session.
 - **F-D2-broad LLM-bypass audit spec** — ~1 session.
 - **Reconcile Chris's 1805 cap-drift via `memory_hygiene_audit --apply`.** ~30 min.
@@ -134,20 +141,21 @@ The v2 arc is functionally complete for daily use. Chris may want to open a new 
 ## Cross-cutting workflow references
 
 - **Constitutional governance chain:** CLAUDE.md constitutional blockquote (Playbook v0.10.0). No amendments this session.
-- **Spec→ship contract:** PLAYBOOK-7.7.1. S2996 was Flow B (Option A directive from S2995 close). No phase skipped.
-- **SIGN evidence discipline:** PLAYBOOK-7.7.2 (tool_runs + line citations mandatory). Both SIGN cycles this session used real `orm_inspect_tool` results. A2 additionally used `web_fetch_tool` which produced the 2nd-trigger evidence for the deferred v2 item #5 half.
-- **Chris-facing decision framing:** PLAYBOOK-7.7.3. No new decision required; Option A already ratified.
+- **Spec→ship contract:** PLAYBOOK-7.7.1. S2997 was Flow B (Option B directive from S2996 close). Two PRs shipped: main feature + A2-fold placement polish (same-session, S2994→S2995 hotfix precedent).
+- **SIGN evidence discipline:** PLAYBOOK-7.7.2 (tool_runs + line citations mandatory). T1 SIGN used real `orm_inspect_tool` on 1 stale row. A2 SIGN used `deliverable_tool detail` + `orm_inspect_tool filter` on the actual dispatched deliverable produced by a real gpt-5-mini roundtrip.
+- **Chris-facing decision framing:** PLAYBOOK-7.7.3. No new decision required.
 - **Cross-repo application:** PLAYBOOK-7.7.4. Not exercised.
 - **Close-ceremony PR discipline:** PLAYBOOK-7.4.1 through 7.4.4.
-- **Recycle discipline** (S2978 refinement to PLAYBOOK-7.4.4): `make recycle-all` after each merge. Frontend diff → recycle-all correctly triggered frontend rebuild. `feedback_recycle_after_merge` compliance.
-- **`feedback_verify_at_raw_orm_before_trusting_tool_no_data`** — Rigby A2 Ask #1 used raw ORM to confirm the 4 rows have `staleness_failed_refs` populated (the exact data the UI chips render).
+- **Recycle discipline** (S2978 refinement to PLAYBOOK-7.4.4): `make recycle-all` after each merge. Both PRs backend-only → frontend rebuild skipped correctly via HEAD-range path-diff.
+- **`feedback_verify_at_raw_orm_before_trusting_tool_no_data`** — Rigby A2 Ask #1 used `deliverable_tool detail` to independently verify substrate (metadata flags, section presence, AC ordering).
+- **`feedback_zoom_out_ask_per_rigby_sign`** — A2 zoom-out surfaced Fold C `same_pr_mitigatable` that got mitigated same-session via polish PR. Canonical example of the zoom-out ask catching real critique that would otherwise ship as-is.
 
 ---
 
 ## Wrapper pin note
 
-The active PA conversation pin at S2996 close is minted by `session_lifecycle close` at close time and the wrapper `tools/pa_local.sh` rewritten atomically. Commit the wrapper diff in the S2996 close cascade PR per `feedback_commit_wrapper_pin_bump_at_close`.
+The active PA conversation pin at S2997 close is minted by `session_lifecycle close` at close time and the wrapper `tools/pa_local.sh` rewritten atomically. Commit the wrapper diff in the S2997 close cascade PR per `feedback_commit_wrapper_pin_bump_at_close`.
 
 ---
 
-**Reminder — the workflow is constitutional.** S2996 was Flow B (Option A directive-in-hand). The v2 arc has been running Flow B end-to-end for 5 sessions straight (S2991 through S2996) — the pattern is stable. Notable this session: Rigby A2 SIGN naturally surfaced a 2nd trigger on an existing deferred item (v2 item #5 cookies) simply by trying to verify a backend endpoint. That's the SIGN-cycle-as-passive-signal-collection pattern paying off — worth watching for a 3rd occurrence to justify making it a Playbook rule.
+**Reminder — the workflow is constitutional.** S2997 was Flow B with same-session polish following the S2994→S2995 hotfix pattern. That's now happened 3 times in a row (S2994 hotfix in S2995; S2997 polish; and the pattern where Rigby A2 zoom-out surfaces a `same_pr_mitigatable` fold that gets shipped as a polish PR). If a 4th instance surfaces, worth considering a Playbook rule around "same-session polish PR budget when A2 SIGN surfaces critique of shipped shape."
