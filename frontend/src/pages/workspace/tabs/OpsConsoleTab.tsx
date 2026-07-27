@@ -21,8 +21,9 @@ const LazyDocumentViewer = lazy(() =>
   import('@/components/platform/DocumentViewer').then((m) => ({ default: m.DocumentViewer })),
 )
 
-// S2767 N4: doc-content response shape from /api/platform/doc-content/ (public
-// read-only, guarded to docs/** with traversal check — see auth_middleware.py:436).
+// S2767 N4 / S2984 PR3: doc-content response shape from /api/platform/doc-content/.
+// Auth-required (login_required as of S2984), guarded to docs/** with '..' string
+// check + Path.resolve() containment check against BASE_DIR.
 interface DocContentResponse {
   content: string
   metadata: {
