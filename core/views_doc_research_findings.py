@@ -207,11 +207,55 @@ def doc_research_findings_send_to_rigby_view(request, finding_id: str):
     Route the finding through Phase A `generate_spec_body` and persist a
     `briefing_action_item` Deliverable in the Donkey Betz workspace. Store
     the resulting `deliverable_id` on the finding so the UI can link back.
+
+    S2998 v2 Fold D: refuse re-dispatch when `finding.deliverable_id` is
+    already set. Frontend button transforms to "View deliverable" once
+    dispatched (S2995 hotfix), but this guard is defense-in-depth for
+    direct API calls, PA-tool dispatches, and bulk ops that don't have
+    UI protection. Callers can override with body `{"force": true}` —
+    strict boolean True only (not truthy strings/1) — which is logged
+    for audit since it means burning tokens on a replacement spec.
     """
     try:
         finding = DocResearchFinding.objects.get(id=finding_id)
     except DocResearchFinding.DoesNotExist:
         return DRFResponse({"error": "finding not found"}, status=404)
+
+    # Parse body for `force` flag. Missing/empty/invalid body → treat as
+    # {} which defaults force=False. Strict True required (per Rigby T1
+    # extra note): truthy strings like "true" / "yes" / 1 do NOT count.
+    force_flag = False
+    if request.body:
+        try:
+            body_json = json.loads(request.body)
+        except json.JSONDecodeError:
+            return DRFResponse({"error": "Invalid JSON body"}, status=400)
+        if isinstance(body_json, dict):
+            force_flag = body_json.get("force") is True
+
+    if finding.deliverable_id and not force_flag:
+        return DRFResponse(
+            {
+                "error": (
+                    "Finding already has a deliverable. Pass "
+                    '`{"force": true}` in the body to re-dispatch.'
+                ),
+                "reason_code": "deliverable_already_exists",
+                "finding_id": str(finding.id),
+                "existing_deliverable_id": finding.deliverable_id,
+            },
+            status=409,
+        )
+
+    if finding.deliverable_id and force_flag:
+        # Audit trail: force-redispatch is a token-burn escape hatch.
+        logger.warning(
+            "send_to_rigby(finding): FORCE re-dispatch finding_id=%s "
+            "replacing existing deliverable_id=%s user=%s",
+            finding.id,
+            finding.deliverable_id,
+            request.user.username if request.user.is_authenticated else "anon",
+        )
 
     citations: List[Dict[str, Any]] = [
         {
