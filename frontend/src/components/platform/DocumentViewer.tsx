@@ -5,8 +5,8 @@
  * directly in the Knowledge tab without navigating away.
  */
 
-import { useState, useEffect } from 'react'
-import { X, ExternalLink, Clock, FileText, Copy, Check, ChevronLeft, Maximize2, Minimize2 } from 'lucide-react'
+import { useState, useEffect, useMemo } from 'react'
+import { X, ExternalLink, Clock, FileText, Copy, Check, ChevronLeft, Maximize2, Minimize2, Sparkles, Code2 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 // S2984 PR5 hotfix: use shared `api` axios instance (withCredentials:true +
 // CSRF interceptor) so Django session cookies flow. Raw `axios` was used
@@ -16,6 +16,13 @@ import { api } from '@/lib/api'
 import ReactMarkdown from 'react-markdown'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
+import { CanonicalBriefing } from '@/components/platform/CanonicalBriefing'
+
+// S2985: Briefing tab is only meaningful for canonical summary docs under
+// docs/research/domains/. Detect via a conservative regex so we don't show a
+// broken Briefing button on canon/, playbooks/, or audits/ pages.
+const BRIEFING_ELIGIBLE_PATTERN = /docs\/research\/domains\/.+canonical_summary.*\.md$/i
+type ViewerMode = 'briefing' | 'raw'
 
 interface DocumentMetadata {
   path: string
@@ -74,6 +81,19 @@ export function DocumentViewer({
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+
+  // S2985: Briefing tab (spec deliverable 6f6c4122). Default to Briefing when
+  // the doc is a canonical-summary path; otherwise Raw only.
+  const briefingEligible = useMemo(
+    () => Boolean(documentPath && BRIEFING_ELIGIBLE_PATTERN.test(documentPath)),
+    [documentPath],
+  )
+  const [viewerMode, setViewerMode] = useState<ViewerMode>(
+    briefingEligible ? 'briefing' : 'raw',
+  )
+  useEffect(() => {
+    setViewerMode(briefingEligible ? 'briefing' : 'raw')
+  }, [briefingEligible, documentPath])
 
   // Fetch document content when path changes
   useEffect(() => {
@@ -222,9 +242,47 @@ export function DocumentViewer({
           </div>
         )}
 
+        {/* S2985: Briefing | Raw tab strip — only rendered when the doc is
+            eligible for an LLM briefing (canonical summary under
+            docs/research/domains/). Non-canonical docs skip the strip
+            entirely so nothing changes for existing viewers. */}
+        {briefingEligible && (
+          <div className="flex items-center gap-1 px-4 py-2 bg-gray-800/20 border-b border-gray-700/50 flex-shrink-0">
+            <button
+              onClick={() => setViewerMode('briefing')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors',
+                viewerMode === 'briefing'
+                  ? 'bg-primary-500/20 text-primary-300 border border-primary-500/30'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-700',
+              )}
+            >
+              <Sparkles size={13} />
+              Briefing
+            </button>
+            <button
+              onClick={() => setViewerMode('raw')}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors',
+                viewerMode === 'raw'
+                  ? 'bg-primary-500/20 text-primary-300 border border-primary-500/30'
+                  : 'text-gray-400 hover:text-white hover:bg-gray-700',
+              )}
+            >
+              <Code2 size={13} />
+              Raw
+            </button>
+          </div>
+        )}
+
         {/* Content */}
         <div className="flex-1 overflow-y-auto">
-          {isLoading ? (
+          {briefingEligible && viewerMode === 'briefing' && documentPath ? (
+            <CanonicalBriefing
+              anchorPath={documentPath}
+              onFallbackToRaw={() => setViewerMode('raw')}
+            />
+          ) : isLoading ? (
             <div className="flex items-center justify-center h-64">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full animate-spin"></div>
