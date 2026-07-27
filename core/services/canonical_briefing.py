@@ -252,13 +252,21 @@ def _parse_and_validate(
     raw_json: str,
     citation_lookup: Dict[int, Dict[str, Any]],
     max_bullets_per_section: int,
-) -> List[Dict[str, Any]]:
-    """Parse LLM JSON, drop invalid citation keys, enforce section shape."""
+) -> tuple[List[Dict[str, Any]], bool]:
+    """Parse LLM JSON, drop invalid citation keys, enforce section shape.
+
+    Returns (sections, llm_valid_json). Rigby A2 ZO1 fold: surface JSON parse
+    failure as an explicit flag so consumers can distinguish "LLM produced
+    a valid empty briefing" from "LLM output was malformed and we bailed"
+    (both would otherwise render as empty sections).
+    """
+    llm_valid_json = True
     try:
         payload = json.loads(raw_json)
     except json.JSONDecodeError:
         logger.warning("canonical_briefing: LLM returned invalid JSON, falling back")
         payload = {}
+        llm_valid_json = False
 
     raw_sections = {
         s.get("key"): s
@@ -318,7 +326,7 @@ def _parse_and_validate(
                 "bullets": bullets,
             }
         )
-    return sections
+    return sections, llm_valid_json
 
 
 def build_briefing(
@@ -407,7 +415,7 @@ def build_briefing(
                 user_prompt=user_prompt,
                 model=model or DEFAULT_MODEL,
             )
-            sections = _parse_and_validate(
+            sections, llm_valid_json = _parse_and_validate(
                 raw_json=raw_json,
                 citation_lookup=citation_lookup,
                 max_bullets_per_section=max_bullets_per_section,
@@ -418,6 +426,7 @@ def build_briefing(
                 "generated_at": timezone.now().isoformat(),
                 "prompt_version": PROMPT_VERSION,
                 "sections": sections,
+                "llm_valid_json": llm_valid_json,
                 "retrieval": {
                     "total_unique_chunks": total_chunks,
                     "per_section_counts": {
