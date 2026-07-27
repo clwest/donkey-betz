@@ -30,9 +30,10 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
-from dataclasses import dataclass
+import subprocess
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -134,6 +135,133 @@ def _classify_finding_type(text: str, source_heading: str) -> str:
         return DocResearchFinding.FINDING_TYPE_EXECUTABLE
 
     return DocResearchFinding.FINDING_TYPE_UNKNOWN
+
+
+# S2995 v2 item #4 — staleness detector.
+# Reuses EXECUTABLE_FILE_LINE_RE to extract `path.py:123` references from
+# the finding text, then checks whether the path still exists at the
+# repo root and whether the cited line is within the file. Any failed
+# ref flips the finding to `suspected`; the failed refs land in
+# metadata['staleness_failed_refs'] so v2 item #8 can consume without
+# a second schema field.
+#
+# Bare-filename refs (no `/`) are resolved via a repo-wide basename
+# index built once per command invocation from `git ls-files`. This
+# matches Chris's actual finding text — audits routinely cite
+# `td_handlers_ops.py:5585` without directory prefix (Rigby T1 SIGN Ask
+# #1 sample confirmed the pattern).
+_STALENESS_REF_RE = EXECUTABLE_FILE_LINE_RE  # alias for clarity
+
+
+def _build_repo_file_index(base_dir: Path) -> Dict[str, Set[str]]:
+    """Return {basename: {full_path, ...}} from `git ls-files`.
+
+    Used to resolve bare-filename refs like `foo.py:123` to their
+    real repo-relative paths. When `git` isn't available (e.g. running
+    outside a checkout in tests), returns an empty index — callers
+    treat bare refs as unresolvable then.
+    """
+    try:
+        raw = subprocess.check_output(
+            ["git", "ls-files"],
+            cwd=str(base_dir),
+            stderr=subprocess.DEVNULL,
+            timeout=30,
+        )
+    except (subprocess.SubprocessError, FileNotFoundError, OSError):
+        return {}
+    index: Dict[str, Set[str]] = {}
+    for line in raw.decode("utf-8", errors="replace").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        name = line.rsplit("/", 1)[-1]
+        index.setdefault(name, set()).add(line)
+    return index
+
+
+def _resolve_ref_path(
+    ref_path: str,
+    base_dir: Path,
+    file_index: Optional[Dict[str, Set[str]]],
+) -> Optional[Path]:
+    """Return the resolved absolute Path for `ref_path`, or None if not found.
+
+    - If `ref_path` contains `/`: check `base_dir/ref_path` directly.
+    - If bare (no `/`): consult `file_index` for matches. If exactly one
+      match, use it. If multiple, prefer the shortest path (most likely
+      canonical / not deep-buried). If zero, unresolved.
+    """
+    if "/" in ref_path:
+        candidate = base_dir / ref_path
+        return candidate if candidate.is_file() else None
+    if not file_index:
+        return None
+    matches = file_index.get(ref_path)
+    if not matches:
+        return None
+    # Deterministic tie-break: shortest path wins (canonical over deeply-nested).
+    chosen = sorted(matches, key=lambda p: (len(p), p))[0]
+    candidate = base_dir / chosen
+    return candidate if candidate.is_file() else None
+
+
+def _check_staleness_at_head(
+    text: str,
+    base_dir: Path,
+    file_index: Optional[Dict[str, Set[str]]] = None,
+) -> Tuple[str, List[str]]:
+    """Return (staleness_value, failed_refs).
+
+    `staleness_value` is `fresh` when the finding has no file:line refs
+    OR when every ref resolves to an existing path with the cited line
+    within the file. `suspected` when at least one ref fails EITHER
+    check (path missing or line out of range).
+
+    `failed_refs` is the list of `path:line` strings that failed, in
+    the order they appeared. Empty when `staleness_value == 'fresh'`.
+    """
+    if not text:
+        return DocResearchFinding.STALENESS_FRESH, []
+    matches = _STALENESS_REF_RE.findall(text)
+    if not matches:
+        # No refs at all → no signal, no claim, no failure.
+        return DocResearchFinding.STALENESS_FRESH, []
+
+    failed: List[str] = []
+    for raw_ref in matches:
+        # Regex match is the full `path:line` slice; split conservatively.
+        m = re.match(r"^\s*([A-Za-z_][A-Za-z0-9_/.\-]*)\s*:\s*(\d+)\s*$", raw_ref)
+        if not m:
+            continue
+        ref_path, line_str = m.group(1), m.group(2)
+        try:
+            line_num = int(line_str)
+        except ValueError:
+            continue
+        resolved = _resolve_ref_path(ref_path, base_dir, file_index)
+        if resolved is None:
+            failed.append(f"{ref_path}:{line_num}")
+            continue
+        try:
+            # Cheap line-count check: seek to a line strictly greater than the
+            # cited one; if the file has < line_num lines, ref is stale.
+            with resolved.open("rb") as fh:
+                # Read up to line_num+1 lines; count them.
+                lines_seen = 0
+                for _ in fh:
+                    lines_seen += 1
+                    if lines_seen >= line_num:
+                        break
+                if lines_seen < line_num:
+                    failed.append(f"{ref_path}:{line_num}")
+        except OSError:
+            # Unreadable file — treat as unresolvable, not fresh.
+            failed.append(f"{ref_path}:{line_num}")
+
+    if failed:
+        return DocResearchFinding.STALENESS_SUSPECTED, failed
+    return DocResearchFinding.STALENESS_FRESH, []
 
 
 @dataclass
@@ -404,8 +532,23 @@ class Command(BaseCommand):
             "--apply",
             action="store_true",
             help=(
-                "Only meaningful with --reclassify-existing: actually persist "
-                "the reclassification. Without --apply this mode is a dry-run."
+                "Only meaningful with --reclassify-existing or "
+                "--recheck-staleness: actually persist the change. Without "
+                "--apply either mode is a dry-run."
+            ),
+        )
+        # S2995 v2 item #4 — staleness recheck mode. Walks every existing
+        # row and re-runs _check_staleness_at_head against HEAD. Dry-run
+        # by default (prints distribution + delta); writes only when
+        # `--apply` is set. Same safety-first default as
+        # --reclassify-existing per PR #3648 Rigby zoom-out fold.
+        parser.add_argument(
+            "--recheck-staleness",
+            action="store_true",
+            help=(
+                "Skip source-doc ingest; instead walk all DocResearchFinding "
+                "rows and re-check staleness against HEAD. Prints "
+                "distribution + change delta. Requires --apply to persist."
             ),
         )
 
@@ -414,11 +557,21 @@ class Command(BaseCommand):
         dry_run: bool = bool(options.get("dry_run"))
         verbose: bool = bool(options.get("verbose"))
         reclassify_existing: bool = bool(options.get("reclassify_existing"))
+        recheck_staleness: bool = bool(options.get("recheck_staleness"))
         apply_writes: bool = bool(options.get("apply"))
 
         if reclassify_existing:
             self._run_reclassify_existing(apply_writes=apply_writes)
             return
+        if recheck_staleness:
+            self._run_recheck_staleness(base_dir=base_dir, apply_writes=apply_writes)
+            return
+
+        # Build the repo-wide basename index once per invocation so bare
+        # file refs in finding text (`foo.py:123`) can be resolved to
+        # their real repo-relative paths without a per-check filesystem
+        # walk.
+        file_index = _build_repo_file_index(base_dir)
 
         stats = {
             "files_scanned": 0,
@@ -456,6 +609,17 @@ class Command(BaseCommand):
 
             for pf in parsed:
                 hash_ = _text_hash(pf.doc_path, pf.text)
+                staleness_value, failed_refs = _check_staleness_at_head(
+                    pf.text, base_dir, file_index
+                )
+                # Only persist the failed-refs list when we actually have
+                # them; keeps `metadata` uncluttered for fresh rows and
+                # matches the "no signal, no claim" default.
+                merged_metadata = dict(pf.metadata or {})
+                if failed_refs:
+                    merged_metadata["staleness_failed_refs"] = failed_refs
+                else:
+                    merged_metadata.pop("staleness_failed_refs", None)
                 with transaction.atomic():
                     obj, created = DocResearchFinding.objects.update_or_create(
                         doc_path=pf.doc_path,
@@ -467,8 +631,9 @@ class Command(BaseCommand):
                             "text": pf.text,
                             "confidence": pf.confidence,
                             "tags": pf.tags,
-                            "metadata": pf.metadata,
+                            "metadata": merged_metadata,
                             "finding_type": pf.finding_type,
+                            "staleness": staleness_value,
                         },
                     )
                     if created:
@@ -524,5 +689,62 @@ class Command(BaseCommand):
         for finding_id, new_type in to_update:
             DocResearchFinding.objects.filter(id=finding_id).update(
                 finding_type=new_type
+            )
+        self.stdout.write(f"Applied: {len(to_update)} row(s) updated")
+
+    def _run_recheck_staleness(
+        self, *, base_dir: Path, apply_writes: bool
+    ) -> None:
+        """Walk all DocResearchFinding rows and re-check staleness at HEAD.
+
+        Prints total row count, proposed staleness distribution, and the
+        change delta (would-flip count). Writes only when
+        `apply_writes=True`. When writing, also updates
+        `metadata['staleness_failed_refs']` to reflect the fresh check.
+        """
+        file_index = _build_repo_file_index(base_dir)
+
+        qs = DocResearchFinding.objects.all().only(
+            "id", "text", "staleness", "metadata"
+        )
+        total = qs.count()
+
+        proposed_counts: dict[str, int] = {
+            DocResearchFinding.STALENESS_FRESH: 0,
+            DocResearchFinding.STALENESS_SUSPECTED: 0,
+        }
+        flip_count = 0
+        to_update: List[Tuple[str, str, List[str], dict]] = []
+
+        for row in qs.iterator(chunk_size=500):
+            new_val, failed_refs = _check_staleness_at_head(
+                row.text, base_dir, file_index
+            )
+            proposed_counts[new_val] = proposed_counts.get(new_val, 0) + 1
+            if new_val != row.staleness:
+                flip_count += 1
+                if apply_writes:
+                    merged = dict(row.metadata or {})
+                    if failed_refs:
+                        merged["staleness_failed_refs"] = failed_refs
+                    else:
+                        merged.pop("staleness_failed_refs", None)
+                    to_update.append((str(row.id), new_val, failed_refs, merged))
+
+        self.stdout.write(f"Total rows: {total}")
+        self.stdout.write("Proposed staleness distribution:")
+        for label, count in sorted(proposed_counts.items()):
+            pct = (count * 100.0 / total) if total else 0.0
+            self.stdout.write(f"  {label:>10s}  {count:5d}  ({pct:5.1f}%)")
+        self.stdout.write(f"Rows that would change: {flip_count}")
+
+        if not apply_writes:
+            self.stdout.write("(dry-run — pass --apply to persist)")
+            return
+
+        for finding_id, new_val, _failed, merged_metadata in to_update:
+            DocResearchFinding.objects.filter(id=finding_id).update(
+                staleness=new_val,
+                metadata=merged_metadata,
             )
         self.stdout.write(f"Applied: {len(to_update)} row(s) updated")

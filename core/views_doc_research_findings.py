@@ -46,6 +46,7 @@ VALID_MARK_STATUSES = {
 
 VALID_CLOSE_MODES = {choice for choice, _ in DocResearchFinding.CLOSE_MODE_CHOICES}
 VALID_FINDING_TYPES = {choice for choice, _ in DocResearchFinding.FINDING_TYPE_CHOICES}
+VALID_STALENESS = {choice for choice, _ in DocResearchFinding.STALENESS_CHOICES}
 
 
 def _serialize_finding(f: DocResearchFinding) -> Dict[str, Any]:
@@ -66,6 +67,7 @@ def _serialize_finding(f: DocResearchFinding) -> Dict[str, Any]:
         "resolution_note": f.resolution_note,
         "close_mode": f.close_mode,
         "finding_type": f.finding_type,
+        "staleness": f.staleness,
         "deliverable_id": f.deliverable_id or None,
         "first_seen_at": f.first_seen_at.isoformat() if f.first_seen_at else None,
         "last_seen_at": f.last_seen_at.isoformat() if f.last_seen_at else None,
@@ -106,6 +108,9 @@ def doc_research_findings_list_view(request):
     finding_type = (request.GET.get("finding_type") or "").strip()
     if finding_type and finding_type in VALID_FINDING_TYPES:
         qs = qs.filter(finding_type=finding_type)
+    staleness = (request.GET.get("staleness") or "").strip()
+    if staleness and staleness in VALID_STALENESS:
+        qs = qs.filter(staleness=staleness)
     min_confidence = (request.GET.get("min_confidence") or "").strip()
     if min_confidence == "high":
         qs = qs.filter(confidence="high")
