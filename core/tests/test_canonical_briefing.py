@@ -312,6 +312,29 @@ class CanonicalBriefingShapeTests(TestCase):
             self.assertEqual(section["bullets"], [])
 
 
+    @patch("core.services.canonical_briefing._call_llm")
+    @patch("core.services.canonical_briefing.retrieve_scoped_chunks")
+    def test_malformed_llm_json_surfaces_llm_valid_json_false(
+        self, mock_retrieve, mock_llm
+    ) -> None:
+        """Rigby A2 ZO1 fold: parse failure must not silently render as empty.
+
+        Consumers need to distinguish 'LLM produced a valid empty briefing'
+        from 'LLM returned garbage and we bailed'.
+        """
+        mock_retrieve.return_value = _fake_chunks(["docs/foo/a.md"])
+        mock_llm.return_value = "not valid json at all {"
+        resp = self.client.post(
+            "/api/repo/canonical-briefing/",
+            data=json.dumps({"anchor_path": "docs/PLATFORM_INVENTORY.md"}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 200)
+        payload = resp.json()
+        self.assertIn("llm_valid_json", payload)
+        self.assertFalse(payload["llm_valid_json"])
+
+
 class CanonicalBriefingSnippetSanitizerTests(TestCase):
     def test_snippet_truncated_to_max_chars(self) -> None:
         long = "x" * 1000
