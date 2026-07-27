@@ -1,11 +1,12 @@
 """
-Regression tests for doc_content_view hardening (S2984 PR3).
+Regression tests for doc_content_view hardening (S2984 PR3 + PR4 hotfix).
 
-The endpoint at core/views_platform_command.py:doc_content_view was
-previously public and used a string-only traversal guard. This PR added:
-  1. @login_required — was anonymous.
-  2. Path.resolve() containment check against BASE_DIR — catches symlinks
-     that resolve outside the repo (the '..' string guard misses them).
+Timeline:
+- S2984 PR3 added @login_required (was public) + Path.resolve() containment
+  check against BASE_DIR — catches symlinks that '..' string guard misses.
+- S2984 PR4 hotfix converted the endpoint from django-native @login_required
+  to DRF @api_view + IsAuthenticated so auth failure returns JSON 401/403
+  (not the 302 HTML redirect that silently blanked DocumentViewer).
 
 Run::
 
@@ -41,10 +42,21 @@ class DocContentAuthTests(TestCase):
     def setUp(self) -> None:
         self.client = Client()
 
-    def test_anonymous_is_redirected_to_login(self) -> None:
+    def test_anonymous_returns_json_not_html_redirect(self) -> None:
+        """
+        S2984 PR4 hotfix: DRF @api_view returns JSON 401/403 on auth
+        failure, NOT the 302 HTML redirect django-native @login_required
+        would emit (which axios silently follows to a login HTML page,
+        making the DocumentViewer render blank without an error state).
+        """
         resp = self.client.get("/api/platform/doc-content/", {"path": "docs/README.md"})
-        # @login_required with no LOGIN_URL match returns 302 to the login flow.
-        self.assertIn(resp.status_code, (302, 401, 403))
+        self.assertIn(resp.status_code, (401, 403), f"expected 401/403, got {resp.status_code}")
+        self.assertNotEqual(resp.status_code, 302, "must NOT redirect (breaks XHR consumers)")
+        self.assertIn(
+            "application/json",
+            resp.headers.get("Content-Type", ""),
+            f"expected JSON content-type, got {resp.headers.get('Content-Type')!r}",
+        )
 
     def test_authenticated_get_returns_200_for_valid_doc(self) -> None:
         self.client.force_login(self.user)
