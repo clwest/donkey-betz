@@ -296,8 +296,19 @@ export function DeliverablesTab() {
   // component (after activeWsId is derived) so we don't race the store.
   const [searchParams] = useSearchParams()
   const statusFilter = searchParams.get('filter') || ''
+  const deliverableParam = searchParams.get('deliverable') || ''
   const [searchInput, setSearchInput] = useState('')
   const [showFilters, setShowFilters] = useState(false)
+
+  // S2995: deep-link support — `?deliverable=<id>` auto-opens the detail
+  // panel for that row on landing. Mirrors the `?filter=` pattern above.
+  // `detailQuery` (below) hydrates the panel via ID; the row doesn't need
+  // to be in the current list slice.
+  useEffect(() => {
+    if (deliverableParam) {
+      setSelectedId(deliverableParam)
+    }
+  }, [deliverableParam])
 
   // Session 1246 — Grouped view (Rigby design: recency → category accordions
   // with cheap aggregation summaries). Default to grouped; persist to

@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronRight,
   Circle,
+  ExternalLink,
   Loader2,
   Search,
   Send,
@@ -186,7 +187,7 @@ function FindingRow({
                 <div>
                   <span className="font-medium text-gray-300">Deliverable:</span>{' '}
                   <a
-                    href={`/workspace?tab=work&sub=deliverables&workspace=${DONKEY_BETZ_WORKSPACE_ID}`}
+                    href={`/workspace?tab=work&sub=deliverables&workspace=${DONKEY_BETZ_WORKSPACE_ID}&deliverable=${finding.deliverable_id}`}
                     className="text-primary-400 underline hover:text-primary-300"
                     target="_blank"
                     rel="noreferrer"
@@ -201,28 +202,47 @@ function FindingRow({
         <div className="flex flex-col gap-1 items-end shrink-0">
           {finding.status === 'open' && (
             <>
-              {finding.finding_type === 'decision_evidence' && (
+              {finding.finding_type === 'decision_evidence' && !finding.deliverable_id && (
                 <div className="text-[10px] text-amber-300/80 max-w-[9rem] text-right leading-tight mb-0.5">
                   Decision record — verify boundary before re-audit.
                 </div>
               )}
-              <button
-                onClick={onSend}
-                disabled={sending}
-                className={`px-2 py-1 text-xs rounded border disabled:opacity-50 flex items-center gap-1 ${
-                  finding.finding_type === 'decision_evidence'
-                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
-                    : 'border-primary-500/40 bg-primary-500/10 text-primary-300 hover:bg-primary-500/20'
-                }`}
-                title={
-                  finding.finding_type === 'decision_evidence'
-                    ? 'Create a re-audit spec to confirm this boundary still holds'
-                    : 'Create spec-shape Deliverable in Donkey Betz workspace'
-                }
-              >
-                {sending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
-                {finding.finding_type === 'decision_evidence' ? 'Verify evidence' : 'Send to Rigby'}
-              </button>
+              {finding.deliverable_id ? (
+                // S2995: post-dispatch, the primary CTA switches from
+                // "send" (which would re-dispatch and burn tokens) to
+                // "navigate to what was created". Deep-links via the
+                // `?deliverable=` param DeliverablesTab consumes.
+                <a
+                  href={`/workspace?tab=work&sub=deliverables&workspace=${DONKEY_BETZ_WORKSPACE_ID}&deliverable=${finding.deliverable_id}`}
+                  className="px-2 py-1 text-xs rounded border border-emerald-500/40 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20 flex items-center gap-1"
+                  title={
+                    finding.finding_type === 'decision_evidence'
+                      ? 'Open the re-audit spec deliverable'
+                      : 'Open the spec deliverable'
+                  }
+                >
+                  <ExternalLink size={12} />
+                  View deliverable
+                </a>
+              ) : (
+                <button
+                  onClick={onSend}
+                  disabled={sending}
+                  className={`px-2 py-1 text-xs rounded border disabled:opacity-50 flex items-center gap-1 ${
+                    finding.finding_type === 'decision_evidence'
+                      ? 'border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                      : 'border-primary-500/40 bg-primary-500/10 text-primary-300 hover:bg-primary-500/20'
+                  }`}
+                  title={
+                    finding.finding_type === 'decision_evidence'
+                      ? 'Create a re-audit spec to confirm this boundary still holds'
+                      : 'Create spec-shape Deliverable in Donkey Betz workspace'
+                  }
+                >
+                  {sending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
+                  {finding.finding_type === 'decision_evidence' ? 'Verify evidence' : 'Send to Rigby'}
+                </button>
+              )}
               <button
                 onClick={() => onMark('fixed')}
                 disabled={markingStatus !== null}
