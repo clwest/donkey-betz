@@ -219,6 +219,7 @@ INSTALLED_APPS = [
     # Third party packages
     'rest_framework',
     'rest_framework.authtoken',
+    'drf_spectacular',         # S2990: OpenAPI schema for @extend_schema decorators
     'corsheaders',
     'channels',
     'django_celery_beat',      # Celery Beat scheduler for automated tasks
@@ -738,6 +739,8 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 50,
+    # S2990: drf-spectacular AutoSchema so @extend_schema decorators are honored.
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
     # I-0301 Phase 3 Stage 1 — Failure-Data Safety Contract Layer 1 enforcement.
     # Custom exception handler that wraps every DRF error response into the
     # ratified §3.1 envelope. See contract §8.1.
