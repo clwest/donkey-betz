@@ -4204,12 +4204,21 @@ from core.views_workspace_templates import (
 )
 from core.views_workspace_home import workspace_home_snapshot, workspace_shift_brief
 from core.views_repo_research import research_arcs
-from core.views_repo_canonical_briefing import canonical_briefing_view
+from core.views_repo_canonical_briefing import (
+    canonical_briefing_view,
+    canonical_briefing_send_to_rigby_view,
+)
 urlpatterns += [
     # Repo Research Arcs — Session 2984 / PR3 spec be68f1d1-…
     path('api/repo/research/arcs/', research_arcs, name='repo-research-arcs'),
     # Canonical Briefing — S2985 spec 6f6c4122-… (POST: anchor_path + scope)
     path('api/repo/canonical-briefing/', canonical_briefing_view, name='repo-canonical-briefing'),
+    # S2988: per-bullet action item → Donkey Betz workspace deliverable
+    path(
+        'api/repo/canonical-briefing/send-to-rigby/',
+        canonical_briefing_send_to_rigby_view,
+        name='repo-canonical-briefing-send-to-rigby',
+    ),
     # S2984 PR4: Guided Action "Run Shift Brief"
     path('api/workspaces/<uuid:workspace_id>/shift-brief/', workspace_shift_brief, name='workspace-shift-brief'),
 
