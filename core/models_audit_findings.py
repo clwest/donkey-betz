@@ -153,6 +153,27 @@ class DocResearchFinding(models.Model):
         db_index=True,
     )
 
+    # S2995 v2 item #4 — staleness detector.
+    # Orthogonal to status/close_mode/finding_type — a decision_evidence
+    # finding can still be `suspected` if its cited file:line drifted at
+    # HEAD. New rows get `_check_staleness_at_head` at ingest; the
+    # existing 900 default to `fresh` until the PR (b) backfill migration
+    # runs. When suspected, the failed refs land in
+    # metadata['staleness_failed_refs'] so v2 item #8 (wire-through smoke
+    # check) can consume without a second schema field.
+    STALENESS_FRESH = "fresh"
+    STALENESS_SUSPECTED = "suspected"
+    STALENESS_CHOICES = [
+        (STALENESS_FRESH, "Fresh"),
+        (STALENESS_SUSPECTED, "Suspected stale"),
+    ]
+    staleness = models.CharField(
+        max_length=16,
+        choices=STALENESS_CHOICES,
+        default=STALENESS_FRESH,
+        db_index=True,
+    )
+
     deliverable_id = models.CharField(max_length=64, blank=True, default="")
 
     first_seen_at = models.DateTimeField(auto_now_add=True)
