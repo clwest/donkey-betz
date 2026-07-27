@@ -1340,6 +1340,17 @@ disconnect + scope magnitude):
    line 45 no explicit permission_classes = inherits default). Cat
    A boundary observation; enforcement decision belongs to Cat D
    S2504.
+
+   > **S2990 HEAD re-verify note (2026-07-27, HEAD `808c50603`).** Line
+   > refs drifted: `DEFAULT_PERMISSION_CLASSES` is at `core/settings.py:737-738`.
+   > `LeagueViewSet` example no longer applies at HEAD (`sports/views.py:48`
+   > now declares `permission_classes = [permissions.AllowAny]`). Runtime
+   > URL-resolver walk finds **19 of 818 DRF class-based views (2.3%)**
+   > inheriting implicitly, not the estimated ~80-90%. Full coverage matrix
+   > + cluster distribution + Cat D S2504 boundary framing collected at
+   > `docs/research/domains/api/2990_permission_classes_implicit_inheritance_evidence_report.md`.
+   > Original S2402/S2501 evidence preserved as historical artifact; addendum
+   > added forward-pointing only, per S2990 Rigby SIGN cycle agreement.
 4. **Bare `Response({...})` dict returns bypass ModelSerializer
    typing.** ~60% of sampled money-path endpoints per §4.3;
    generalized to entire API surface per §7.2 evidence. Cat A
