@@ -15,7 +15,7 @@ The platform stores memory in three distinct places. Each has a different lifeti
 | **ConversationMemory** | `core.models.ConversationMemory` | Auto-write at PA turn close | pgvector semantic search when user references past conversations | Persistent; not user-curated; embedding-indexed |
 | **AgentMemory** (per-agent scratchpad) | `core.models_unified_system.AgentMemory` | Agent-side writes during execution | Injected into agent prompts | Per-agent; safety-class filtered |
 
-**PR1 scope** covers the `UserMemoryContext` layer only. Trace/hygiene/preflight for the other two layers are PR2.
+**PR1 scope** covered the `UserMemoryContext` write path and audit fields. **PR2 (S2987)** added the utilization trace, supersede semantics, hygiene command, and cap-drift fix (see `## PR2 additions` below). Trace/hygiene for `ConversationMemory` and `AgentMemory` layers is still future work.
 
 ## remember_tool — quick reference
 
@@ -102,12 +102,78 @@ memory_injected: {user_id, chars}
 
 Separate from `remember_tool`, the PA also runs `_detect_memory_intent()` on incoming user messages and, when it matches phrases like "remember X" or "note that I…", it saves to `UserMemoryContext` directly. This is the "user says remember, PA writes it" path — the LLM does not need to call `remember_tool` for these to persist.
 
-## What's NOT in PR1 (see PR2)
+## PR2 additions (S2987)
 
-- **MemoryUtilizationTrace** — will answer "did memory influence this response?" with layer-tagged retrieved/injected/used IDs.
-- **`memory_hygiene_audit` management command** — surface stale + conflict candidates; supersede semantics.
-- **Supersede fields on `UserMemoryContext`** — `is_active`, `superseded_by`, `superseded_at` migration.
-- **Non-PA preflight** — currently only PA turn calls `MemoryContextService`. Direct LLM callers (e.g. `ProjectBuilderOrchestrator`) bypass it. PR2 wires MVP into `ProjectBuilderOrchestrator`; broader sweep is a follow-up spec.
+### Memory utilization trace
+
+Every PA turn that injects memory now records a `memory_injected` OpsRun event with the retrieved memory ids and layer discriminator:
+
+```json
+{
+  "user_id": "42",
+  "chars": 1287,
+  "retrieved_memory_ids": [12345, 12401, 12467, ...],
+  "layer": "user_memory_context"
+}
+```
+
+Answers "did memory influence this response?" — the ids are the concrete rows the LLM saw for that turn. Fetch via `MemoryContextService.get_prompt_context_with_trace(user)`; `get_prompt_context(user)` is a backwards-compat wrapper. `layer` is currently always `user_memory_context`; future extensions (`user_agent_learning`, `conversation_memory`) live behind `F-D3-layer-expand`.
+
+### Supersede-not-delete semantics
+
+Three new `UserMemoryContext` fields:
+
+| Field | Purpose |
+|---|---|
+| `is_active` | Default `True`. When `False`, the row is excluded from prompt injection and cap counts. |
+| `superseded_by` | FK-to-self pointing at the row that replaced this one. `on_delete=SET_NULL` so the audit link decays safely if the replacement is later removed. |
+| `superseded_at` | Timestamp of when the row went inactive. |
+
+**Delete is never used.** Hygiene and dedupe both mark rows inactive + link to the replacement. Composite index `(user, is_active, -created_at)` keeps the filtered read fast.
+
+### Cap enforcement in `memory_promotion_service`
+
+Prior behavior: `check_and_promote` bypassed `MEMORY_MAX_ITEMS` and wrote unbounded. This is what accumulated 1803 rows on Chris's user at S2986 close.
+
+New behavior:
+
+1. Count active rows.
+2. If under cap: create normally.
+3. If at cap: find oldest active `source='auto_promotion'` row, demote it (`is_active=False, superseded_at=now, superseded_by=<new_row>`), then create.
+4. If no `auto_promotion` rows to demote (all rows are curated): SKIP + emit `memory_promotion_capped` tracker event.
+
+Curated rows (`source='remember_tool'` etc.) are never demoted by auto-promotion.
+
+### `memory_hygiene_audit` management command
+
+```bash
+# Report only (default) — no writes
+python manage.py memory_hygiene_audit
+
+# Scope to one user
+python manage.py memory_hygiene_audit --user chris
+
+# Supersede stale candidates (never DELETE)
+python manage.py memory_hygiene_audit --apply
+
+# Override cap for reporting
+python manage.py memory_hygiene_audit --max-items 100
+```
+
+Surfaces three finding classes:
+
+- **Stale** — `is_active=True` AND (`last_accessed IS NULL` OR `last_accessed < now-90d`) AND `importance < 5` AND `created_at < now-90d`. Prunable via `--apply`.
+- **Cap-drift** — users with `active_count > MEMORY_MAX_ITEMS`, with source breakdown so operators can see which writer is the accumulation source.
+- **Conflicts** — same user + same memory_type + >2 active rows sharing a tag. Manual review only; never auto-superseded.
+
+Only stale rows are auto-superseded by `--apply`. Cap-drift and conflicts require manual inspection.
+
+## Deferred / future
+
+- **Non-PA preflight** (D2 from spec `ba968ac1`) — deferred. The originally-planned target `ProjectBuilderOrchestrator._build_project_with_llm_only` turned out to be dead-invocation code (only demo/test callers). Rigby's LLM-bypass sweep at S2986 T1 SIGN pass 3 found 14+ real non-PA LLM sites — those get a follow-up audit spec (`F-D2-broad`) rather than case-by-case preflight in this arc.
+- **Relevance-threshold pre-injection filter** (`F-ZO2`) — inject memory only when relevance score above a threshold. Needs relevance-scoring infra.
+- **Structured citations / post-hoc classifier** (`F-ZO3`) — stronger "used" signal than the current "retrieved" audit. MVP self-report is honest ("here's what the LLM saw"); tighter attribution is a v2 upgrade.
+- **`ConversationMemory` + `AgentMemory` trace** — the `layer` field is ready to distinguish; the retrieval paths need to be threaded through `MemoryUtilizationTrace`.
 
 ## Related surfaces
 
@@ -118,9 +184,12 @@ Separate from `remember_tool`, the PA also runs `_detect_memory_intent()` on inc
 | Auto-memory detector | Regex intent → auto-save | `core/services/unified_pa_entrypoint.py:_detect_memory_intent` |
 | S2986 tests | Handler happy-path + dedupe + cap-hit + truncation | `core/tests/test_s2986_remember_tool.py` |
 | S2886 tests | Handler error envelopes (5 sites) | `core/tests/test_s2886_core_error_envelope.py` |
+| S2987 tests | Migration smoke + trace + cap-fix + hygiene command | `core/tests/test_s2987_memory_hygiene_and_trace.py` |
+| Hygiene command | Stale / cap-drift / conflict audit + supersede | `core/management/commands/memory_hygiene_audit.py` |
+| Promotion service | Auto-detects ops facts + respects cap via demote | `core/services/memory_promotion_service.py` |
 
 ## Session provenance
 
 - **S2886** (2026-07-21) migrated the 5 handler-side error branches to the S2879 `_handler_error` envelope.
-- **S2986** (2026-07-26, this arc) fixed the `remember_tool.save` reliability gaps: `cap_hit` envelope migration, save-return `status`/`truncated`/`original_len` signaling, entrypoint-side oversized-content gate, PA prompt header rename, happy-path test coverage, this doc.
-- **S2986 PR2** (queued): trace + hygiene + supersede + narrow preflight.
+- **S2986 (PR1)** (2026-07-26) fixed the `remember_tool.save` reliability gaps: `cap_hit` envelope migration, save-return `status`/`truncated`/`original_len` signaling, entrypoint-side oversized-content gate, PA prompt header rename, happy-path test coverage, this doc.
+- **S2987 (PR2)** (2026-07-26) shipped the D3 utilization trace, D4 hygiene + supersede migration, and closed the `memory_promotion_service` cap bypass discovered at PR1 post-merge smoke. D2 (non-PA preflight) descoped after Rigby verified the target was dead code — rolled into follow-up `F-D2-broad` audit spec.
