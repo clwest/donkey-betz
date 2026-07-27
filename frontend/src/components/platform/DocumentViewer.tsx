@@ -88,6 +88,13 @@ export function DocumentViewer({
         const response = await axios.get('/api/platform/doc-content/', {
           params: { path: documentPath }
         })
+        // S2984 PR4 hotfix: shape-guard the response body. Belt-and-
+        // suspenders in case the backend ever regresses to returning a
+        // 302 HTML redirect (which axios would surface as a 200 with an
+        // HTML body — content becomes undefined, viewer renders blank).
+        if (typeof response.data?.content !== 'string') {
+          throw new Error('Invalid doc-content response (missing content string)')
+        }
         setContent(response.data.content)
         setMetadata(response.data.metadata)
       } catch (err: any) {
