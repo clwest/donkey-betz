@@ -268,6 +268,59 @@ def _staleness_prompt_hint(failed_refs: List[str]) -> str:
     )
 
 
+# S2999 v2 item #7: F-A2-equivalent for downstream consumers.
+# LLM-produced ACs sometimes cite `file:line` refs the executor needs
+# to visit. If the cited path doesn't exist at HEAD (or the line is
+# out of range), the AC is pointing at a phantom target and the
+# executor will waste time. We reuse S2995's `_check_staleness_at_head`
+# helper to run the same fail-safe check across every AC and surface
+# a warning + extras metadata list.
+#
+# Complements S2997 (which injects verification ACs for source-side
+# stale refs). S2999 handles the DOWNSTREAM side: LLM-produced refs.
+# Deliberately quiet per Rigby T1 SIGN Ask #2 (warning-only; the loud
+# injection pattern belongs to S2997). File:line-only per Ask #1 —
+# identifier grepping is deferred scope + higher FP risk.
+
+
+def _verify_ac_consumers(acs: List[str]) -> List[str]:
+    """Return sorted unique list of file:line refs in `acs` that fail
+    path-existence / line-in-range check at HEAD.
+
+    Lazy-imports the S2995 helpers to avoid pulling management-command
+    module into hot import path at module load. Fail-open: if the
+    helpers can't be imported (e.g. odd test env), return empty list —
+    consumer verification is best-effort per Rigby T1 SIGN Ask #3(c).
+    """
+    if not acs:
+        return []
+    try:
+        from django.conf import settings
+        from core.management.commands.index_doc_research_findings import (
+            _build_repo_file_index,
+            _check_staleness_at_head,
+        )
+    except ImportError:
+        logger.debug("briefing_spec: consumer verifier helpers unavailable")
+        return []
+
+    from pathlib import Path
+    base_dir = Path(settings.BASE_DIR)
+    file_index = _build_repo_file_index(base_dir)
+
+    seen: set[str] = set()
+    unverified: List[str] = []
+    for ac in acs:
+        if not ac:
+            continue
+        _val, failed = _check_staleness_at_head(str(ac), base_dir, file_index)
+        for ref in failed:
+            if ref not in seen:
+                seen.add(ref)
+                unverified.append(ref)
+    return unverified
+
+
 def _inject_staleness_acs(
     spec: BriefingSpec,
     failed_refs: List[str],
@@ -588,6 +641,21 @@ def generate_spec_body(
     if refs:
         spec = _inject_staleness_acs(spec, refs, prompt_shape)
 
+    # S2999 v2 item #7: verify LLM-produced ACs don't cite phantom
+    # `file:line` refs. Runs after any staleness injection so injected
+    # verification ACs (which cite the SAME suspect refs we just
+    # warned about) don't double-count as unverified. Deliberately
+    # excludes the leading `refs` count from the injected AC set — an
+    # injected AC saying "Open `<ref>` at HEAD..." should NOT flag
+    # `<ref>` as an unverified consumer.
+    prepended_count = len([r for r in refs if r]) if refs else 0
+    checked_acs = spec.acceptance_criteria[prepended_count:] if prepended_count else spec.acceptance_criteria
+    unverified_consumer_refs = _verify_ac_consumers(checked_acs)
+    if unverified_consumer_refs:
+        spec.warnings.append(
+            f"unverified_consumer_refs:{len(unverified_consumer_refs)}"
+        )
+
     body = _render_spec_markdown(
         spec=spec,
         bullet_text=bullet_text,
@@ -604,6 +672,7 @@ def generate_spec_body(
         "spec_prompt_shape": prompt_shape,
         "finding_type_used": (finding_type or "").strip().lower() or None,
         "staleness_failed_refs_injected": bool(refs),
+        "unverified_consumer_refs": list(unverified_consumer_refs),
         "llm_success": llm_success,
         "spec_warnings": list(spec.warnings),
     }
