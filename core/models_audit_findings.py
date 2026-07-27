@@ -54,6 +54,21 @@ class DocResearchFinding(models.Model):
         (STATUS_DISMISSED, "Dismissed"),
     ]
 
+    # S2991 close-mode taxonomy (orthogonal to `status`; nullable).
+    # Rigby SIGN caught: status is lifecycle, close_mode is closure mechanism.
+    # Freshness (e.g., "stale-corrected") stays in resolution_note until a
+    # second trigger justifies a dedicated freshness axis.
+    CLOSE_MODE_FIXED_VIA_PR = "fixed_via_pr"
+    CLOSE_MODE_EVIDENCE_DELIVERED = "evidence_delivered"
+    CLOSE_MODE_DEFERRED_TO_ARC = "deferred_to_arc"
+    CLOSE_MODE_INFORMATIONAL = "informational"
+    CLOSE_MODE_CHOICES = [
+        (CLOSE_MODE_FIXED_VIA_PR, "Fixed via PR"),
+        (CLOSE_MODE_EVIDENCE_DELIVERED, "Evidence delivered"),
+        (CLOSE_MODE_DEFERRED_TO_ARC, "Deferred to arc"),
+        (CLOSE_MODE_INFORMATIONAL, "Informational"),
+    ]
+
     CONFIDENCE_HIGH = "high"
     CONFIDENCE_MEDIUM = "medium"
     CONFIDENCE_LOW = "low"
@@ -108,6 +123,13 @@ class DocResearchFinding(models.Model):
         related_name="resolved_audit_findings",
     )
     resolution_note = models.TextField(blank=True, default="")
+    close_mode = models.CharField(
+        max_length=32,
+        choices=CLOSE_MODE_CHOICES,
+        null=True,
+        blank=True,
+        default=None,
+    )
 
     deliverable_id = models.CharField(max_length=64, blank=True, default="")
 
