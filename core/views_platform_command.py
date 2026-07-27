@@ -1224,6 +1224,7 @@ def skin_lock_toggle_view(request):
 
 
 @require_GET
+@login_required
 def doc_content_view(request):
     """
     GET /api/platform/doc-content/
@@ -1236,6 +1237,11 @@ def doc_content_view(request):
     Returns:
     - content: Raw markdown content
     - metadata: Title, lines, size, modified date
+
+    Security (S2984 PR3 hardening):
+    - @login_required (was previously public).
+    - Path.resolve() containment check against BASE_DIR — rejects symlinks
+      that resolve outside the repo, in addition to the existing '..' guard.
     """
     doc_path = request.GET.get('path', '')
 
@@ -1256,8 +1262,15 @@ def doc_content_view(request):
             'error': 'Invalid path - directory traversal not allowed'
         }, status=403)
 
-    # Build full path
-    full_path = Path(settings.BASE_DIR) / doc_path
+    # Build full path + resolve to catch symlinks pointing outside BASE_DIR.
+    base = Path(settings.BASE_DIR).resolve()
+    full_path = (base / doc_path).resolve() if (base / doc_path).exists() else base / doc_path
+    try:
+        full_path.relative_to(base)
+    except ValueError:
+        return JsonResponse({
+            'error': 'Invalid path - resolves outside repository'
+        }, status=403)
 
     if not full_path.exists():
         return JsonResponse({
