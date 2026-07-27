@@ -86,24 +86,45 @@ class MemoryContextService:
         """
         Build memory context string for system prompt injection.
 
-        Retrieves preferences, goals, and decisions, applies decay
-        weighting, and formats as a structured context block.
+        Backwards-compatible wrapper around
+        :meth:`get_prompt_context_with_trace` — returns just the context
+        string. New code should prefer the with-trace variant so the
+        retrieved memory ids can be recorded in the ``memory_injected``
+        OpsRun event (S2987 D3 — MemoryUtilizationTrace).
+        """
+        context, _retrieved_ids, _layer = self.get_prompt_context_with_trace(user)
+        return context
 
-        Args:
-            user: User to get context for
+    def get_prompt_context_with_trace(self, user: User) -> tuple:
+        """
+        S2987 (spec ba968ac1 PR2 D3) — Build memory context and return the
+        list of retrieved memory ids alongside it so the caller can record
+        a MemoryUtilizationTrace event.
 
         Returns:
-            Formatted context string for prompt injection
+            (context_str, retrieved_ids: list[int], layer: str)
+
+            ``layer`` is the memory layer discriminator. MVP always emits
+            ``'user_memory_context'`` — future extensions ('user_agent_learning',
+            'conversation_memory') live behind future_trigger F-D3-layer-expand.
         """
-        # Check cache
+        layer = 'user_memory_context'
+
+        # Check cache. Cached value is (context, retrieved_ids).
         cache_key = f"{self.CACHE_PREFIX}:prompt:{user.id}"
         cached = cache.get(cache_key)
-        if cached:
-            return cached
+        if cached is not None and isinstance(cached, tuple) and len(cached) == 2:
+            return cached[0], cached[1], layer
+        if cached is not None and isinstance(cached, str):
+            # Pre-S2987 cache entries stored bare strings. Return empty ids
+            # for the remainder of the TTL — next call after the entry
+            # expires will populate the new shape.
+            return cached, [], layer
 
         context_parts = []
+        retrieved_ids: list = []
 
-        # 1. Get profile-based context (static preferences)
+        # 1. Get profile-based context (static preferences — no UserMemoryContext ids)
         profile_context = self._get_profile_context(user)
         if profile_context:
             context_parts.append(profile_context)
@@ -116,6 +137,7 @@ class MemoryContextService:
         )
         if preferences:
             context_parts.append(self._format_preferences(preferences))
+            retrieved_ids.extend(p['id'] for p in preferences if p.get('id'))
 
         # 3. Get goals
         goals = self._get_weighted_memories(
@@ -125,6 +147,7 @@ class MemoryContextService:
         )
         if goals:
             context_parts.append(self._format_goals(goals))
+            retrieved_ids.extend(g['id'] for g in goals if g.get('id'))
 
         # 4. Get recent decisions (for context on what user chose before)
         decisions = self._get_weighted_memories(
@@ -135,17 +158,21 @@ class MemoryContextService:
         )
         if decisions:
             context_parts.append(self._format_decisions(decisions))
+            retrieved_ids.extend(d['id'] for d in decisions if d.get('id'))
 
         # Combine and truncate
         context = "\n\n".join(context_parts)
         if len(context) > self.max_context_chars:
             context = context[:self.max_context_chars] + "..."
 
-        # Cache result
-        cache.set(cache_key, context, self.CACHE_TTL)
+        # Cache the pair (context, ids) — S2987 shape.
+        cache.set(cache_key, (context, retrieved_ids), self.CACHE_TTL)
 
-        logger.info(f"Built memory context for {user.username}: {len(context)} chars")
-        return context
+        logger.info(
+            f"Built memory context for {user.username}: {len(context)} chars, "
+            f"{len(retrieved_ids)} retrieved ids"
+        )
+        return context, retrieved_ids, layer
 
     def get_content_preferences(self, user: User, channel=None) -> Dict[str, Any]:
         """
@@ -183,9 +210,13 @@ class MemoryContextService:
             pass
 
         # Get from UserMemoryContext preferences
+        # S2987 A2 fold — filter is_active=True for parity with
+        # _get_weighted_memories(). Superseded rows must not influence
+        # content preference extraction.
         memories = UserMemoryContext.objects.filter(
             user=user,
-            memory_type='preference'
+            memory_type='preference',
+            is_active=True,
         ).order_by('-importance', '-created_at')[:10]
 
         for memory in memories:
@@ -289,9 +320,13 @@ class MemoryContextService:
         Returns:
             List of memory dicts with decay_weight added
         """
+        # S2987 (spec ba968ac1 PR2 D4) — filter superseded/inactive rows
+        # out of prompt injection. is_active default is True, so existing
+        # rows without the field behave unchanged.
         query = UserMemoryContext.objects.filter(
             user=user,
-            memory_type__in=memory_types
+            memory_type__in=memory_types,
+            is_active=True,
         )
 
         if days_back:
@@ -307,6 +342,7 @@ class MemoryContextService:
             decay_weight = self.calculate_decay_weight(memory.created_at)
             weighted_score = memory.importance * decay_weight
             weighted.append({
+                'id': memory.id,
                 'content': memory.content,
                 'importance': memory.importance,
                 'decay_weight': decay_weight,

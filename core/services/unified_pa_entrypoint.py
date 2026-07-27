@@ -3031,7 +3031,14 @@ class UnifiedPAEntrypoint:
         try:
             from core.services.memory_context_service import get_memory_context_service
             memory_svc = get_memory_context_service()
-            memory_context = memory_svc.get_prompt_context(self.user)
+            # S2987 (spec ba968ac1 PR2 D3) — use the with-trace variant so
+            # the retrieved memory ids + layer discriminator land on the
+            # memory_injected OpsRun event. This is the MemoryUtilizationTrace
+            # substrate — enables "did memory influence this response?"
+            # answers by pointing at the concrete row ids the LLM saw.
+            memory_context, retrieved_ids, memory_layer = (
+                memory_svc.get_prompt_context_with_trace(self.user)
+            )
             if memory_context:
                 prompt_parts.append("")
                 # S2986 F-Z1: neutral header reduces the tendency to parrot
@@ -3042,13 +3049,16 @@ class UnifiedPAEntrypoint:
                     "PERSISTENT USER CONTEXT (use only if relevant; do not mention unless asked):"
                 )
                 prompt_parts.append(memory_context)
-                # OpsRun event for memory injection
+                # OpsRun event for memory injection — S2987 D3 extends
+                # payload with retrieved_memory_ids + layer.
                 from core.tools.ops_run_tracker import get_active_tracker
                 tracker = get_active_tracker()
                 if tracker:
                     tracker.info('memory_injected', {
                         'user_id': str(self.user.id),
                         'chars': len(memory_context),
+                        'retrieved_memory_ids': list(retrieved_ids),
+                        'layer': memory_layer,
                     })
         except Exception as e:
             logger.debug(f"[PA] Memory context injection skipped: {e}")
