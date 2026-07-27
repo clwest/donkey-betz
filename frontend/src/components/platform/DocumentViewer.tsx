@@ -8,7 +8,11 @@
 import { useState, useEffect } from 'react'
 import { X, ExternalLink, Clock, FileText, Copy, Check, ChevronLeft, Maximize2, Minimize2 } from 'lucide-react'
 import { cn } from '@/lib/cn'
-import axios from 'axios'
+// S2984 PR5 hotfix: use shared `api` axios instance (withCredentials:true +
+// CSRF interceptor) so Django session cookies flow. Raw `axios` was used
+// pre-PR3 when this endpoint was in PUBLIC_PATHS whitelist and didn't need
+// auth; PR3 hardening exposed the wrapper mismatch.
+import { api } from '@/lib/api'
 import ReactMarkdown from 'react-markdown'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
@@ -85,7 +89,7 @@ export function DocumentViewer({
       setError(null)
 
       try {
-        const response = await axios.get('/api/platform/doc-content/', {
+        const response = await api.get('/platform/doc-content/', {
           params: { path: documentPath }
         })
         // S2984 PR4 hotfix: shape-guard the response body. Belt-and-
