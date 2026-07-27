@@ -508,6 +508,9 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
 
         # Newsletter signup (public landing page — Operator Edge)
         '/api/newsletter/',
+
+        # S2990: drf-spectacular schema + Swagger UI + Redoc — dev docs, conventionally public.
+        '/api/schema/',
     ]
 
     # Session 830: Exact match public paths (don't use prefix matching)
