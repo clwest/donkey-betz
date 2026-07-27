@@ -318,11 +318,36 @@ class UserMemoryContext(models.Model):
     accessed_count = models.IntegerField(default=0)
     last_accessed = models.DateTimeField(null=True, blank=True)
 
+    # S2987 (spec ba968ac1 PR2) — supersede-not-delete semantics for hygiene.
+    # `is_active=False` rows are excluded from prompt injection and count-cap
+    # checks. `superseded_by` links to the row that replaced this one (dedupe
+    # bumps, auto_promotion cap demotion, or explicit hygiene command --apply).
+    # Delete is NEVER used — full audit trail preserved.
+    is_active = models.BooleanField(
+        default=True,
+        db_index=True,
+        help_text="False means superseded/inactive; excluded from prompt injection + cap counts.",
+    )
+    superseded_by = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='supersedes',
+        help_text="If this row was replaced, points at the replacement row.",
+    )
+    superseded_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When this row was marked inactive.",
+    )
+
     class Meta:
         ordering = ['-importance', '-created_at']
         indexes = [
             models.Index(fields=['user', 'memory_type', '-created_at']),
             models.Index(fields=['user', '-importance']),
+            models.Index(fields=['user', 'is_active', '-created_at']),
         ]
 
     def __str__(self):

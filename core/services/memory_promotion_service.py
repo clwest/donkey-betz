@@ -299,6 +299,66 @@ def check_and_promote(
                 'tags': tags,
             }
 
+        # S2987 (spec ba968ac1 PR2 D4) — respect MEMORY_MAX_ITEMS cap.
+        # Prior behavior: this call bypassed the cap check that
+        # remember_tool.save enforces, so a heavy PA user accumulated
+        # `auto_promotion` rows unbounded (Chris's user at S2986 close:
+        # 1803 rows against a 200 cap). New behavior:
+        #
+        # 1. Count active rows.
+        # 2. If < cap: create normally.
+        # 3. If >= cap: try to DEMOTE the oldest active auto_promotion row
+        #    (mark is_active=False + superseded_at=now + link superseded_by
+        #    to the new row) — never DELETE. Then create new row.
+        # 4. If nothing safe to demote (no active auto_promotion rows):
+        #    SKIP with a memory_promotion_capped tracker event so the
+        #    dropped promotion is auditable.
+        import os
+        from django.utils import timezone
+        from core.tools.ops_run_tracker import get_active_tracker
+
+        max_items = int(os.environ.get('MEMORY_MAX_ITEMS', '200'))
+        active_count = UserMemoryContext.objects.filter(
+            user=user, is_active=True
+        ).count()
+
+        row_to_demote = None
+        if active_count >= max_items:
+            # S2987 A2 fold — importance-first, then created_at. Robust to
+            # future importance-drift: even if all auto_promotion rows are
+            # currently importance=9, the policy stays sensible if that
+            # changes. Lowest-importance oldest row wins.
+            row_to_demote = (
+                UserMemoryContext.objects
+                .filter(user=user, is_active=True, source='auto_promotion')
+                .order_by('importance', 'created_at')
+                .first()
+            )
+            if row_to_demote is None:
+                capped_reason = 'no_auto_promotion_rows_available'
+                tracker = get_active_tracker()
+                if tracker:
+                    tracker.info('memory_promotion_capped', {
+                        'user_id': str(user.id),
+                        'active_count': active_count,
+                        'max_items': max_items,
+                        'trace_id': trace_id,
+                        'content_preview': content[:80],
+                        # S2987 A2 fold — machine-readable reason for
+                        # tracker consumers filtering on capped events.
+                        'reason': capped_reason,
+                    })
+                logger.info(
+                    f"[{trace_id}] Memory promotion CAPPED — no auto_promotion "
+                    f"rows available to demote (active={active_count}, cap={max_items})"
+                )
+                return {
+                    'action': 'capped',
+                    'active_count': active_count,
+                    'max_items': max_items,
+                    'reason': capped_reason,
+                }
+
         # Create new memory
         memory = UserMemoryContext.objects.create(
             user=user,
@@ -317,6 +377,32 @@ def check_and_promote(
             },
         )
 
+        # If we hit the cap, demote the oldest auto_promotion row + link it
+        # to the row we just created. Order matters: create new first so
+        # the FK target exists when we mark the old one superseded.
+        demoted_id = None
+        if row_to_demote is not None:
+            row_to_demote.is_active = False
+            row_to_demote.superseded_at = timezone.now()
+            row_to_demote.superseded_by = memory
+            row_to_demote.save(update_fields=[
+                'is_active', 'superseded_at', 'superseded_by',
+            ])
+            demoted_id = row_to_demote.id
+            tracker = get_active_tracker()
+            if tracker:
+                tracker.info('memory_promotion_demoted', {
+                    'user_id': str(user.id),
+                    'demoted_memory_id': demoted_id,
+                    'replacement_memory_id': memory.id,
+                    'active_count': active_count,
+                    'max_items': max_items,
+                    'trace_id': trace_id,
+                })
+            logger.info(
+                f"[{trace_id}] Memory promotion DEMOTED id={demoted_id} → replaced by id={memory.id}"
+            )
+
         # Clear memory cache
         svc = get_memory_context_service()
         svc.clear_cache(user)
@@ -325,13 +411,16 @@ def check_and_promote(
             f"[{trace_id}] Memory promotion AUTO-SAVED id={memory.id} "
             f"score={score} tags={tags}"
         )
-        return {
+        result = {
             'action': 'saved',
             'memory_id': memory.id,
             'score': score,
             'content': content[:100],
             'tags': tags,
         }
+        if demoted_id is not None:
+            result['demoted_memory_id'] = demoted_id
+        return result
 
     except Exception as e:
         logger.warning(f"[{trace_id}] Memory promotion save failed: {e}")
