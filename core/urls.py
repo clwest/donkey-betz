@@ -4208,6 +4208,11 @@ from core.views_repo_canonical_briefing import (
     canonical_briefing_view,
     canonical_briefing_send_to_rigby_view,
 )
+from core.views_doc_research_findings import (
+    doc_research_findings_list_view,
+    doc_research_findings_mark_view,
+    doc_research_findings_send_to_rigby_view,
+)
 urlpatterns += [
     # Repo Research Arcs — Session 2984 / PR3 spec be68f1d1-…
     path('api/repo/research/arcs/', research_arcs, name='repo-research-arcs'),
@@ -4218,6 +4223,22 @@ urlpatterns += [
         'api/repo/canonical-briefing/send-to-rigby/',
         canonical_briefing_send_to_rigby_view,
         name='repo-canonical-briefing-send-to-rigby',
+    ),
+    # S2989 Phase B: doc-research finding registry
+    path(
+        'api/repo/doc-research-findings/',
+        doc_research_findings_list_view,
+        name='repo-doc-research-findings-list',
+    ),
+    path(
+        'api/repo/doc-research-findings/<uuid:finding_id>/mark/',
+        doc_research_findings_mark_view,
+        name='repo-doc-research-findings-mark',
+    ),
+    path(
+        'api/repo/doc-research-findings/<uuid:finding_id>/send-to-rigby/',
+        doc_research_findings_send_to_rigby_view,
+        name='repo-doc-research-findings-send-to-rigby',
     ),
     # S2984 PR4: Guided Action "Run Shift Brief"
     path('api/workspaces/<uuid:workspace_id>/shift-brief/', workspace_shift_brief, name='workspace-shift-brief'),

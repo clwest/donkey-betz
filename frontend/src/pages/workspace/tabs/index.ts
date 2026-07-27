@@ -85,3 +85,6 @@ export { SignalDispatchesTab } from './SignalDispatchesTab'
 
 // S2978: Theme Signals v1 — Buildable/Investable tab-scoped cards (product-tier UI on SignalCluster)
 export { ThemeSignalsTab } from './theme-signals/ThemeSignalsTab'
+
+// S2989 Phase B: Audit Findings — docs/research/ finding registry with mark + send-to-rigby
+export { FindingsTab } from './FindingsTab'
