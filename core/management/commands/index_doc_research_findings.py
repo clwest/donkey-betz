@@ -77,6 +77,65 @@ LOW_CONFIDENCE_HEADINGS = {
 }
 
 
+# S2992 v2 item #2 — finding-type classifier signals.
+# Adapted from spec after Claude ORM-direct signal validation on the 900-row
+# corpus and Rigby T1 SIGN (10-row sample) fold: literal "blocks downstream"
+# had 0 hits; imperative verbs are the real executable-shape indicator when
+# a file:line anchor is absent.
+DECISION_EVIDENCE_TEXT_PATTERNS = [
+    r"\bCat(?:egory)?\s?A\b",
+    r"\bboundary\s+(?:observation|violation)s?\b",
+    r"\bxx99\b",
+    r"\bD-?verdict\b",
+]
+DECISION_EVIDENCE_HEADINGS = {"boundary violations"}
+_DECISION_EVIDENCE_RE = re.compile(
+    "|".join(DECISION_EVIDENCE_TEXT_PATTERNS), re.IGNORECASE
+)
+
+# Executable signals: an explicit file:line anchor OR an imperative verb that
+# names concrete engineering work. Verbs are anchored at word boundaries to
+# keep false positives low ("fix" alone hits ~5 rows in corpus; combined with
+# the rest of the set the class stays high-signal).
+EXECUTABLE_FILE_LINE_RE = re.compile(
+    r"\b[A-Za-z_][A-Za-z0-9_/.\-]*\.(?:py|ts|tsx|js|jsx|go|rs|md)\s*:\s*\d+\b"
+)
+EXECUTABLE_VERB_RE = re.compile(
+    r"\b(?:rename|delete|remove|add|implement|wire|fix|refactor|migrate|"
+    r"bump|pin|extract|split|merge|backfill|deprecate)\b",
+    re.IGNORECASE,
+)
+EXECUTABLE_HEADINGS = {
+    "next actions", "action items", "todos", "to-dos", "to dos",
+}
+
+
+def _classify_finding_type(text: str, source_heading: str) -> str:
+    """Regex classifier over (text, source_heading) → finding_type.
+
+    Precedence: decision_evidence wins over executable on collision — a
+    decision record that also cites a file:line is still primarily a
+    decision record, per Rigby T1 SIGN agreement.
+
+    Deterministic and idempotent; safe to run on every upsert.
+    """
+    heading_lower = (source_heading or "").strip().lower()
+
+    if heading_lower in DECISION_EVIDENCE_HEADINGS:
+        return DocResearchFinding.FINDING_TYPE_DECISION_EVIDENCE
+    if _DECISION_EVIDENCE_RE.search(text or ""):
+        return DocResearchFinding.FINDING_TYPE_DECISION_EVIDENCE
+
+    if heading_lower in EXECUTABLE_HEADINGS:
+        return DocResearchFinding.FINDING_TYPE_EXECUTABLE
+    if EXECUTABLE_FILE_LINE_RE.search(text or ""):
+        return DocResearchFinding.FINDING_TYPE_EXECUTABLE
+    if EXECUTABLE_VERB_RE.search(text or ""):
+        return DocResearchFinding.FINDING_TYPE_EXECUTABLE
+
+    return DocResearchFinding.FINDING_TYPE_UNKNOWN
+
+
 @dataclass
 class ParsedFinding:
     doc_path: str
@@ -87,6 +146,7 @@ class ParsedFinding:
     confidence: str
     tags: List[str]
     metadata: dict
+    finding_type: str = "unknown"
 
 
 def _strip_leading_numbering(header: str) -> str:
@@ -224,6 +284,7 @@ def _parse_finding_sections(
                     confidence=confidence,
                     tags=[domain_slug] if domain_slug else [],
                     metadata={"line_number": i + 1},
+                    finding_type=_classify_finding_type(bullet_text, header_bare),
                 )
             )
     return findings
@@ -292,6 +353,9 @@ def _parse_implementation_debt(doc_path_rel: str, content: str) -> List[ParsedFi
                             "debt_type": (fields.get("debt_type") or "").strip("`"),
                             "severity": (fields.get("severity") or "").strip("`"),
                         },
+                        finding_type=_classify_finding_type(
+                            description, f"{idbt_id} — {one_liner}"
+                        ),
                     )
                 )
         i = j
@@ -322,11 +386,39 @@ class Command(BaseCommand):
             action="store_true",
             help="Print per-doc summary counts.",
         )
+        # S2992 v2 item #2 — reclassification mode. Walks every existing row
+        # and re-runs _classify_finding_type on the persisted (text,
+        # source_heading). Dry-run by default (prints distribution + delta);
+        # writes only when `--apply` is set. Safety-first default per
+        # PR #3648 Rigby zoom-out fold.
+        parser.add_argument(
+            "--reclassify-existing",
+            action="store_true",
+            help=(
+                "Skip source-doc ingest; instead walk all DocResearchFinding "
+                "rows and (re-)classify their finding_type. Prints "
+                "distribution + change delta. Requires --apply to persist."
+            ),
+        )
+        parser.add_argument(
+            "--apply",
+            action="store_true",
+            help=(
+                "Only meaningful with --reclassify-existing: actually persist "
+                "the reclassification. Without --apply this mode is a dry-run."
+            ),
+        )
 
     def handle(self, *args, **options) -> None:
         base_dir = Path(settings.BASE_DIR)
         dry_run: bool = bool(options.get("dry_run"))
         verbose: bool = bool(options.get("verbose"))
+        reclassify_existing: bool = bool(options.get("reclassify_existing"))
+        apply_writes: bool = bool(options.get("apply"))
+
+        if reclassify_existing:
+            self._run_reclassify_existing(apply_writes=apply_writes)
+            return
 
         stats = {
             "files_scanned": 0,
@@ -376,6 +468,7 @@ class Command(BaseCommand):
                             "confidence": pf.confidence,
                             "tags": pf.tags,
                             "metadata": pf.metadata,
+                            "finding_type": pf.finding_type,
                         },
                     )
                     if created:
@@ -389,3 +482,47 @@ class Command(BaseCommand):
             f"Created: {stats['created']}  Updated: {stats['updated']}"
             + (" (dry-run)" if dry_run else "")
         )
+
+    def _run_reclassify_existing(self, *, apply_writes: bool) -> None:
+        """Walk all DocResearchFinding rows and re-classify finding_type.
+
+        Prints total row count, proposed distribution, and the change delta
+        (would-flip count). Writes only when `apply_writes=True`.
+        """
+        qs = DocResearchFinding.objects.all().only(
+            "id", "text", "source_heading", "finding_type"
+        )
+        total = qs.count()
+
+        proposed_counts: dict[str, int] = {
+            DocResearchFinding.FINDING_TYPE_DECISION_EVIDENCE: 0,
+            DocResearchFinding.FINDING_TYPE_EXECUTABLE: 0,
+            DocResearchFinding.FINDING_TYPE_UNKNOWN: 0,
+        }
+        flip_count = 0
+        to_update: List[tuple[str, str]] = []
+
+        for row in qs.iterator(chunk_size=500):
+            new_type = _classify_finding_type(row.text, row.source_heading)
+            proposed_counts[new_type] = proposed_counts.get(new_type, 0) + 1
+            if new_type != row.finding_type:
+                flip_count += 1
+                if apply_writes:
+                    to_update.append((str(row.id), new_type))
+
+        self.stdout.write(f"Total rows: {total}")
+        self.stdout.write("Proposed distribution:")
+        for label, count in sorted(proposed_counts.items()):
+            pct = (count * 100.0 / total) if total else 0.0
+            self.stdout.write(f"  {label:>20s}  {count:5d}  ({pct:5.1f}%)")
+        self.stdout.write(f"Rows that would change: {flip_count}")
+
+        if not apply_writes:
+            self.stdout.write("(dry-run — pass --apply to persist)")
+            return
+
+        for finding_id, new_type in to_update:
+            DocResearchFinding.objects.filter(id=finding_id).update(
+                finding_type=new_type
+            )
+        self.stdout.write(f"Applied: {len(to_update)} row(s) updated")
