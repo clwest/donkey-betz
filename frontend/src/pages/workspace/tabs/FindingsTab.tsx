@@ -27,6 +27,7 @@ import { api } from '@/lib/api'
 type FindingStatus = 'open' | 'fixed' | 'dismissed'
 type Confidence = 'high' | 'medium' | 'low'
 type SourceType = 'audit' | 'canonical_summary' | 'implementation_debt'
+type FindingType = 'decision_evidence' | 'executable' | 'unknown'
 
 interface Finding {
   id: string
@@ -38,6 +39,7 @@ interface Finding {
   confidence: Confidence
   tags: string[]
   status: FindingStatus
+  finding_type: FindingType
   resolved_at: string | null
   resolved_by: string | null
   resolution_note: string
@@ -92,6 +94,28 @@ function StatusBadge({ s }: { s: FindingStatus }) {
   )
 }
 
+// S2994 v2 item #6: surface finding_type distinction. `unknown` is the
+// default and adds no signal, so we hide the badge for it.
+function FindingTypeBadge({ t }: { t: FindingType }) {
+  if (t === 'unknown') return null
+  const isEvidence = t === 'decision_evidence'
+  const color = isEvidence
+    ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+    : 'bg-primary-500/20 text-primary-300 border-primary-500/30'
+  const label = isEvidence ? 'Evidence' : 'Executable'
+  const title = isEvidence
+    ? 'Decision-record finding — sending to Rigby produces a re-audit spec, not engineering work'
+    : 'Ready-to-implement finding — sending to Rigby produces an engineering spec'
+  return (
+    <span
+      className={`px-1.5 py-0.5 rounded border text-[10px] uppercase tracking-wide ${color}`}
+      title={title}
+    >
+      {label}
+    </span>
+  )
+}
+
 function FindingRow({
   finding,
   onMark,
@@ -130,6 +154,7 @@ function FindingRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap text-[11px] text-gray-400 mb-1">
             <StatusBadge s={finding.status} />
+            <FindingTypeBadge t={finding.finding_type} />
             <ConfidenceBadge c={finding.confidence} />
             <span className="px-1.5 py-0.5 rounded bg-gray-700/50 border border-gray-600 text-gray-300">
               {finding.domain_slug || '(no domain)'}
@@ -176,14 +201,27 @@ function FindingRow({
         <div className="flex flex-col gap-1 items-end shrink-0">
           {finding.status === 'open' && (
             <>
+              {finding.finding_type === 'decision_evidence' && (
+                <div className="text-[10px] text-amber-300/80 max-w-[9rem] text-right leading-tight mb-0.5">
+                  Decision record — verify boundary before re-audit.
+                </div>
+              )}
               <button
                 onClick={onSend}
                 disabled={sending}
-                className="px-2 py-1 text-xs rounded border border-primary-500/40 bg-primary-500/10 text-primary-300 hover:bg-primary-500/20 disabled:opacity-50 flex items-center gap-1"
-                title="Create spec-shape Deliverable in Donkey Betz workspace"
+                className={`px-2 py-1 text-xs rounded border disabled:opacity-50 flex items-center gap-1 ${
+                  finding.finding_type === 'decision_evidence'
+                    ? 'border-amber-500/40 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20'
+                    : 'border-primary-500/40 bg-primary-500/10 text-primary-300 hover:bg-primary-500/20'
+                }`}
+                title={
+                  finding.finding_type === 'decision_evidence'
+                    ? 'Create a re-audit spec to confirm this boundary still holds'
+                    : 'Create spec-shape Deliverable in Donkey Betz workspace'
+                }
               >
                 {sending ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} />}
-                Send to Rigby
+                {finding.finding_type === 'decision_evidence' ? 'Verify evidence' : 'Send to Rigby'}
               </button>
               <button
                 onClick={() => onMark('fixed')}
@@ -235,6 +273,7 @@ export function FindingsTab() {
   const [status, setStatus] = useState<'open' | 'fixed' | 'dismissed' | 'all'>('open')
   const [domainSlug, setDomainSlug] = useState('')
   const [sourceType, setSourceType] = useState<'' | SourceType>('')
+  const [findingType, setFindingType] = useState<'' | FindingType>('')
   const [minConfidence, setMinConfidence] = useState<'' | 'high' | 'medium'>('medium')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -267,6 +306,7 @@ export function FindingsTab() {
         }
         if (domainSlug) params.domain_slug = domainSlug
         if (sourceType) params.source_type = sourceType
+        if (findingType) params.finding_type = findingType
         if (minConfidence) params.min_confidence = minConfidence
         if (debouncedSearch) params.search = debouncedSearch
         const resp = await api.get<ListResponse>('/repo/doc-research-findings/', { params })
@@ -284,7 +324,7 @@ export function FindingsTab() {
     return () => {
       cancelled = true
     }
-  }, [status, domainSlug, sourceType, minConfidence, debouncedSearch, page, pageSize])
+  }, [status, domainSlug, sourceType, findingType, minConfidence, debouncedSearch, page, pageSize])
 
   const handleMark = async (finding: Finding, next: FindingStatus) => {
     setMarkingId(finding.id)
@@ -319,9 +359,15 @@ export function FindingsTab() {
       setFindings(prev =>
         prev.map(f => (f.id === finding.id ? resp.data.finding : f)),
       )
+      // S2994 v2 item #6: reinforce the S2993 shape distinction by naming
+      // the deliverable variant in the toast, not just its ID.
+      const kind =
+        finding.finding_type === 'decision_evidence'
+          ? 'Evidence-capture'
+          : 'Engineering spec'
       setToast({
         kind: 'ok',
-        text: `Deliverable created (${resp.data.deliverable_id.slice(0, 8)})`,
+        text: `${kind} deliverable created (${resp.data.deliverable_id.slice(0, 8)})`,
       })
     } catch (err: any) {
       setToast({
@@ -392,6 +438,20 @@ export function FindingsTab() {
           <option value="audit">Source: Audit</option>
           <option value="canonical_summary">Source: Canonical Summary</option>
           <option value="implementation_debt">Source: Implementation Debt</option>
+        </select>
+        <select
+          value={findingType}
+          onChange={e => {
+            setFindingType(e.target.value as any)
+            setPage(1)
+          }}
+          className="text-xs bg-gray-900 border border-gray-700 rounded px-2 py-1 text-gray-200"
+          title="Filter by classification axis (decision_evidence / executable / unknown)"
+        >
+          <option value="">Type: Any</option>
+          <option value="decision_evidence">Type: Evidence (decision record)</option>
+          <option value="executable">Type: Executable</option>
+          <option value="unknown">Type: Unknown</option>
         </select>
         <select
           value={minConfidence}
