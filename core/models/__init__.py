@@ -85,6 +85,10 @@ from ..models_deliverables import (
     ContentPacketItem,
 )
 
+# S2989 Phase B: docs/research/ finding registry (distinct from
+# models_audit_tracking.AuditFinding which serves security-audit reports)
+from ..models_audit_findings import DocResearchFinding
+
 # Import audit tracking models (Session 819 - Audit Tracking System)
 from ..models_audit_tracking import (
     AuditReport,
