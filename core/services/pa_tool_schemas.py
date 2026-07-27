@@ -423,6 +423,19 @@ PA_TOOL_SCHEMAS = [
                         "multi-tenant."
                     ),
                 },
+                "use_user_auth": {
+                    "type": "boolean",
+                    "description": (
+                        "Inject the calling user's DRF Token as "
+                        "`Authorization: Token <key>` so authenticated "
+                        "internal endpoints (e.g. /api/repo/...) return 200 "
+                        "instead of 401. Default false. Ignored when the "
+                        "caller already supplied an Authorization header. "
+                        "If the user has no Token row, the request proceeds "
+                        "unauthenticated and the endpoint's 401 is returned "
+                        "as-is (fail-open). S3000 v2 item #5."
+                    ),
+                },
             },
             "required": ["url"],
         },
