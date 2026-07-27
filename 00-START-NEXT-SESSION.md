@@ -2,74 +2,75 @@
 
 ---
 
-## READ THIS FIRST — SESSION 2992 CLOSED. Findings-surface v2 item #2 shipped end-to-end.
+## READ THIS FIRST — SESSION 2993 CLOSED. Findings-surface v2 item #3 shipped end-to-end.
 
-**Two feature PRs merged this session (Flow B — spec-originated engineering work from S2991's v2 list).**
+**One feature PR merged this session (Flow B — spec-originated engineering work from S2991's v2 list).**
 
-**PR #3650 (`5f4652f8d`) — v2 item #2 PR (a): additive `finding_type` taxonomy + regex classifier at ingest.** Claude ran ORM-direct signal validation on the 900-row corpus BEFORE framing (spec's literal `"blocks downstream X"` had 0 matches). Rigby T1 SIGN sampled 10 real rows via `orm_inspect_tool` and flagged that plainly actionable findings without `.py:line` anchors were collapsing into `unknown` — widened `executable` regex to include imperative verbs (`rename|delete|remove|add|implement|wire|fix|refactor|migrate|bump|pin|extract|split|merge|backfill|deprecate`) before code. Shipped shape: `finding_type` = classification axis orthogonal to `status` (lifecycle) and `close_mode` (closure mechanism); 3 values (`decision_evidence` / `executable` / `unknown`); default `unknown`; `db_index=True`. Migration 0400 schema-only (default auto-populates 900 rows). `--reclassify-existing` command mode defaults to dry-run (`--apply` required to persist) per PR #3648 zoom-out fold. Serializer + list-endpoint filter surface `finding_type`. 21 tests. Rigby A2 SIGN: AGREE (real tool_runs: `describe_model` + `count_by` + 10-row sample; 8/10 gut-match with 2 acceptable misses noted for future signal tweak).
+**PR #3653 (`f533cacf8`) — v2 item #3: spec-generator prompt branches on `finding_type`.** `core/services/briefing_spec_generator.generate_spec_body` now accepts optional `finding_type` kwarg. `decision_evidence` findings get an evidence-capture prompt (records boundary/verdict; acceptance criteria become verification steps). `executable` / `unknown` / `None` / unrecognized values fall through to the pre-S2993 engineering-spec prompt. Same JSON schema + same markdown section headers so downstream renderers/consumers stay identical. Send-to-rigby view forwards `finding.finding_type`. Metadata extras carry `spec_prompt_shape` + `finding_type_used` for audit. Fail-open placeholder copy diverges per shape (evidence findings don't nudge to "author acceptance criteria"). 19 new tests + 44 pre-existing tests green. Rigby T1 SIGN sampled 3 real `decision_evidence` corpus rows via `orm_inspect_tool` before framing; verified rows read as boundary/contract evidence statements. Rigby A2 SIGN independently POSTed nothing — she ran `orm_inspect_tool filter model=Deliverable metadata__has_key=spec_prompt_shape` + `deliverable_tool detail` on the 3 real send-to-rigby deliverables I dispatched post-merge (real gpt-5-mini roundtrip; SERVER_NAME='localhost'); confirmed shape mapping AGREE per-row AND eyeballed the actual LLM output of the decision_evidence deliverable (`e51207dc-…`) — goal reads "Record that…" (capture, not implement); all 4 acceptance criteria are verification steps.
 
-**PR #3651 (`ab21d7a88`) — v2 item #2 PR (b): backfill on 900-row corpus.** Data migration 0401 re-runs `_classify_finding_type` over every existing row via `apps.get_model(...).iterator(chunk_size=500)`; only flips rows whose classifier output differs. Reverse resets non-unknown rows to `unknown` (pragmatic — pre-migration state was uniformly `unknown`). Post-migration distribution matches pre-merge dry-run exactly: **139 decision_evidence (15.4%) / 138 executable (15.3%) / 623 unknown (69.2%) / 900 total**. Rigby final verify confirmed via `count_by(finding_type)`.
-
-**HEAD at close:** `ab21d7a88` + docs cascade PR (this file + handoff + wrapper pin bump per `feedback_commit_wrapper_pin_bump_at_close`). Recycle-all clean at `sha=ab21d7a8846b` post-PR-#3651.
+**HEAD at close:** `f533cacf8` + docs cascade PR (this file + handoff + wrapper pin bump per `feedback_commit_wrapper_pin_bump_at_close`). Recycle-all clean at `sha=f533cacf8be0` post-PR-#3653.
 
 Full context:
-- `docs/handoffs/SESSION_2992_FINDING_TYPE_CLASSIFIER_V2_ITEM_2.md`
-- `docs/handoffs/SESSION_2991_FINDINGS_SURFACE_V2_ITEMS_1_AND_5.md` (prior)
+- `docs/handoffs/SESSION_2993_SPEC_PROMPT_BRANCHING_V2_ITEM_3.md`
+- `docs/handoffs/SESSION_2992_FINDING_TYPE_CLASSIFIER_V2_ITEM_2.md` (prior)
 
 ---
 
-## S2993 primary directive — Continue Findings-surface v2 sequence
+## S2994 primary directive — pick between two natural next openers
 
-**With #1 (close_mode), #2 (finding_type classifier), and #5 (orm_inspect_tool allowlist) shipped, item #3 (spec-generator prompt branching on finding_type) is the natural next opener** — it's the smallest remaining item (~30–60 min per S2992 handoff estimate), directly consumes #2's `finding_type` axis, and unblocks Rigby-SIGN UX improvements downstream.
+With #1 (close_mode) + #2 (finding_type classifier + backfill) + #3 (prompt branching) + #5 (orm_inspect_tool allowlist) shipped, the remaining v2 sequence items are:
 
-### Highest-leverage next PR: v2 item #3 — spec-generator prompt branching on finding_type
+### Option A — v2 item #6: Rigby-SIGN nudge in UI for `finding_type=decision_evidence` (~30 min)
 
-The `send-to-rigby` endpoint at `core/views_doc_research_findings.py:194` currently routes every finding through `generate_spec_body` with the same template regardless of shape. Branch on `finding_type`:
-- **`decision_evidence`** — swap template to `evidence_capture` (or equivalent). These are decision-record findings; the spec output should capture the boundary/verdict, not propose new engineering work.
-- **`executable`** — keep existing engineering-spec template. These are ready-to-implement action items.
-- **`unknown`** — keep existing template (default).
+Now unblocked by S2993. The UI-side polish that lets Rigby surface a "verify evidence still holds" nudge for decision_evidence findings before dispatching a re-audit. Smallest remaining piece. Small React/frontend delta likely.
 
-Look at `core/services/briefing_spec_generator.generate_spec_body` signature + templates before deciding whether to add a new template file or parameterize the existing one.
+### Option B — v2 item #4: staleness detector at ingest (~1 session)
 
-**Sub-PR shape:** likely a single PR (~30–60 min). Includes 3–5 tests verifying template selection per `finding_type`. Rigby A2 SIGN post-merge: send 3 real findings via `send-to-rigby` (one per class) and verify the deliverable shape differs.
+Walk `file:line` + identifier references, verify still-matches at HEAD, tag `staleness=suspected` on mismatch. Batch pass over existing 900 findings after landing. **Also needs `--dry-run` mode per PR #3648 zoom-out fold + `feedback_local_truth_no_production`.** Backend-only. Bigger unlock: it lets Rigby quickly flag when a `finding` may be pointing at code that's since moved/renamed.
 
-### Ordered follow-on priorities (dependency-aware)
+**Recommendation:** Option A if you want a quick UI-visible win that closes the "surface finding_type value to human" loop; Option B if you want more backend leverage first (staleness = new orthogonal axis, useful in Rigby SIGN workflows). Both are cleanly scoped; pick one and skip framing debate.
 
-4. **Staleness detector at ingest** — walk `file:line` + identifier references, verify still-matches at HEAD, tag `staleness=suspected` on mismatch. Batch pass over existing 900 findings after landing. **Also needs `--dry-run` mode per PR #3648 zoom-out fold.** ~1 session.
+### Ordered follow-on priorities (dependency-aware) after either choice
 5. **`web_fetch_tool` session cookies (deferred half of v2 item #5)** — bigger design change; security review needed. Not blocking; open when Chris signals we need HTTP-shape verification past the ORM boundary.
-6. **Rigby-SIGN nudge in UI for `finding_type=decision_evidence`** — surface a "verify evidence still holds" nudge. Now unblocked by #2. ~30 min.
-7. **F-A2-equivalent for downstream consumers** — verify consumers referenced in ACs actually exist. ~30–60 min.
-8. **Wire-through smoke-check AC for half-wired findings** — auto-add browser-session verification. ~30 min.
+6. **F-A2-equivalent for downstream consumers** — verify consumers referenced in ACs actually exist. ~30–60 min.
+7. **Wire-through smoke-check AC for half-wired findings** — auto-add browser-session verification. ~30 min.
+8. **Executable-prompt tightening (S2993 Fold C future_trigger)** — make `executable` acceptance_criteria more code-testable now that we've seen evidence_capture ship cleanly.
+9. **Rigby Tool Gap Ledger entry from S2993 Fold B** — cheap dry-run preview endpoint for `send-to-rigby` that returns `would_use_shape / finding_type_used / spec_prompt_version` without calling the LLM. Would let Rigby preview a dispatch before burning tokens.
 
 **Standard opener:**
 1. Run `context-kit orient` (auto-injected).
 2. Absorb this file + MEMORY.md + CLAUDE.md.
-3. Read the S2992 handoff in full — especially "v2 gaps surfaced" section for the two carry-forward signal-tweak candidates (`boundary drift`, `VERIFIED at HEAD`).
+3. Read the S2993 handoff in full — especially SIGN discipline section + fold classifications.
 4. Optional pre-response state probes:
-   - `git log --oneline -6` — should show docs cascade → `ab21d7a88` (PR #3651) → `5f4652f8d` (PR #3650) → `8debe2e5e` (S2991 close) → `7a895c871` → `6f9f298b5`.
-   - Rigby can now query directly: `orm_inspect_tool action=count_by model=DocResearchFinding field=finding_type` should return `{unknown: 623, decision_evidence: 139, executable: 138}`.
+   - `git log --oneline -6` — should show docs cascade → `f533cacf8` (PR #3653) → `527f17664` (S2992 close) → `ab21d7a88` (PR #3651) → `5f4652f8d` (PR #3650) → `8debe2e5e` (S2991 close).
+   - Rigby ORM-verify: `orm_inspect_tool action=filter model=Deliverable filters={"metadata__has_key":"spec_prompt_shape"} order_by=-created_at limit=5` — should return the 3 S2993 A2 SIGN deliverables (`6c43078e-…` / `3f42fefa-…` / `e51207dc-…`).
    - `curl -sS http://localhost:8000/api/schema/ | head -c 200` — drf-spectacular schema still live.
 
-**Suggested first PR shape for S2993:** #3 (prompt branching) as a single PR. Read the existing `generate_spec_body` first to decide template-file-per-class vs branching-inside-existing-template. Route framing through Rigby before code.
+**Suggested first-turn shape for S2994:** ask Chris "A or B?" (Option A = UI nudge / Option B = staleness detector). Both are ~1-session-or-less; both consume the S2993 shape directly.
 
 ---
 
-## S2993 carry-forward seeds (Chris picks whether to open — not gated on the v2 arc)
+## S2994 carry-forward seeds (Chris picks whether to open — not gated on the v2 arc)
 
-### New carry-forward from S2992
+### New carry-forward from S2993
 
-- **Signal-tweak follow-up for `finding_type` classifier.** Two acceptable-misses surfaced during Rigby A2 SIGN: (1) `boundary drift` phrasing lands in `unknown` (regex expects `boundary (observation|violation)`); (2) `VERIFIED at HEAD` evidence records land in `executable` because they cite `file:line`. Neither blocking. Combine into a single signal-tweak PR if a 2nd independent trigger surfaces.
+- **Fold B ledger candidate — dry-run preview for send-to-rigby.** Cheap endpoint that returns `would_use_shape / finding_type_used / spec_prompt_version` without calling the LLM. Would let Rigby (and the UI) preview a dispatch before spending tokens. Ledger, not blocking.
+- **Fold C future_trigger — executable-prompt tightening.** Rigby correctly gated: don't tighten `executable` acceptance_criteria in the same PR as evidence-branching. Open as a distinct follow-on once we have quality stats on evidence_capture output (Rigby A2 sample was 1 deliverable; watch for the 2nd–3rd real dispatch to confirm the LLM stays on-shape).
+
+### Carry-forward from S2992 (STILL OPEN)
+
+- **Signal-tweak follow-up for `finding_type` classifier.** Two acceptable-misses surfaced during Rigby A2 SIGN at S2992: (1) `boundary drift` phrasing lands in `unknown` (regex expects `boundary (observation|violation)`); (2) `VERIFIED at HEAD` evidence records land in `executable` because they cite `file:line`. Neither blocking. Combine into a single signal-tweak PR if a 2nd independent trigger surfaces.
 - **Data-migration-vs-management-command pattern.** PR #3651 chose data migration for cross-env reproducibility (matches migration 0399 backfill pattern). Alternative was live `--apply` invocation. If future one-shot backfills recur, codify the "data migration when reproducibility matters; --apply for signal iteration" split.
 
 ### Carry-forward from S2991 (STILL OPEN)
 
-- **Dry-run counts pattern for future bulk-write migrations.** PR #3651 followed this exactly (dry-run default; `--apply` required). If pattern surfaces on a 3rd bulk-write migration, codify as a substrate rule.
-- **Contract-lock-in guardrail on `close_mode` and now `finding_type`.** Both are in serializer payload — renaming/removing values becomes breaking-change territory. Watch for frontend/PA consumers that read either.
+- **Dry-run counts pattern for future bulk-write migrations.** If pattern surfaces on a 3rd bulk-write migration, codify as a substrate rule.
+- **Contract-lock-in guardrail on `close_mode`, `finding_type`, and now `spec_prompt_shape` + `finding_type_used`.** All are in Deliverable/finding payloads — renaming/removing values becomes breaking-change territory. Watch for frontend/PA consumers that read any of them.
 - **Freshness axis 2nd-trigger clause.** Codified S2991; still no 2nd trigger. If any future finding surfaces "stale-corrected" state, add orthogonal `evidence_freshness` field; do NOT expand `close_mode` values.
 
 ### Carry-forward from S2989-S2990 (STILL OPEN)
 
-- **`web_fetch_tool` session cookies** — deferred half of v2 item #5 (see #5 in v2 list above).
+- **`web_fetch_tool` session cookies** — deferred half of v2 item #5 (see #5 in follow-on list above).
 - **F-D3-tracker-scope wire-up** — activate OpsRun tracker for PA turns. ~1 session. Highest-leverage backend seed.
 - **F-D2-broad LLM-bypass audit spec** — evaluate user-facing personalization impact of each `enforce_real_ai` / `chat.completions` / `responses.create` non-PA callsite. Est ~1 session for the audit doc.
 - **Reconcile Chris's 1805 cap-drift via `memory_hygiene_audit --apply`.** ~30 min diagnostic + apply.
@@ -98,20 +99,20 @@ Look at `core/services/briefing_spec_generator.generate_spec_body` signature + t
 ## Cross-cutting workflow references
 
 - **Constitutional governance chain:** CLAUDE.md constitutional blockquote (Playbook v0.10.0). No amendments this session.
-- **Spec→ship contract:** PLAYBOOK-7.7.1 (9 phases + abort-early clause). S2992 was Flow B (spec-originated from S2991's v2 list); joint framing → Chris yes/no → execute → A2 SIGN → merge → recycle for both PRs. No phase skipped.
-- **SIGN evidence discipline:** PLAYBOOK-7.7.2 (tool_runs + line citations mandatory for T1/A2). Rigby returned real `orm_inspect_tool` tool_runs on T1 framing (10-row corpus sample), A2 verify (describe_model + count_by + 10-row classification cross-check), AND final post-PR-b verify. Zero rubber-stamping across three SIGN cycles.
-- **Chris-facing decision framing:** PLAYBOOK-7.7.3 (plain english; "do we lose anything?" + "is it more work later?"; ≤1 decision). Chris ratification was one yes/no after Claude+Rigby joint agreement.
+- **Spec→ship contract:** PLAYBOOK-7.7.1 (9 phases + abort-early clause). S2993 was Flow B (spec-originated from S2991's v2 list); joint framing → Chris directive-already-ratified → execute → A2 SIGN → merge → recycle. No phase skipped.
+- **SIGN evidence discipline:** PLAYBOOK-7.7.2 (tool_runs + line citations mandatory for T1/A2). Rigby returned real `orm_inspect_tool` tool_runs on T1 framing (3-row `decision_evidence` corpus sample), A2 verify (`orm_inspect_tool filter` + `deliverable_tool detail` on real send-to-rigby deliverables). Zero rubber-stamping across both SIGN cycles.
+- **Chris-facing decision framing:** PLAYBOOK-7.7.3 (plain english; "do we lose anything?" + "is it more work later?"; ≤1 decision). No new Chris decision required this session; the S2992-close directive was already ratified.
 - **Cross-repo application:** PLAYBOOK-7.7.4. Not exercised this session.
 - **Close-ceremony PR discipline:** PLAYBOOK-7.4.1 through 7.4.4.
-- **Recycle discipline** (S2978 refinement to PLAYBOOK-7.4.4): `make recycle-all` after each merge. Both diffs backend-only, so HEAD-range path-diff detection correctly skipped frontend rebuild.
-- **`feedback_verify_at_raw_orm_before_trusting_tool_no_data`** — Claude ran ORM-direct signal validation BEFORE framing (spec's literal `"blocks downstream X"` had 0 matches). Prevented shipping a classifier that would over-collapse.
+- **Recycle discipline** (S2978 refinement to PLAYBOOK-7.4.4): `make recycle-all` after each merge. Backend-only diff, so HEAD-range path-diff detection correctly skipped frontend rebuild.
+- **`feedback_verify_at_raw_orm_before_trusting_tool_no_data`** — Rigby T1 SIGN Ask #1 verified 3 real decision_evidence corpus rows via `orm_inspect_tool` before framing. Prevented shipping a prompt reframe against imaginary content.
 
 ---
 
 ## Wrapper pin note
 
-The active PA conversation pin at S2992 close is minted by `session_lifecycle close` at close time and the wrapper `tools/pa_local.sh` rewritten atomically. Commit the wrapper diff in the S2992 close cascade PR per `feedback_commit_wrapper_pin_bump_at_close`.
+The active PA conversation pin at S2993 close is minted by `session_lifecycle close` at close time and the wrapper `tools/pa_local.sh` rewritten atomically. Commit the wrapper diff in the S2993 close cascade PR per `feedback_commit_wrapper_pin_bump_at_close`.
 
 ---
 
-**Reminder — the workflow is constitutional.** S2992 was Flow B (spec-originated). Joint framing (Claude+Rigby) → Chris yes/no → execute → A2 SIGN → merge → recycle was the shape for both PRs. Rigby's T1 SIGN fold (widen `executable` regex beyond `.py:line` to include imperative verbs) is the canonical example this session of PLAYBOOK-7.7.2 SIGN discipline preventing a suboptimal ship — worth referencing in future framings when spec signals don't match corpus reality (ORM-direct validation before framing catches this cheaply).
+**Reminder — the workflow is constitutional.** S2993 was Flow B (spec-originated). Chris directive from S2992-close → Claude+Rigby joint framing → execute → Rigby A2 SIGN → merge → recycle was the shape. Rigby's T1 SIGN discipline (sampling 3 real `decision_evidence` corpus rows before I framed the reframe) is the canonical example this session of `feedback_verify_at_raw_orm_before_trusting_tool_no_data` — worth referencing in future prompt-shape work when spec directives describe LLM behavior without corpus grounding.
