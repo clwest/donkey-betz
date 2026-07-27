@@ -251,11 +251,18 @@ def canonical_briefing_send_to_rigby_view(request):
     citations: List[Dict[str, Any]] = [c for c in raw_citations if isinstance(c, dict)]
 
     title = _derive_title(bullet_text)
-    content = _compose_action_item_body(
-        anchor_path=anchor_path,
+
+    # S2989 Phase A: generate spec-shape body via briefing_spec_generator.
+    # Fail-open — the generator returns a placeholder-shape body on any
+    # LLM/schema failure and marks it in metadata, so downstream never
+    # sees a shape mismatch.
+    from core.services.briefing_spec_generator import generate_spec_body
+
+    content, spec_extras = generate_spec_body(
+        bullet_text=bullet_text,
         section_key=section_key,
         section_title=section_title,
-        bullet_text=bullet_text,
+        anchor_path=anchor_path,
         citations=citations,
     )
 
@@ -300,6 +307,7 @@ def canonical_briefing_send_to_rigby_view(request):
                 "section_key": section_key,
                 "section_title": section_title,
                 "citation_count": len(citations),
+                **spec_extras,
             },
             preserve_title=True,
             raise_on_gated=True,
