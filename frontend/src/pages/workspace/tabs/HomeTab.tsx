@@ -23,15 +23,21 @@
  * value the spec doesn't cover).
  */
 
-import { useMemo } from 'react'
+import { useMemo, useState, lazy, Suspense } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import {
-  Activity, AlertTriangle, ArrowRight, BookOpen, ClipboardList,
-  Clock, FileText, Layers, Loader2, Package, Plus, Sparkles, Star,
-  Target, XCircle,
+  Activity, AlertTriangle, ArrowRight, BookOpen, ChevronDown, ChevronRight,
+  ClipboardList, Clock, FileText, GitBranch, Layers, Loader2, Package,
+  Plus, Sparkles, Star, Target, XCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { api } from '@/lib/api'
+
+// S2984 PR3: DocumentViewer lazy-loaded — arc entrypoints open in the
+// in-app viewer per spec §Frontend / Chris directive #3 (no GitHub links).
+const LazyDocumentViewer = lazy(() =>
+  import('@/components/platform/DocumentViewer').then((m) => ({ default: m.DocumentViewer })),
+)
 
 interface HomeTabProps {
   activeWorkspace: { id: string; name: string } | null
@@ -408,6 +414,242 @@ function LibraryModule({
 }
 
 // --------------------------------------------------------------------- //
+// Section: RESEARCH ARCS (S2984 PR3) — repo docs/research/domains/*
+// --------------------------------------------------------------------- //
+
+interface ArcEntrypoint {
+  label: string
+  path: string
+}
+
+interface ResearchArc {
+  arc_id: string
+  title: string
+  path: string
+  status: 'active' | 'hanging' | 'done' | 'stale'
+  last_touched_at: string | null
+  days_since_touched: number | null
+  entrypoints: ArcEntrypoint[]
+  signals: {
+    has_canonical_summary: boolean
+    open_questions_markers: number
+    todo_hits: number
+  }
+}
+
+interface ResearchArcsResponse {
+  generated_at: string
+  root: string
+  active_days: number
+  stale_days: number
+  arcs: ResearchArc[]
+}
+
+const STATUS_GROUPS: Array<{
+  key: ResearchArc['status']
+  label: string
+  chip: string
+  hint: string
+}> = [
+  {
+    key: 'active',
+    label: 'Active',
+    chip: 'bg-accent-green/20 text-accent-green border-accent-green/30',
+    hint: 'Touched in the last 14 days.',
+  },
+  {
+    key: 'hanging',
+    label: 'Hanging',
+    chip: 'bg-accent-amber/20 text-accent-amber border-accent-amber/30',
+    hint: 'Open questions / TODOs, or no canonical summary.',
+  },
+  {
+    key: 'done',
+    label: 'Done',
+    chip: 'bg-primary-500/20 text-primary-400 border-primary-500/30',
+    hint: 'Canonical summary present, no open questions, not stale.',
+  },
+  {
+    key: 'stale',
+    label: 'Stale',
+    chip: 'bg-gray-500/20 text-gray-500 border-gray-500/30',
+    hint: 'Not touched in 60+ days (or no timestamp available).',
+  },
+]
+
+function touchedLabel(arc: ResearchArc): string {
+  if (arc.days_since_touched === null) return 'Never touched'
+  if (arc.days_since_touched === 0) return 'Touched today'
+  if (arc.days_since_touched === 1) return 'Touched 1 day ago'
+  return `Touched ${arc.days_since_touched} days ago`
+}
+
+function ArcRow({
+  arc,
+  onOpenPath,
+}: {
+  arc: ResearchArc
+  onOpenPath: (path: string, label: string) => void
+}) {
+  return (
+    <li className="rounded-md bg-dark-bg/60 border border-dark-border p-2.5 hover:border-primary-500/40 transition-colors">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-medium truncate" title={arc.arc_id}>{arc.title}</div>
+          <div className="text-xs text-gray-500 mt-0.5">{touchedLabel(arc)}</div>
+        </div>
+        {arc.signals.open_questions_markers > 0 && (
+          <span
+            className="text-[10px] px-1.5 py-0.5 rounded bg-accent-amber/15 text-accent-amber border border-accent-amber/30 flex-shrink-0"
+            title={`${arc.signals.open_questions_markers} TODO/TBD/WIP hits across arc`}
+          >
+            {arc.signals.open_questions_markers}
+          </span>
+        )}
+      </div>
+      {arc.entrypoints.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-2">
+          {arc.entrypoints.map((entry) => (
+            <button
+              key={entry.path}
+              type="button"
+              onClick={() => onOpenPath(entry.path, `${arc.title} — ${entry.label}`)}
+              className="text-[11px] px-1.5 py-0.5 rounded border border-dark-border text-gray-300 hover:text-primary-300 hover:border-primary-500/40 transition-colors flex items-center gap-1"
+              title={entry.path}
+            >
+              <FileText size={10} />
+              {entry.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </li>
+  )
+}
+
+function ArcStatusColumn({
+  group,
+  arcs,
+  onOpenPath,
+}: {
+  group: (typeof STATUS_GROUPS)[number]
+  arcs: ResearchArc[]
+  onOpenPath: (path: string, label: string) => void
+}) {
+  const TOP_N = 5
+  const [expanded, setExpanded] = useState(false)
+  const visible = expanded ? arcs : arcs.slice(0, TOP_N)
+
+  return (
+    <div className="rounded-lg border border-dark-border bg-dark-bg/40 p-3 space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className={cn('text-xs px-1.5 py-0.5 rounded border', group.chip)}>
+            {group.label}
+          </span>
+          <span className="text-xs text-gray-500">{arcs.length}</span>
+        </div>
+        {arcs.length > TOP_N && (
+          <button
+            type="button"
+            onClick={() => setExpanded((e) => !e)}
+            className="text-xs text-primary-400 hover:text-primary-300 flex items-center gap-0.5"
+          >
+            {expanded ? (<><ChevronDown size={12} /> Less</>) : (<><ChevronRight size={12} /> All</>)}
+          </button>
+        )}
+      </div>
+      {arcs.length === 0 ? (
+        <p className="text-xs text-gray-500 italic py-1">None.</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {visible.map((arc) => (
+            <ArcRow key={arc.arc_id} arc={arc} onOpenPath={onOpenPath} />
+          ))}
+        </ul>
+      )}
+    </div>
+  )
+}
+
+function ResearchArcsModule({
+  onOpenPath,
+}: {
+  onOpenPath: (path: string, label: string) => void
+}) {
+  const arcsQuery = useQuery<ResearchArcsResponse>({
+    queryKey: ['repo-research-arcs'],
+    queryFn: async () => {
+      const res = await api.get('/repo/research/arcs/')
+      return res.data as ResearchArcsResponse
+    },
+    // Backend caches 30s; refetch on a slightly longer interval so a
+    // second tab-open shares the same warm entry.
+    refetchInterval: 60_000,
+    retry: false,
+  })
+
+  // Group arcs by status — sorted within each group by recency (already
+  // deterministic on the backend by arc_id, so we re-sort here by
+  // last_touched_at DESC per spec §Frontend "Sort within group").
+  const grouped = useMemo(() => {
+    const out: Record<ResearchArc['status'], ResearchArc[]> = {
+      active: [], hanging: [], done: [], stale: [],
+    }
+    for (const arc of arcsQuery.data?.arcs ?? []) {
+      out[arc.status].push(arc)
+    }
+    for (const status of Object.keys(out) as ResearchArc['status'][]) {
+      out[status].sort((a, b) => {
+        const at = a.last_touched_at ?? ''
+        const bt = b.last_touched_at ?? ''
+        return bt.localeCompare(at)
+      })
+    }
+    return out
+  }, [arcsQuery.data])
+
+  return (
+    <div className="card space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <GitBranch size={18} className="text-primary-400" />
+          <h2 className="text-lg font-semibold">Research Arcs (Repo)</h2>
+        </div>
+        <span className="text-xs text-gray-500">
+          Auto-detected from <code className="font-mono">docs/research/domains</code>
+        </span>
+      </div>
+
+      {arcsQuery.isLoading ? (
+        <div className="flex items-center justify-center py-6">
+          <Loader2 className="animate-spin text-primary-400" size={20} />
+        </div>
+      ) : arcsQuery.isError || !arcsQuery.data ? (
+        <p className="text-sm text-gray-500 italic py-2">
+          Couldn't load research arcs — the doc tree may be unreachable in this environment.
+        </p>
+      ) : arcsQuery.data.arcs.length === 0 ? (
+        <p className="text-sm text-gray-500 italic py-2">
+          No research arcs found under <code className="font-mono">docs/research/domains</code>.
+        </p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {STATUS_GROUPS.map((group) => (
+            <ArcStatusColumn
+              key={group.key}
+              group={group}
+              arcs={grouped[group.key]}
+              onOpenPath={onOpenPath}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// --------------------------------------------------------------------- //
 // Section: GUIDED ACTIONS (stub — PR4 wires the buttons)
 // --------------------------------------------------------------------- //
 
@@ -500,6 +742,10 @@ function GreetingBand({ workspaceName, boot }: { workspaceName: string; boot: Bo
 export default function HomeTab({ activeWorkspace, onNavigateTab }: HomeTabProps) {
   const wsId = activeWorkspace?.id
 
+  // S2984 PR3: doc viewer slide-out state — arc entrypoint clicks feed here.
+  const [docViewer, setDocViewer] = useState<{ path: string; title: string } | null>(null)
+  const openArcDoc = (path: string, title: string) => setDocViewer({ path, title })
+
   const snapshotQuery = useQuery<HomeSnapshot>({
     queryKey: ['workspace-home-snapshot', wsId],
     queryFn: async () => {
@@ -560,12 +806,27 @@ export default function HomeTab({ activeWorkspace, onNavigateTab }: HomeTabProps
     <div className="space-y-5">
       <GreetingBand workspaceName={snapshot.workspace.name} boot={bootQuery.data} />
 
+      {/* S2984 PR3: research arcs — full-width, above the 2×2 grid per
+          spec §Frontend "near the top of Home". */}
+      <ResearchArcsModule onOpenPath={openArcDoc} />
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <NowModule data={snapshot.now} />
         <ActiveWorkModule data={snapshot.active_work} onNavigateTab={onNavigateTab} />
         <LibraryModule data={snapshot.library} onNavigateTab={onNavigateTab} />
         <GuidedActionsModule />
       </div>
+
+      {/* S2984 PR3: in-app doc viewer for arc entrypoints. Lazy-loaded so
+          the DocumentViewer bundle only downloads when an arc is clicked. */}
+      <Suspense fallback={null}>
+        <LazyDocumentViewer
+          documentPath={docViewer?.path ?? null}
+          title={docViewer?.title}
+          isOpen={docViewer !== null}
+          onClose={() => setDocViewer(null)}
+        />
+      </Suspense>
     </div>
   )
 }
