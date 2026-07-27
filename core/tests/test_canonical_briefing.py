@@ -508,11 +508,34 @@ class CanonicalBriefingSendToRigbyTests(TestCase):
     def test_happy_path_creates_deliverable_without_diagnostic_flag(self) -> None:
         from core.models_deliverables import Deliverable
 
-        resp = self.client.post(
-            self.ENDPOINT,
-            data=json.dumps(self._valid_body()),
-            content_type="application/json",
-        )
+        # S2989 Phase A: patch the LLM call so the spec generator produces
+        # a deterministic spec body without hitting OpenAI. The endpoint
+        # code path is otherwise identical to prod.
+        spec_json = json.dumps({
+            "goal": "Investigate follow-up X and ship the fix.",
+            "context": "Bullet references a pending audit follow-up in the memory arc.",
+            "open_question": "Whether to gate the fix behind a flag.",
+            "files_implicated": [
+                {
+                    "path": "docs/research/domains/memory/1300_memory_domain_scoping.md",
+                    "source": "citation",
+                }
+            ],
+            "acceptance_criteria": [
+                "Follow-up X is tracked in the finding row.",
+                "Fix ships behind a flag defaulting off.",
+                "Tests cover both flag states.",
+            ],
+        })
+        with patch(
+            "core.services.briefing_spec_generator._call_spec_llm",
+            return_value=spec_json,
+        ):
+            resp = self.client.post(
+                self.ENDPOINT,
+                data=json.dumps(self._valid_body()),
+                content_type="application/json",
+            )
         self.assertEqual(resp.status_code, 201, resp.content[:400])
         payload = resp.json()
         self.assertEqual(payload["deliverable_type"], "briefing_action_item")
@@ -533,3 +556,84 @@ class CanonicalBriefingSendToRigbyTests(TestCase):
         )
         self.assertIsNone(d.diagnostic_code)
         self.assertIn("next_actions", d.tags)
+
+        # S2989 Phase A: spec-shape sections must be rendered.
+        for header in (
+            "## Goal", "## Context", "## Open question",
+            "## Files implicated", "## Acceptance criteria", "## Evidence",
+        ):
+            self.assertIn(header, d.content, f"missing spec section {header}")
+        # Metadata carries llm_success + schema version.
+        self.assertTrue(d.metadata.get("llm_success"))
+        self.assertEqual(d.metadata.get("spec_schema_version"), "SPEC_V1")
+
+    def test_llm_failure_falls_open_with_placeholder_shape(self) -> None:
+        """F-A1 fail-open: LLM raises → placeholder spec with same layout."""
+        from core.models_deliverables import Deliverable
+
+        with patch(
+            "core.services.briefing_spec_generator._call_spec_llm",
+            side_effect=RuntimeError("openai boom"),
+        ):
+            resp = self.client.post(
+                self.ENDPOINT,
+                data=json.dumps(self._valid_body()),
+                content_type="application/json",
+            )
+        self.assertEqual(resp.status_code, 201, resp.content[:400])
+        d = Deliverable.objects.get(id=resp.json()["deliverable_id"])
+        # Same sections rendered even on failure.
+        for header in (
+            "## Goal", "## Context", "## Open question",
+            "## Files implicated", "## Acceptance criteria", "## Evidence",
+        ):
+            self.assertIn(header, d.content)
+        # Metadata surfaces the failure.
+        self.assertFalse(d.metadata.get("llm_success"))
+        self.assertIn("openai boom", d.metadata.get("llm_failure_reason", ""))
+
+    def test_llm_invents_file_path_downgraded_to_inferred(self) -> None:
+        """F-A2: file path claiming source=citation but not in payload → inferred."""
+        from core.models_deliverables import Deliverable
+
+        spec_json = json.dumps({
+            "goal": "Fix the thing.",
+            "context": "The bullet describes an unclear situation.",
+            "open_question": "None",
+            "files_implicated": [
+                # Real citation path — should stay citation.
+                {
+                    "path": "docs/research/domains/memory/1300_memory_domain_scoping.md",
+                    "source": "citation",
+                },
+                # Path NOT in citations, claiming citation — should downgrade.
+                {
+                    "path": "core/services/does_not_exist.py",
+                    "source": "citation",
+                },
+            ],
+            "acceptance_criteria": ["Ship the fix."],
+        })
+        with patch(
+            "core.services.briefing_spec_generator._call_spec_llm",
+            return_value=spec_json,
+        ):
+            resp = self.client.post(
+                self.ENDPOINT,
+                data=json.dumps(self._valid_body()),
+                content_type="application/json",
+            )
+        d = Deliverable.objects.get(id=resp.json()["deliverable_id"])
+        # Real citation path rendered as citation.
+        self.assertIn(
+            "`docs/research/domains/memory/1300_memory_domain_scoping.md` — _citation_",
+            d.content,
+        )
+        # Invented path downgraded to inferred.
+        self.assertIn(
+            "`core/services/does_not_exist.py` — _inferred — verify_",
+            d.content,
+        )
+        # Warning surfaced in metadata.
+        warnings = d.metadata.get("spec_warnings") or []
+        self.assertIn("file_source_downgraded_not_in_citations", warnings)
