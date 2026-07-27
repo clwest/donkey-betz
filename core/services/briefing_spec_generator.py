@@ -55,6 +55,17 @@ MAX_ACCEPTANCE_CRITERIA = 8
 FILE_SOURCE_CITATION = "citation"
 FILE_SOURCE_INFERRED = "inferred"
 
+# S2993 item #3: prompt-shape axis. Mirrors DocResearchFinding.finding_type
+# but the generator only cares about "which prompt do I run?" so we keep a
+# generator-local vocabulary rather than importing the model.
+PROMPT_SHAPE_ENGINEERING = "engineering"
+PROMPT_SHAPE_EVIDENCE = "evidence_capture"
+_FINDING_TYPE_TO_PROMPT_SHAPE = {
+    "decision_evidence": PROMPT_SHAPE_EVIDENCE,
+    "executable": PROMPT_SHAPE_ENGINEERING,
+    "unknown": PROMPT_SHAPE_ENGINEERING,
+}
+
 
 @dataclass
 class FileEntry:
@@ -94,15 +105,30 @@ def _cap(text: str, limit: int) -> Tuple[str, bool]:
     return text[: limit - 1].rstrip() + "\u2026", True
 
 
-def _build_spec_prompt(
+def _format_citation_blocks(citations: List[Dict[str, Any]]) -> Tuple[str, str]:
+    """Return (citations_text, known_paths_bullets) for prompt injection."""
+    citation_paths = sorted(
+        {(c.get("path") or "").strip() for c in citations if isinstance(c, dict) and c.get("path")}
+    )
+    citation_blocks: List[str] = []
+    for i, c in enumerate(citations or [], start=1):
+        path = c.get("path") or "?"
+        snippet = (c.get("snippet") or "").replace("\r", " ").strip()
+        if len(snippet) > 800:
+            snippet = snippet[:799] + "\u2026"
+        citation_blocks.append(f"[{i}] path={path}\n{snippet}")
+    citations_text = "\n\n".join(citation_blocks) or "(no citations attached)"
+    known_paths = "\n".join(f"- {p}" for p in citation_paths) or "(none)"
+    return citations_text, known_paths
+
+
+def _build_spec_prompt_engineering(
     bullet_text: str,
     section_title: str,
     anchor_path: str,
     citations: List[Dict[str, Any]],
 ) -> Tuple[str, str]:
-    citation_paths = sorted(
-        {(c.get("path") or "").strip() for c in citations if isinstance(c, dict) and c.get("path")}
-    )
+    citations_text, known_paths = _format_citation_blocks(citations)
     system = (
         "You convert one bullet from a canonical documentation audit into a "
         "spec that a code-writing AI agent will pick up and implement. The "
@@ -126,15 +152,6 @@ def _build_spec_prompt(
         "snippets or the bullet text.\n"
         "- Return ONLY the JSON object. No prose, no code fences."
     )
-    citation_blocks: List[str] = []
-    for i, c in enumerate(citations or [], start=1):
-        path = c.get("path") or "?"
-        snippet = (c.get("snippet") or "").replace("\r", " ").strip()
-        if len(snippet) > 800:
-            snippet = snippet[:799] + "\u2026"
-        citation_blocks.append(f"[{i}] path={path}\n{snippet}")
-    citations_text = "\n\n".join(citation_blocks) or "(no citations attached)"
-    known_paths = "\n".join(f"- {p}" for p in citation_paths) or "(none)"
     user = (
         f"Source canonical summary: {anchor_path}\n"
         f"Source section: {section_title}\n"
@@ -145,6 +162,88 @@ def _build_spec_prompt(
         "Return the spec JSON now."
     )
     return system, user
+
+
+def _build_spec_prompt_evidence(
+    bullet_text: str,
+    section_title: str,
+    anchor_path: str,
+    citations: List[Dict[str, Any]],
+) -> Tuple[str, str]:
+    """S2993 item #3: prompt shape for decision_evidence findings.
+
+    Reframes the same JSON schema — goal/context/open_question/files_implicated/
+    acceptance_criteria — to CAPTURE the boundary/verdict rather than propose
+    engineering work. acceptance_criteria become verification/re-audit steps.
+    """
+    citations_text, known_paths = _format_citation_blocks(citations)
+    system = (
+        "You convert one bullet from a canonical documentation audit into a "
+        "decision-evidence record. The bullet documents a boundary, verdict, "
+        "or contract — not a task to implement. The reader has no arc context.\n\n"
+        "Output MUST be JSON with keys: goal, context, open_question, "
+        "files_implicated, acceptance_criteria.\n\n"
+        "Rules:\n"
+        "- goal: ONE sentence stating the boundary/verdict the finding records. "
+        "Do NOT propose an implementation. Example shapes: "
+        "\"Record that <X> is the enforced boundary between <A> and <B>.\" / "
+        "\"Capture that <system> deliberately does not <behavior> and why.\"\n"
+        "- context: 2-3 sentences grounded in the citations that explain what "
+        "the boundary is and why it holds. Plain English.\n"
+        "- open_question: ONE sentence naming what a future audit should check "
+        "to falsify or renew this evidence — OR the exact string \"None\" if "
+        "the record is self-contained.\n"
+        "- files_implicated: array of objects {path, source}. These point at "
+        "code/docs where the evidence LIVES (not where work would happen). "
+        f"source MUST be one of \"{FILE_SOURCE_CITATION}\" (path taken verbatim "
+        "from the citations list — copy the path exactly) or "
+        f"\"{FILE_SOURCE_INFERRED}\" (path a human should verify). "
+        "Prefer citation-sourced paths. If no real file path is present in the "
+        "citations, return an empty array — DO NOT invent code paths.\n"
+        "- acceptance_criteria: array of 3-5 short imperative VERIFICATION "
+        "steps that would let a future auditor confirm the boundary/verdict "
+        "still holds. Each ≤ 20 words, testable, concrete. Example shapes: "
+        "\"Re-read <cited section> at HEAD confirms <boundary> still enforced.\" / "
+        "\"Grep <symbol> in <path> returns only the expected callers.\" "
+        "Do NOT phrase these as \"implement X\" or \"add Y\".\n"
+        "- Do NOT invent facts. Every claim must be grounded in the citation "
+        "snippets or the bullet text.\n"
+        "- Return ONLY the JSON object. No prose, no code fences."
+    )
+    user = (
+        f"Source canonical summary: {anchor_path}\n"
+        f"Source section: {section_title}\n"
+        f"Bullet text:\n{bullet_text}\n\n"
+        f"Retrieved citations:\n{citations_text}\n\n"
+        f"Paths present in citations (allowlist for source=\"{FILE_SOURCE_CITATION}\"):\n"
+        f"{known_paths}\n\n"
+        "Return the decision-evidence spec JSON now."
+    )
+    return system, user
+
+
+def _resolve_prompt_shape(finding_type: Optional[str]) -> str:
+    """Map finding_type → prompt shape. Unknown values fall through to engineering."""
+    if not finding_type:
+        return PROMPT_SHAPE_ENGINEERING
+    return _FINDING_TYPE_TO_PROMPT_SHAPE.get(finding_type.strip().lower(), PROMPT_SHAPE_ENGINEERING)
+
+
+def _build_spec_prompt(
+    bullet_text: str,
+    section_title: str,
+    anchor_path: str,
+    citations: List[Dict[str, Any]],
+    prompt_shape: str = PROMPT_SHAPE_ENGINEERING,
+) -> Tuple[str, str]:
+    """Route to the prompt builder for the given shape.
+
+    Kept as the single public callsite so callers stay stable; internal
+    branch selects engineering vs evidence-capture per S2993 item #3.
+    """
+    if prompt_shape == PROMPT_SHAPE_EVIDENCE:
+        return _build_spec_prompt_evidence(bullet_text, section_title, anchor_path, citations)
+    return _build_spec_prompt_engineering(bullet_text, section_title, anchor_path, citations)
 
 
 def _call_spec_llm(system_prompt: str, user_prompt: str, model: str) -> str:
@@ -249,8 +348,25 @@ def _validate_and_repair(
     )
 
 
-def _placeholder_spec(bullet_text: str, reason: str) -> BriefingSpec:
-    """F-A1 fail-open: same section layout, explicit placeholders."""
+def _placeholder_spec(
+    bullet_text: str,
+    reason: str,
+    prompt_shape: str = PROMPT_SHAPE_ENGINEERING,
+) -> BriefingSpec:
+    """F-A1 fail-open: same section layout, explicit placeholders.
+
+    Placeholder copy shifts per prompt_shape so a fail-open decision_evidence
+    finding doesn't ask a human to "implement" verification steps.
+    """
+    if prompt_shape == PROMPT_SHAPE_EVIDENCE:
+        return BriefingSpec(
+            goal=f"(evidence capture failed — author manually) {bullet_text}"[:CAP_GOAL_CHARS],
+            context="",
+            open_question="Author decision-evidence record manually — see original bullet in Evidence.",
+            files_implicated=[],
+            acceptance_criteria=["Author verification steps manually."],
+            warnings=[f"llm_failed:{reason[:120]}"],
+        )
     return BriefingSpec(
         goal=f"(spec generation failed — author manually) {bullet_text}"[:CAP_GOAL_CHARS],
         context="",
@@ -320,14 +436,21 @@ def generate_spec_body(
     anchor_path: str,
     citations: List[Dict[str, Any]],
     model: Optional[str] = None,
+    finding_type: Optional[str] = None,
 ) -> Tuple[str, Dict[str, Any]]:
     """Return (markdown_body, metadata_extras).
 
     metadata_extras carries llm_success / spec_prompt_version / warnings /
     llm_failure_reason so callers can merge into Deliverable.metadata for
     audit.
+
+    S2993 item #3: `finding_type` selects the prompt shape.
+    `decision_evidence` → evidence-capture prompt (records the boundary/verdict).
+    Everything else (`executable`, `unknown`, None, unrecognized) → the
+    existing engineering-spec prompt.
     """
     chosen_model = model or DEFAULT_SPEC_MODEL
+    prompt_shape = _resolve_prompt_shape(finding_type)
     citation_paths = {
         (c.get("path") or "").strip()
         for c in citations
@@ -339,6 +462,7 @@ def generate_spec_body(
         section_title=section_title,
         anchor_path=anchor_path,
         citations=citations,
+        prompt_shape=prompt_shape,
     )
 
     llm_success = True
@@ -355,7 +479,7 @@ def generate_spec_body(
         )
         llm_success = False
         failure_reason = str(exc)[:200]
-        spec = _placeholder_spec(bullet_text, failure_reason or "unknown")
+        spec = _placeholder_spec(bullet_text, failure_reason or "unknown", prompt_shape)
 
     body = _render_spec_markdown(
         spec=spec,
@@ -369,6 +493,8 @@ def generate_spec_body(
         "spec_schema_version": spec.schema_version,
         "spec_prompt_version": SPEC_PROMPT_VERSION,
         "spec_model": chosen_model,
+        "spec_prompt_shape": prompt_shape,
+        "finding_type_used": (finding_type or "").strip().lower() or None,
         "llm_success": llm_success,
         "spec_warnings": list(spec.warnings),
     }
