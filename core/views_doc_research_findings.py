@@ -233,6 +233,17 @@ def doc_research_findings_send_to_rigby_view(request, finding_id: str):
         logger.exception("send_to_rigby(finding): import failed")
         return DRFResponse({"error": "Deliverable subsystem unavailable"}, status=500)
 
+    # S2997 v2 item #8: pipe stale-ref call-out into the spec so
+    # downstream executors see the drift. Only when the ingest-time
+    # detector actually flagged this finding — a `fresh` finding
+    # doesn't need the injection and shouldn't get a spurious
+    # "Staleness note" section.
+    failed_refs: List[str] = []
+    if finding.staleness == DocResearchFinding.STALENESS_SUSPECTED:
+        raw_refs = (finding.metadata or {}).get("staleness_failed_refs") or []
+        if isinstance(raw_refs, list):
+            failed_refs = [str(r) for r in raw_refs if isinstance(r, str) and r.strip()]
+
     content, spec_extras = generate_spec_body(
         bullet_text=finding.text,
         section_key=section_key,
@@ -240,6 +251,7 @@ def doc_research_findings_send_to_rigby_view(request, finding_id: str):
         anchor_path=finding.doc_path,
         citations=citations,
         finding_type=finding.finding_type,
+        staleness_failed_refs=failed_refs or None,
     )
 
     try:
