@@ -134,6 +134,21 @@ def _detect_memory_intent(message: str) -> str | None:
 
 TOOL_ARGS_MALFORMED_ERROR_CODE = 'TOOL_ARGS_JSON_MALFORMED'
 
+# S2986 — pre-parse oversize gate for remember_tool.save. The LLM's tool-call
+# `arguments` JSON is streamed one token at a time; when the content field of
+# a remember_tool.save call is long, the args string can be truncated mid-
+# stream by the output_tokens budget. The existing TOOL_ARGS_JSON_MALFORMED
+# path catches truncation *after* json.loads fails, but by then the retry
+# hint is generic. This threshold gates the raw string length (before parse)
+# so we can surface a targeted "summarize before saving" message.
+#
+# 3000 raw chars ≈ 1500 chars of content plus JSON overhead (action, memory_type,
+# tags, importance, quotes, escapes). UserMemoryContext.content column clamps
+# to 500 chars on write, so anything above ~1500 is guaranteed to be truncated
+# by the handler regardless of the LLM streaming behavior.
+REMEMBER_TOOL_ARGS_RAW_MAX = 3000
+REMEMBER_CONTENT_OVERSIZED_ERROR_CODE = 'REMEMBER_CONTENT_TOO_LONG'
+
 # Session 1199 — silent-fallback detector for the iteration-cap failure mode
 # documented in deliverable c2bac9c0. When the LLM runs out of tool-call
 # iterations and is forced to a text-only response on the final iteration,
@@ -208,6 +223,39 @@ def _should_trigger_silent_fallback(text: str, tool_runs: list) -> bool:
         bool(run.get('ok')) for run in tool_runs
         if isinstance(run, dict)
     )
+
+
+def _build_remember_content_oversized_envelope(
+    *, tool_name: str, raw_args_len: int
+) -> dict:
+    """S2986 — typed envelope for remember_tool.save calls whose raw
+    ``arguments`` string exceeds :data:`REMEMBER_TOOL_ARGS_RAW_MAX`.
+
+    Gates BEFORE ``json.loads`` so it fires even when the LLM's arguments
+    string was truncated mid-stream by the output_tokens budget (the exact
+    failure mode called out in spec ba968ac1). The retry hint tells the
+    LLM to summarize the memory before saving — remember_tool.save only
+    stores 500 chars of content anyway, so a longer payload is guaranteed
+    to be truncated at write time.
+    """
+    return {
+        'ok': False,
+        'error_code': REMEMBER_CONTENT_OVERSIZED_ERROR_CODE,
+        'tool_name': tool_name,
+        'message': (
+            'remember_tool.save content is too long. Summarize the memory '
+            'to under 500 characters before saving — only the first 500 '
+            'characters would be stored anyway.'
+        ),
+        'meta': {
+            'arguments_len': raw_args_len,
+            'raw_max': REMEMBER_TOOL_ARGS_RAW_MAX,
+        },
+        'retry_hint': {
+            'recommended_action': 'remember_tool.save',
+            'max_content_chars': 500,
+        },
+    }
 
 
 def _build_tool_args_malformed_envelope(
@@ -2181,6 +2229,48 @@ class UnifiedPAEntrypoint:
                 tool_name = fn.get('name', '')
                 call_id = tc.get('id', '')
 
+                # S2986 — pre-parse oversize gate for remember_tool.save.
+                # Raw-string length check fires BEFORE json.loads so it works
+                # even when the LLM's arguments string was truncated mid-stream
+                # by the output_tokens budget. handler-side content clamp is
+                # 500 chars, so anything above the raw-max threshold would
+                # either fail to parse or be truncated on write anyway.
+                raw_args_str = fn.get('arguments', '') or ''
+                if (
+                    tool_name == 'remember_tool'
+                    and len(raw_args_str) > REMEMBER_TOOL_ARGS_RAW_MAX
+                ):
+                    oversized_envelope = _build_remember_content_oversized_envelope(
+                        tool_name=tool_name,
+                        raw_args_len=len(raw_args_str),
+                    )
+                    logger.warning(
+                        f"[{trace_id}] remember_tool.save args oversized: "
+                        f"raw_len={len(raw_args_str)} "
+                        f"max={REMEMBER_TOOL_ARGS_RAW_MAX}"
+                    )
+                    fc_metadata.append({
+                        'name': tool_name,
+                        'arguments': {},
+                        'call_id': call_id,
+                        'ok': False,
+                    })
+                    tool_result_inputs.append({
+                        'type': 'function_call_output',
+                        'call_id': call_id,
+                        'output': json.dumps(oversized_envelope),
+                    })
+                    tool_runs.append({
+                        'ok': False,
+                        'tool': tool_name,
+                        'latency_ms': 0,
+                        'error_code': REMEMBER_CONTENT_OVERSIZED_ERROR_CODE,
+                        'error_message': oversized_envelope['message'],
+                        'trace_id': trace_id,
+                        'result': None,
+                    })
+                    continue
+
                 try:
                     arguments = json.loads(fn.get('arguments', '{}'))
                 except (json.JSONDecodeError, TypeError) as parse_err:
@@ -2944,7 +3034,13 @@ class UnifiedPAEntrypoint:
             memory_context = memory_svc.get_prompt_context(self.user)
             if memory_context:
                 prompt_parts.append("")
-                prompt_parts.append("YOUR MEMORY (things the user asked you to remember):")
+                # S2986 F-Z1: neutral header reduces the tendency to parrot
+                # "you asked me to remember…" phrasing back to the user. The
+                # memory is still injected on every turn; the copy just tells
+                # the model to use it only when relevant and not to surface it.
+                prompt_parts.append(
+                    "PERSISTENT USER CONTEXT (use only if relevant; do not mention unless asked):"
+                )
                 prompt_parts.append(memory_context)
                 # OpsRun event for memory injection
                 from core.tools.ops_run_tracker import get_active_tracker
