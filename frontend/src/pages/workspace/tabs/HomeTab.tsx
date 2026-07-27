@@ -23,15 +23,17 @@
  * value the spec doesn't cover).
  */
 
-import { useMemo, useState, lazy, Suspense } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useMemo, useState, useEffect, lazy, Suspense } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import {
   Activity, AlertTriangle, ArrowRight, BookOpen, ChevronDown, ChevronRight,
-  ClipboardList, Clock, FileText, GitBranch, Layers, Loader2, Package,
-  Plus, Sparkles, Star, Target, XCircle,
+  ClipboardList, Clock, Copy, FileText, GitBranch, Layers, Loader2, Package,
+  Plus, Sparkles, Star, Target, X, XCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { api } from '@/lib/api'
+import { trackEvent } from '@/hooks/useTelemetryEvent'
 
 // S2984 PR3: DocumentViewer lazy-loaded — arc entrypoints open in the
 // in-app viewer per spec §Frontend / Chris directive #3 (no GitHub links).
@@ -650,17 +652,137 @@ function ResearchArcsModule({
 }
 
 // --------------------------------------------------------------------- //
-// Section: GUIDED ACTIONS (stub — PR4 wires the buttons)
+// Section: GUIDED ACTIONS (S2984 PR4 — wired per spec §2.4)
 // --------------------------------------------------------------------- //
 
-const GUIDED_ACTIONS = [
-  { id: 'create-spec', label: 'Create Engineering Spec', icon: FileText, hint: 'Draft a new spec deliverable with a template' },
-  { id: 'review-ready', label: 'Review Ready Items', icon: ClipboardList, hint: 'Filter deliverables where status = ready' },
-  { id: 'start-initiative', label: 'Start Initiative from Spec', icon: Target, hint: 'Wizard: pick a spec → create initiative → link' },
+type GuidedActionId = 'create-spec' | 'review-ready' | 'start-initiative' | 'shift-brief'
+
+interface GuidedActionDef {
+  id: GuidedActionId
+  label: string
+  icon: typeof FileText
+  hint: string
+}
+
+const GUIDED_ACTIONS: GuidedActionDef[] = [
+  { id: 'create-spec', label: 'Create Engineering Spec', icon: FileText, hint: 'Draft a new spec via Rigby chat' },
+  { id: 'review-ready', label: 'Review Ready Items', icon: ClipboardList, hint: 'Deliverables ready for review' },
+  { id: 'start-initiative', label: 'Start Initiative from Spec', icon: Target, hint: 'Create initiative from an existing spec via Rigby chat' },
   { id: 'shift-brief', label: 'Run Shift Brief', icon: Sparkles, hint: 'Rigby-generated summary of the workspace right now' },
 ]
 
-function GuidedActionsModule() {
+interface ShiftBriefResult {
+  ok: boolean
+  summary_text: string
+  traffic_light: 'GREEN' | 'YELLOW' | 'RED'
+  sections: Record<string, unknown>
+  metadata: { runtime_ms?: number; degraded_fields?: string[]; tools_called?: string[] }
+  workspace_id: string
+  generated_at: string
+}
+
+function TrafficLightChip({ light }: { light: 'GREEN' | 'YELLOW' | 'RED' }) {
+  const cls =
+    light === 'GREEN' ? 'bg-accent-green/20 text-accent-green border-accent-green/30'
+    : light === 'YELLOW' ? 'bg-accent-amber/20 text-accent-amber border-accent-amber/30'
+    : 'bg-accent-red/20 text-accent-red border-accent-red/30'
+  return <span className={cn('text-xs px-2 py-0.5 rounded border', cls)}>{light}</span>
+}
+
+function ShiftBriefModal({
+  result,
+  onClose,
+}: {
+  result: ShiftBriefResult
+  onClose: () => void
+}) {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = () => {
+    navigator.clipboard.writeText(result.summary_text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/60 z-40" onClick={onClose} />
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-full max-w-2xl max-h-[80vh] bg-dark-card border border-dark-border rounded-xl shadow-2xl flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-dark-border">
+          <div className="flex items-center gap-2">
+            <Sparkles size={18} className="text-primary-400" />
+            <h2 className="text-lg font-semibold">Shift Brief</h2>
+            <TrafficLightChip light={result.traffic_light} />
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleCopy}
+              className="p-1.5 hover:bg-dark-bg rounded text-gray-400 hover:text-white"
+              title="Copy brief"
+            >
+              {copied ? <span className="text-xs text-accent-green">Copied</span> : <Copy size={14} />}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 hover:bg-dark-bg rounded text-gray-400 hover:text-white"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+        <div className="p-5 overflow-y-auto flex-1">
+          <pre className="whitespace-pre-wrap text-sm text-gray-200 font-mono leading-relaxed">
+            {result.summary_text || '(empty brief)'}
+          </pre>
+          {result.metadata?.degraded_fields && result.metadata.degraded_fields.length > 0 && (
+            <div className="mt-4 text-xs text-accent-amber border border-accent-amber/30 rounded p-2">
+              Degraded fields: {result.metadata.degraded_fields.join(', ')}
+            </div>
+          )}
+        </div>
+        <div className="px-4 py-2 border-t border-dark-border text-xs text-gray-500 flex items-center gap-3">
+          <span>Generated {new Date(result.generated_at).toLocaleTimeString()}</span>
+          {typeof result.metadata?.runtime_ms === 'number' && (
+            <span>· {result.metadata.runtime_ms}ms</span>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
+function GuidedActionsModule({
+  workspaceId,
+}: {
+  workspaceId: string | undefined
+}) {
+  const navigate = useNavigate()
+  const [briefResult, setBriefResult] = useState<ShiftBriefResult | null>(null)
+  const shiftBriefMutation = useMutation<ShiftBriefResult, Error, void>({
+    mutationFn: async () => {
+      if (!workspaceId) throw new Error('No active workspace')
+      const res = await api.post(`/workspaces/${workspaceId}/shift-brief/`)
+      return res.data as ShiftBriefResult
+    },
+    onSuccess: (data) => setBriefResult(data),
+  })
+
+  const handleClick = (id: GuidedActionId) => {
+    trackEvent('guided_action_clicked', workspaceId, { action: id })
+    switch (id) {
+      case 'create-spec':
+      case 'start-initiative':
+        navigate('/')
+        break
+      case 'review-ready':
+        navigate('/workspace?tab=deliverables&filter=ready')
+        break
+      case 'shift-brief':
+        shiftBriefMutation.mutate()
+        break
+    }
+  }
+
   return (
     <div className="card space-y-4">
       <div className="flex items-center gap-2">
@@ -669,26 +791,43 @@ function GuidedActionsModule() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-        {GUIDED_ACTIONS.map((action) => (
-          <button
-            key={action.id}
-            type="button"
-            disabled
-            title={`${action.hint} (available in PR4)`}
-            className="flex items-start gap-2 text-left rounded-md border border-dark-border bg-dark-bg/40 p-3 opacity-60 cursor-not-allowed"
-          >
-            <action.icon size={16} className="text-primary-400 mt-0.5 flex-shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium truncate">{action.label}</div>
-              <div className="text-xs text-gray-500 truncate">{action.hint}</div>
-            </div>
-          </button>
-        ))}
+        {GUIDED_ACTIONS.map((action) => {
+          const isLoading = action.id === 'shift-brief' && shiftBriefMutation.isPending
+          return (
+            <button
+              key={action.id}
+              type="button"
+              onClick={() => handleClick(action.id)}
+              disabled={isLoading}
+              title={action.hint}
+              className={cn(
+                'flex items-start gap-2 text-left rounded-md border border-dark-border bg-dark-bg/40 p-3 transition-colors',
+                isLoading
+                  ? 'opacity-60 cursor-wait'
+                  : 'hover:border-primary-500/50 hover:bg-dark-bg/60 cursor-pointer',
+              )}
+            >
+              {isLoading ? (
+                <Loader2 size={16} className="text-primary-400 mt-0.5 flex-shrink-0 animate-spin" />
+              ) : (
+                <action.icon size={16} className="text-primary-400 mt-0.5 flex-shrink-0" />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{action.label}</div>
+                <div className="text-xs text-gray-500 truncate">{action.hint}</div>
+              </div>
+            </button>
+          )
+        })}
       </div>
 
-      <p className="text-xs text-gray-500 italic">
-        These will light up in an upcoming round.
-      </p>
+      {shiftBriefMutation.isError && (
+        <p className="text-xs text-accent-red italic">
+          Shift brief failed: {shiftBriefMutation.error?.message || 'unknown error'}
+        </p>
+      )}
+
+      {briefResult && <ShiftBriefModal result={briefResult} onClose={() => setBriefResult(null)} />}
     </div>
   )
 }
@@ -745,6 +884,11 @@ export default function HomeTab({ activeWorkspace, onNavigateTab }: HomeTabProps
   // S2984 PR3: doc viewer slide-out state — arc entrypoint clicks feed here.
   const [docViewer, setDocViewer] = useState<{ path: string; title: string } | null>(null)
   const openArcDoc = (path: string, title: string) => setDocViewer({ path, title })
+
+  // S2984 PR4 §5: fire workspace_home_viewed once per workspace switch.
+  useEffect(() => {
+    if (wsId) trackEvent('workspace_home_viewed', wsId)
+  }, [wsId])
 
   const snapshotQuery = useQuery<HomeSnapshot>({
     queryKey: ['workspace-home-snapshot', wsId],
@@ -814,7 +958,7 @@ export default function HomeTab({ activeWorkspace, onNavigateTab }: HomeTabProps
         <NowModule data={snapshot.now} />
         <ActiveWorkModule data={snapshot.active_work} onNavigateTab={onNavigateTab} />
         <LibraryModule data={snapshot.library} onNavigateTab={onNavigateTab} />
-        <GuidedActionsModule />
+        <GuidedActionsModule workspaceId={wsId} />
       </div>
 
       {/* S2984 PR3: in-app doc viewer for arc entrypoints. Lazy-loaded so
