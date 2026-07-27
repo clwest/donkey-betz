@@ -345,3 +345,68 @@ class CanonicalBriefingSnippetSanitizerTests(TestCase):
     def test_snippet_strips_nulls(self) -> None:
         out = briefing_service._sanitize_snippet("hello\x00world")
         self.assertNotIn("\x00", out)
+
+
+class CanonicalBriefingRealORMRetrievalTests(TestCase):
+    """Non-mocked test that actually issues the DocumentEmbedding query.
+
+    The five test classes above stub out retrieve_scoped_chunks entirely, so
+    a field-name mismatch on the annotate() call (e.g. 'embedding' vs
+    'embedding_vector') passes CI but 500s on every real request. This test
+    creates a real Document + DocumentEmbedding row and calls the un-mocked
+    retrieve_scoped_chunks — schema drift on the pgvector column will fail
+    it with a FieldError.
+    """
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        from content.models import Document, DocumentEmbedding, DocumentType, EmbeddingModel
+
+        cls.owner = User.objects.create_user(
+            username=f"s2988-real-orm-{uuid.uuid4().hex[:8]}",
+            email="s2988-real-orm@example.com",
+            password="x",
+        )
+        cls.doc = Document.objects.create(
+            owner=cls.owner,
+            title="Test canonical summary",
+            document_type=DocumentType.MARKDOWN,
+            file_path="docs/research/domains/_test_canonical_briefing/9999_test_canonical_summary.md",
+            raw_content="Test canonical summary content.",
+        )
+        cls.chunk = DocumentEmbedding.objects.create(
+            document=cls.doc,
+            embedding_model=EmbeddingModel.OPENAI_SMALL,
+            chunk_index=0,
+            chunk_text="Test canonical summary content chunk.",
+            chunk_size=len("Test canonical summary content chunk."),
+            embedding_vector=[0.01] * 1536,
+            embedding_dimension=1536,
+        )
+
+    @patch("core.rag_integration.create_embedding")
+    def test_retrieve_scoped_chunks_uses_real_orm_field_name(
+        self, mock_create_embedding
+    ) -> None:
+        """Regression: annotate() must reference the model's real field name.
+
+        Bug that motivated this test: the annotate() call referenced
+        `"embedding"` when the model field is `embedding_vector`, so every
+        real request raised django.core.exceptions.FieldError and the view
+        surfaced a generic 500. Mocking create_embedding keeps the test
+        offline while still exercising the ORM query construction end-to-end.
+        """
+        mock_create_embedding.return_value = [0.01] * 1536
+
+        results = briefing_service.retrieve_scoped_chunks(
+            query="test query",
+            scope_root="docs/research/domains/_test_canonical_briefing",
+            limit=5,
+        )
+
+        self.assertEqual(len(results), 1, "seeded chunk should be retrievable")
+        self.assertEqual(results[0]["chunk_id"], str(self.chunk.id))
+        self.assertEqual(
+            results[0]["path"],
+            "docs/research/domains/_test_canonical_briefing/9999_test_canonical_summary.md",
+        )
