@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronRight,
   Circle,
+  Clock,
   ExternalLink,
   Loader2,
   Search,
@@ -29,6 +30,7 @@ type FindingStatus = 'open' | 'fixed' | 'dismissed'
 type Confidence = 'high' | 'medium' | 'low'
 type SourceType = 'audit' | 'canonical_summary' | 'implementation_debt'
 type FindingType = 'decision_evidence' | 'executable' | 'unknown'
+type Staleness = 'fresh' | 'suspected'
 
 interface Finding {
   id: string
@@ -41,6 +43,7 @@ interface Finding {
   tags: string[]
   status: FindingStatus
   finding_type: FindingType
+  staleness: Staleness
   resolved_at: string | null
   resolved_by: string | null
   resolution_note: string
@@ -117,6 +120,24 @@ function FindingTypeBadge({ t }: { t: FindingType }) {
   )
 }
 
+// S2996 v2 item #4 UI surface: orange "Stale" badge on rows whose
+// cited file:line refs failed re-verification at HEAD. Hidden for
+// `fresh` (matches the S2994 hidden-for-default pattern). Shows on
+// every suspected row regardless of finding_type — staleness is an
+// orthogonal truth signal per Rigby T1 SIGN Ask #3(a).
+function StalenessBadge({ s }: { s: Staleness }) {
+  if (s === 'fresh') return null
+  return (
+    <span
+      className="px-1.5 py-0.5 rounded border text-[10px] uppercase tracking-wide bg-orange-500/20 text-orange-300 border-orange-500/40 inline-flex items-center gap-0.5"
+      title="Cited file:line refs did not verify at HEAD. Expand row to see which refs failed."
+    >
+      <Clock size={10} />
+      Stale
+    </span>
+  )
+}
+
 function FindingRow({
   finding,
   onMark,
@@ -156,6 +177,7 @@ function FindingRow({
           <div className="flex items-center gap-2 flex-wrap text-[11px] text-gray-400 mb-1">
             <StatusBadge s={finding.status} />
             <FindingTypeBadge t={finding.finding_type} />
+            <StalenessBadge s={finding.staleness} />
             <ConfidenceBadge c={finding.confidence} />
             <span className="px-1.5 py-0.5 rounded bg-gray-700/50 border border-gray-600 text-gray-300">
               {finding.domain_slug || '(no domain)'}
@@ -177,6 +199,31 @@ function FindingRow({
                   {finding.tags.join(', ')}
                 </div>
               )}
+              {finding.staleness === 'suspected' &&
+                Array.isArray(
+                  (finding.metadata as { staleness_failed_refs?: unknown })
+                    ?.staleness_failed_refs,
+                ) && (
+                  <div>
+                    <span className="font-medium text-orange-300">
+                      Failed refs:
+                    </span>{' '}
+                    <span className="text-orange-200/80">
+                      {(
+                        (finding.metadata as {
+                          staleness_failed_refs: string[]
+                        }).staleness_failed_refs
+                      ).map(ref => (
+                        <code
+                          key={ref}
+                          className="mr-2 px-1 py-0.5 bg-orange-500/10 border border-orange-500/30 rounded text-[10px]"
+                        >
+                          {ref}
+                        </code>
+                      ))}
+                    </span>
+                  </div>
+                )}
               {finding.resolution_note && (
                 <div>
                   <span className="font-medium text-gray-300">Resolution note:</span>{' '}
@@ -294,6 +341,7 @@ export function FindingsTab() {
   const [domainSlug, setDomainSlug] = useState('')
   const [sourceType, setSourceType] = useState<'' | SourceType>('')
   const [findingType, setFindingType] = useState<'' | FindingType>('')
+  const [staleness, setStaleness] = useState<'' | Staleness>('')
   const [minConfidence, setMinConfidence] = useState<'' | 'high' | 'medium'>('medium')
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -327,6 +375,7 @@ export function FindingsTab() {
         if (domainSlug) params.domain_slug = domainSlug
         if (sourceType) params.source_type = sourceType
         if (findingType) params.finding_type = findingType
+        if (staleness) params.staleness = staleness
         if (minConfidence) params.min_confidence = minConfidence
         if (debouncedSearch) params.search = debouncedSearch
         const resp = await api.get<ListResponse>('/repo/doc-research-findings/', { params })
@@ -344,7 +393,7 @@ export function FindingsTab() {
     return () => {
       cancelled = true
     }
-  }, [status, domainSlug, sourceType, findingType, minConfidence, debouncedSearch, page, pageSize])
+  }, [status, domainSlug, sourceType, findingType, staleness, minConfidence, debouncedSearch, page, pageSize])
 
   const handleMark = async (finding: Finding, next: FindingStatus) => {
     setMarkingId(finding.id)
@@ -472,6 +521,19 @@ export function FindingsTab() {
           <option value="decision_evidence">Type: Evidence (decision record)</option>
           <option value="executable">Type: Executable</option>
           <option value="unknown">Type: Unknown</option>
+        </select>
+        <select
+          value={staleness}
+          onChange={e => {
+            setStaleness(e.target.value as any)
+            setPage(1)
+          }}
+          className="text-xs bg-gray-900 border border-gray-700 rounded px-2 py-1 text-gray-200"
+          title="Filter by staleness — refs that failed to verify at HEAD"
+        >
+          <option value="">Staleness: Any</option>
+          <option value="fresh">Staleness: Fresh</option>
+          <option value="suspected">Staleness: Suspected stale</option>
         </select>
         <select
           value={minConfidence}
