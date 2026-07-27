@@ -234,6 +234,7 @@ def doc_research_findings_send_to_rigby_view(request, finding_id: str):
         section_title=section_title,
         anchor_path=finding.doc_path,
         citations=citations,
+        finding_type=finding.finding_type,
     )
 
     try:
