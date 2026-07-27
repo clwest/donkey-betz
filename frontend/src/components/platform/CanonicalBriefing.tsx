@@ -12,7 +12,16 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, ChevronDown, ChevronRight, FileText, Loader2, RefreshCw } from 'lucide-react'
+import {
+  AlertTriangle,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  FileText,
+  Loader2,
+  RefreshCw,
+  Send,
+} from 'lucide-react'
 import { api } from '@/lib/api'
 
 interface Citation {
@@ -53,6 +62,13 @@ interface CanonicalBriefingProps {
   onFallbackToRaw: () => void
 }
 
+interface SendState {
+  status: 'idle' | 'sending' | 'sent' | 'error'
+  deliverableId?: string
+  workspaceId?: string
+  error?: string
+}
+
 const INSUFFICIENT_SUPPORT_MSG = 'Insufficient support in canonical docs'
 
 function CitationList({ citations }: { citations: Citation[] }) {
@@ -84,19 +100,128 @@ function CitationList({ citations }: { citations: Citation[] }) {
   )
 }
 
-function BulletItem({ bullet }: { bullet: Bullet }) {
+function SendToRigbyButton({
+  anchorPath,
+  section,
+  bullet,
+}: {
+  anchorPath: string
+  section: Section
+  bullet: Bullet
+}) {
+  const [state, setState] = useState<SendState>({ status: 'idle' })
+
+  const handleSend = async () => {
+    setState({ status: 'sending' })
+    try {
+      const resp = await api.post('/repo/canonical-briefing/send-to-rigby/', {
+        anchor_path: anchorPath,
+        section_key: section.key,
+        section_title: section.title,
+        bullet_text: bullet.text,
+        citations: bullet.citations,
+      })
+      setState({
+        status: 'sent',
+        deliverableId: resp.data?.deliverable_id,
+        workspaceId: resp.data?.workspace_id,
+      })
+    } catch (err: any) {
+      const errorMsg =
+        err.response?.data?.error ||
+        err.message ||
+        'Failed to send'
+      setState({ status: 'error', error: errorMsg })
+    }
+  }
+
+  if (state.status === 'sent') {
+    return (
+      <span className="mt-1 inline-flex items-center gap-1 text-xs text-primary-400">
+        <Check size={12} />
+        Sent — deliverable{' '}
+        {state.deliverableId && state.workspaceId ? (
+          <a
+            href={`/workspaces/${state.workspaceId}/deliverables/${state.deliverableId}`}
+            className="underline hover:text-primary-300"
+            target="_blank"
+            rel="noreferrer"
+          >
+            {state.deliverableId.slice(0, 8)}
+          </a>
+        ) : (
+          'created'
+        )}
+      </span>
+    )
+  }
+
+  if (state.status === 'error') {
+    return (
+      <button
+        onClick={handleSend}
+        className="mt-1 inline-flex items-center gap-1 text-xs text-accent-red hover:text-red-300"
+        title={state.error}
+      >
+        <AlertTriangle size={12} />
+        Send failed — retry
+      </button>
+    )
+  }
+
+  return (
+    <button
+      onClick={handleSend}
+      disabled={state.status === 'sending'}
+      className="mt-1 inline-flex items-center gap-1 text-xs text-gray-500 hover:text-primary-400 disabled:opacity-50 transition-colors"
+      title="Create a workspace deliverable in Donkey Betz so Claude can pick it up"
+    >
+      {state.status === 'sending' ? (
+        <Loader2 size={12} className="animate-spin" />
+      ) : (
+        <Send size={12} />
+      )}
+      {state.status === 'sending' ? 'Sending…' : 'Send to Rigby'}
+    </button>
+  )
+}
+
+function BulletItem({
+  bullet,
+  section,
+  anchorPath,
+}: {
+  bullet: Bullet
+  section: Section
+  anchorPath: string
+}) {
   const isInsufficient = bullet.text === INSUFFICIENT_SUPPORT_MSG
   return (
     <li className="text-sm">
       <span className={isInsufficient ? 'italic text-gray-500' : 'text-gray-200'}>
         {bullet.text}
       </span>
-      <CitationList citations={bullet.citations} />
+      <div className="flex items-center gap-3">
+        <CitationList citations={bullet.citations} />
+        {!isInsufficient && (
+          <SendToRigbyButton
+            anchorPath={anchorPath}
+            section={section}
+            bullet={bullet}
+          />
+        )}
+      </div>
     </li>
   )
 }
 
-function SectionCard({ section }: { section: Section }) {
+function SectionCard({
+  section,
+  anchorPath,
+}: {
+  section: Section
+  anchorPath: string
+}) {
   return (
     <div className="rounded-lg border border-gray-700 bg-gray-800/40 p-4">
       <h3 className="text-sm font-semibold text-white mb-2">{section.title}</h3>
@@ -105,7 +230,12 @@ function SectionCard({ section }: { section: Section }) {
       ) : (
         <ul className="space-y-2 list-disc list-outside ml-4">
           {section.bullets.map((b, idx) => (
-            <BulletItem key={idx} bullet={b} />
+            <BulletItem
+              key={idx}
+              bullet={b}
+              section={section}
+              anchorPath={anchorPath}
+            />
           ))}
         </ul>
       )}
@@ -230,7 +360,11 @@ export function CanonicalBriefing({ anchorPath, onFallbackToRaw }: CanonicalBrie
       )}
       <div className="space-y-3">
         {data.sections.map((section) => (
-          <SectionCard key={section.key} section={section} />
+          <SectionCard
+            key={section.key}
+            section={section}
+            anchorPath={anchorPath}
+          />
         ))}
       </div>
     </div>

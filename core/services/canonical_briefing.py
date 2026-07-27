@@ -42,7 +42,7 @@ from core.services.redis_lock import (
 
 logger = logging.getLogger(__name__)
 
-PROMPT_VERSION = "v1"
+PROMPT_VERSION = "v2"
 CACHE_TTL_SECONDS = 15 * 60
 CACHE_KEY_PREFIX = "canonical_briefing:"
 LOCK_TTL_SECONDS = 60
@@ -50,6 +50,7 @@ DEFAULT_MODEL = "gpt-5-mini"
 DEFAULT_MAX_COMPLETION_TOKENS = 6000
 SNIPPET_MAX_CHARS = 300
 INSUFFICIENT_SUPPORT_MSG = "Insufficient support in canonical docs"
+MAX_WORDS_PER_BULLET = 20
 
 SECTION_ORDER = ("tldr", "decisions", "state", "risks", "next_actions")
 SECTION_TITLES = {
@@ -168,11 +169,22 @@ def _build_prompt(
     system_prompt = (
         "You are a briefing writer. You will receive retrieved chunks from a "
         "canonical documentation folder and must produce a JSON-only briefing "
-        "with 5 sections. Each bullet MUST cite one or more chunks by their "
-        "'citation_key' (integer). If a section has no supporting chunks, "
-        "return an empty bullets array for that section; do not invent facts. "
-        "Do not repeat the source text verbatim; summarize concisely. Do not "
-        "add citations that don't appear in the provided chunks."
+        "with 5 sections.\n\n"
+        "Voice rules — the reader has no arc context:\n"
+        f"- Each bullet ≤ {MAX_WORDS_PER_BULLET} words. One idea per bullet. Plain English.\n"
+        "- Do NOT use opaque insider jargon (e.g. 'Cat D', 'xx99', 'Path A', "
+        "'verdict cascade', 'T4', 'F-D-2') without expanding it in the same "
+        "bullet. If a fact can't be said cleanly without such jargon, drop it.\n"
+        "- No stacked sub-clauses. If a bullet needs 'and', 'while', 'along "
+        "with', or 'depending on', split it into two bullets or drop the "
+        "caveat. Prefer 8-15 words over 20.\n"
+        "- Write concrete facts and decisions, not meta-descriptions of the "
+        "document ('this summary is authored with authority X').\n\n"
+        "Citation rules:\n"
+        "- Each bullet MUST cite one or more chunks by their 'citation_key' "
+        "(integer). If a section has no supporting chunks, return an empty "
+        "bullets array; do not invent facts.\n"
+        "- Do not add citations that don't appear in the provided chunks."
     )
 
     context_blocks: List[str] = []
@@ -218,8 +230,8 @@ Return JSON with this exact shape:
 Rules:
 - Each section MUST appear in the sections array with the exact key.
 - Each bullet's "citation_keys" MUST be a non-empty array of integers that appear as citation_key in the provided chunks. If a section has no supporting chunks, return {{"bullets": []}} for that section.
-- Maximum {max_bullets_per_section} bullets per section.
-- Bullet text should be one clear sentence, no markdown, no leading dash.
+- Maximum {max_bullets_per_section} bullets per section. Prefer fewer, tighter bullets over the maximum.
+- Bullet text: ONE idea, ≤ {MAX_WORDS_PER_BULLET} words, plain English, no markdown, no leading dash, no jargon acronyms unexpanded.
 - Return ONLY the JSON object. No prose, no code fences.
 """
     return system_prompt, user_prompt

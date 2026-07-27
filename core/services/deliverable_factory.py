@@ -1425,6 +1425,11 @@ _TYPES_EXEMPT_FROM_INITIATIVE_ALIGNMENT = frozenset({
     # confuse the review by adding a false-positive "missing initiative"
     # flag on every spec.
     'engineering_spec',
+    # S2988: per-bullet action items sent from the Canonical Briefing
+    # UI to the Donkey Betz workspace. Each row is the action distilled
+    # from one briefing bullet + its retrieved citations — not tied to
+    # an initiative by construction.
+    'briefing_action_item',
 })
 
 

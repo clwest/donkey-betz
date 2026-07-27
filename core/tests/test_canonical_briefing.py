@@ -410,3 +410,126 @@ class CanonicalBriefingRealORMRetrievalTests(TestCase):
             results[0]["path"],
             "docs/research/domains/_test_canonical_briefing/9999_test_canonical_summary.md",
         )
+
+
+class CanonicalBriefingSendToRigbyTests(TestCase):
+    """S2988: per-bullet Deliverable creation into Donkey Betz workspace.
+
+    Verifies:
+    - Auth guard (JSON 401/403, not 302).
+    - Path validation reuses the shared docs/ containment check.
+    - Deliverable lands with the exempt type (no diagnostic flag) and the
+      Donkey Betz workspace binding.
+    - Required-field validation.
+    """
+
+    DONKEY_BETZ_WS = "b4503364-2573-4401-9e28-61a739e0ce50"
+    ENDPOINT = "/api/repo/canonical-briefing/send-to-rigby/"
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        from core.models_skin_layer import ProjectWorkspace
+
+        cls.user = User.objects.create_user(
+            username=f"s2988-send-{uuid.uuid4().hex[:8]}",
+            email="s2988-send@example.com",
+            password="x",
+        )
+        # Ensure the Donkey Betz workspace exists in the test DB so the
+        # endpoint's ProjectWorkspace.objects.get(id=…) resolves. Uses
+        # get_or_create so re-runs are idempotent under --keepdb.
+        cls.workspace, _ = ProjectWorkspace.objects.get_or_create(
+            id=cls.DONKEY_BETZ_WS,
+            defaults={
+                "name": "Donkey Betz (test)",
+                "user": cls.user,
+                "root_path": "/tmp/test-donkey-betz",
+            },
+        )
+
+    def setUp(self) -> None:
+        cache.clear()
+        self.client = Client()
+        self.client.force_login(self.user)
+
+    def _valid_body(self, **overrides) -> dict:
+        body = {
+            "anchor_path": "docs/research/domains/memory/1399_memory_canonical_summary.md",
+            "section_key": "next_actions",
+            "section_title": "Next Actions",
+            "bullet_text": "Test bullet — investigate follow-up X and produce spec.",
+            "citations": [
+                {
+                    "document_id": "doc-1",
+                    "chunk_id": "chunk-1",
+                    "path": "docs/research/domains/memory/1300_memory_domain_scoping.md",
+                    "snippet": "Relevant snippet from source.",
+                }
+            ],
+        }
+        body.update(overrides)
+        return body
+
+    def test_anonymous_returns_json_not_html_redirect(self) -> None:
+        c = Client()  # no login
+        resp = c.post(
+            self.ENDPOINT,
+            data=json.dumps(self._valid_body()),
+            content_type="application/json",
+        )
+        self.assertIn(resp.status_code, (401, 403))
+        self.assertNotEqual(resp.status_code, 302)
+        self.assertIn("application/json", resp.headers.get("Content-Type", ""))
+
+    def test_missing_bullet_text_returns_400(self) -> None:
+        resp = self.client.post(
+            self.ENDPOINT,
+            data=json.dumps(self._valid_body(bullet_text="")),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_anchor_outside_docs_returns_403(self) -> None:
+        resp = self.client.post(
+            self.ENDPOINT,
+            data=json.dumps(self._valid_body(anchor_path="core/urls.py")),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 403)
+
+    def test_citations_not_a_list_returns_400(self) -> None:
+        resp = self.client.post(
+            self.ENDPOINT,
+            data=json.dumps(self._valid_body(citations="not a list")),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 400)
+
+    def test_happy_path_creates_deliverable_without_diagnostic_flag(self) -> None:
+        from core.models_deliverables import Deliverable
+
+        resp = self.client.post(
+            self.ENDPOINT,
+            data=json.dumps(self._valid_body()),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 201, resp.content[:400])
+        payload = resp.json()
+        self.assertEqual(payload["deliverable_type"], "briefing_action_item")
+        self.assertEqual(payload["workspace_id"], self.DONKEY_BETZ_WS)
+        self.assertTrue(payload["title"].startswith("Briefing action: "))
+
+        d = Deliverable.objects.get(id=payload["deliverable_id"])
+        self.assertEqual(str(d.workspace_id), self.DONKEY_BETZ_WS)
+        self.assertEqual(d.deliverable_type, "briefing_action_item")
+        self.assertEqual(d.category, "research_followup")
+        # Regression guard for `feedback_pa_deliverables_tool_flags_ratifications_as_diagnostic`:
+        # the exempt-type list in deliverable_factory must keep briefing_action_item
+        # off the missing_initiative_id diagnostic path, or the row will
+        # be hidden from the workspace UI.
+        self.assertIsNone(
+            d.diagnostic_status,
+            "briefing_action_item must be exempt from the missing_initiative_id diagnostic",
+        )
+        self.assertIsNone(d.diagnostic_code)
+        self.assertIn("next_actions", d.tags)
