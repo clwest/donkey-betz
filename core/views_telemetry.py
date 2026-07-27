@@ -63,3 +63,55 @@ def page_view_api(request):
         pass
 
     return JsonResponse({}, status=204)
+
+
+# ─────────────────────────────────────────────────────────────────────
+# S2984 PR4: Guided-actions instrumentation
+# ─────────────────────────────────────────────────────────────────────
+
+EVENT_COUNTER_TTL = 90 * 86400  # 90 days, same as page-view
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def event_api(request):
+    """
+    Record a generic UI event (Spec §5: workspace_home_viewed,
+    guided_action_clicked, library_filter_applied). Returns 204 on
+    success, 204 on any failure (never blocks UI — same contract as
+    page_view_api).
+
+    Body: {"event": "...", "workspace_id": "...", "payload": {...}}
+
+    Increments Redis counter at:
+      ui_events:{YYYY-MM-DD}:{event}                    += 1
+      ui_events:{YYYY-MM-DD}:{event}:{workspace_id}     += 1
+    """
+    try:
+        body = json.loads(request.body)
+        event = (body.get('event') or '').strip()
+        if not event:
+            return JsonResponse({}, status=204)
+
+        workspace_id = (body.get('workspace_id') or '').strip() or None
+
+        today = date.today().isoformat()
+
+        try:
+            from django.core.cache import cache
+
+            event_key = f'ui_events:{today}:{event}'
+            current = cache.get(event_key, 0)
+            cache.set(event_key, current + 1, EVENT_COUNTER_TTL)
+
+            if workspace_id:
+                scoped_key = f'ui_events:{today}:{event}:{workspace_id}'
+                current_scoped = cache.get(scoped_key, 0)
+                cache.set(scoped_key, current_scoped + 1, EVENT_COUNTER_TTL)
+        except Exception:
+            logger.debug("Telemetry.event: cache unavailable, skipping")
+
+    except Exception:
+        pass
+
+    return JsonResponse({}, status=204)

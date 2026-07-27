@@ -1,8 +1,10 @@
 // Session 1009: Deliverables Library Tab
 // Browse, search, and manage agent-produced deliverables
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { trackEvent } from '@/hooks/useTelemetryEvent'
 import ReactMarkdown from 'react-markdown'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
@@ -286,6 +288,14 @@ export function DeliverablesTab() {
     template?: boolean
     source?: string
   }>({})
+
+  // S2984 PR4: deep-link from Home guided-action "Review Ready Items"
+  // uses ?filter=ready to preset a client-side status filter. Keeps the
+  // server API + existing filter shape untouched (Rigby T1 REVISE).
+  // The library_filter_applied telemetry effect runs LATER in the
+  // component (after activeWsId is derived) so we don't race the store.
+  const [searchParams] = useSearchParams()
+  const statusFilter = searchParams.get('filter') || ''
   const [searchInput, setSearchInput] = useState('')
   const [showFilters, setShowFilters] = useState(false)
 
@@ -310,6 +320,14 @@ export function DeliverablesTab() {
   // Workspace-aware: when viewed inside a workspace context, filter by
   // workspace. When on the global /deliverables page, show everything.
   const activeWsId = useWorkspaceStore(s => s.activeWorkspace?.id)
+
+  // S2984 PR4 §5: fire library_filter_applied once per URL-param change
+  // (declared here so we can key on the workspace-store value cleanly).
+  useEffect(() => {
+    if (statusFilter) {
+      trackEvent('library_filter_applied', activeWsId, { filter: statusFilter, source: 'url' })
+    }
+  }, [statusFilter, activeWsId])
 
   const statsQuery = useQuery({
     queryKey: ['deliverables-stats', activeWsId],
@@ -441,7 +459,14 @@ export function DeliverablesTab() {
 
   const stats: DeliverableStats | null = statsQuery.data?.stats ?? null
   const types: DeliverableType[] = typesQuery.data?.types ?? []
-  const deliverables: Deliverable[] = listQuery.data?.deliverables ?? []
+  const rawDeliverables: Deliverable[] = listQuery.data?.deliverables ?? []
+  // S2984 PR4: apply client-side status filter from URL param
+  // (?filter=ready). Kept client-side to avoid touching the server API +
+  // existing filters shape for this MVP.
+  const deliverables: Deliverable[] = useMemo(() => {
+    if (!statusFilter) return rawDeliverables
+    return rawDeliverables.filter(d => (d as unknown as { status?: string }).status === statusFilter)
+  }, [rawDeliverables, statusFilter])
   const pagination: Pagination | null = listQuery.data?.pagination ?? null
   const detail: Deliverable | null = detailQuery.data?.deliverable ?? null
   const hasActiveFilters = !!(filters.type || filters.category || filters.agent || filters.search || filters.saved || filters.template || filters.source)

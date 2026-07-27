@@ -1,14 +1,12 @@
 """
-Workspace Home Snapshot API — Session 2983 / Spec 5e1c702f-c09e-4f10-b513-888f0784a81a.
+Workspace Home APIs — Session 2983 (snapshot) + Session 2984 PR4 (shift-brief).
 
-Endpoint:
-- GET /api/workspaces/<uuid:workspace_id>/home/  — snapshot for the workspace
-  Home tab (NOW / ACTIVE WORK / LIBRARY modules).
-
-Response shape follows the ENGINEERING SPEC — Workspace Home v1 (Legibility
-Overhaul) §3.1 with per-section partial-failure guardrails: each section is
-computed in isolation and, on failure, returns empty defaults + a logged
-warning so the whole page never dies.
+Endpoints:
+- GET /api/workspaces/<uuid:workspace_id>/home/          — snapshot for the
+  Home tab (NOW / ACTIVE WORK / LIBRARY modules) — Spec §3.1.
+- POST /api/workspaces/<uuid:workspace_id>/shift-brief/  — Guided Action
+  "Run Shift Brief" — invokes core.services.rigby_shift_brief.build_shift_brief
+  and returns the result. Owner-only auth via _get_workspace.
 """
 
 from __future__ import annotations
@@ -280,5 +278,55 @@ def workspace_home_snapshot(request, workspace_id):
             "now": now_payload,
             "active_work": active_work_payload,
             "library": library_payload,
+        }
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def workspace_shift_brief(request, workspace_id):
+    """
+    Guided Action §2.4 "Run Shift Brief".
+
+    Invokes core.services.rigby_shift_brief.build_shift_brief synchronously
+    (bounded by SUB_TOOL_TIMEOUT_SECONDS per parallel sub-tool per the
+    service) and returns the result dict.
+
+    Workspace is validated for owner access via _get_workspace but v1 does
+    NOT scope the brief itself to the workspace — build_shift_brief takes
+    conversation_id, not workspace_id (Rigby T1 SIGN REVISE ship
+    recommendation for PR4 MVP; workspace-scoping wrapper deferred to a
+    follow-up if the surface proves useful).
+    """
+    from core.models_skin_layer import ProjectWorkspace
+    from core.services.rigby_shift_brief import build_shift_brief
+
+    try:
+        workspace = _get_workspace(workspace_id, request.user)
+    except ProjectWorkspace.DoesNotExist:
+        return Response({"success": False, "error": "Workspace not found"}, status=404)
+
+    try:
+        brief = build_shift_brief(user_id=request.user.id, conversation_id=None, window="24h")
+    except Exception:
+        logger.warning(
+            "workspace_shift_brief failed",
+            exc_info=True,
+            extra={"workspace_id": str(workspace_id)},
+        )
+        return Response(
+            {"ok": False, "error": "shift_brief_failed", "workspace_id": str(workspace.id)},
+            status=502,
+        )
+
+    return Response(
+        {
+            "ok": bool(brief.get("ok")),
+            "summary_text": brief.get("summary_text", ""),
+            "traffic_light": brief.get("traffic_light", "GREEN"),
+            "sections": brief.get("sections", {}),
+            "metadata": brief.get("metadata", {}),
+            "workspace_id": str(workspace.id),
+            "generated_at": timezone.now().isoformat(),
         }
     )
