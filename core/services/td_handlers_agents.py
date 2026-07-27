@@ -514,17 +514,45 @@ class AgentHandlersMixin:
         json_body = payload.get('json_body') if method == 'POST' else None
         allow_private_networks = bool(payload.get('allow_private_networks', True))
 
+        # S3000 v2 item #5: opt-in DRF Token auth for internal endpoints.
+        # When the caller sets `use_user_auth=True` AND we have a `user_id`
+        # in the dispatch context, look up the user's DRF Token and inject
+        # `Authorization: Token <key>` — but only if the caller hasn't
+        # already supplied an Authorization header (respect explicit
+        # overrides). Fail-open: no token → proceed unauthenticated; the
+        # endpoint will 401 and the caller sees that in the response.
+        # Precedent: `td_handlers_core.py:854` uses the same lookup.
+        use_user_auth = bool(payload.get('use_user_auth'))
+        auth_injected = False
+        if use_user_auth and user_id is not None:
+            has_auth_header = any(k.lower() == 'authorization' for k in headers)
+            if not has_auth_header:
+                try:
+                    from rest_framework.authtoken.models import Token
+                    token_obj = Token.objects.filter(user_id=user_id).first()
+                    if token_obj:
+                        headers = dict(headers)  # avoid mutating caller
+                        headers['Authorization'] = f'Token {token_obj.key}'
+                        auth_injected = True
+                except Exception:  # noqa: BLE001 — auth injection is best-effort
+                    logger.warning(
+                        "web_fetch_tool: Token lookup failed user_id=%s trace_id=%s",
+                        user_id, trace_id, exc_info=True,
+                    )
+
         # Log without leaking Authorization header value or body content
         header_names = sorted(headers.keys())
         logger.info(
             "web_fetch_tool call: method=%s url=%s header_names=%s "
-            "timeout=%.1fs max_bytes=%d allow_private=%s trace_id=%s",
+            "timeout=%.1fs max_bytes=%d allow_private=%s auth_injected=%s "
+            "trace_id=%s",
             method,
             url,
             header_names,
             timeout_seconds,
             max_bytes,
             allow_private_networks,
+            auth_injected,
             trace_id,
         )
 
