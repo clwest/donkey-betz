@@ -38,6 +38,13 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required, user_passes_test
+# S2984 PR4: DRF for doc_content_view — returns JSON 401/403 on auth
+# failure via the platform's DRF exception handler, instead of the 302
+# HTML redirect that @login_required would emit (which axios follows,
+# yielding a silent 'no content' bug in DocumentViewer).
+from rest_framework.decorators import api_view, permission_classes as drf_permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response as DRFResponse
 from django.views.decorators.http import require_GET, require_POST, require_http_methods
 
 logger = logging.getLogger(__name__)
@@ -1223,8 +1230,8 @@ def skin_lock_toggle_view(request):
         }, status=500)
 
 
-@require_GET
-@login_required
+@api_view(['GET'])
+@drf_permission_classes([IsAuthenticated])
 def doc_content_view(request):
     """
     GET /api/platform/doc-content/
@@ -1239,28 +1246,37 @@ def doc_content_view(request):
     - metadata: Title, lines, size, modified date
 
     Security (S2984 PR3 hardening):
-    - @login_required (was previously public).
+    - IsAuthenticated (was previously public).
     - Path.resolve() containment check against BASE_DIR — rejects symlinks
       that resolve outside the repo, in addition to the existing '..' guard.
+
+    Auth-XHR contract (S2984 PR4 hotfix):
+    - DRF @api_view + @permission_classes returns JSON 401/403 on auth
+      failure instead of the 302 HTML redirect that django.contrib.auth's
+      @login_required would emit. axios treats a 302-followed HTML page
+      as a valid 200 body, making `response.data.content` undefined and
+      the DocumentViewer render silently blank. DRF's exception handler
+      (core/security/error_envelope.py:drf_exception_handler) returns
+      application/json, so the frontend catch-block hits normally.
     """
     doc_path = request.GET.get('path', '')
 
     if not doc_path:
-        return JsonResponse({
-            'error': 'Missing path parameter'
-        }, status=400)
+        return DRFResponse({'error': 'Missing path parameter'}, status=400)
 
     # Security: Only allow reading from docs/ directory
     if not doc_path.startswith('docs/'):
-        return JsonResponse({
-            'error': 'Invalid path - must be within docs/ directory'
-        }, status=403)
+        return DRFResponse(
+            {'error': 'Invalid path - must be within docs/ directory'},
+            status=403,
+        )
 
     # Security: Prevent directory traversal
     if '..' in doc_path:
-        return JsonResponse({
-            'error': 'Invalid path - directory traversal not allowed'
-        }, status=403)
+        return DRFResponse(
+            {'error': 'Invalid path - directory traversal not allowed'},
+            status=403,
+        )
 
     # Build full path + resolve to catch symlinks pointing outside BASE_DIR.
     base = Path(settings.BASE_DIR).resolve()
@@ -1268,25 +1284,20 @@ def doc_content_view(request):
     try:
         full_path.relative_to(base)
     except ValueError:
-        return JsonResponse({
-            'error': 'Invalid path - resolves outside repository'
-        }, status=403)
+        return DRFResponse(
+            {'error': 'Invalid path - resolves outside repository'},
+            status=403,
+        )
 
     if not full_path.exists():
-        return JsonResponse({
-            'error': f'Document not found: {doc_path}'
-        }, status=404)
+        return DRFResponse({'error': f'Document not found: {doc_path}'}, status=404)
 
     if not full_path.is_file():
-        return JsonResponse({
-            'error': 'Path is not a file'
-        }, status=400)
+        return DRFResponse({'error': 'Path is not a file'}, status=400)
 
     # Only allow markdown files
     if full_path.suffix.lower() not in ['.md', '.markdown']:
-        return JsonResponse({
-            'error': 'Only markdown files are supported'
-        }, status=400)
+        return DRFResponse({'error': 'Only markdown files are supported'}, status=400)
 
     try:
         content = full_path.read_text(encoding='utf-8')
@@ -1302,7 +1313,7 @@ def doc_content_view(request):
         if not title:
             title = full_path.stem.replace('_', ' ').replace('-', ' ').title()
 
-        return JsonResponse({
+        return DRFResponse({
             'content': content,
             'metadata': {
                 'path': doc_path,
@@ -1311,13 +1322,11 @@ def doc_content_view(request):
                 'lines': content.count('\n') + 1,
                 'size_bytes': stat.st_size,
                 'modified_at': datetime.fromtimestamp(stat.st_mtime, tz=dt_timezone.utc).isoformat(),
-            }
+            },
         })
     except Exception as e:
         logger.error(f"Error reading document {doc_path}: {e}")
-        return JsonResponse({
-            'error': f'Error reading document: {str(e)}'
-        }, status=500)
+        return DRFResponse({'error': f'Error reading document: {str(e)}'}, status=500)
 
 
 # =============================================================================
