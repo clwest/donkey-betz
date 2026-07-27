@@ -142,7 +142,7 @@ function SendToRigbyButton({
         Sent — deliverable{' '}
         {state.deliverableId && state.workspaceId ? (
           <a
-            href={`/workspaces/${state.workspaceId}/deliverables/${state.deliverableId}`}
+            href={`/workspace?tab=deliverables&workspace=${state.workspaceId}`}
             className="underline hover:text-primary-300"
             target="_blank"
             rel="noreferrer"
