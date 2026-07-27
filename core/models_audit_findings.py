@@ -78,6 +78,22 @@ class DocResearchFinding(models.Model):
         (CONFIDENCE_LOW, "Low"),
     ]
 
+    # S2992 v2 item #2 — finding-type classifier at ingest.
+    # Orthogonal to status and close_mode: classifies what SHAPE of work the
+    # finding represents so the spec-generator (item #3) can branch template,
+    # and Rigby-SIGN UI (item #6) can nudge on decision_evidence rows.
+    # Applied at ingest via _classify_finding_type in the index command; new
+    # rows always get a classification, existing 900 default to `unknown`
+    # until `--reclassify-existing --apply` runs (deferred to PR (b)).
+    FINDING_TYPE_DECISION_EVIDENCE = "decision_evidence"
+    FINDING_TYPE_EXECUTABLE = "executable"
+    FINDING_TYPE_UNKNOWN = "unknown"
+    FINDING_TYPE_CHOICES = [
+        (FINDING_TYPE_DECISION_EVIDENCE, "Decision Evidence"),
+        (FINDING_TYPE_EXECUTABLE, "Executable"),
+        (FINDING_TYPE_UNKNOWN, "Unknown"),
+    ]
+
     SOURCE_TYPE_AUDIT = "audit"
     SOURCE_TYPE_CANONICAL_SUMMARY = "canonical_summary"
     SOURCE_TYPE_IMPLEMENTATION_DEBT = "implementation_debt"
@@ -129,6 +145,12 @@ class DocResearchFinding(models.Model):
         null=True,
         blank=True,
         default=None,
+    )
+    finding_type = models.CharField(
+        max_length=32,
+        choices=FINDING_TYPE_CHOICES,
+        default=FINDING_TYPE_UNKNOWN,
+        db_index=True,
     )
 
     deliverable_id = models.CharField(max_length=64, blank=True, default="")
