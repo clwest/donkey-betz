@@ -864,6 +864,21 @@ class AgentHandlersMixin:
                 'app_label': 'core', 'sensitive': False,
                 'expensive_text_fields': ('result_summary', 'full_result', 'error_message'),
             },
+            # S2991 v2 item #5 — DocResearchFinding surfacing so Rigby's
+            # A2 SIGN cycles on the Findings surface can verify row state
+            # directly instead of relying on Claude-side ORM shells. Same
+            # blocker hit at S2990 close (marking) + S2991 close_mode
+            # migration A2 (verification) — two triggers within two
+            # sessions justify closing the tool-surface gap. Non-sensitive:
+            # rows are docs/research/ bullet extractions, no credentials.
+            # `text` (finding body) + `resolution_note` (Chris/Rigby close
+            # notes, often multi-line) are TextFields that can exceed 4KB
+            # per row so both blocked from contains lookups. `tags` +
+            # `metadata` are JSONFields (redaction path).
+            'DocResearchFinding': {
+                'app_label': 'core', 'sensitive': False,
+                'expensive_text_fields': ('text', 'resolution_note'),
+            },
         }
 
         _MAX_LIMIT = 200
