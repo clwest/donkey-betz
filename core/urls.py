@@ -5053,11 +5053,15 @@ urlpatterns += [
 # =========================================================================
 # Wires up the schema endpoints so the 17 @extend_schema decorators in
 # sports/views.py (and any future ones) produce a real OpenAPI document.
+# permission_classes=[AllowAny] overrides the global IsAuthenticated default
+# — schema/docs endpoints are conventionally public dev tools and the
+# endpoint URLs are already deducible from the frontend bundle.
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView, SpectacularRedocView
+from rest_framework.permissions import AllowAny
 urlpatterns += [
-    path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
-    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
-    path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
+    path('api/schema/', SpectacularAPIView.as_view(permission_classes=[AllowAny]), name='schema'),
+    path('api/schema/swagger-ui/', SpectacularSwaggerView.as_view(permission_classes=[AllowAny], url_name='schema'), name='swagger-ui'),
+    path('api/schema/redoc/', SpectacularRedocView.as_view(permission_classes=[AllowAny], url_name='schema'), name='redoc'),
 ]
 
 # =========================================================================
