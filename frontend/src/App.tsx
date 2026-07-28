@@ -41,6 +41,7 @@ import ExecutorPage from '@/pages/ExecutorPage'  // Session 1076: Executor runs 
 import MediaPage from '@/pages/MediaPage'
 import VipAcceptPage from '@/pages/VipAcceptPage'
 import OperatorEdgePage from '@/pages/OperatorEdgePage'
+import SessionExpiredModal from '@/components/SessionExpiredModal'  // ADR-0005 §3.4 T-ENVELOPE-3
 
 // Focus Cockpit — imports preserved for potential admin-bypass restore (Phase 1 consolidation)
 // All cockpit routes now redirect to Workspace tabs. See cockpit/ directory for original pages.
@@ -61,6 +62,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
+    <>
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       {/* S2797: Public marketing / early-access surface. Unauth. Chris shares
@@ -153,6 +155,8 @@ function App() {
       <Route path="/cockpit/inbox" element={<Navigate to="/workspace?tab=home" replace />} />
       <Route path="/cockpit/*" element={<Navigate to="/workspace" replace />} />
     </Routes>
+    <SessionExpiredModal />
+    </>
   )
 }
 
