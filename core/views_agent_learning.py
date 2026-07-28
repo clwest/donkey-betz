@@ -2155,7 +2155,6 @@ def promote_decision(request, decision_id):
 
     try:
         from core.models_unified_system import AgentDecisionSummary
-        from core.models import KnowledgeTransfer
         import redis
         import json
         import os
@@ -2165,51 +2164,54 @@ def promote_decision(request, decision_id):
 
         logger.info(f"🏛️ [BOARDROOM] Decision promoted to canonical: {decision.topic}")
 
-        # Session 657: Create a knowledge transfer record for the canonical decision
+        # S3026 Fold C (S3023 forward-carry): the original S657 KnowledgeTransfer
+        # write path was structurally broken — the KT model at
+        # `core.models_unified_system:785` has fields (source_knowledge,
+        # transfer_summary, was_applied, was_useful, …) that don't match the
+        # kwargs S657 passed (source_agent, target_agent, title, content,
+        # applied). Every promotion since S657 hit
+        # `TypeError: KnowledgeTransfer() got unexpected keyword arguments`
+        # inside the broad `except Exception as learn_err` and returned
+        # `learning_created: False` with no observable failure — so any
+        # `decision.summary` AttributeError further down never even fired.
+        #
+        # Option C fix: remove the broken KT write entirely, keep + fix the
+        # Redis broadcast (still valuable to collective intelligence
+        # subscribers), return `learning_created: False` honestly with a
+        # `learning_reason` diagnostic so callers know why. The KT model
+        # realignment is a separate design arc.
         learning_created = False
+        learning_reason = 'knowledge_transfer_model_mismatch_deferred'
+
         try:
-            # Create knowledge transfer to capture the canonical decision as learned knowledge
-            knowledge = KnowledgeTransfer.objects.create(
-                source_agent='BoardroomGovernance',
-                target_agent='CollectiveIntelligence',
-                knowledge_type='canonical_policy',
-                title=f"[Canonical] {decision.topic[:100]}",
-                content=decision.summary or decision.topic,
-                usefulness_score=0.9,  # High score for canonical decisions
-                applied=True,
-            )
-            learning_created = True
-            logger.info(f"🧠 [SESSION 657] Created knowledge transfer for canonical decision: {knowledge.id}")
-
-            # Broadcast to collective intelligence via Redis
-            try:
-                r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
-                event = {
-                    'type': 'canonical_decision_promoted',
-                    'timestamp': timezone.now().isoformat(),
-                    'decision_id': str(decision.id),
-                    'topic': decision.topic[:100],
-                    'decision_type': decision.decision_type,
-                    'summary': (decision.summary or '')[:200],
-                    'agents_involved': decision.agents_involved or [],
-                }
-                r.publish('agent_learning', json.dumps({
-                    'type': 'canonical_policy_created',
-                    'data': event
-                }))
-                r.incr('canonical_decisions:total')
-                logger.info(f"🧠 [SESSION 657] Broadcast canonical decision to collective intelligence")
-            except Exception as redis_err:
-                logger.warning(f"Redis broadcast failed: {redis_err}")
-
-        except Exception as learn_err:
-            logger.warning(f"Error creating learning from canonical decision: {learn_err}")
+            r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
+            event = {
+                'type': 'canonical_decision_promoted',
+                'timestamp': timezone.now().isoformat(),
+                'decision_id': str(decision.id),
+                'topic': decision.topic[:100],
+                'decision_type': decision.decision_type,
+                'summary': (decision.rationale or decision.recommended_stance or '')[:200],
+                # S3026 Fold C follow-up: AgentDecisionSummary field is
+                # `participants`, not `agents_involved`. The prior spelling
+                # was also silently masked by the broad try/except.
+                'participants': decision.participants or [],
+            }
+            r.publish('agent_learning', json.dumps({
+                'type': 'canonical_policy_created',
+                'data': event
+            }))
+            r.incr('canonical_decisions:total')
+            logger.info(f"🧠 [S3026] Broadcast canonical decision to collective intelligence")
+        except Exception as redis_err:
+            logger.warning(f"[S3026] Redis broadcast failed: {redis_err}")
 
         return JsonResponse({
             'success': True,
             'message': f'Decision "{decision.topic}" promoted to canonical policy',
             'decision_id': str(decision.id),
-            'learning_created': learning_created  # Session 657
+            'learning_created': learning_created,  # Session 657 (S3026: honestly False)
+            'learning_reason': learning_reason,  # S3026 Fold C diagnostic
         })
 
     except AgentDecisionSummary.DoesNotExist:
