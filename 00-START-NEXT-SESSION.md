@@ -2,80 +2,113 @@
 
 ---
 
-## READ THIS FIRST — SESSION 3010 CLOSED. **ADR-0007 §4.3 T-ENVELOPE-2-DEPRECATION now at 5-of-5 files migrated.** All 62 sites in `core/views_platform_integrations.py` shipped via 2-PR split (16 auth + 46 CRUD) + Fold E RateLimiting 429 migrated + 2 Rigby Tool Gap Ledger entries minted. Arc is **essentially complete**; only trailing scope = 3 gumroad_webhook sites (Chris-deferred pending Gumroad body-shape sensitivity check) + api_helpers.py disposition arc.
+## READ THIS FIRST — SESSION 3011 CLOSED. **ADR-0007 §4.3 T-ENVELOPE-2-DEPRECATION arc is now FULLY COMPLETE.** All 5 MIGRATED_FILES clean of raw JsonResponse error envelopes (`views_platform_integrations.py` gumroad_webhook 3 sites closed as B1; extended AST-based str(e) body-leak lint ships as B2 with 32 grandfathered DRF Response debt sites cataloged). **T-ENVELOPE-3 opens as the primary S3012 arc** — retire `api_helpers.api_error` across ~90 caller sites in 4 primary files + 6 minor sites.
 
-**3 feature PRs + 2 ledger deliverables shipped this session.**
+**2 feature PRs shipped this session.**
 
-**PR #3694 (`2cfa01561`) — Fold E: RateLimiting 429 → helper.** Last raw JsonResponse envelope in auth_middleware.py migrated. File now 11/11 sites helper-based, 0 raw patterns. JsonResponse import dropped. Rigby A2 SIGN AGREE 5/5. Programmatic smoke verified (middleware commented-out in settings; RequestFactory smoke confirmed 429 + Family E + retry_after_seconds=300 + full log-source proof).
+**PR #3698 (`96326c20e`) — B1: gumroad_webhook 3 error sites migrated.** L1382 (JSON decode fail) + L1393 (missing product_id) → `invalid_input` (400→400). L1447 (unhandled exception) → `internal_error` (500→500). **Safety upgrade:** str(e) leak at L1447 removed. Success paths L1418/L1428 preserved as raw JsonResponse per ADR §4.3 error-only scope. Rigby A1 (3 STRENGTHEN + 2 AGREE, 5 tool_runs); A2 (4 AGREE + 1 STRENGTHEN, 2 tool_runs). Live curl smoke post-`make restart` — 3 sites × PASS with fresh support codes (74d2/7905/a08c). str(e) confirmed in operator log ONLY, not user body.
 
-**PR #3695 (`cd65a3931`) — Batch 4a PR A: 16 auth-surface sites.** oauth_connect + oauth_callback + refresh_token migrated. 9 status shifts (400→503×3, 400→502×2, 400→500×3, 400→404×1, 400→401×1). Safety upgrade: 2 exception-fallback sites no longer leak str(e) to user-facing body. **Import strategy correction:** api_error RETAINED in PR A (pending PR B) — new Fold D rule pattern for PR-split migrations. Rigby A2 SIGN AGREE 5/5. 3-site smoke PASS.
+**PR #3699 (`6a1d8645a`) — B2: AST-based str(e) body-leak lint + grandfather list.** Extended `scripts/lint_no_deprecated_family_b.py` with AST detector for `return JsonResponse/Response({...str(e) or f-string {e}...})` patterns. 32 pre-existing DRF Response leaks in `core/views_odds_sports.py` grandfathered as `STR_E_LEAK_GRANDFATHER` frozenset. `--regenerate-grandfather` flag for churn recovery. Stale grandfather detection at exit 0. Rigby A1 (DECIDE Shape 4 + 3 STRENGTHENs, 4 tool_runs); A2 (3 AGREE + 1 STRENGTHEN P1-minor, 2 tool_runs). Test evidence: 6/6 PASS (baseline / list / regenerate / new-leak-fail / stale-warn / syntax).
 
-**PR #3696 (`c7e0fbc71`) — Batch 4b PR B: 46 platform-CRUD sites + MIGRATED_FILES = 5.** etsy + shutterstock + gumroad + sync + disconnect endpoints all migrated. Combined file at 62/62 sites. Added to MIGRATED_FILES tuple (**5 files tracked**). 24 status shifts (400→404×10, 400→500×8, 400→502×5, 400→503×1). 8 exception-fallback safety upgrades. api_error dropped from imports (final cleanup). Rigby A2 SIGN AGREE 4/5 + PARTIAL D3 (scope-of-inspection, not code defect). 3-site smoke PASS with behavior-change verification (400→404 + 400→503 both confirmed live).
+**B3 audit + rescope.** Grep-tool-grounded audit surfaced api_helpers.py `api_error` has ~90 caller sites across 4 primary files (`views_ab_testing.py` 37 / `views_learning_loop.py` 25 / `views_rag_observability.py` 13 / `tasks_conversations.py` 11) + 6 minor sites. Plus existing bug: 7 sites in `views_rag_observability.py` use `status_code=` kwarg api_error doesn't accept (would `TypeError`). Chris ratified Option F (defer to T-ENVELOPE-3 successor arc) after workflow correction on wall-clock time inflation (Fold C).
 
-**Task C — 2 Rigby Tool Gap Ledger entries** minted in workspace `b4503364-2573-4401-9e28-61a739e0ce50`:
-- **`f4e8481f-ac80-477d-b5dd-9f291a21f245`** — Rigby Tool Gap — LLM-side hallucination on file-level code claim (S3009 Fold A)
-- **`e6e7fd6d-0f8a-4ba9-8ecb-879612ea779c`** — Rigby Tool Gap — shell-exec surface gap for read-only verification (S3009 Fold C)
+**Rigby SIGN quality this session:** 5 substantive SIGN cycles, all tool-grounded, ZERO hallucination triggers (matches S3010 zero-hallucination pattern — 2 sessions continuous).
 
-Post-create ORM fix applied to both per `feedback_pa_deliverables_tool_flags_ratifications_as_diagnostic`.
-
-**Rigby SIGN quality this session:** 4 substantive SIGN cycles, all tool-grounded, ZERO hallucination triggers (contrast S3009 Fold A). Fold C stays at 1st trigger.
-
-**HEAD at close:** `c7e0fbc71` + docs cascade PR (this file + handoff + INDEX regen + wrapper pin bump + orphan docs/INDEX.md carry-over from S3009).
+**HEAD at close:** `6a1d8645a` + docs cascade PR (this file + handoff + INDEX regen + wrapper pin bump).
 
 Full context:
-- `docs/handoffs/SESSION_3010_T_ENVELOPE_2_DEPRECATION_BATCH_4_COMPLETE.md` — 3-PR close, 5 folds (A/B/C/D/E), forward carries
-- `docs/adr/ADR-0007-layered-envelope-policy.md` — parent ADR (ratified S3005)
+- `docs/handoffs/SESSION_3011_ENVELOPE_CLOSEOUT_B1_B2.md` — 2-PR close, 5 folds (A/B/C/D/E), forward carries, T-ENVELOPE-3 arc open
+- `docs/adr/ADR-0007-layered-envelope-policy.md` — parent ADR (T-ENVELOPE-2 CLOSED at S3011)
 - `core/security/error_envelope.py:117-154` — helper (shipped S3008)
-- `scripts/lint_no_deprecated_family_b.py` — **5 files tracked** (added views_platform_integrations.py this session)
+- `scripts/lint_no_deprecated_family_b.py` — expanded S3011 (Family B helpers + AST str(e) body-leak detection + grandfather set)
 
 ---
 
-## S3011 primary directive candidates — Chris ratifies at open
+## S3012 primary directive — T-ENVELOPE-3 retire api_error()
 
-The T-ENVELOPE-2-DEPRECATION arc is **essentially complete**. S3011 has more options than prior sessions; Chris should choose the direction.
+**Primary arc:** Retire `core.api_helpers.api_error` across ~90 caller sites. Migrate to `emit_error_envelope(reason_code=..., request=request, hint=...)` per Family E contract (ADR-0007 §3.1).
 
-### Option A — Fold B Playbook amendment (middleware/view restart discipline, 4th trigger)
+### Scope
 
-**~1 session.** Fold B has hit 4 triggers (S3007 1st, S3008 2nd, S3009 3rd, S3010 4th). The pattern is stable and repeatable. Extend `feedback_recycle_after_merge` into a formal PLAYBOOK-7.4.5 rule (or v0.10.1 PATCH). Rule text: "Any change to files loaded by Daphne request path (middleware / views / URLs / settings / installed_apps) requires `make restart` or `make recycle-all`, not `make celery-recycle` alone."
+4 primary files (by site count):
+- `core/views_ab_testing.py` — **37 sites**
+- `core/views_learning_loop.py` — **25 sites**
+- `core/views_rag_observability.py` — **13 sites** (bundle bug fix: `s/status_code=/status=/g` for 7 sites)
+- `core/tasks_conversations.py` — **11 sites**
 
-Do we lose anything by doing this? No — codifies existing behavior. More work later? No — reduces future re-derivation cost.
+6 minor files (1-2 sites each):
+- `core/tests/test_llm_call_wrapper.py`
+- `core/tests/test_pilot_gates_authz_sweep_2789.py`
+- `core/services/llm_call_wrapper.py`
+- `core/services/agent_llm_router.py`
+- `core/models_llm_telemetry.py`
+- `core/models_deliberation.py`
 
-Recommended if Chris wants to close out the governance side of the arc.
+### Recommended shape (per bias-toward-machine-speed post-Fold-C)
 
-### Option B — Close-out T-ENVELOPE-2-DEPRECATION trailing scope
+**4 sequential mini-PRs, one per primary file.** Each PR:
+1. Read the file, identify all api_error sites + their status codes.
+2. Route A1 to Rigby with proposed migration table (site → reason_code mapping + hint dict shape).
+3. Implement (batch mechanical migration).
+4. Route A2 to Rigby with diff + smoke evidence.
+5. Ship. If Daphne-request-path file → `make restart` (Fold B). Otherwise `make celery-recycle`.
+6. Add file to `MIGRATED_FILES` tuple in `scripts/lint_no_deprecated_family_b.py`.
 
-**Bundle: gumroad_webhook migration + JsonResponse-str(e) lint check + api_helpers.py disposition.** ~1-2 sessions.
+**Bundle minor files (6 sites total) into a 5th PR** at the end. Or fold into the last primary-file PR if scope allows.
 
-**B1 (~1 hr):** gumroad_webhook migration. 3 sites at `core/views_platform_integrations.py` L1418/L1428/L1435. Need to verify Gumroad webhook body-shape sensitivity first (external consumer contract). Steps:
-1. Check Gumroad webhook docs for expected body shape on error / retry semantics
-2. If safe (they only check HTTP status): migrate + drop JsonResponse import + smoke via webhook simulation
-3. If unsafe: keep raw JsonResponse but at least remove str(e) leak at L1435
+**Total estimate at Claude+Rigby machine-speed cadence:** ~45-90 min for full retirement.
 
-**B2 (~30 min):** JsonResponse-str(e) lint check. Rigby S3010 A2 Z1(b) suggestion. Extend `scripts/lint_no_deprecated_family_b.py` (or add new script) that greps for `JsonResponse(...'message': str(e)...)` or `JsonResponse(...'message': f"...{e}...)` patterns. Catches the current gumroad_webhook L1435 leak + prevents regression.
+### Reason code mapping guide
 
-**B3 (~1-2 hr):** api_helpers.py disposition arc. Currently: Family B helpers (`api_success`, `api_error`, etc.) with deprecation docstrings. Decision: (a) retire (breaking change for any leftover callers), (b) keep-with-warning + add runtime DeprecationWarning, (c) split (keep api_success + api_paginated as canonical for success responses per ADR-0007 §3.3, retire error helpers). Includes grep audit for any remaining api_error callers platform-wide.
+| api_error usage pattern | Recommended reason_code | typical_status |
+|--|--|--|
+| `api_error("Authentication required", ...)` | `not_authenticated` | 401 |
+| `api_error("Test not found", status=404)` | `not_found` | 404 |
+| `api_error("Missing required field: X")` | `invalid_input` | 400 |
+| `api_error("Invalid JSON data")` | `invalid_input` | 400 |
+| `api_error("Cannot start test in {status} status")` | `validation_error` | 400 |
+| `api_error(str(e), status=500)` (exception fallback) | `internal_error` | 500 (drop str(e) leak → hint={exc_type}) |
+| `api_error("Staff access required", ...)` | `permission_denied` | 403 |
 
-Do we lose anything by deferring? Nothing user-visible; 3 webhook sites stay Family B. More work later? Yes — the arc will keep 2 small carry-forwards indefinitely if not closed.
+### Bundled bug fix (per Chris ratification)
 
-Recommended if Chris wants engineering completeness.
+In the `views_rag_observability.py` migration PR:
+- Fix `status_code=` kwarg (~7 sites at L43/L68/L98/L127/L155/L182/L210/L239/L293) — either `s/status_code=/status=/g` before migration OR just drop the kwarg entirely when migrating to `emit_error_envelope` (which uses `reason_code` inference for status).
 
-### Option C — Fresh engineering thread (Chris bias-engineering rule)
+### api_success disposition (deferred)
 
-Per `feedback_engineering_bias_over_audit`: at session open, list net-new engineering candidates FIRST. Batch 4 was engineering, but the arc is winding down. Concrete net-new candidates:
+`api_error` is Family B (error surface). `api_success` (L63-70) is success surface — per ADR-0007 §3.3, `api_success` + `api_paginated` may stay canonical. T-ENVELOPE-3 focuses on `api_error` retirement. `api_success` disposition deferred to a follow-up (possibly T-ENVELOPE-4).
 
-- **New spider:** any market/data source Chris wants coverage on (e.g., Kalshi option chains, congressional trades, Fed FOMC calendar).
-- **Workspace tab enhancement:** per `feedback_workspace_over_command_center_for_new_ui` — extend Files tab, Deliverables tab, or Initiatives tab with a specific new capability.
-- **Agent capability:** new AGENT_MAP entry, new tool_dispatcher handler, new advisor domain specialist.
-- **Pipeline:** new signal aggregation rule, new content deliberation stage, new body-system monitor.
-- **Dashboard:** new operator-observability view, new revenue attribution surface, new agent-collaboration graph.
+### After T-ENVELOPE-3 complete
 
-Chris raises specifics at S3011 open; Claude proposes 1-3 candidates from repo state.
+- Retire `api_error` from `core/api_helpers.py` (breaking change; safe once all callers migrated).
+- `core/api_helpers.py` reduces to `smart_truncate` + optionally `api_success`.
+- ADR-0007 close (§4.3 T-ENVELOPE-2 + §4.4 T-ENVELOPE-3 both complete).
+
+---
+
+## S3012 alternative directive candidates
+
+### Option A — Fold B Playbook amendment (5th trigger imminent)
+
+**~20-30 min at machine-speed.** Fold B has hit 4 triggers (S3007/S3008/S3009/S3010→S3011). Extend `feedback_recycle_after_merge` into formal PLAYBOOK-7.4.5 rule (or v0.10.1 PATCH). Rule text ready in S3011 handoff Fold B section. Bundle candidate with T-ENVELOPE-3 close cascade.
+
+### Option B — Sports odds leak drain arc (bundled with T-ENVELOPE-3 or standalone)
+
+**~30-60 min at machine-speed.** Drain the 32 grandfathered DRF Response `str(e)` sites in `core/views_odds_sports.py`. Each drained site removes one grandfather entry from `STR_E_LEAK_GRANDFATHER`. When set is empty, drop the grandfather mechanism entirely.
+
+Could bundle into T-ENVELOPE-3 if views_odds_sports.py is added to that arc's scope. But those sites are DRF Response (not api_error callers) — arguably a separate class of migration.
+
+### Option C — Fresh engineering (Chris bias-engineering rule)
+
+Per `feedback_engineering_bias_over_audit`. Concrete candidates:
+- New spider / new agent capability / workspace tab enhancement.
+- Signal aggregation rule / body-system monitor / dashboard.
+- Chris raises specifics at S3012 open.
 
 ### Option D — Docs restructuring arc (queued at S2801)
 
-Chris directive S2800 close (2026-07-16): open a parent-scoped research arc auditing `/docs/` using the `/docs/research/` pattern itself. Output = design proposal + migration plan across arc; NOT code changes / file moves. Fresh session; first-action fresh mint. 4 proposed audit threads (inventory / research-pattern extraction / human pain / handoffs+audits proliferation).
-
-**Complementary to Chris's ebook idea** (recorded S3010 in `project_ebook_from_docs_folder`) — the docs restructuring arc could produce the ebook as an output.
+Chris directive S2800 close (2026-07-16): open a parent-scoped research arc auditing `/docs/` using the `/docs/research/` pattern itself. Complementary to Chris's ebook idea (recorded S3010 in `project_ebook_from_docs_folder`).
 
 ### Option E — Chris's own priority
 
@@ -84,42 +117,35 @@ Chris may have surfaced other work between sessions (email, discord, personal ch
 **Standard opener:**
 1. Run `context-kit orient` (auto-injected).
 2. Absorb this file + MEMORY.md + CLAUDE.md.
-3. Read S3010 handoff (`docs/handoffs/SESSION_3010_T_ENVELOPE_2_DEPRECATION_BATCH_4_COMPLETE.md`).
+3. Read S3011 handoff (`docs/handoffs/SESSION_3011_ENVELOPE_CLOSEOUT_B1_B2.md`).
 4. Optional state probes:
-   - `git log --oneline -8` — should show docs cascade → `c7e0fbc71` (PR #3696 Batch 4b) → `cd65a3931` (PR #3695 Batch 4a) → `2cfa01561` (PR #3694 Fold E) → `6d8bf37fb` (S3009 close cascade).
-   - `python scripts/lint_no_deprecated_family_b.py --list` — confirm **5 tracked files** (Batch 4 addition present).
-   - `grep -rn "api_error\|api_unauthorized\|api_forbidden" core/ --include="*.py" | grep -v "views_odds_sports\|views_revenue_analytics\|auth_middleware\|views_auto_distribution\|views_platform_integrations\|api_responses"` — identify remaining callers of Family B helpers OUTSIDE the 5 migrated files. Feeds Option B3 (api_helpers.py disposition audit).
+   - `git log --oneline -8` — should show docs cascade → `6a1d8645a` (PR #3699 B2 str(e) lint) → `96326c20e` (PR #3698 B1 gumroad_webhook) → `383f53949` (S3010 close cascade).
+   - `python scripts/lint_no_deprecated_family_b.py` — confirm `✅ ADR-0007 Family B deprecation lint OK (5 files checked, 32 grandfathered str(e) leaks)`.
+   - `grep -c "\bapi_error\b" core/views_ab_testing.py core/views_learning_loop.py core/views_rag_observability.py core/tasks_conversations.py` — confirm caller counts still match audit (37/25/13/11).
 
-**Joint recommendation at close:** No single clear winner given arc completeness. Preferred order depends on Chris signal:
-- If Chris wants **governance closure**: A (Playbook amendment) > B (close-out arc).
-- If Chris wants **engineering completeness on the arc**: B (close-out) > A.
-- If Chris wants **fresh momentum**: C (fresh engineering) > D (docs arc) > A/B.
-- If Chris signals nothing specific: **A first (~1 hr Playbook amendment, quick win + closes the well-motivated 4-trigger pattern) then B1+B2 bundle (~1-1.5 hr close-out gumroad_webhook + lint)** — combined ~2-3 hrs closes multiple loops in one session. Then next session goes C or D.
+**Joint recommendation at close:** T-ENVELOPE-3 as primary S3012 arc (most-continuous close-out for the ADR-0007 envelope story). Bundle Fold B PLAYBOOK-7.4.5 amendment (Option A, ~20-30 min) into T-ENVELOPE-3 close cascade as a natural pairing. Sports odds leak drain (Option B) as follow-up after T-ENVELOPE-3 closes if session appetite remains.
 
 ---
 
-## S3011 carry-forward seeds
+## S3012 carry-forward seeds
 
-### New carry-forward from S3010
+### New from S3011
 
-- **Fold B `4th trigger` — middleware/view restart discipline.** Playbook amendment strongly motivated. Priority Option A.
-- **Fold D `1st trigger` — PR-split import-cleanup discipline.** New rule pattern (deprecated imports must be retained until final PR of a split). Watch for 2nd trigger.
-- **Fold E — JsonResponse-str(e) lint check.** Small tooling PR candidate. Bundle with gumroad_webhook migration (Option B1+B2).
-- **HTTP Retry-After header** — Rigby S3010 Fold E A2 Z1(c) suggestion. Add header from within emit_error_envelope for RATE_LIMITED reason codes. Future work.
-- **Fold A `7th continuous cascade`** — observation stays; watch for cascade-class break.
+- **T-ENVELOPE-3 primary arc** — retire `api_helpers.api_error` across ~90 sites in 4 primary files + 6 minor sites. Bundle bug fix in `views_rag_observability.py` (`status_code`→`status`). See S3012 primary directive section above.
+- **Fold B `5th trigger` in-flight** — v0.10.1 PATCH amendment for PLAYBOOK-7.4.5 (`make restart` requirement for Daphne request path). Bundle with T-ENVELOPE-3 close cascade.
+- **Fold A `1st trigger` (S3011)** — 00-START line-number drift. Watch for 2nd. Do line-number lookups fresh at session open, don't trust doc-stored linenos.
+- **Fold C `1st trigger` (S3011)** — Wall-clock time inflation in Claude scope estimates. Watch for 2nd. Use machine-speed framing (Claude+Rigby cadence ≈ 1/5 to 1/10 of human wall-clock).
+- **Fold D `1st trigger` (S3011)** — Close-cascade scope estimates without caller audits. Watch for 2nd. Cross-session forward-carry arc estimates must include caller-count or file-count audit result.
+- **Fold E `1st trigger` (S3011)** — MIGRATED_FILES lint scope-drift (helper-call vs raw-construction leak classes). Watch for 2nd.
+- **Sports odds leak drain arc** — 32 DRF Response `str(e)` sites in `views_odds_sports.py` grandfathered by B2 lint. Follow-up arc; each drained site removes one grandfather entry.
+- **future_str_e_variants** — `repr(e)` / `force_str(e)` / `f"{e!r}"` detection extension for B2 lint (per Rigby A2 STRENGTHEN, deferred beyond promised scope).
 
-### T-ENVELOPE-2-DEPRECATION queue after S3010
+### Carried from S3010 (STATUS PRESERVED)
 
-**Essentially complete.** Only trailing:
-- **gumroad_webhook migration** (3 sites deferred per Chris) — Option B1
-- **api_helpers.py disposition arc** — Option B3
-
-### Carried from S3009 (RESOLVED this session)
-
-- **Fold A `1st trigger`** (Rigby LLM-side hallucination) — **Ledger entry minted:** `f4e8481f-ac80-477d-b5dd-9f291a21f245`. No 2nd trigger at S3010 (Fold C at S3010 explicitly noted zero repeats). Continue to watch.
-- **Fold B `1st trigger`** (repo_tool.search no total_matches, S3008) — still open. Bundle candidate with the second S3009-Fold-C ledger entry (`e6e7fd6d-0f8a-4ba9-8ecb-879612ea779c`) for repo_tool capability expansion arc.
-- **Fold C `1st trigger`** (Rigby shell-exec tool-surface gap) — **Ledger entry minted:** `e6e7fd6d-0f8a-4ba9-8ecb-879612ea779c`. Watch for 2nd trigger.
-- **Fold E `future_trigger`** (RateLimiting 429) — **RESOLVED at S3010 as PR #3694.**
+- **Fold B `4th → 5th trigger imminent`** — PLAYBOOK-7.4.5 amendment ready.
+- **Fold A `1st trigger` (S3009 LLM-hallucination ledger `f4e8481f-...`)** — ZERO hallucinations at S3010 + S3011 (2 sessions continuous). Watch continues.
+- **Fold C `1st trigger` (S3009 Rigby shell-exec ledger `e6e7fd6d-...`)** — still open. Watch for 2nd.
+- **Fold B `1st trigger` from S3008** (`repo_tool.search no total_matches`) — still open. Bundle candidate with `e6e7fd6d-...` for repo_tool capability expansion arc.
 
 ### Carried from earlier sessions (STILL OPEN — unchanged this session)
 
@@ -174,19 +200,19 @@ Chris may have surfaced other work between sessions (email, discord, personal ch
 
 ## Cross-cutting workflow references
 
-- **Constitutional governance chain:** CLAUDE.md constitutional blockquote (Playbook v0.10.0). No amendments this session. **Fold B (4th trigger)** is the strongest amendment candidate. Priority Option A at S3011.
-- **ADR corpus:** ADR-0001 through ADR-0007. **ADR-0007 §4.3 T-ENVELOPE-2-DEPRECATION at 5-of-5 files migrated + Fold E shipped.** Only `gumroad_webhook` (3 sites) + `api_helpers.py` disposition remain.
-- **Spec→ship contract:** PLAYBOOK-7.7.1. **3× clean Flow B spec→ship this session** (Fold E pre-ratified spec direct to A2; Batch 4a PR A A1→implement→A2; Batch 4b PR B A1-inherited→implement→A2). Plus 1 Rigby-only task (Task C ledger entries).
-- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **4× substantive Rigby SIGN cycles this session** (Fold E A2 + Batch 4 A1 + PR A A2 + PR B A2). Zero hallucination triggers (contrast S3009). Fold C stayed at 1st trigger.
-- **Chris-facing decision framing:** PLAYBOOK-7.7.3. 2 mid-flight decision surfaces (gumroad_webhook scope + PR split shape) routed via Rigby with plain-english framing. Chris confirmed DEFER on gumroad. Full decision loop closed.
-- **Recycle discipline:** middleware/view diff → `make restart` used correctly on all 3 PRs. **Fold B 4th trigger, threshold clearly met.**
+- **Constitutional governance chain:** CLAUDE.md constitutional blockquote (Playbook v0.10.0). No amendments this session. **Fold B (5th trigger imminent)** — PLAYBOOK-7.4.5 amendment ready for v0.10.1 PATCH. Priority Option A for S3012 bundle with T-ENVELOPE-3 close cascade.
+- **ADR corpus:** ADR-0001 through ADR-0007. **ADR-0007 §4.3 T-ENVELOPE-2-DEPRECATION FULLY COMPLETE.** T-ENVELOPE-3 (`api_helpers.py` retirement) opens as successor arc for S3012.
+- **Spec→ship contract:** PLAYBOOK-7.7.1. **2× clean Flow B spec→ship this session** (B1 A1→implement→A2→ship→restart→live-curl; B2 A1→implement→A2→ship). Plus 1 audit-driven decision cycle (B3 A1 rescope, no ship).
+- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **5× substantive Rigby SIGN cycles this session** (B1 A1 + B1 A2 + B2 A1 + B2 A2 + B3 A1). Zero hallucination triggers. Matches S3010 pattern (2 sessions continuous).
+- **Chris-facing decision framing:** PLAYBOOK-7.7.3. 3 mid-flight decision surfaces (B1 shape, B2 sequential-vs-bundled, B3 audit rescope). All routed with plain-English framing.
+- **Recycle discipline:** B1 (view diff) → `make restart` used correctly. **Fold B 4th trigger** (5th if T-ENVELOPE-3 primary-file PRs are Daphne request-path). B2 (lint-only) → no restart. Cascade PR (docs-only) → no restart.
 
 ---
 
 ## Wrapper pin note
 
-The active PA conversation pin at S3010 close is minted by `session_lifecycle close` at close time and the wrapper `tools/pa_local.sh` rewritten atomically. Commit the wrapper diff in the S3010 close cascade PR per `feedback_commit_wrapper_pin_bump_at_close`.
+The active PA conversation pin at S3011 close is minted by `session_lifecycle close` at close time and the wrapper `tools/pa_local.sh` rewritten atomically. Commit the wrapper diff in the S3011 close cascade PR per `feedback_commit_wrapper_pin_bump_at_close`.
 
 ---
 
-**Reminder — the workflow is constitutional. S3010 shipped a clean 3-PR sequential close following the S3009 joint recommendation shape (C+B1+A):** ledger entries → Fold E warm-up → Batch 4 (2-PR split). ADR-0007 §4.3 T-ENVELOPE-2-DEPRECATION is now at 5-of-5 files migrated. The arc's engineering substrate is complete. **S3011 opens with more options than any prior session:** governance closure (Fold B amendment), close-out (gumroad_webhook + lint + api_helpers), fresh engineering, docs restructuring, or Chris's own priority. Rigby SIGN quality stayed clean this session (zero hallucination triggers, contrast S3009 Fold A which motivated the ledger entry minted this session).
+**Reminder — the workflow is constitutional. S3011 shipped a clean 2-PR close following the S3011 00-START Option B recommendation:** gumroad_webhook migration (B1, PR #3698) → str(e) body-leak lint expansion (B2, PR #3699) → B3 audit-driven Chris rescope (Option F, T-ENVELOPE-3 opened for S3012). **ADR-0007 §4.3 T-ENVELOPE-2-DEPRECATION arc is now FULLY COMPLETE.** S3012 opens with T-ENVELOPE-3 as the primary directive (retire `api_helpers.api_error` across ~90 caller sites; machine-speed estimate ~45-90 min via 4 sequential mini-PRs). Rigby SIGN quality stayed clean this session (zero hallucination triggers — 2 sessions continuous).
