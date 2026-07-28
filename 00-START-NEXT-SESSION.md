@@ -2,65 +2,77 @@
 
 ---
 
-## READ THIS FIRST — SESSION 3000 CLOSED. **v2 arc 12-of-12 COMPLETE.** web_fetch_tool user_auth shipped.
+## READ THIS FIRST — SESSION 3001 CLOSED. **ADR-0005 Typed Error Envelope Contract ratified.** T-ENVELOPE-1 opens for S3002.
 
-**One feature PR merged this session** (v2 item #5 corrected scope; backend-only).
+**One ADR ratification PR merged this session** (ADR-0005, docs-only, PROVISIONAL, Chris-ratified 2026-07-27).
 
-**PR #3670 (`39a6a9c97`) — v2 item #5 (corrected scope): `web_fetch_tool` gains `use_user_auth`.** Chris asked before opening Option A: "what's actually wrong? Should we investigate first?" That instinct broke a 5-session mislabel. Carry-forward called it "web_fetch_tool session cookies" — actual gap was smaller: handler already had `user_id`, just never used it to look up the user's DRF Token. `use_user_auth: bool = False` new schema param; when True + `user_id` present, look up token via `Token.objects.filter(user_id=user_id).first()` and inject `Authorization: Token <key>`. Explicit override wins (case-insensitive header check). Fail-open if no token row. ~5-10 LOC net, ~30 min end-to-end.
+**PR #3672 (`f87ae95ef`) — ADR-0005 Typed Error Envelope Contract (PROVISIONAL).** Discharges 2503 §19.1 R1 CRITICAL Chris-D-verdict-request for the typed-error-envelope subset. Ratifies Cat D γ mechanism (React Query onError + top-level ErrorBoundary + QueryClient defaults), APIResponseEnvelope (Family B) as SoT emission shape (opt-in, not mandate), SHAPE-BLIND interceptor retention with elevation optionality preserved, Cat C β "explicit re-login" nested as UX policy inside γ default handler, F-C-VIP-1 scope-tightening on expiry-signal UX. **Explicitly does NOT ratify** session-lifecycle α/β/γ, whitelist-replacement γ, backend Path A/B/C, permission-floor registry (each deferred to future ADR-N per §2.4).
 
-**Historic A2 SIGN:** Rigby dispatched `web_fetch_tool` with `use_user_auth=true` against `/api/repo/doc-research-findings/?staleness=suspected` — **HTTP 200**, body contained all 4 known-suspected finding IDs (`56851590-...`, `e386eb18-...`, `956f8571-...`, `7d5f6797-...`). First A2 this entire arc where Rigby verified a backend endpoint without me falling back to APIClient.
+**7 T-slots named** (T-ENVELOPE-0..6 + T-VIP-1). T-ENVELOPE-0 (R6 top-level ErrorBoundary) is BLOCKING PREREQUISITE for γ Layer 2 only; Layer 1 + Layer 3 can ship independently per §4.2.
 
-**v2 sequence COMPLETE (12-of-12):** #1 close_mode / #2 finding_type / #3 prompt branching / #4 staleness detector + UI / #5 orm_inspect + web_fetch_tool auth / #6 UI nudge + View-deliverable hotfix / #7 downstream consumer verify / #8 stale-ref AC injection / S2997-Fold-D re-dispatch guard.
+**Rigby T1 SIGN complete** across 2 dispatch turns (arc pin `pa-8e17b50843a34be5`): Q1 AGREE + minor STRENGTHEN (Fold A applied) / Q2 AGREE (7 T-slots aligned with 2499 §8.4 + 2599 §8) / Q3 AGREE (3 HEAD claims tool-verified: zero ErrorBoundary + APIResponseEnvelope location + api.ts interceptor line-drift) / Q4 substantive zoom-out (3 concerns preserved).
 
-**HEAD at close:** `39a6a9c97` + docs cascade PR (this file + handoff + wrapper pin bump per `feedback_commit_wrapper_pin_bump_at_close`). Recycle-all clean at `sha=39a6a9c97bfe` post-PR-#3670.
+**HEAD at close:** `f87ae95ef` + docs cascade PR (this file + handoff + INDEX + wrapper pin bump per `feedback_commit_wrapper_pin_bump_at_close`).
 
 Full context:
-- `docs/handoffs/SESSION_3000_WEB_FETCH_TOOL_USER_AUTH_V2_ITEM_5.md` — includes the scope-mislabel post-mortem
-- `docs/handoffs/SESSION_2999_AC_CONSUMER_VERIFIER_V2_ITEM_7.md` (prior)
+- `docs/handoffs/SESSION_3001_ADR_0005_TYPED_ERROR_ENVELOPE.md` — includes scope-recovery post-mortem (2400 Auth slot already-executed discovery)
+- `docs/adr/ADR-0005-typed-error-envelope-contract.md` — the ADR itself
 
 ---
 
-## S3001 primary directive — v2 arc COMPLETE, pivot decision
+## S3002 primary directive — T-ENVELOPE-1
 
-**The findings-surface v2 arc is fully drained.** Every item shipped. Multiple natural next-arc candidates:
+**Ship QueryClient default `onError` handler at `frontend/src/main.tsx`.** This is ADR-0005 §3.1 γ Layer 1 implementation — the first post-ratification T-slot PR. Can ship independently of R6 ErrorBoundary (T-ENVELOPE-0), which is a Layer 2 blocker only.
 
-### Option A — Open a fresh research arc
+### Scope
 
-Chris's own queue proposal (MEMORY `project_2100_plus_queue_ranking`): 2100 RAG / 2200 Frontend / 2300 Mobile / 2400 Auth / 2500 API / 2600 PA. Pick one and open.
+- **Location:** `frontend/src/main.tsx` (or QueryClient factory site — verify at S3002 open which pattern this codebase uses)
+- **Behavior:** default `onError` fires for every query/mutation error not caught by a hook-scoped handler. On 401 response (any shape family per ADR-0005 §3.4):
+  1. Clear client-side auth state (`useAuthStore.getState().logout()`)
+  2. Surface user-facing "session expired — please log in" modal/toast (T-ENVELOPE-3 provides concrete UI component; T-ENVELOPE-1 wire to placeholder or `console.warn` if T-ENVELOPE-3 not yet shipped)
+  3. Redirect to `/login` on user acknowledgment (NOT immediately, unless request URL matches `/auth/` or `/login`)
+- **Anti-pattern gate:** default handler MUST NOT surface `VIPInvite.account_expires_at` copy until T-VIP-1 (F-C-VIP-1 enforcement) ships. Session-expired copy bounded to token/session lifecycle framing.
+- **Shape-agnostic:** consume `AxiosError` object directly; do NOT branch on `.response.data.detail` vs `.response.data.error.message` (per ADR-0005 §3.3 SHAPE-BLIND interceptor retention decision).
 
-### Option B — Drain some of the accumulated fold ledger
+### Estimated size
 
-10+ ledger candidates + future_triggers accumulated over the v2 arc. Small backend items (~30-60 min each) that would tidy up the platform:
-- Fold F (S2997) — `orm_inspect_tool` JSON-path lookup support (`metadata__<key>=value`)
-- Fold A (S2998) — force=true × factory dedupe semantic mismatch (split flags or dedupe_mode enum)
-- Fold B (S2997) — dedupe strictness `(ref, verb)` deterministic key
-- Fold C (S2996) — staleness toast reinforcement
-- Fold C (S2994) — Deliverables-tab type badge
-- Fold F (S2995 hotfix) — WorkspacePageNew param preservation
+~30-60 min. QueryClient factory + `onError` default handler + smoke test. Layer 3 opt-in per-hook overrides remain independent post-ship.
 
-### Option C — Formalize an emergent pattern into a Playbook amendment
+### Follow-on T-slots
 
-S3000 Fold A surfaced a candidate rule: "Before carrying forward an investigation as a multi-session blocker, reproduce the failure at the thinnest interface (PA tool / HTTP call) and enumerate the missing affordance precisely." 1st concrete instance this session; not yet 2-trigger threshold for amendment. Watch, don't amend.
+- **T-ENVELOPE-0** — R6 top-level ErrorBoundary framework (~1-2 sessions). Dual-owned Cat D + Group 2200. Can run parallel to T-ENVELOPE-1.
+- **T-ENVELOPE-3** — "Session expired" modal/toast UI (~30-60 min after T-ENVELOPE-1 lands).
+- **T-ENVELOPE-2** — Backend `EXCEPTION_HANDLER` choice (Chris-D-verdict at T-ENVELOPE-2 planning).
 
-### Option D — Chris's own priorities
+### Alternative openers
 
-Chris may have work outside the v2 arc that's been queued. Ask.
+If S3002 Chris redirects:
+- **B — Drain v2 arc fold ledger.** 10+ items still open. Pick 1-2 highest-bang.
+- **C — R6 ErrorBoundary framework (T-ENVELOPE-0).** Unblocks γ Layer 2; dual-owned with Group 2200.
+- **D — Chris's own priority.** Always higher weight than ADR follow-on if a specific pain point surfaced.
 
 **Standard opener:**
 1. Run `context-kit orient` (auto-injected).
 2. Absorb this file + MEMORY.md + CLAUDE.md.
-3. Read the S3000 handoff in full — especially the scope-mislabel post-mortem and the v2 arc COMPLETE marker.
-4. Optional pre-response state probes:
-   - `git log --oneline -6` — should show docs cascade → `39a6a9c97` (PR #3670) → `2c3688817` (S2999 close) → `d48ddc493` (PR #3668) → `29ee89a3a` (S2998 close) → `d3ab2e889` (PR #3666).
-   - Rigby web_fetch_tool self-test: dispatch `web_fetch_tool` with `use_user_auth=true` against any internal endpoint — should return 200 (regression check on S3000).
-
-**Suggested first-turn shape for S3001:** ask Chris "A (fresh arc — which?) / B (drain ledger — pick 1-2) / D (your priority)?" — v2 arc is done, opening decision is genuinely Chris's. Recommendation weight: **D > A > B > C** (Chris probably has work in mind after 10 sessions of v2; if not, fresh arc is more valuable than ledger drain).
+3. Read the S3001 handoff — especially the scope-recovery post-mortem (2400 Auth slot already-executed).
+4. Read `docs/adr/ADR-0005-typed-error-envelope-contract.md` §3.1 + §3.4 + §4.1 T-ENVELOPE-1 spec.
+5. Optional pre-response state probes:
+   - `git log --oneline -6` — should show docs cascade → `f87ae95ef` (PR #3672 ADR-0005) → `c9b09d97d` (S3000 close cascade) → `39a6a9c97` (v2 item #5) → `2c3688817` (S2999 close cascade).
+   - `grep -n "QueryClient" frontend/src/main.tsx` — locate current QueryClient factory site.
+   - `wc -l frontend/src/main.tsx` — sanity check on file size before edit.
 
 ---
 
-## S3001 carry-forward seeds
+## S3002 carry-forward seeds
 
-### New carry-forward from S3000
+### New carry-forward from S3001
+
+- **Fold A — CLOSED at merge.** Frontmatter `provisional_reason` wording sharpened to reflect Layer-1 independence.
+- **Fold B `informational` — future ADR-N misread risk.** "γ ratified" implying interceptor policy is preserved by §3.3 wording. Watch for Family B mandate ADR-N to potentially need explicit re-anchoring; not a rule candidate yet.
+- **Fold C `informational` — potential Playbook rule candidate.** "When Chris quotes a prior-session scoping suggestion, verify the target research slot state before accepting the scope." 1st concrete instance at S3001 (S3000 was spiritual cousin at carry-forward-label scope). Watch for 2nd similar instance before proposing Playbook amendment.
+- **ADR-0005 T-slot queue** — 7 T-slots enumerated in §4.1. T-ENVELOPE-1 is next; others queued.
+
+### Carry-forward from S3000 (STILL OPEN)
 
 - **Fold A `informational` — potential Playbook rule candidate.** "Reproduce the failure at the thinnest interface before naming the carry-forward." 1st concrete instance. Watch for 2nd before proposing Playbook amendment.
 - **Fold B `informational` — residual APIClient-forcing shapes.** Even with `use_user_auth`: (i) CSRF + session-cookie endpoints; (ii) multipart/form-data uploads; (iii) OAuth redirects; (iv) non-JSON POST bodies. None blocking; log for future arcs.
@@ -113,7 +125,7 @@ Chris may have work outside the v2 arc that's been queued. Ask.
 ### Carry-forward from S2991 (STILL OPEN)
 
 - **Dry-run counts pattern for future bulk-write migrations** (3rd-trigger check).
-- **Contract-lock-in guardrail** — updated set: `close_mode`, `finding_type`, `spec_prompt_shape`, `finding_type_used`, `staleness`, `metadata.staleness_failed_refs`, `metadata.staleness_failed_refs_injected`, `metadata.unverified_consumer_refs`, `reason_code`, **`use_user_auth`**.
+- **Contract-lock-in guardrail** — updated set: `close_mode`, `finding_type`, `spec_prompt_shape`, `finding_type_used`, `staleness`, `metadata.staleness_failed_refs`, `metadata.staleness_failed_refs_injected`, `metadata.unverified_consumer_refs`, `reason_code`, `use_user_auth`.
 - **Freshness axis 2nd-trigger clause** (still no 2nd trigger).
 
 ### Carry-forward from S2989-S2990 (STILL OPEN)
@@ -145,21 +157,21 @@ Chris may have work outside the v2 arc that's been queued. Ask.
 
 ## Cross-cutting workflow references
 
-- **Constitutional governance chain:** CLAUDE.md constitutional blockquote (Playbook v0.10.0). No amendments this session. **Candidate seed:** S3000 Fold A "reproduce at thinnest interface" — watch for 2nd trigger.
-- **Spec→ship contract:** PLAYBOOK-7.7.1. S3000 was Flow B with an investigation phase INSERTED before T1 SIGN because Chris challenged scope framing. Investigate → recommend scope → Chris ratifies → code → ship — a valid variant of the pattern.
-- **SIGN evidence discipline:** PLAYBOOK-7.7.2. T1 SIGN skipped (design fully deterministic after Chris ratification). A2 SIGN was the strongest of the arc — Rigby used her own newly-shipped tool end-to-end.
-- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Chris's investigation ask was itself a decision route ("A or investigate first?"). Investigate-first delivered corrected scope + smaller ship in less time.
+- **Constitutional governance chain:** CLAUDE.md constitutional blockquote (Playbook v0.10.0). No amendments this session. **Candidate seeds:** S3000 Fold A "reproduce at thinnest interface" + S3001 Fold C "verify quoted-scope target-slot state" — both `informational`, both awaiting 2nd trigger.
+- **ADR corpus:** ADR-0001 through ADR-0005. ADR-0005 is first PROVISIONAL ADR authored via draft-first + Rigby T1 SIGN pre-Chris-ratification (ADR-0004 precedent). ADR corpus schema unchanged (additive `provisional:` + `provisional_reason:` fields per ADR-0004 §4.4 forward-compat rule).
+- **Spec→ship contract:** PLAYBOOK-7.7.1. S3001 was ADR-authoring shape, not feature-shipping shape. No T1 SIGN pre-draft; T1 SIGN happened on drafted body across 2 dispatch turns.
+- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **Exemplar session.** Rigby's Q3 BLOCKED verdict (explicit refusal to rubber-stamp HEAD claims without tool_runs) is the rule working correctly. Turn 2 completion pass produced 9 real tool_runs.
+- **Chris-facing decision framing:** PLAYBOOK-7.7.3. All 3 Chris-facing decision moments (A/B/C/D pivot / A3 target / Ratify & merge) framed with plain-English "do we lose anything?" + "is it more work later?" tables.
 - **Close-ceremony PR discipline:** PLAYBOOK-7.4.1 through 7.4.4.
-- **Recycle discipline** (S2978 refinement to PLAYBOOK-7.4.4): backend-only diff → frontend rebuild skipped correctly.
-- **`feedback_verify_at_raw_orm_before_trusting_tool_no_data`** — this session's spiritual cousin: verify at raw CODE before trusting your own carry-forward framing. The T1 SIGN convention emphasizes tool-based verification of assumptions; S3000 showed that assumption-verification should also cover carry-forward LABELS, not just framing content.
-- **`feedback_zoom_out_ask_per_rigby_sign`** — A2 zoom-out surfaced the rule-worthy pattern (Fold A) that would have been invisible from a "small win" narrative. Continuing to pay off across the arc.
+- **Recycle discipline** (S2978 refinement to PLAYBOOK-7.4.4): docs-only diff for ADR-0005 PR; docs cascade PR also docs-only; `make recycle-all` runs per safe-default rule.
+- **Draft-first workflow:** PLAYBOOK-16. ADR-0005 authored with `status: draft`; flipped to `accepted` only after Chris "Ratify and open the PR" verdict.
 
 ---
 
 ## Wrapper pin note
 
-The active PA conversation pin at S3000 close is minted by `session_lifecycle close` at close time and the wrapper `tools/pa_local.sh` rewritten atomically. Commit the wrapper diff in the S3000 close cascade PR per `feedback_commit_wrapper_pin_bump_at_close`.
+The active PA conversation pin at S3001 close is minted by `session_lifecycle close` at close time and the wrapper `tools/pa_local.sh` rewritten atomically. Commit the wrapper diff in the S3001 close cascade PR per `feedback_commit_wrapper_pin_bump_at_close`.
 
 ---
 
-**Reminder — the workflow is constitutional. S3000 is a milestone.** 10-session Flow B arc (S2991–S3000) shipped 12 v2 items end-to-end, plus 1 S2994 hotfix, 1 S2997 polish PR, and now 1 scope-mislabel-correction PR. Every ship followed PLAYBOOK-7.7.1 shape with real-tool T1 SIGN and real-ops A2 SIGN. The pattern's biggest single validation was S3000: Chris's "investigate first" instinct converted a mislabeled ~1-session carry-forward into a ~30-min ship, AND Rigby's own tool surface now verifies the fix end-to-end without APIClient fallback. Whatever S3001 opens, this arc has trained a strong close-loop-with-real-ops muscle.
+**Reminder — the workflow is constitutional. S3001 is a milestone.** First ADR ratification since ADR-0004 (Arc I-0200 at S2701 on 2026-07-07). ADR-0005 opens the post-v2 arc-authoring cadence: draft-first → Rigby T1 SIGN on drafted body → Chris ratifies → PR → merge → T-slot implementation PRs follow. Whatever S3002 opens, the ADR discipline that shipped this session is the substrate for every future post-arc design-decision ratification.
