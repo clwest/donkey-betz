@@ -606,7 +606,7 @@ function BulkPromoteModal({
           </p>
           {showLargeBatchWarning && !submitting && (
             <p className="text-xs text-accent-amber">
-              Large batch: this may take a few minutes when briefs are enabled.
+              Large batch: bulk create is usually seconds; watch the progress bar for row-by-row status.
             </p>
           )}
           {/* S3025 (U7): progress bar shown once the submit starts. Reflects
