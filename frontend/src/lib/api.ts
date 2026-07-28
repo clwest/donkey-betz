@@ -3979,6 +3979,21 @@ export const platformApi = {
         by_risk: Record<string, number>
       }
     }>('/rag/observability/classify/', params || {}),
+
+  // Session 3013: Bulk decide attention items (existing endpoint at views_human_interface.py:BulkAttentionDecideView)
+  bulkAttentionDecide: (params: {
+    decision: 'approved' | 'ignored' | 'rejected'
+    item_ids?: string[]
+    item_type?: string
+    urgency?: string
+  }) =>
+    api.post<{
+      success: boolean
+      count: number
+      decision?: string
+      message?: string
+      error?: string
+    }>('/human/attention/bulk-decide/', params),
 }
 
 // Session 833: Blogs API for approval workflow
