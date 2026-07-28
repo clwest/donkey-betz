@@ -57,6 +57,18 @@ class VIPReadOnlyMiddleware:
         if not self._is_vip_user(request):
             return self.get_response(request)
 
+        # T-VIP-1: enforce VIPInvite.account_expires_at + revoked_at
+        # (ADR-0005 §3.5 risk-gate — F-C-VIP-1 preserved HIGH-severity).
+        if not self._invite_is_still_active(request.user):
+            logger.info(
+                "VIP expiry/revoke block: %s %s user=%s",
+                request.method, request.path, request.user,
+            )
+            return JsonResponse(
+                {'error': 'Your VIP demo access has expired.'},
+                status=401,
+            )
+
         path = request.path
 
         # Block writes (except whitelisted)
@@ -99,6 +111,41 @@ class VIPReadOnlyMiddleware:
         except Exception as _e:
             logger.warning(
                 "vip_middleware._is_vip_user: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
+            return False
+
+    def _invite_is_still_active(self, user):
+        """Return False if the user's redeeming invite is revoked or past
+        account_expires_at. Missing invite row for a vip_demo_viewer user is
+        treated as a data-inconsistency deny.
+        """
+        from django.utils import timezone
+
+        from core.models_vip_invite import VIPInvite
+
+        try:
+            invite = (
+                VIPInvite.objects
+                .filter(redeemed_by=user)
+                .order_by('-redeemed_at')
+                .first()
+            )
+            if invite is None:
+                logger.warning(
+                    "vip_middleware: vip_demo_viewer user has no VIPInvite row — "
+                    "denying (user_id=%s username=%s)",
+                    getattr(user, 'id', None), getattr(user, 'username', None),
+                )
+                return False
+            if invite.revoked_at is not None:
+                return False
+            if invite.account_expires_at <= timezone.now():
+                return False
+            return True
+        except Exception as _e:
+            logger.warning(
+                "vip_middleware._invite_is_still_active: swallowed (%s: %s) — denying",
                 type(_e).__name__, _e,
             )
             return False
