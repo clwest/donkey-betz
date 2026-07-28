@@ -680,6 +680,32 @@ export const signalsApi = {
       deliverable: { id: string; title: string } | null
       deliverable_error?: string
     }>(`/platform/signal-cluster/${clusterId}/create-initiative/`, params),
+  // Session 3015 (U3): Bulk-promote N clusters at once.
+  bulkCreateInitiativesFromClusters: (params: {
+    cluster_ids: string[]
+    generate_brief?: boolean
+    workspace_id?: string
+  }) =>
+    api.post<{
+      success: boolean
+      error?: string
+      summary: {
+        requested: number
+        succeeded: number
+        failed: number
+        briefs_requested: number
+        briefs_succeeded: number
+        briefs_failed: number
+      }
+      results: Array<{
+        cluster_id: string
+        initiative?: { id: string; name: string; status: string; current_stage: number } | null
+        deliverable?: { id: string; title: string } | null
+        deliverable_error?: string
+        error?: string
+        existing_initiative?: { id: string; name: string }
+      }>
+    }>('/platform/signal-cluster/bulk-create-initiative/', params),
   // S2978: Theme Signals v1 — tab-scoped Buildable/Investable cards.
   // S2980: `build_only` filters Buildable to action==build cards only.
   themeSignals: (params?: { tab?: 'buildable' | 'investable'; days?: number; limit?: number; min_confidence?: number; build_only?: boolean }) =>
