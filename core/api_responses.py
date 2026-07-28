@@ -13,7 +13,17 @@ logger = logging.getLogger(__name__)
 
 
 class APIResponseEnvelope:
-    """Standardized API response envelope"""
+    """Standardized API response envelope.
+
+    .. important:: Scope (ADR-0007 layered envelope policy, ratified 2026-07-27)
+
+        Canonical for **SUCCESS responses only** — use ``.success()`` +
+        ``.paginated()``. All error-adjacent methods below are DEPRECATED;
+        error responses should use
+        ``core.security.error_envelope.build_user_facing_envelope`` (Family E,
+        safety-contract) per ``docs/adr/ADR-0007-layered-envelope-policy.md``
+        §3.1. Existing callers keep working; new callers MUST use Family E.
+    """
     
     @staticmethod
     def success(
@@ -58,14 +68,20 @@ class APIResponseEnvelope:
         status_code: int = status.HTTP_400_BAD_REQUEST
     ) -> JsonResponse:
         """
+        .. deprecated:: ADR-0007 (2026-07-27)
+            Use ``core.security.error_envelope.build_user_facing_envelope``
+            (Family E, safety-contract) as the canonical ERROR-RESPONSE SoT.
+            See ``docs/adr/ADR-0007-layered-envelope-policy.md`` §3.3.
+            Existing callers work; new callers MUST use Family E.
+
         Create an error API response
-        
+
         Args:
             message: Human-readable error message
             error_code: Machine-readable error code
             details: Additional error details
             status_code: HTTP status code
-            
+
         Returns:
             JsonResponse with standardized error format
         """
@@ -141,7 +157,10 @@ class APIResponseEnvelope:
     
     @staticmethod
     def unauthorized(message: str = "Authentication required") -> JsonResponse:
-        """Create a standardized 401 Unauthorized response"""
+        """Create a standardized 401 Unauthorized response.
+
+        .. deprecated:: ADR-0007 — use Family E (see ``APIResponseEnvelope.error`` docstring).
+        """
         return APIResponseEnvelope.error(
             message=message,
             error_code="authentication_required",
@@ -150,7 +169,10 @@ class APIResponseEnvelope:
     
     @staticmethod
     def forbidden(message: str = "Access denied") -> JsonResponse:
-        """Create a standardized 403 Forbidden response"""
+        """Create a standardized 403 Forbidden response.
+
+        .. deprecated:: ADR-0007 — use Family E (see ``APIResponseEnvelope.error`` docstring).
+        """
         return APIResponseEnvelope.error(
             message=message,
             error_code="access_denied",
@@ -159,7 +181,10 @@ class APIResponseEnvelope:
     
     @staticmethod
     def not_found(message: str = "Resource not found") -> JsonResponse:
-        """Create a standardized 404 Not Found response"""
+        """Create a standardized 404 Not Found response.
+
+        .. deprecated:: ADR-0007 — use Family E (see ``APIResponseEnvelope.error`` docstring).
+        """
         return APIResponseEnvelope.error(
             message=message,
             error_code="not_found",
@@ -171,7 +196,10 @@ class APIResponseEnvelope:
         message: str = "Validation failed",
         details: Optional[Dict] = None
     ) -> JsonResponse:
-        """Create a standardized validation error response"""
+        """Create a standardized validation error response.
+
+        .. deprecated:: ADR-0007 — use Family E (see ``APIResponseEnvelope.error`` docstring).
+        """
         return APIResponseEnvelope.error(
             message=message,
             error_code="validation_error",
@@ -181,7 +209,10 @@ class APIResponseEnvelope:
     
     @staticmethod
     def rate_limited(message: str = "Too many requests") -> JsonResponse:
-        """Create a standardized rate limit response"""
+        """Create a standardized rate limit response.
+
+        .. deprecated:: ADR-0007 — use Family E (see ``APIResponseEnvelope.error`` docstring).
+        """
         return APIResponseEnvelope.error(
             message=message,
             error_code="rate_limited",
@@ -193,7 +224,10 @@ class APIResponseEnvelope:
         message: str = "Internal server error",
         error_id: Optional[str] = None
     ) -> JsonResponse:
-        """Create a standardized server error response"""
+        """Create a standardized server error response.
+
+        .. deprecated:: ADR-0007 — use Family E (see ``APIResponseEnvelope.error`` docstring).
+        """
         details = {"error_id": error_id} if error_id else None
         
         return APIResponseEnvelope.error(
@@ -210,7 +244,10 @@ def api_success(data=None, message="Success", **kwargs):
     return APIResponseEnvelope.success(data, message, **kwargs)
 
 def api_error(message, error_code="generic_error", **kwargs):
-    """Shortcut for error response"""  
+    """Shortcut for error response.
+
+    .. deprecated:: ADR-0007 — use ``core.security.error_envelope.build_user_facing_envelope``.
+    """
     return APIResponseEnvelope.error(message, error_code, **kwargs)
 
 def api_paginated(data, **kwargs):
@@ -218,17 +255,29 @@ def api_paginated(data, **kwargs):
     return APIResponseEnvelope.paginated(data, **kwargs)
 
 def api_unauthorized(message="Authentication required"):
-    """Shortcut for 401 response"""
+    """Shortcut for 401 response.
+
+    .. deprecated:: ADR-0007 — use Family E.
+    """
     return APIResponseEnvelope.unauthorized(message)
 
 def api_forbidden(message="Access denied"):
-    """Shortcut for 403 response"""
+    """Shortcut for 403 response.
+
+    .. deprecated:: ADR-0007 — use Family E.
+    """
     return APIResponseEnvelope.forbidden(message)
 
 def api_not_found(message="Resource not found"):
-    """Shortcut for 404 response"""
+    """Shortcut for 404 response.
+
+    .. deprecated:: ADR-0007 — use Family E.
+    """
     return APIResponseEnvelope.not_found(message)
 
 def api_validation_error(message="Validation failed", details=None):
-    """Shortcut for validation error response"""
+    """Shortcut for validation error response.
+
+    .. deprecated:: ADR-0007 — use Family E.
+    """
     return APIResponseEnvelope.validation_error(message, details)
