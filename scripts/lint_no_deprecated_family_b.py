@@ -44,6 +44,14 @@ MIGRATED_FILES: tuple[str, ...] = (
     # (create/batch/reschedule/cancel/settings/apply_template). All sites
     # use emit_error_envelope() helper.
     "core/views_auto_distribution.py",
+    # Batch 4 (S3010, ADR-0007 §4.3) — 62 sites in platform integrations
+    # views (oauth_connect/callback/refresh + etsy/shutterstock/gumroad
+    # CRUD + sync + disconnect). Split across PR A (16 auth-surface) +
+    # PR B (46 platform-CRUD). All 62 sites use emit_error_envelope()
+    # helper. gumroad_webhook (3 sites w/ raw JsonResponse) deferred
+    # to S3011 pending verification of Gumroad webhook body-shape
+    # sensitivity.
+    "core/views_platform_integrations.py",
 )
 
 # Deprecated helper usages (regex matched as function calls with open paren).
