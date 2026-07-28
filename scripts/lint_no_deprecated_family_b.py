@@ -36,6 +36,9 @@ MIGRATED_FILES: tuple[str, ...] = (
     # Batch 1 (S3006, ADR-0007 §4.3)
     "core/views_odds_sports.py",
     "core/views_revenue_analytics.py",
+    # Batch 2 (S3007, ADR-0007 §4.3) — 10 sites in auth middleware +
+    # token_auth_required decorator (same file, file-scoped lint).
+    "core/auth_middleware.py",
 )
 
 # Deprecated helper usages (regex matched as function calls with open paren).
