@@ -32,6 +32,7 @@ from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 
 from core.models_unified_system import Agent, AgentMemory
+from core.tests.helpers.agent_assignment import assign_agent_to_user
 from core.tests.helpers.token_auth import token_client_for
 
 
@@ -54,6 +55,10 @@ class MemoryDetailAuthGateTests(TestCase):
             description="",
             specialization="",
         )
+        # S3019 (ADR-0008): assign the agent to `self.user` so scope predicate
+        # doesn't 404 the positive-path tests. The S3017 tests originally
+        # predated A.2 and relied on the unscoped `.get()`.
+        assign_agent_to_user(self.agent, self.user)
         self.memory = AgentMemory.objects.create(
             agent=self.agent,
             title="F-2 remediation seed",
