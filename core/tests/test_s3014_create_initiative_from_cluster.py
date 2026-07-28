@@ -195,3 +195,23 @@ class CreateInitiativeFromClusterTests(TestCase):
         self.assertEqual(initiative.owner_id, self.user.id)
         self.assertIsNotNone(initiative.target_workspace_id)
         self.assertEqual(initiative.target_workspace.user_id, self.user.id)
+
+    def test_signal_cluster_fk_set_at_create_time(self):
+        """S3021 U5: Initiative.signal_cluster FK is set to the source cluster
+        at create time (deterministic, no embedding search).
+
+        Guards against regression to the pre-U5 state where only the
+        parent_topic string carried the linkage and Initiative.signal_cluster_id
+        was NULL — breaking downstream provenance queries that filter by FK
+        (e.g., SignalCluster.initiatives reverse accessor).
+        """
+        cluster = _make_cluster(name="U5 FK linkage cluster")
+        response = self.client.post(self._url(cluster.id), data="", content_type="application/json")
+        self.assertEqual(response.status_code, 200)
+
+        initiative = Initiative.objects.get(id=response.json()["initiative"]["id"])
+        self.assertEqual(initiative.signal_cluster_id, cluster.id)
+        # parent_topic string form preserved (backward compat for string-based tracing)
+        self.assertEqual(initiative.parent_topic, f"signal_cluster:{cluster.id}")
+        # Reverse accessor works — cluster.initiatives.all() includes this initiative
+        self.assertIn(initiative, cluster.initiatives.all())

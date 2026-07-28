@@ -218,3 +218,24 @@ class BulkCreateInitiativesFromClustersTests(TestCase):
             self.assertEqual(initiative.owner_id, self.user.id)
             self.assertIsNotNone(initiative.target_workspace_id)
             self.assertEqual(initiative.target_workspace.user_id, self.user.id)
+
+    def test_signal_cluster_fk_set_at_create_time_bulk(self):
+        """S3021 U5: Bulk path also sets Initiative.signal_cluster FK to source cluster.
+
+        Extends the S3014 single-cluster contract (test_signal_cluster_fk_set_at_create_time)
+        to the bulk path. Since both flows share _create_initiative_from_cluster_core,
+        this is a regression guard against a future refactor that might diverge them.
+        """
+        clusters = [_make_cluster(f"U5 bulk FK {i}") for i in range(3)]
+        cluster_ids = [str(c.id) for c in clusters]
+        response = self._post({"cluster_ids": cluster_ids, "generate_brief": False})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["summary"]["succeeded"], 3)
+
+        for cluster in clusters:
+            initiative = Initiative.objects.get(parent_topic=f"signal_cluster:{cluster.id}")
+            self.assertEqual(initiative.signal_cluster_id, cluster.id)
+            # Rigby A2 fold: lock the provenance pair — string form + FK — in the same assertion block.
+            self.assertEqual(initiative.parent_topic, f"signal_cluster:{cluster.id}")
+            # Reverse accessor: cluster → initiatives
+            self.assertIn(initiative, cluster.initiatives.all())
