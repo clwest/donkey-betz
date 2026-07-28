@@ -2173,7 +2173,8 @@ def promote_decision(request, decision_id):
         # `TypeError: KnowledgeTransfer() got unexpected keyword arguments`
         # inside the broad `except Exception as learn_err` and returned
         # `learning_created: False` with no observable failure — so any
-        # `decision.summary` AttributeError further down never even fired.
+        # AttributeError further down (on the missing summary field
+        # named in the S3023 Fold C description) never even fired.
         #
         # Option C fix: remove the broken KT write entirely, keep + fix the
         # Redis broadcast (still valuable to collective intelligence
@@ -2185,17 +2186,28 @@ def promote_decision(request, decision_id):
 
         try:
             r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
+            # S3026 A2 REVISE: this broadcast has never actually fired
+            # since S657 (each attempt raised before reaching r.publish),
+            # so there are no real subscribers coded against a prior
+            # payload shape. But any subscriber that reverse-engineered
+            # the S657 source may have used the `agents_involved` key —
+            # emit both keys for one compatibility window + a
+            # `schema_version` bump so subscribers can gate on shape.
+            participants_list = decision.participants or []
             event = {
+                'schema_version': 1,
                 'type': 'canonical_decision_promoted',
                 'timestamp': timezone.now().isoformat(),
                 'decision_id': str(decision.id),
                 'topic': decision.topic[:100],
                 'decision_type': decision.decision_type,
                 'summary': (decision.rationale or decision.recommended_stance or '')[:200],
-                # S3026 Fold C follow-up: AgentDecisionSummary field is
-                # `participants`, not `agents_involved`. The prior spelling
-                # was also silently masked by the broad try/except.
-                'participants': decision.participants or [],
+                # Canonical key going forward.
+                'participants': participants_list,
+                # Back-compat alias for any subscriber coded against the
+                # S657 source. Remove once observability confirms zero
+                # readers of the old key.
+                'agents_involved': participants_list,
             }
             r.publish('agent_learning', json.dumps({
                 'type': 'canonical_policy_created',
