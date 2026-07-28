@@ -2102,67 +2102,11 @@ def get_system_health(request):
         }, status=500)
 
 
-# S3027 (S3023 Fold B re-scope): single source of truth for the canonical
-# promotion broadcast — shape, schema versioning, back-compat aliases, Redis
-# fault tolerance all live here. Both `promote_decision` (single) and
-# `bulk_promote_decisions` call this after `decision.promote_to_canonical(...)`
-# so the event shape never drifts between the two endpoints (the drift class
-# S3026 Fold C surfaced).
-#
-# Contract: best-effort, non-fatal. Any Redis exception is caught, logged
-# with `decision_id` + optional `request_id`, and returns False. Never raises
-# to caller.
-def _emit_canonical_promotion_broadcast(decision, *, request_id=None) -> bool:
-    """Publish a `canonical_policy_created` event to the `agent_learning`
-    Redis channel for a freshly-promoted `AgentDecisionSummary`.
-
-    Returns True iff `r.publish(...)` completed without raising. Any
-    exception (Redis unavailable, JSON encode error, etc.) is logged +
-    swallowed → returns False. This is transport, not domain logic —
-    Redis-down must not fail promotion.
-    """
-    import json
-    import os
-    import redis
-
-    try:
-        r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
-        # S3026 A2 REVISE: dual-emit participants (canonical going forward)
-        # + agents_involved (S657-source back-compat alias) for one
-        # compatibility window. `schema_version: 1` lets subscribers gate on
-        # shape as it evolves.
-        participants_list = decision.participants or []
-        event = {
-            'schema_version': 1,
-            'type': 'canonical_decision_promoted',
-            'timestamp': timezone.now().isoformat(),
-            'decision_id': str(decision.id),
-            'topic': decision.topic[:100],
-            'decision_type': decision.decision_type,
-            'summary': (decision.rationale or decision.recommended_stance or '')[:200],
-            # Canonical key going forward.
-            'participants': participants_list,
-            # Back-compat alias for any subscriber coded against the S657
-            # source. Remove once observability confirms zero readers of
-            # the old key.
-            'agents_involved': participants_list,
-        }
-        r.publish('agent_learning', json.dumps({
-            'type': 'canonical_policy_created',
-            'data': event,
-        }))
-        r.incr('canonical_decisions:total')
-        logger.info(
-            "🧠 [S3027] Broadcast canonical decision decision_id=%s request_id=%s",
-            decision.id, request_id,
-        )
-        return True
-    except Exception as redis_err:
-        logger.warning(
-            "[S3027] Redis broadcast failed decision_id=%s request_id=%s: %s",
-            decision.id, request_id, redis_err,
-        )
-        return False
+# S3028: the canonical-promotion broadcast helper moved to
+# `core/services/canonical_decision_broadcast.py` so service-layer callers
+# (PA tool handler, AI-AutoPromoter, Session 589 rules service) can invoke
+# it without reverse-layering. See that module for the event shape +
+# best-effort contract.
 
 
 # S2785 Fold 4 decision-approve audit — staff-only helper for /api/boardroom/*
@@ -2218,6 +2162,9 @@ def promote_decision(request, decision_id):
 
     try:
         from core.models_unified_system import AgentDecisionSummary
+        from core.services.canonical_decision_broadcast import (
+            emit_canonical_promotion_broadcast,
+        )
 
         decision = AgentDecisionSummary.objects.get(id=decision_id)
         decision.promote_to_canonical(promoted_by='human')
@@ -2228,12 +2175,12 @@ def promote_decision(request, decision_id):
         # `learning_created: False` + `learning_reason` diagnostic explains
         # why persistent learning storage is deferred pending the KT model
         # realignment design arc. S3027 extracted the Redis broadcast into
-        # `_emit_canonical_promotion_broadcast` so single + bulk endpoints
-        # share one event shape (drift-proof).
+        # a shared helper; S3028 moved the helper to services/ so all 5
+        # promotion paths can call it without reverse-layering.
         learning_created = False
         learning_reason = 'knowledge_transfer_model_mismatch_deferred'
 
-        _emit_canonical_promotion_broadcast(
+        emit_canonical_promotion_broadcast(
             decision,
             request_id=request.META.get('HTTP_X_REQUEST_ID'),
         )
@@ -2361,9 +2308,13 @@ def bulk_promote_decisions(request):
 
     # Promote all matching. S3027 (S3023 Fold B re-scope): after each
     # successful promotion, emit the same canonical broadcast the single
-    # endpoint fires (via `_emit_canonical_promotion_broadcast` — single
-    # source of truth). Broadcast failure is best-effort and never fails
-    # promotion — helper returns bool + logs on failure.
+    # endpoint fires. S3028 moved the helper into
+    # `core/services/canonical_decision_broadcast` so services can call
+    # it too (PA handler + AI-AutoPromoter + Session 589 rules service).
+    from core.services.canonical_decision_broadcast import (
+        emit_canonical_promotion_broadcast,
+    )
+
     request_id = request.META.get('HTTP_X_REQUEST_ID')
     promoted = 0
     broadcasts_succeeded = 0
@@ -2376,7 +2327,7 @@ def bulk_promote_decisions(request):
             logger.warning(f"Failed to promote decision {decision.id}: {e}")
             continue
 
-        if _emit_canonical_promotion_broadcast(decision, request_id=request_id):
+        if emit_canonical_promotion_broadcast(decision, request_id=request_id):
             broadcasts_succeeded += 1
         else:
             broadcasts_failed += 1

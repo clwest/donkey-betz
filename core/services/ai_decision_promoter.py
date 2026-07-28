@@ -172,6 +172,11 @@ or
 
         Returns:
             True if promoted successfully
+
+        S3028: after the field mutation commits, emit the canonical-
+        promotion Redis broadcast so the AI-AutoPromoter path fires the
+        same event the boardroom endpoints fire. Broadcast is best-effort
+        and never fails promotion — helper returns bool.
         """
         try:
             with transaction.atomic():
@@ -180,10 +185,17 @@ or
                 decision.promoted_at = timezone.now()
                 decision.promoted_by = promoter
                 decision.save()
-            return True
         except Exception as e:
             logger.error(f"Error promoting decision {decision.id}: {e}")
             return False
+
+        # Broadcast outside the transaction — Redis-down must not fail
+        # (or roll back) promotion. Helper is best-effort.
+        from core.services.canonical_decision_broadcast import (
+            emit_canonical_promotion_broadcast,
+        )
+        emit_canonical_promotion_broadcast(decision)
+        return True
 
     def run_batch_promotion(
         self,
