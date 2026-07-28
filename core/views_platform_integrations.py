@@ -1379,14 +1379,26 @@ def gumroad_webhook(request):
             try:
                 data = json.loads(request.body)
             except json.JSONDecodeError:
-                return JsonResponse({'status': 'error', 'message': 'No data received'}, status=400)
+                return emit_error_envelope(
+                    reason_code='invalid_input',
+                    request=request,
+                    hint={'source': 'gumroad_webhook', 'reason': 'json_decode_failed'},
+                )
 
         product_id = data.get('product_id')
         price_cents = int(data.get('price', 0))
         sale_id = data.get('sale_id')
 
         if not product_id:
-            return JsonResponse({'status': 'error', 'message': 'Missing product_id'}, status=400)
+            return emit_error_envelope(
+                reason_code='invalid_input',
+                request=request,
+                hint={
+                    'source': 'gumroad_webhook',
+                    'reason': 'missing_field',
+                    'field': 'product_id',
+                },
+            )
 
         # Find the distribution by Gumroad product ID
         distribution = ContentDistribution.objects.filter(
@@ -1432,7 +1444,15 @@ def gumroad_webhook(request):
 
     except Exception as e:
         logger.exception(f"Gumroad webhook error: {e}")
-        return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+        return emit_error_envelope(
+            reason_code='internal_error',
+            request=request,
+            hint={
+                'source': 'gumroad_webhook',
+                'reason': 'unhandled_exception',
+                'exc_type': type(e).__name__,
+            },
+        )
 
 
 # =============================================================================
