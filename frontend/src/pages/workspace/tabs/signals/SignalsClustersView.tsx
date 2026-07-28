@@ -512,7 +512,8 @@ function BulkPromoteModal({
   )
 }
 
-// Session 3015 (U3): Dismissible summary card shown after a bulk-promote completes
+// Session 3015 (U3): Dismissible summary card shown after a bulk-promote completes.
+// Session 3015 hotfix polish: separate dedupe hits (skipped, expected) from real errors.
 function BulkPromoteResultCard({
   result,
   onDismiss,
@@ -523,18 +524,33 @@ function BulkPromoteResultCard({
   }
   onDismiss: () => void
 }) {
-  const [showFailures, setShowFailures] = useState(false)
+  const [showDetails, setShowDetails] = useState(false)
   const { summary, failures } = result
-  const hasFailures = summary.failed > 0
+  // A failure with `existing_initiative` is a dedupe hit — not a real error, just
+  // "this cluster was already promoted; here's the initiative it maps to." Real
+  // errors are things like "Cluster not found" / "Initiative creation failed".
+  const skipped = failures.filter((f) => !!f.existing_initiative)
+  const realErrors = failures.filter((f) => !f.existing_initiative)
+  const hasSkipped = skipped.length > 0
+  const hasRealErrors = realErrors.length > 0
+  const allGood = summary.succeeded === summary.requested
+
+  const borderColor = hasRealErrors
+    ? 'border-accent-red/40'
+    : hasSkipped
+    ? 'border-accent-amber/30'
+    : 'border-primary-500/30'
 
   return (
-    <div className="fixed bottom-4 right-4 z-40 max-w-md w-[92%] p-4 bg-gray-950 border border-primary-500/30 rounded-lg shadow-2xl space-y-2">
+    <div className={`fixed bottom-4 right-4 z-40 max-w-md w-[92%] p-4 bg-gray-950 border ${borderColor} rounded-lg shadow-2xl space-y-2`}>
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-2">
-          {hasFailures ? (
-            <AlertTriangle className="text-accent-amber" size={16} />
-          ) : (
+          {allGood ? (
             <CheckCircle2 className="text-accent-green" size={16} />
+          ) : hasRealErrors ? (
+            <AlertTriangle className="text-accent-red" size={16} />
+          ) : (
+            <AlertTriangle className="text-accent-amber" size={16} />
           )}
           <div className="text-sm font-medium text-gray-100">
             {summary.succeeded} of {summary.requested} initiative{summary.requested === 1 ? '' : 's'} created
@@ -544,24 +560,37 @@ function BulkPromoteResultCard({
           <X size={14} />
         </button>
       </div>
-      <div className="text-xs text-gray-400">
-        {summary.briefs_succeeded} brief{summary.briefs_succeeded === 1 ? '' : 's'} generated
-        {summary.briefs_failed > 0 && ` · ${summary.briefs_failed} brief${summary.briefs_failed === 1 ? '' : 's'} skipped`}
+      <div className="text-xs text-gray-400 space-y-0.5">
+        <div>
+          {summary.briefs_succeeded} brief{summary.briefs_succeeded === 1 ? '' : 's'} generated
+          {summary.briefs_failed > 0 && ` · ${summary.briefs_failed} brief${summary.briefs_failed === 1 ? '' : 's'} skipped`}
+        </div>
+        {hasSkipped && (
+          <div className="text-accent-amber">
+            {skipped.length} already existed (skipped)
+          </div>
+        )}
+        {hasRealErrors && (
+          <div className="text-accent-red">
+            {realErrors.length} error{realErrors.length === 1 ? '' : 's'}
+          </div>
+        )}
       </div>
-      {hasFailures && (
+      {(hasSkipped || hasRealErrors) && (
         <div className="pt-2 border-t border-gray-800">
           <button
-            onClick={() => setShowFailures(!showFailures)}
-            className="text-xs text-accent-amber hover:text-accent-amber/80"
+            onClick={() => setShowDetails(!showDetails)}
+            className="text-xs text-gray-300 hover:text-white"
           >
-            {showFailures ? 'Hide' : 'Show'} {summary.failed} failure{summary.failed === 1 ? '' : 's'}
+            {showDetails ? 'Hide' : 'Show'} details
           </button>
-          {showFailures && (
+          {showDetails && (
             <div className="mt-2 max-h-40 overflow-y-auto space-y-1 text-xs">
-              {failures.map((f) => (
-                <div key={f.cluster_id} className="p-1.5 rounded bg-accent-red/5 text-gray-300">
-                  <div className="text-accent-red text-[10px] uppercase">{f.cluster_id.slice(0, 8)}</div>
-                  <div>{f.error}</div>
+              {skipped.map((f) => (
+                <div key={f.cluster_id} className="p-1.5 rounded bg-accent-amber/5 text-gray-300">
+                  <div className="text-accent-amber text-[10px] uppercase flex items-center gap-1">
+                    Already exists · {f.cluster_id.slice(0, 8)}
+                  </div>
                   {f.existing_initiative && (
                     <a
                       href={`/workspace?tab=initiatives&id=${f.existing_initiative.id}`}
@@ -570,6 +599,12 @@ function BulkPromoteResultCard({
                       → {f.existing_initiative.name}
                     </a>
                   )}
+                </div>
+              ))}
+              {realErrors.map((f) => (
+                <div key={f.cluster_id} className="p-1.5 rounded bg-accent-red/5 text-gray-300">
+                  <div className="text-accent-red text-[10px] uppercase">Error · {f.cluster_id.slice(0, 8)}</div>
+                  <div>{f.error}</div>
                 </div>
               ))}
             </div>
