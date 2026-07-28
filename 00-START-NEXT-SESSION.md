@@ -2,118 +2,139 @@
 
 ---
 
-## READ THIS FIRST — SESSION 3015 CLOSED. **U3 Bulk-promote SignalClusters shipped** (PR #3710, `c388f006a`) + **4 post-ship browser-layer hotfixes** (PR #3712 `a01bb6740` active-workspace routing / PR #3713 `756f7a6f` TRIAGE visibility + dedupe UX polish / PR #3714 `47c1cbd57` Token-auth on `/api/initiatives/`). Third consecutive user-facing session (S3013 U1 → S3014 U2 → S3015 U3). Backend U3: refactored U2's core creation logic into shared helper + new bulk endpoint `POST /api/platform/signal-cluster/bulk-create-initiative/` + Cluster Explorer table gets checkboxes + sticky action bar + confirm modal + dismissible result summary card + 10 new tests (all PASS, S3014's 8 also still PASS = 18/18). Rigby A2 zoom-out mitigation: 100-item batch cap. Zero new model fields. **Chris browser-verified end-to-end** — U2 single-cluster promotion + U3 bulk promotion both write to the active workspace, land in TRIAGE, visible in Initiatives tab.
+## READ THIS FIRST — SESSION 3016 CLOSED. **Fold E (Token-auth parity coverage class) + Fold G (PUBLIC_PATHS bare-prefix audit for silent-empty reads) both shipped.** Second-half of the S3015 hotfix follow-up. 2 feature PRs (Fold E `ad84a847b` + Fold G `14b4a7ad4`), 32/32 tests PASS (was 28 pre-Fold E; +4 tests + shared `token_client_for()` helper + workspace-owner strengthening), audit yielded **0 critical findings** (1 false positive + 1 partial-degradation F-2 + 1 housekeeping dupe). Substrate hardening session after 3 consecutive user-facing sessions (S3013 U1 → S3014 U2 → S3015 U3). Chris's directive was two-part; both halves closed.
 
-**1 feature PR shipped this session.**
+**2 feature PRs shipped this session.**
 
-**PR #3710 (`c388f006a`) — U3: Bulk-promote SignalClusters to Initiatives (+ optional briefs).**
+**PR #3716 (`ad84a847b`) — Fold E: Token-auth parity guards for user-facing endpoints.**
 
-- **Backend refactor:** extracted `_resolve_target_workspace()` + `_create_initiative_from_cluster_core()` helpers. S3014 single-cluster view refactored to thin wrapper (8/8 S3014 tests still PASS post-refactor).
-- **New endpoint:** `POST /api/platform/signal-cluster/bulk-create-initiative/`. Body `{cluster_ids: [...], generate_brief?: bool, workspace_id?: str}`. Returns 200 with per-row results. Partial-failure semantics: initiative-level failure ≠ brief-level failure. 100-item batch cap. De-dupes within request + preserves order.
-- **Frontend:** checkbox column on Cluster Explorer → sticky "Create N initiatives" bar when ≥1 selected → `BulkPromoteModal` (shows first 10 cluster names + generate-briefs toggle) → post-run `BulkPromoteResultCard` (dismissible, expandable failures panel with deep links to `existing_initiative` pointers).
-- **Tests:** new `core/tests/test_s3015_bulk_create_initiatives_from_clusters.py` (10 tests, all PASS in ~1s). Includes Rigby A2 zoom-out regression (100-cap 400).
+- **NEW** `core/tests/helpers/token_auth.py` — `token_client_for(user)` (DRF `Token.objects.get_or_create` + Client with `Authorization: Token …`, mirroring React frontend).
+- **MODIFIED** S3013/S3014/S3015 test files — one parity test each. S3014+S3015 strengthened per Rigby T1 REVISE with `initiative.target_workspace.user_id == self.user.id` (anon can't resolve user's workspace, so an anon-fallthrough regression fails hard).
+- **NEW** `core/tests/test_s3016_initiatives_list_auth_parity.py` — 3 tests locking the exact PR #3714 scenario: session/token count parity, Token-auth-alone non-empty, anon still returns empty 200 (OPTIONAL_AUTH_PATHS contract).
+- **Test result:** 32/32 pass in 4.125s.
 
-**Rigby SIGN quality this session:** 3 substantive SIGN cycles, all tool-grounded, ZERO hallucination triggers (matches S3010 → S3014 pattern — **6 sessions continuous**).
+**PR #3717 (`14b4a7ad4`) — Fold G: PUBLIC_PATHS bare-prefix audit for silent-empty reads.**
 
-**HEAD at close:** `47c1cbd57` (Token-auth hotfix) after the ship trail: `c388f006a` (U3) → `b8f9b889f` (docs cascade) → `a01bb6740` (active-workspace) → `756f7a6f` (TRIAGE visibility + dedupe polish) → `47c1cbd57` (Token-auth fix) + this docs cascade PR (handoff post-ship section + 00-START refresh + INDEX regen).
+- **NEW** `scripts/audit_public_paths_scoped_reads_s3016.py` — candidate generator (not a classifier). Walks `get_resolver().url_patterns × PUBLIC_PATHS`, greps view source for 5 canonical scope predicates.
+- **NEW** `docs/audits/PUBLIC_PATHS_BARE_PREFIX_AUDIT_S3016.md` — findings doc. F-1 (false positive, `/api/celery/breakdown/` is `@superuser_required`), F-2 (unscoped memory detail row at `/api/memory-palace/memory/<uuid>/` — primary issue = row itself is public + secondary = silent enrichment drop), housekeeping dupe `/api/celery/`.
+- **Substantive:** S3015 list-endpoint-empty class does **not** repeat elsewhere for the 5 tracked predicates. Fold E hotfix + parity tests correctly scoped.
+
+**Rigby SIGN quality this session:** 6 substantive SIGN cycles (Fold E T0/T1/close-out + Fold G T0-implicit/T1/close-out), all tool-grounded, zero hallucination triggers. **Matches S3010–S3015 pattern — 8 sessions continuous.**
+
+**HEAD at close:** `14b4a7ad4` (Fold G merged) + this docs cascade PR (handoff + 00-START refresh + INDEX regen + wrapper pin bump).
 
 Full context:
-- `docs/handoffs/SESSION_3015_U3_BULK_CLUSTER_PROMOTION.md` — full session close, 4 folds (A/B/C/D), forward carries.
-- `core/views_platform_command.py` — `_create_initiative_from_cluster_core` helper + `bulk_create_initiatives_from_clusters_view` + refactored single view.
-- `core/tests/test_s3015_bulk_create_initiatives_from_clusters.py` — 10 tests.
-- `frontend/src/pages/workspace/tabs/signals/SignalsClustersView.tsx` — checkbox column + BulkPromoteModal + BulkPromoteResultCard.
-- `frontend/src/lib/api.ts` — `signalsApi.bulkCreateInitiativesFromClusters()`.
+- `docs/handoffs/SESSION_3016_FOLD_E_G_TOKEN_AUTH_SWEEP.md` — full session close, 6 folds, forward carries.
+- `core/tests/helpers/token_auth.py` — reusable Token-auth test helper.
+- `core/tests/test_s3016_initiatives_list_auth_parity.py` — PR #3714 regression guard.
+- `scripts/audit_public_paths_scoped_reads_s3016.py` — reusable audit script.
+- `docs/audits/PUBLIC_PATHS_BARE_PREFIX_AUDIT_S3016.md` — Fold G findings + F-2 remediation candidates.
 
 ---
 
-## S3016 primary directive candidates
+## S3017 primary directive candidates
 
-**No in-flight arc.** Chris directive-required to select. Options ranked:
+**No in-flight arc.** Chris directive-required. Options ranked:
 
-### Option A — Fresh engineering (per bias-engineering rule)
+### Option A — F-2 remediation (unscoped `/api/memory-palace/memory/<uuid>/`)
 
-- **U4 candidate:** AgentDecisionSummary bulk-decide. `pending_decisions` currently mixes HumanAttentionItem (which U1 handles) + AgentDecisionSummary (which nothing bulk-handles). ~1 session.
-- **U5 candidate:** Post-create auto-link cluster ↔ initiative via embeddings. Use existing `initiative_signal_linker.auto_link_initiative_signals()` after cluster→initiative create. ~30 min.
-- **U6 candidate:** Bulk cluster → initiative UX polish — inline per-row name editing in the confirm modal (currently all-defaults). Requires expanded modal + per-row state. ~1 session.
-- Chris raises specifics at S3016 open.
+The Fold G audit found the memory detail row is publicly readable — anon with a valid UUID fetches the row + triggers access_count auto-increment. **Chris ratifies shape** among:
 
-**Recommended.** U5 (auto-link) is the fastest — leverages existing service. Or U4 (parallel bulk pattern for AgentDecisionSummary — matches U1 shape).
+1. **`@token_auth_required` gate** (~30 min) — simplest, matches S2789 pattern for endpoints in PUBLIC_PATHS that need auth. Removes anon reachability entirely.
+2. **New `scope_queryset_agent_memory` predicate** in `core/security/object_authz.py` + scope the lookup itself (~1 session) — strongest, but requires design addition to the object_authz surface. Aligns with the existing 5-predicate pattern.
+3. **`execution_data_available` payload flag** (~15 min) — secondary only, does NOT fix the unscoped memory row leak. Not recommended in isolation.
 
-### Option B — Fold A codification: bulk endpoint scope-limit-cap standard
+**Recommended:** Option A.1 (`@token_auth_required` gate) — fastest, matches existing pattern, removes the leak. A.2 is stronger long-term but adds a new predicate to the object_authz surface which may want its own ADR.
 
-**~30 min.** Retrofit `MAX_BATCH_SIZE` to S3013 `BulkAttentionDecideView` (currently uncapped) + document as bulk-endpoint invariant. Small ADR or Playbook amendment candidate. Needs Chris ratification.
+### Option B — Fresh engineering (per bias-engineering-over-audit rule)
 
-### Option C — Fold A codification (S3014): "diagnostic on create" invariant
+Continuation of the U-series bulk-shape trajectory:
+- **U4 candidate:** AgentDecisionSummary bulk-decide. `pending_decisions` currently mixes HumanAttentionItem (which U1 handles) + AgentDecisionSummary (which nothing bulk-handles). Parallels U1 shape. ~1 session.
+- **U5 candidate:** Post-create auto-link cluster ↔ initiative via `initiative_signal_linker.auto_link_initiative_signals()` after cluster→initiative create. ~30 min.
+- **U6 candidate:** Bulk cluster → initiative UX polish — inline per-row name editing in confirm modal. ~1 session.
 
-**~1 session.** Broader Playbook rule that all user-triggered create endpoints resolve non-null required-for-integrity FKs before create. Would touch multiple existing views (audit + amend). Needs Chris ratification.
+### Option C — Zoom-out carry from Fold E T0 SIGN
 
-### Option D — 9th test coupling (S3013 non-blocking carry)
+Four concerns Rigby flagged that Fold E did NOT defend against:
+1. Middleware-ordering drift — Django test-client path may not match Daphne/ASGI in prod. Design candidate: middleware-order snapshot test.
+2. DRF `authentication_classes` on ViewSets that bypass `UnifiedTokenAuthenticationMiddleware`. Parallel Fold-G-shape audit for the DRF stack.
+3. WebSocket auth-parity coverage class — Fold E was HTTP READ scope only. Separate arc.
+4. `Bearer <token>` header format — only `Token <key>` currently covered by helper. ~30 min extension.
 
-**~15 min.** Test asserting `governance_view.pending_decisions[].id` → `HumanAttentionItem.id`.
+### Option D — Housekeeping
 
-### Option E — Task #7: Delete dead A/B testing handlers (S3012 carry)
+- Dedupe `/api/celery/` PUBLIC_PATHS entry (~10 min).
+- 9th test coupling from S3013 non-blocking carry (~15 min).
 
-**~1 session.** ~11 dead handlers, ~600 lines. Needs Chris ratification.
+### Option E — Chris's own priority (supersedes A/B/C/D)
 
-### Option F — Chris's own priority
-
-Chris-driven directive supersedes A/B/C/D/E.
-
-**Joint recommendation at close:** Option A — U5 (fastest, uses existing service). If Chris wants continuation of the bulk-shape pattern, U4 (AgentDecisionSummary bulk-decide) parallels S3013 U1.
+**Joint recommendation at close:** **Option A.1** (`@token_auth_required` gate on `/api/memory-palace/memory/<uuid>/`) — closes the unscoped-row leak F-2 identified, fastest option, matches existing pattern. If Chris wants to continue the U-series bulk-shape trajectory instead, U5 (auto-link) is the fastest at ~30 min.
 
 **Standard opener:**
 1. Run `context-kit orient` (auto-injected).
 2. Absorb this file + MEMORY.md + CLAUDE.md.
-3. Read S3015 handoff (`docs/handoffs/SESSION_3015_U3_BULK_CLUSTER_PROMOTION.md`).
+3. Read S3016 handoff (`docs/handoffs/SESSION_3016_FOLD_E_G_TOKEN_AUTH_SWEEP.md`).
 4. Optional state probes:
-   - `git log --oneline -5` — should show docs cascade → `c388f006a` (PR #3710 U3) → `9a5cef211` (S3014 close cascade) → `e00e5880f` (PR #3708 U2).
-   - `python manage.py test core.tests.test_s3015_bulk_create_initiatives_from_clusters core.tests.test_s3014_create_initiative_from_cluster --keepdb` — should return 18/18 OK in ~1s.
-   - Browser smoke: Workspace → Intelligence tab → Signals sub-tab → Cluster Explorer → check 2-3 rows → confirm sticky "Create N initiatives" bar appears.
+   - `git log --oneline -6` — should show docs cascade → `14b4a7ad4` (PR #3717 Fold G) → `ad84a847b` (PR #3716 Fold E) → `d9ef9aa03` (S3015 close cascade).
+   - `python manage.py test core.tests.test_s3013_bulk_attention_decide_mutation core.tests.test_s3014_create_initiative_from_cluster core.tests.test_s3015_bulk_create_initiatives_from_clusters core.tests.test_s3016_initiatives_list_auth_parity --keepdb` — should return 32/32 OK in ~4s.
+   - `python manage.py shell < scripts/audit_public_paths_scoped_reads_s3016.py` — should re-produce 4 raw / 2 unique candidates.
 
 ---
 
-## S3016 carry-forward seeds
+## S3017 carry-forward seeds
 
-### New from S3015
+### New from S3016
 
-- **Fold E `1st trigger`** — Browser-layer defects invisible to shell tests + Rigby SIGN. 4 hotfixes shipped this session broke immediately in Chris's real browser despite passing all backend tests + Rigby A2 SIGN + shell probes. Missing coverage class: browser-session + Token-auth path testing. Every test in this session used session auth; frontend uses Token auth exclusively. Watch for 2nd trigger.
-- **Fold F `1st trigger`** — "Empty state" symptom has multiple silent-degradation causes (browser cache / auth session/token / middleware auth path / queryset scope / frontend filter). Formalize the diagnostic tree so future triage compresses.
-- **Fold G `informational`** — `UnifiedTokenAuthenticationMiddleware.PUBLIC_PATHS` uses `startswith` matching. Audit for other bare-prefix entries that might be broader than their comment suggests (the `/api/initiatives/` entry was meant for `/api/initiatives/<uuid>/action-items/` sub-path but caught the list endpoint).
+- **F-2 remediation candidate** — `@token_auth_required` gate OR new `scope_queryset_agent_memory` predicate on `/api/memory-palace/memory/<uuid>/`. See Option A above.
+- **Dupe `/api/celery/` PUBLIC_PATHS entry** — housekeeping.
+- **Fold D `1st trigger`** — doc-only PR + `make recycle-all` policy. Watch for 2nd trigger (does PLAYBOOK-7.4.4 need a "doc-only PR = recycle optional" clause?).
+- **Zoom-out carries (from Fold E T0):**
+  - Middleware-ordering snapshot test candidate.
+  - DRF ViewSet auth-class parallel audit (2nd-trigger watch).
+  - WebSocket auth-parity coverage class (likely S3018+).
+  - `Bearer <token>` helper extension (~30 min).
+- **Fold F `informational`** — inline-scoping classifier expansion for future Fold-G re-run if a silent-empty regression surfaces on an endpoint not using the tracked predicates.
+
+### Carried from S3015 (STATUS UPDATED)
+
+- **S3015 Fold E `1st trigger`** — **CLOSED by S3016 PR #3716**.
+- **S3015 Fold F `1st trigger`** — carry-forward retained (empty-state diagnostic tree still open).
+- **S3015 Fold G `informational`** — **CLOSED by S3016 PR #3717**.
 - **U4 candidate:** AgentDecisionSummary bulk-decide.
-- **U5 candidate:** Post-create auto-link via `initiative_signal_linker`.
-- **U6 candidate:** Per-row name editing in bulk cluster confirm modal.
-- **Fold A `1st trigger`** — Bulk-endpoint scope-limit-cap standard. Retrofit BulkAttentionDecideView (uncapped) + codify as invariant.
-- **Fold B `informational`** — Refactor-first for U-N when U-(N-1) shipped shared logic.
-- **Fold C `informational`** — Bulk-endpoint invariants (order preserved + de-dupe within request).
-- **Fold D `3rd trigger`** — Cycle 1A verify-before-build. 3 consecutive triggers.
-- **UI candidate:** progress bar during bulk create (currently single mutation call; could show optimistic per-item progress).
+- **U5 candidate:** post-create auto-link via `initiative_signal_linker`.
+- **U6 candidate:** per-row name editing in bulk cluster confirm modal.
+- **Fold A `1st trigger` (bulk-endpoint scope-limit-cap standard)** — carry-forward.
+- **Fold B `informational`** — carry-forward.
+- **Fold C `informational`** — carry-forward.
+- **Fold D `3rd trigger` (Cycle 1A verify-before-build)** — carry-forward.
+- **UI candidate:** progress bar during bulk create.
 
 ### Carried from S3014 (STATUS PRESERVED)
 
 - **Rigby non-blocking A2 suggestion (S3013):** 9th test coupling.
 - **Batch Defer for Governance (S3013):** needs new bulk endpoint.
-- **Fold A `1st trigger` (S3014)** — "Diagnostic on create" invariant codification. Watch for 2nd.
+- **Fold A `1st trigger` (S3014)** — "Diagnostic on create" invariant codification.
 - **Fold B `informational` (S3014)** — `create_deliverable` factory `trigger_source` bypass documentation.
 - **Fold C `informational` (S3014)** — Session 843 `parent_object_type/id` audit opportunity.
-- **Fold D `2nd trigger` (rolled)** — Rigby web_fetch_tool auth clarification (Rigby Tool Gap Ledger candidate).
+- **Fold D `2nd trigger` (rolled)** — Rigby web_fetch_tool auth clarification.
 
 ### Carried from S3013 (STATUS PRESERVED)
 
-- **Fold A `3rd trigger` this session** — Cycle 1A verify-before-build (pattern reinforcement).
-- **Fold B `1st trigger` (S3013)** — S2785 auth-regression mutation-path blind spot.
-- **Fold D `future_trigger` (S3013)** — `BulkAttentionDecideView` uses Family B envelope shape.
-- **Fold E `informational` (S3013)** — Bulk endpoint decision enum inconsistency.
+- **Fold A `3rd trigger`** — Cycle 1A verify-before-build.
+- **Fold B `1st trigger`** — S2785 auth-regression mutation-path blind spot (partially addressed by S3016 Fold E; not fully closed).
+- **Fold D `future_trigger`** — `BulkAttentionDecideView` uses Family B envelope shape.
+- **Fold E `informational`** — Bulk endpoint decision enum inconsistency.
 
 ### Carried from S3012 (STATUS PRESERVED)
 
-- **Task #7 — Delete dead A/B testing handlers** per HALF_BUILT_FEATURES_AUDIT. Needs Chris ratification.
+- **Task #7 — Delete dead A/B testing handlers** per HALF_BUILT_FEATURES_AUDIT.
 - **Task #8 — DRF-decorator refactor** for 15 auth guards in views_learning_loop.py.
 - **Fold C `informational`** — `@superuser_required` decorator Family B → Family E migration candidate.
 
 ### Carried from S3011 (STATUS PRESERVED)
 
-- **Fold B `5th trigger imminent → assess post-S3015`** — PLAYBOOK-7.4.5 amendment (`make restart` for Daphne). All 3 recent sessions used `make recycle-all`.
-- **Fold A `1st trigger` (S3009 LLM-hallucination ledger)** — ZERO hallucinations at S3010-S3015 (**6 sessions continuous**).
+- **Fold B `5th trigger imminent → assess post-S3016`** — PLAYBOOK-7.4.5 amendment (`make restart` for Daphne). All recent sessions used `make recycle-all`. **Increment: S3016 also used `make recycle-all` twice → trigger imminent, not yet fired.**
+- **Fold A `1st trigger` (S3009 LLM-hallucination ledger)** — ZERO hallucinations at S3010-S3016 (**8 sessions continuous**).
 - **Fold C `1st trigger` (S3009 Rigby shell-exec ledger)** — still open.
 - **Fold B `1st trigger` from S3008** (`repo_tool.search no total_matches`) — bundle candidate for repo_tool capability expansion arc.
 
@@ -176,19 +197,19 @@ Chris-driven directive supersedes A/B/C/D/E.
 
 - **Constitutional governance chain:** CLAUDE.md constitutional blockquote (Playbook v0.10.0). No amendments this session.
 - **ADR corpus:** ADR-0001 through ADR-0007. No open ADR successor arcs.
-- **Spec→ship contract:** PLAYBOOK-7.7.1. **1× Flow B spec→ship this session.**
-- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **3× substantive Rigby SIGN cycles. Zero hallucination triggers. 6 sessions continuous.**
-- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Chris routing this session: "continue with U3" (ratifying joint recommendation) + "Internet blip continue" (resume after blip).
-- **Recycle discipline (PLAYBOOK-7.4.4):** `make recycle-all` used pre-merge (smoke) and post-merge (constitutional).
-- **Verify-before-build (Cycle 1A):** **3rd consecutive trigger** — extracted + reused U2 core helpers for U3 bulk endpoint.
-- **Fold classification (PLAYBOOK-6.10.8):** Rigby A2 zoom-out concern classified `same_pr_actionable` (100-cap adopted in same PR).
+- **Spec→ship contract:** PLAYBOOK-7.7.1. **2× Flow B spec→ship this session (Fold E + Fold G).**
+- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **6× substantive Rigby SIGN cycles. Zero rubber-stamp signals. 8 sessions continuous.**
+- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Chris routing this session: initial anchor-correction ("I anchored on 00-START menu instead of your close summary") + 4× "proceed" ratifications + 1× "merge and recycle" directive.
+- **Recycle discipline (PLAYBOOK-7.4.4):** `make recycle-all` twice — post-Fold-E merge and post-Fold-G merge (constitutional consistency even on doc-only PR).
+- **Verify-before-build (Cycle 1A):** implicit — the `token_client_for` helper was placed in `core/tests/helpers/` after confirming no prior helper pattern existed.
+- **Fold classification (PLAYBOOK-6.10.8):** 3× `same_pr_actionable → resolved` (Folds A/B/C mitigated in same PR). 1× new `1st trigger` (Fold D — doc-only PR + recycle-all policy). 2× `informational` (Folds E/F zoom-out).
 
 ---
 
 ## Wrapper pin note
 
-The active PA conversation pin at S3015 close is minted by `session_lifecycle close` at close time and the wrapper `tools/pa_local.sh` rewritten atomically. Commit the wrapper diff in the S3015 close cascade PR per `feedback_commit_wrapper_pin_bump_at_close`.
+The active PA conversation pin at S3016 close is minted by `session_lifecycle close` at close time and the wrapper `tools/pa_local.sh` rewritten atomically. Commit the wrapper diff in the S3016 close cascade PR per `feedback_commit_wrapper_pin_bump_at_close`.
 
 ---
 
-**Reminder — the workflow is constitutional. S3015 shipped a clean 1-PR arc following the S3015 00-START Option A (fresh engineering / U3 bulk-promote clusters) primary directive. Third consecutive user-facing session (U1 → U2 → U3). S3016 opens with no in-flight arc.**
+**Reminder — the workflow is constitutional. S3016 shipped a clean 2-PR arc following the S3016 00-START directive (correcting to Fold E + G per Chris's earlier close summary, not the 00-START Option A menu which had drifted). Substrate hardening after 3 consecutive user-facing sessions. S3017 opens with no in-flight arc.**
