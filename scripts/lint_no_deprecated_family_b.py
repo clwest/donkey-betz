@@ -38,7 +38,12 @@ MIGRATED_FILES: tuple[str, ...] = (
     "core/views_revenue_analytics.py",
     # Batch 2 (S3007, ADR-0007 §4.3) — 10 sites in auth middleware +
     # token_auth_required decorator (same file, file-scoped lint).
+    # S3009 B1 completed the file to 0 raw-pattern sites (helper only).
     "core/auth_middleware.py",
+    # Batch 3 (S3009, ADR-0007 §4.3) — 25 sites in auto-distribution views
+    # (create/batch/reschedule/cancel/settings/apply_template). All sites
+    # use emit_error_envelope() helper.
+    "core/views_auto_distribution.py",
 )
 
 # Deprecated helper usages (regex matched as function calls with open paren).
