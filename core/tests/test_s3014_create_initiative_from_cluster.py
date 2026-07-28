@@ -20,6 +20,7 @@ from django.test import Client, TestCase
 from core.models_document_registry import Initiative
 from core.models_signal_intelligence import SignalCluster
 from core.models_skin_layer import ProjectWorkspace
+from core.tests.helpers.token_auth import token_client_for
 
 
 User = get_user_model()
@@ -167,3 +168,30 @@ class CreateInitiativeFromClusterTests(TestCase):
         response = self.client.post(self._url(cluster.id), data="", content_type="application/json")
         self.assertEqual(response.status_code, 200)
         self.assertLessEqual(len(response.json()["initiative"]["name"]), 200)
+
+    def test_token_auth_reaches_single_cluster_endpoint_parity(self):
+        """S3016 Fold E: Token-auth (React frontend) must reach the single-cluster endpoint.
+
+        Same regression class as the S3015 hotfix — a PUBLIC_PATHS bare prefix
+        would short-circuit token parsing, drop the caller to AnonymousUser,
+        and produce a wrong-owner or 403 result. Session-auth tests above
+        would not surface it.
+        """
+        cluster = _make_cluster(name="Token parity single")
+        token_client = token_client_for(self.user)
+        response = token_client.post(
+            self._url(cluster.id),
+            data=json.dumps({"generate_brief": False}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(body["initiative"]["name"], "Demand Spike: Token parity single")
+        # Same-user provenance under Token-auth. Assert target_workspace.user_id
+        # because anon-fallthrough could theoretically pass owner_id via other
+        # code paths; anon cannot resolve "user's first workspace".
+        initiative = Initiative.objects.get(id=body["initiative"]["id"])
+        self.assertEqual(initiative.owner_id, self.user.id)
+        self.assertIsNotNone(initiative.target_workspace_id)
+        self.assertEqual(initiative.target_workspace.user_id, self.user.id)
