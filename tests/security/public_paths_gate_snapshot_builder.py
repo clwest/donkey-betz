@@ -50,7 +50,16 @@ from django.urls.resolvers import URLPattern, URLResolver
 from core.auth_middleware import UnifiedTokenAuthenticationMiddleware
 
 
-SNAPSHOT_PATH = Path(__file__).parent / "public_paths_gate_snapshot.json"
+# S3018 Rigby T1 REVISE-1: split snapshot into two files for diff hygiene.
+# `gated.json` (127 rows at baseline) is the high-signal diff surface —
+# gate changes on decorator/DRF-protected views land here. `ungated.json`
+# (606 rows at baseline) is the noise bucket — route additions under bare-
+# prefixes without a gate land here. Reviewers focus on the gated file for
+# security-relevant diffs; the ungated file is only interesting when
+# doing a public-surface audit. Test equality is enforced by merging both
+# files at load time, so security semantics are unchanged.
+GATED_SNAPSHOT_PATH = Path(__file__).parent / "public_paths_gate_snapshot_gated.json"
+UNGATED_SNAPSHOT_PATH = Path(__file__).parent / "public_paths_gate_snapshot_ungated.json"
 
 
 # Prefixes explicitly out of scope for the invariant (own auth stack).
@@ -168,11 +177,55 @@ def build_snapshot() -> dict[str, Any]:
     }
 
 
+def _split_routes(routes: dict[str, dict[str, Any]]) -> tuple[dict, dict]:
+    """Partition routes into (gated, ungated) sub-dicts. `gate == "none"`
+    is ungated; anything else (`decorator:*` / `drf:*`) is gated.
+    """
+    gated: dict[str, dict[str, Any]] = {}
+    ungated: dict[str, dict[str, Any]] = {}
+    for path, row in routes.items():
+        if row.get("gate") == "none":
+            ungated[path] = row
+        else:
+            gated[path] = row
+    return gated, ungated
+
+
+def _snapshot_header(snapshot: dict[str, Any], bucket: str) -> dict[str, Any]:
+    """Return a snapshot metadata header, tagged with which bucket it holds."""
+    return {
+        "schema_version": snapshot["schema_version"],
+        "excluded_prefixes": snapshot["excluded_prefixes"],
+        "in_scope_prefixes_count": snapshot["in_scope_prefixes_count"],
+        "bucket": bucket,
+    }
+
+
 def read_snapshot() -> dict[str, Any]:
-    """Read the checked-in snapshot from disk."""
-    return json.loads(SNAPSHOT_PATH.read_text())
+    """Read + merge the split snapshot files back into the full-shape dict.
+
+    Test equality logic is unchanged — the merged dict is compared as a
+    whole. The file split is purely for reviewer ergonomics.
+    """
+    gated_doc = json.loads(GATED_SNAPSHOT_PATH.read_text())
+    ungated_doc = json.loads(UNGATED_SNAPSHOT_PATH.read_text())
+    if gated_doc["schema_version"] != ungated_doc["schema_version"]:
+        raise ValueError(
+            "gated + ungated snapshot files have divergent schema_version. "
+            "Regenerate both with `python manage.py refresh_public_paths_gate_snapshot`."
+        )
+    return {
+        "schema_version": gated_doc["schema_version"],
+        "excluded_prefixes": gated_doc["excluded_prefixes"],
+        "in_scope_prefixes_count": gated_doc["in_scope_prefixes_count"],
+        "routes": dict(sorted({**gated_doc["routes"], **ungated_doc["routes"]}.items())),
+    }
 
 
 def write_snapshot(snapshot: dict[str, Any]) -> None:
-    """Persist a snapshot (used by the regen management command)."""
-    SNAPSHOT_PATH.write_text(json.dumps(snapshot, indent=2, sort_keys=True) + "\n")
+    """Persist a snapshot split across `gated.json` + `ungated.json`."""
+    gated, ungated = _split_routes(snapshot["routes"])
+    gated_doc = {**_snapshot_header(snapshot, "gated"), "routes": gated}
+    ungated_doc = {**_snapshot_header(snapshot, "ungated"), "routes": ungated}
+    GATED_SNAPSHOT_PATH.write_text(json.dumps(gated_doc, indent=2, sort_keys=True) + "\n")
+    UNGATED_SNAPSHOT_PATH.write_text(json.dumps(ungated_doc, indent=2, sort_keys=True) + "\n")

@@ -14,7 +14,8 @@ from __future__ import annotations
 from django.core.management.base import BaseCommand
 
 from tests.security.public_paths_gate_snapshot_builder import (
-    SNAPSHOT_PATH,
+    GATED_SNAPSHOT_PATH,
+    UNGATED_SNAPSHOT_PATH,
     build_snapshot,
     write_snapshot,
 )
@@ -48,4 +49,9 @@ class Command(BaseCommand):
             return
 
         write_snapshot(snapshot)
-        self.stdout.write(self.style.SUCCESS(f"Wrote snapshot to {SNAPSHOT_PATH}"))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Wrote gated snapshot → {GATED_SNAPSHOT_PATH}\n"
+                f"Wrote ungated snapshot → {UNGATED_SNAPSHOT_PATH}"
+            )
+        )
