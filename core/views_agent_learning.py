@@ -2381,8 +2381,9 @@ def bulk_reject_decisions(request):
     if count == 0:
         return JsonResponse({'success': True, 'count': 0, 'message': 'No matching decisions found'})
 
-    # Bulk update
-    queryset.update(status='rejected')
+    # S3023 U4-H: pass updated_at explicitly. queryset.update() bypasses auto_now
+    # so without this the row would carry a stale updated_at through audit/ordering.
+    queryset.update(status='rejected', updated_at=timezone.now())
 
     logger.info(f"🏛️ [Session 942] Bulk rejected {count} decisions")
 
