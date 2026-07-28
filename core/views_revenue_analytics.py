@@ -27,7 +27,13 @@ from core.models_unified_system import (
     ContentDistribution,
     OpportunityRevenue,
 )
-from core.api_responses import api_success, api_error
+# T-ENVELOPE-2-DEPRECATION Batch 1 (S3006, ADR-0007): success responses
+# use APIResponseEnvelope (Family B — canonical for success). Error
+# responses use build_user_facing_envelope (Family E — safety-contract
+# §3.1, canonical for errors per ADR-0007 §3.1).
+from core.api_responses import api_success
+from django.http import JsonResponse
+from core.security.error_envelope import build_user_facing_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +175,12 @@ def platform_revenue_detail(request, platform_name):
     Get detailed revenue analytics for a specific platform.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        payload = build_user_facing_envelope(reason_code='not_authenticated')
+        logger.warning(
+            "envelope_emit reason=%s support=%s endpoint=%s",
+            payload['reason_code'], payload['support_code'], request.path,
+        )
+        return JsonResponse(payload, status=401)
 
     # Find platform
     platform = DistributionPlatform.objects.filter(
@@ -177,7 +188,13 @@ def platform_revenue_detail(request, platform_name):
     ).first()
 
     if not platform:
-        return api_error(f"Platform '{platform_name}' not found", status_code=404)
+        payload = build_user_facing_envelope(reason_code='not_found')
+        logger.warning(
+            "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+            payload['reason_code'], payload['support_code'], request.path,
+            {'lookup': 'platform', 'name': platform_name},
+        )
+        return JsonResponse(payload, status=404)
 
     # Get user's account on this platform
     account = UserPlatformAccount.objects.filter(
@@ -186,7 +203,16 @@ def platform_revenue_detail(request, platform_name):
     ).first()
 
     if not account:
-        return api_error(f"No account connected for {platform.name}")
+        # Precondition failure — user has not linked an account for this
+        # platform. validation_error (400) not not_found (404) to avoid
+        # existence-oracle risk per safety-contract §9.2.
+        payload = build_user_facing_envelope(reason_code='validation_error')
+        logger.warning(
+            "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+            payload['reason_code'], payload['support_code'], request.path,
+            {'precondition': 'no_linked_account', 'platform': platform.name},
+        )
+        return JsonResponse(payload, status=400)
 
     # Time range
     days = int(request.GET.get('days', 30))
@@ -435,7 +461,12 @@ def calculate_roi(request):
     }
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        payload = build_user_facing_envelope(reason_code='not_authenticated')
+        logger.warning(
+            "envelope_emit reason=%s support=%s endpoint=%s",
+            payload['reason_code'], payload['support_code'], request.path,
+        )
+        return JsonResponse(payload, status=401)
 
     filters = {}
     include_costs = False
@@ -526,7 +557,12 @@ def revenue_forecast(request):
     Generate revenue forecasts based on historical data.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        payload = build_user_facing_envelope(reason_code='not_authenticated')
+        logger.warning(
+            "envelope_emit reason=%s support=%s endpoint=%s",
+            payload['reason_code'], payload['support_code'], request.path,
+        )
+        return JsonResponse(payload, status=401)
 
     # Historical data (last 90 days)
     since = timezone.now() - timedelta(days=90)
@@ -621,7 +657,12 @@ def revenue_goals(request):
     }
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        payload = build_user_facing_envelope(reason_code='not_authenticated')
+        logger.warning(
+            "envelope_emit reason=%s support=%s endpoint=%s",
+            payload['reason_code'], payload['support_code'], request.path,
+        )
+        return JsonResponse(payload, status=401)
 
     # Store goals in user profile or session for now
     # In production, create a proper model for this
@@ -637,7 +678,13 @@ def revenue_goals(request):
             }
             return api_success({'message': 'Goals updated successfully'})
         except json.JSONDecodeError:
-            return api_error("Invalid JSON")
+            payload = build_user_facing_envelope(reason_code='invalid_input')
+            logger.warning(
+                "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+                payload['reason_code'], payload['support_code'], request.path,
+                {'parse_error': 'json_decode'},
+            )
+            return JsonResponse(payload, status=400)
 
     # Get current goals
     goals = request.session.get('revenue_goals', {
@@ -705,7 +752,12 @@ def export_revenue_data(request):
     - days: number of days to include (default: 365)
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        payload = build_user_facing_envelope(reason_code='not_authenticated')
+        logger.warning(
+            "envelope_emit reason=%s support=%s endpoint=%s",
+            payload['reason_code'], payload['support_code'], request.path,
+        )
+        return JsonResponse(payload, status=401)
 
     days = int(request.GET.get('days', 365))
     since = timezone.now() - timedelta(days=days)
