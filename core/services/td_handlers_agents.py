@@ -6021,6 +6021,14 @@ class AgentHandlersMixin:
             # Promote to canonical
             decision.promote_to_canonical(promoted_by=promoted_by)
 
+            # S3028: emit canonical-promotion broadcast so the PA path fires
+            # the same event the boardroom UI + Celery auto-promoter fire.
+            # Best-effort; never fails the promotion.
+            from core.services.canonical_decision_broadcast import (
+                emit_canonical_promotion_broadcast,
+            )
+            emit_canonical_promotion_broadcast(decision)
+
             # Session 940: Record for learning
             if user_id:
                 try:
