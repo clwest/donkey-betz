@@ -3,6 +3,14 @@
 
 TODO(Phase 4B): selected checks in this script can become blocking once the
 repo is ready for stricter enforcement.
+
+Related but INTENTIONALLY SEPARATE guardrails:
+- ``scripts/lint_no_deprecated_family_b.py`` (ADR-0007 §4.2) — file-scoped
+  zero-tolerance lint on the Family B error-helper deprecation. Runs in its
+  own workflow (``.github/workflows/check-envelope-migration.yml``) so a
+  Batch failure surfaces distinctly from repo-guardrail failures. If the
+  two entry points become confusing for maintenance, fold via a
+  ``--check-envelope-migration`` flag on this script.
 """
 
 from __future__ import annotations

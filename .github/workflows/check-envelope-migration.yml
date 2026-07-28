@@ -1,0 +1,30 @@
+name: Envelope Migration Lint
+
+# ADR-0007 §4.2 obligation — file-scoped zero-tolerance lint on the
+# Family B error-helper deprecation. Files enter the tracked list as
+# T-ENVELOPE-2-DEPRECATION batches migrate them; once tracked, they MUST
+# NOT reintroduce deprecated helpers or deprecated imports.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  envelope-migration:
+    name: Envelope Migration Lint (ADR-0007 §4.2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run envelope-migration lint
+        run: python scripts/lint_no_deprecated_family_b.py
