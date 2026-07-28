@@ -30,7 +30,8 @@ from core.models_unified_system import (
     ContentDistribution,
     DistributionAnalytics,
 )
-from core.api_responses import api_success, api_error
+from core.api_responses import api_success
+from core.security.error_envelope import emit_error_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -74,17 +75,29 @@ def create_auto_distribution(request):
     }
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'auto_distribution_create'},
+        )
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return api_error("Invalid JSON")
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={'source': 'auto_distribution_create', 'reason': 'json_decode_error'},
+        )
 
     required_fields = ['content_type', 'title']
     for field in required_fields:
         if field not in data:
-            return api_error(f"Missing required field: {field}")
+            return emit_error_envelope(
+                reason_code='invalid_input',
+                request=request,
+                hint={'source': 'auto_distribution_create', 'reason': 'missing_field', 'field': field},
+            )
 
     # Get user's connected platforms
     connected_accounts = UserPlatformAccount.objects.filter(
@@ -93,7 +106,11 @@ def create_auto_distribution(request):
     ).select_related('platform')
 
     if not connected_accounts.exists():
-        return api_error("No platforms connected. Please connect at least one platform.")
+        return emit_error_envelope(
+            reason_code='validation_error',
+            request=request,
+            hint={'source': 'auto_distribution_create', 'reason': 'no_platforms_connected'},
+        )
 
     # Determine target platforms
     target_platforms = data.get('platforms', [])
@@ -106,7 +123,15 @@ def create_auto_distribution(request):
         ]
 
     if not target_accounts:
-        return api_error("No matching connected platforms found")
+        return emit_error_envelope(
+            reason_code='validation_error',
+            request=request,
+            hint={
+                'source': 'auto_distribution_create',
+                'reason': 'no_matching_platforms',
+                'requested_platforms': target_platforms,
+            },
+        )
 
     # Get content reference
     content_id = None
@@ -119,7 +144,15 @@ def create_auto_distribution(request):
             image = ImageHistory.objects.get(id=data['image_history_id'])
             content_id = str(image.id)
         except ImageHistory.DoesNotExist:
-            return api_error("Image not found")
+            return emit_error_envelope(
+                reason_code='not_found',
+                request=request,
+                hint={
+                    'source': 'auto_distribution_create',
+                    'kind': 'image',
+                    'id': data.get('image_history_id'),
+                },
+            )
 
     elif data['content_type'] == 'video' and data.get('video_history_id'):
         from content.models import VideoHistory
@@ -127,7 +160,15 @@ def create_auto_distribution(request):
             video = VideoHistory.objects.get(id=data['video_history_id'])
             content_id = str(video.id)
         except VideoHistory.DoesNotExist:
-            return api_error("Video not found")
+            return emit_error_envelope(
+                reason_code='not_found',
+                request=request,
+                hint={
+                    'source': 'auto_distribution_create',
+                    'kind': 'video',
+                    'id': data.get('video_history_id'),
+                },
+            )
 
     # Parse schedule
     schedule_type = data.get('schedule', {}).get('type', 'immediate')
@@ -139,7 +180,11 @@ def create_auto_distribution(request):
                 data['schedule']['datetime'].replace('Z', '+00:00')
             )
         except (KeyError, ValueError):
-            return api_error("Invalid scheduled datetime")
+            return emit_error_envelope(
+                reason_code='invalid_input',
+                request=request,
+                hint={'source': 'auto_distribution_create', 'reason': 'invalid_schedule_datetime'},
+            )
 
     elif schedule_type == 'optimal':
         # Calculate optimal posting time based on platform analytics
@@ -294,19 +339,40 @@ def batch_distribute(request):
     }
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'batch_distribute'},
+        )
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return api_error("Invalid JSON")
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={'source': 'batch_distribute', 'reason': 'json_decode_error'},
+        )
 
     items = data.get('items', [])
     if not items:
-        return api_error("No items provided")
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={'source': 'batch_distribute', 'reason': 'no_items'},
+        )
 
     if len(items) > 50:
-        return api_error("Maximum 50 items per batch")
+        return emit_error_envelope(
+            reason_code='validation_error',
+            request=request,
+            hint={
+                'source': 'batch_distribute',
+                'reason': 'batch_limit_exceeded',
+                'limit': 50,
+                'requested': len(items),
+            },
+        )
 
     # Get target platforms
     platforms = data.get('platforms', [])
@@ -324,7 +390,15 @@ def batch_distribute(request):
         target_accounts = list(connected_accounts)
 
     if not target_accounts:
-        return api_error("No matching connected platforms found")
+        return emit_error_envelope(
+            reason_code='validation_error',
+            request=request,
+            hint={
+                'source': 'batch_distribute',
+                'reason': 'no_matching_platforms',
+                'requested_platforms': platforms,
+            },
+        )
 
     # Parse schedule
     schedule = data.get('schedule', {'type': 'immediate'})
@@ -465,7 +539,11 @@ def reschedule_distribution(request, distribution_id):
     }
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'reschedule_distribution'},
+        )
 
     try:
         distribution = ContentDistribution.objects.get(
@@ -473,10 +551,23 @@ def reschedule_distribution(request, distribution_id):
             user=request.user
         )
     except ContentDistribution.DoesNotExist:
-        return api_error("Distribution not found", status_code=404)
+        return emit_error_envelope(
+            reason_code='not_found',
+            request=request,
+            hint={'source': 'reschedule_distribution', 'distribution_id': distribution_id},
+        )
 
     if distribution.status not in ['draft', 'pending']:
-        return api_error("Can only reschedule draft or pending distributions")
+        return emit_error_envelope(
+            reason_code='validation_error',
+            request=request,
+            hint={
+                'source': 'reschedule_distribution',
+                'reason': 'invalid_state',
+                'current_status': distribution.status,
+                'allowed_statuses': ['draft', 'pending'],
+            },
+        )
 
     try:
         data = json.loads(request.body)
@@ -484,7 +575,11 @@ def reschedule_distribution(request, distribution_id):
             data['scheduled_time'].replace('Z', '+00:00')
         )
     except (json.JSONDecodeError, KeyError, ValueError):
-        return api_error("Invalid scheduled_time")
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={'source': 'reschedule_distribution', 'reason': 'invalid_scheduled_time'},
+        )
 
     # Update metadata
     metadata = distribution.platform_metadata or {}
@@ -512,7 +607,11 @@ def cancel_scheduled_distribution(request, distribution_id):
     Cancel a scheduled distribution.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'cancel_scheduled_distribution'},
+        )
 
     try:
         distribution = ContentDistribution.objects.get(
@@ -520,10 +619,23 @@ def cancel_scheduled_distribution(request, distribution_id):
             user=request.user
         )
     except ContentDistribution.DoesNotExist:
-        return api_error("Distribution not found", status_code=404)
+        return emit_error_envelope(
+            reason_code='not_found',
+            request=request,
+            hint={'source': 'cancel_scheduled_distribution', 'distribution_id': distribution_id},
+        )
 
     if distribution.status not in ['draft', 'pending']:
-        return api_error("Can only cancel draft or pending distributions")
+        return emit_error_envelope(
+            reason_code='validation_error',
+            request=request,
+            hint={
+                'source': 'cancel_scheduled_distribution',
+                'reason': 'invalid_state',
+                'current_status': distribution.status,
+                'allowed_statuses': ['draft', 'pending'],
+            },
+        )
 
     # Update status
     distribution.status = 'removed'
@@ -573,7 +685,11 @@ def auto_distribution_settings(request):
     }
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'auto_distribution_settings'},
+        )
 
     accounts = UserPlatformAccount.objects.filter(
         user=request.user,
@@ -600,7 +716,11 @@ def auto_distribution_settings(request):
         try:
             data = json.loads(request.body)
         except json.JSONDecodeError:
-            return api_error("Invalid JSON")
+            return emit_error_envelope(
+                reason_code='invalid_input',
+                request=request,
+                hint={'source': 'auto_distribution_settings', 'reason': 'json_decode_error'},
+            )
 
         updated = []
         for account in accounts:
@@ -731,12 +851,20 @@ def apply_distribution_template(request):
     }
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'apply_distribution_template'},
+        )
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return api_error("Invalid JSON")
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={'source': 'apply_distribution_template', 'reason': 'json_decode_error'},
+        )
 
     template_name = data.get('template')
     templates = {
@@ -748,7 +876,15 @@ def apply_distribution_template(request):
     }
 
     if template_name not in templates:
-        return api_error(f"Unknown template: {template_name}")
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={
+                'source': 'apply_distribution_template',
+                'reason': 'unknown_template',
+                'template': template_name,
+            },
+        )
 
     # Use the auto_distribution endpoint with template platforms
     data['platforms'] = templates[template_name]
