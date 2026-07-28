@@ -457,7 +457,16 @@ def add_memory_to_cluster(request, cluster_id):
     `scope_queryset_agent_memory` (ADR-0008) closes authenticated cross-user.
     """
     try:
-        cluster = MemoryCluster.objects.get(id=cluster_id)
+        # S3020 F-1b (Rigby T1 REVISE): also scope the cluster fetch. The
+        # cluster is owned by an Agent (via FK); reuse the ADR-0008
+        # `agent.user_assignments` M2M traversal shape inline. Without this,
+        # alice could add her own memory into bob's cluster.
+        cluster_qs = MemoryCluster.objects.all()
+        if not getattr(request.user, 'is_superuser', False):
+            cluster_qs = cluster_qs.filter(
+                agent__user_assignments=request.user
+            ).distinct()
+        cluster = cluster_qs.get(id=cluster_id)
     except MemoryCluster.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Cluster not found'}, status=404)
 
