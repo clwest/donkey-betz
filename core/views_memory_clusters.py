@@ -11,9 +11,11 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
+from core.auth_middleware import token_auth_required
 from core.models_unified_system import (
     Agent, AgentMemory, MemoryCluster, MemoryClusterMembership, ClusterEvolution
 )
+from core.security.object_authz import scope_queryset_agent_memory
 
 logger = logging.getLogger(__name__)
 
@@ -439,15 +441,32 @@ def generate_all_clusters(request):
 
 
 @csrf_exempt
+@token_auth_required
 @require_http_methods(["POST"])
 def add_memory_to_cluster(request, cluster_id):
     """
     POST /api/memory-clusters/cluster/<cluster_id>/add-memory/
 
     Manually add a memory to a cluster.
+
+    S3020 F-1 (audit `docs/audits/UNSCOPED_GETS_S3020.md`): pre-fix, this
+    endpoint sat under `/api/memory-clusters/` bare-prefix in PUBLIC_PATHS
+    with an unscoped `AgentMemory.objects.get(id=memory_id)`. Anon or
+    cross-user callers could add any memory into a cluster they specify.
+    Same class as S3017 F-3. `@token_auth_required` closes anon reach;
+    `scope_queryset_agent_memory` (ADR-0008) closes authenticated cross-user.
     """
     try:
-        cluster = MemoryCluster.objects.get(id=cluster_id)
+        # S3020 F-1b (Rigby T1 REVISE): also scope the cluster fetch. The
+        # cluster is owned by an Agent (via FK); reuse the ADR-0008
+        # `agent.user_assignments` M2M traversal shape inline. Without this,
+        # alice could add her own memory into bob's cluster.
+        cluster_qs = MemoryCluster.objects.all()
+        if not getattr(request.user, 'is_superuser', False):
+            cluster_qs = cluster_qs.filter(
+                agent__user_assignments=request.user
+            ).distinct()
+        cluster = cluster_qs.get(id=cluster_id)
     except MemoryCluster.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Cluster not found'}, status=404)
 
@@ -461,7 +480,10 @@ def add_memory_to_cluster(request, cluster_id):
         return JsonResponse({'success': False, 'error': 'memory_id required'}, status=400)
 
     try:
-        memory = AgentMemory.objects.get(id=memory_id)
+        # S3020 (ADR-0008): scope the .get() so cross-user reads 404.
+        memory = scope_queryset_agent_memory(
+            request.user, AgentMemory.objects.all()
+        ).get(id=memory_id)
     except AgentMemory.DoesNotExist:
         return JsonResponse({'success': False, 'error': 'Memory not found'}, status=404)
 
@@ -558,12 +580,20 @@ def cluster_evolution(request, agent_id):
 
 
 @csrf_exempt
+@token_auth_required
 @require_http_methods(["POST"])
 def find_similar_clusters(request):
     """
     POST /api/memory-clusters/find-similar/
 
     Find clusters similar to a given query or memory.
+
+    S3020 F-2 (audit `docs/audits/UNSCOPED_GETS_S3020.md`): pre-fix,
+    unscoped `AgentMemory.objects.get(id=memory_id)` allowed anon /
+    cross-user callers to retrieve any memory's embedding vector +
+    trigger similarity search. Same class as S3017 F-2 (read leak) +
+    additional embedding-vector-leak surface. Gated with the same
+    S3017/S3019 shape.
     """
     try:
         data = json.loads(request.body)
@@ -582,7 +612,10 @@ def find_similar_clusters(request):
     # Get query embedding
     if memory_id:
         try:
-            memory = AgentMemory.objects.get(id=memory_id)
+            # S3020 (ADR-0008): scope the .get() so cross-user reads 404.
+            memory = scope_queryset_agent_memory(
+                request.user, AgentMemory.objects.all()
+            ).get(id=memory_id)
             if not memory.embedding:
                 return JsonResponse({'success': False, 'error': 'Memory has no embedding'}, status=400)
             query_embedding = np.array(memory.embedding)

@@ -614,6 +614,22 @@
       "url_name": "legal-case-files-upload",
       "view": "upload_legal_case_file"
     },
+    "/api/memory-clusters/cluster/<uuid:cluster_id>/add-memory/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_memory_clusters",
+      "prefix": "/api/memory-clusters/",
+      "url_name": "memory-clusters-add-memory",
+      "view": "add_memory_to_cluster"
+    },
+    "/api/memory-clusters/find-similar/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_memory_clusters",
+      "prefix": "/api/memory-clusters/",
+      "url_name": "memory-clusters-find-similar",
+      "view": "find_similar_clusters"
+    },
     "/api/memory-palace/memory/<uuid:memory_id>/": {
       "gate": "decorator:token_required",
       "is_cbv": false,
