@@ -5,7 +5,6 @@ Ensures consistent token validation and security policies across all API endpoin
 
 import logging
 from typing import Optional
-from django.http import JsonResponse
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth import get_user_model
 from django.utils.deprecation import MiddlewareMixin
@@ -932,15 +931,17 @@ class RateLimitingMiddleware(MiddlewareMixin):
                 # Check rate limit (implementation would use Redis/cache)
                 if self.is_rate_limited(client_ip, endpoint, limit, window):
                     logger.warning(f"Rate limit exceeded for {client_ip} on {endpoint}")
-                    return JsonResponse(
-                        {
-                            'success': False,
-                            'error': {
-                                'code': 'rate_limited',
-                                'message': 'Too many requests. Please try again later.'
-                            }
+                    return emit_error_envelope(
+                        reason_code='rate_limited',
+                        request=request,
+                        hint={
+                            'source': 'rate_limit_exceeded',
+                            'endpoint': endpoint,
+                            'client_ip': client_ip,
+                            'limit': limit,
+                            'window_seconds': window,
                         },
-                        status=429
+                        retry_after_seconds=window,
                     )
         
         return None
