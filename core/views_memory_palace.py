@@ -10,6 +10,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 
+from core.auth_middleware import token_auth_required
+
 logger = logging.getLogger(__name__)
 
 
@@ -96,9 +98,19 @@ def get_agent_memories(request, agent_id):
 
 
 @csrf_exempt
+@token_auth_required
 @require_http_methods(["GET"])
 def get_memory_detail(request, memory_id):
-    """Get full details of a specific memory"""
+    """Get full details of a specific memory.
+
+    S3017 (F-2 remediation of Fold G, PUBLIC_PATHS bare-prefix audit):
+    `/api/memory-palace/memory/` sits in PUBLIC_PATHS as a bare prefix, so
+    the middleware short-circuits before token parsing. Without a decorator
+    gate any anon caller with a valid UUID could read the row + trigger the
+    access_count auto-increment (rows are unscoped). `@token_auth_required`
+    forces auth via session OR `Authorization: Token …` before the view
+    body runs; `request.user` is guaranteed authenticated below.
+    """
     try:
         from core.models_unified_system import AgentMemory, AgentExecution
 
@@ -504,9 +516,16 @@ def connect_memories(request):
 
 
 @csrf_exempt
+@token_auth_required
 @require_http_methods(["GET"])
 def get_memory_connections(request, memory_id):
-    """Get all connections for a memory"""
+    """Get all connections for a memory.
+
+    S3017 F-3 (Rigby T1 SIGN zoom-out 5b): sibling of `get_memory_detail`
+    under the same `/api/memory-palace/memory/` bare-prefix bypass. Same
+    F-2-shape read leak — anon with a valid UUID could enumerate a row's
+    connection graph. Gated with the same `@token_auth_required`.
+    """
     try:
         from core.models_unified_system import AgentMemory, MemoryConnection
 
@@ -610,9 +629,16 @@ def get_memory_palace_overview(request):
 
 
 @csrf_exempt
+@token_auth_required
 @require_http_methods(["DELETE"])
 def delete_memory(request, memory_id):
-    """Delete a memory"""
+    """Delete a memory.
+
+    S3017 F-3 (Rigby T1 SIGN zoom-out 5b): mutation sibling under the same
+    `/api/memory-palace/memory/` bare-prefix bypass. Pre-fix any anon
+    caller with a valid UUID could DELETE the row — strictly worse than
+    the F-2 read leak. Gated with `@token_auth_required`.
+    """
     try:
         from core.models_unified_system import AgentMemory
 
