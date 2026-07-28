@@ -39,7 +39,7 @@ from core.models_unified_system import (
     UserPlatformAccount,
     ContentDistribution,
 )
-from core.api_responses import api_success, api_error  # api_error retained pending PR B (46 remaining sites)
+from core.api_responses import api_success
 from core.security.error_envelope import emit_error_envelope
 
 logger = logging.getLogger(__name__)
@@ -546,7 +546,11 @@ def etsy_get_shop(request):
     Get user's Etsy shop information.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'etsy_get_shop'},
+        )
 
     try:
         account = UserPlatformAccount.objects.select_related('platform').get(
@@ -555,7 +559,11 @@ def etsy_get_shop(request):
             account_status='active'
         )
     except UserPlatformAccount.DoesNotExist:
-        return api_error("No active Etsy account connected")
+        return emit_error_envelope(
+            reason_code='not_found',
+            request=request,
+            hint={'source': 'etsy_get_shop', 'reason': 'no_active_account', 'platform': 'etsy'},
+        )
 
     try:
         import requests as http_requests
@@ -575,10 +583,23 @@ def etsy_get_shop(request):
         )
 
         if response.status_code == 401:
-            return api_error("Token expired. Please refresh or reconnect.", status_code=401)
+            return emit_error_envelope(
+                reason_code='not_authenticated',
+                request=request,
+                hint={'source': 'etsy_get_shop', 'reason': 'token_expired', 'platform': 'etsy'},
+            )
 
         if response.status_code != 200:
-            return api_error(f"Etsy API error: {response.status_code}")
+            return emit_error_envelope(
+                reason_code='upstream_provider_error',
+                request=request,
+                hint={
+                    'source': 'etsy_get_shop',
+                    'reason': 'upstream_error',
+                    'platform': 'etsy',
+                    'upstream_status': response.status_code,
+                },
+            )
 
         data = response.json()
         shops = data.get('results', [])
@@ -596,7 +617,15 @@ def etsy_get_shop(request):
 
     except Exception as e:
         logger.exception(f"Etsy shop fetch error: {e}")
-        return api_error(f"Failed to fetch shop: {str(e)}")
+        return emit_error_envelope(
+            reason_code='internal_error',
+            request=request,
+            hint={
+                'source': 'etsy_get_shop',
+                'reason': 'unhandled_exception',
+                'exc_type': type(e).__name__,
+            },
+        )
 
 
 @csrf_exempt
@@ -623,17 +652,29 @@ def etsy_create_listing(request):
     }
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'etsy_create_listing'},
+        )
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return api_error("Invalid JSON")
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={'source': 'etsy_create_listing', 'reason': 'json_decode_error'},
+        )
 
     required_fields = ['shop_id', 'title', 'description', 'price', 'quantity']
     for field in required_fields:
         if field not in data:
-            return api_error(f"Missing required field: {field}")
+            return emit_error_envelope(
+                reason_code='invalid_input',
+                request=request,
+                hint={'source': 'etsy_create_listing', 'reason': 'missing_field', 'field': field},
+            )
 
     try:
         account = UserPlatformAccount.objects.select_related('platform').get(
@@ -642,7 +683,11 @@ def etsy_create_listing(request):
             account_status='active'
         )
     except UserPlatformAccount.DoesNotExist:
-        return api_error("No active Etsy account connected")
+        return emit_error_envelope(
+            reason_code='not_found',
+            request=request,
+            hint={'source': 'etsy_create_listing', 'reason': 'no_active_account', 'platform': 'etsy'},
+        )
 
     try:
         import requests as http_requests
@@ -677,10 +722,23 @@ def etsy_create_listing(request):
         )
 
         if response.status_code == 401:
-            return api_error("Token expired. Please refresh or reconnect.", status_code=401)
+            return emit_error_envelope(
+                reason_code='not_authenticated',
+                request=request,
+                hint={'source': 'etsy_create_listing', 'reason': 'token_expired', 'platform': 'etsy'},
+            )
 
         if response.status_code not in [200, 201]:
-            return api_error(f"Etsy API error: {response.status_code} - {response.text}")
+            return emit_error_envelope(
+                reason_code='upstream_provider_error',
+                request=request,
+                hint={
+                    'source': 'etsy_create_listing',
+                    'reason': 'upstream_error',
+                    'platform': 'etsy',
+                    'upstream_status': response.status_code,
+                },
+            )
 
         etsy_listing = response.json()
 
@@ -724,7 +782,15 @@ def etsy_create_listing(request):
 
     except Exception as e:
         logger.exception(f"Etsy listing creation error: {e}")
-        return api_error(f"Failed to create listing: {str(e)}")
+        return emit_error_envelope(
+            reason_code='internal_error',
+            request=request,
+            hint={
+                'source': 'etsy_create_listing',
+                'reason': 'unhandled_exception',
+                'exc_type': type(e).__name__,
+            },
+        )
 
 
 # =============================================================================
@@ -740,7 +806,11 @@ def shutterstock_get_portfolio(request):
     Get user's Shutterstock contributor portfolio.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'shutterstock_get_portfolio'},
+        )
 
     try:
         account = UserPlatformAccount.objects.select_related('platform').get(
@@ -749,7 +819,11 @@ def shutterstock_get_portfolio(request):
             account_status='active'
         )
     except UserPlatformAccount.DoesNotExist:
-        return api_error("No active Shutterstock account connected")
+        return emit_error_envelope(
+            reason_code='not_found',
+            request=request,
+            hint={'source': 'shutterstock_get_portfolio', 'reason': 'no_active_account', 'platform': 'shutterstock'},
+        )
 
     try:
         import requests as http_requests
@@ -767,10 +841,23 @@ def shutterstock_get_portfolio(request):
         )
 
         if response.status_code == 401:
-            return api_error("Token expired. Please refresh or reconnect.", status_code=401)
+            return emit_error_envelope(
+                reason_code='not_authenticated',
+                request=request,
+                hint={'source': 'shutterstock_get_portfolio', 'reason': 'token_expired', 'platform': 'shutterstock'},
+            )
 
         if response.status_code != 200:
-            return api_error(f"Shutterstock API error: {response.status_code}")
+            return emit_error_envelope(
+                reason_code='upstream_provider_error',
+                request=request,
+                hint={
+                    'source': 'shutterstock_get_portfolio',
+                    'reason': 'upstream_error',
+                    'platform': 'shutterstock',
+                    'upstream_status': response.status_code,
+                },
+            )
 
         stats = response.json()
 
@@ -795,7 +882,15 @@ def shutterstock_get_portfolio(request):
 
     except Exception as e:
         logger.exception(f"Shutterstock portfolio fetch error: {e}")
-        return api_error(f"Failed to fetch portfolio: {str(e)}")
+        return emit_error_envelope(
+            reason_code='internal_error',
+            request=request,
+            hint={
+                'source': 'shutterstock_get_portfolio',
+                'reason': 'unhandled_exception',
+                'exc_type': type(e).__name__,
+            },
+        )
 
 
 @csrf_exempt
@@ -817,17 +912,29 @@ def shutterstock_submit_content(request):
     }
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'shutterstock_submit_content'},
+        )
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return api_error("Invalid JSON")
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={'source': 'shutterstock_submit_content', 'reason': 'json_decode_error'},
+        )
 
     required_fields = ['image_url', 'title', 'description', 'keywords']
     for field in required_fields:
         if field not in data:
-            return api_error(f"Missing required field: {field}")
+            return emit_error_envelope(
+                reason_code='invalid_input',
+                request=request,
+                hint={'source': 'shutterstock_submit_content', 'reason': 'missing_field', 'field': field},
+            )
 
     try:
         account = UserPlatformAccount.objects.select_related('platform').get(
@@ -836,7 +943,11 @@ def shutterstock_submit_content(request):
             account_status='active'
         )
     except UserPlatformAccount.DoesNotExist:
-        return api_error("No active Shutterstock account connected")
+        return emit_error_envelope(
+            reason_code='not_found',
+            request=request,
+            hint={'source': 'shutterstock_submit_content', 'reason': 'no_active_account', 'platform': 'shutterstock'},
+        )
 
     # For Shutterstock, submissions go through their contributor portal
     # This endpoint creates a tracking record and provides guidance
@@ -893,7 +1004,11 @@ def gumroad_get_products(request):
     Get user's Gumroad products.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'gumroad_get_products'},
+        )
 
     try:
         account = UserPlatformAccount.objects.select_related('platform').get(
@@ -902,7 +1017,11 @@ def gumroad_get_products(request):
             account_status='active'
         )
     except UserPlatformAccount.DoesNotExist:
-        return api_error("No active Gumroad account connected")
+        return emit_error_envelope(
+            reason_code='not_found',
+            request=request,
+            hint={'source': 'gumroad_get_products', 'reason': 'no_active_account', 'platform': 'gumroad'},
+        )
 
     try:
         import requests as http_requests
@@ -915,10 +1034,23 @@ def gumroad_get_products(request):
         )
 
         if response.status_code == 401:
-            return api_error("Token expired. Please refresh or reconnect.", status_code=401)
+            return emit_error_envelope(
+                reason_code='not_authenticated',
+                request=request,
+                hint={'source': 'gumroad_get_products', 'reason': 'token_expired', 'platform': 'gumroad'},
+            )
 
         if response.status_code != 200:
-            return api_error(f"Gumroad API error: {response.status_code}")
+            return emit_error_envelope(
+                reason_code='upstream_provider_error',
+                request=request,
+                hint={
+                    'source': 'gumroad_get_products',
+                    'reason': 'upstream_error',
+                    'platform': 'gumroad',
+                    'upstream_status': response.status_code,
+                },
+            )
 
         data = response.json()
         products = data.get('products', [])
@@ -937,7 +1069,15 @@ def gumroad_get_products(request):
 
     except Exception as e:
         logger.exception(f"Gumroad products fetch error: {e}")
-        return api_error(f"Failed to fetch products: {str(e)}")
+        return emit_error_envelope(
+            reason_code='internal_error',
+            request=request,
+            hint={
+                'source': 'gumroad_get_products',
+                'reason': 'unhandled_exception',
+                'exc_type': type(e).__name__,
+            },
+        )
 
 
 @csrf_exempt
@@ -960,17 +1100,29 @@ def gumroad_create_product(request):
     }
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'gumroad_create_product'},
+        )
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return api_error("Invalid JSON")
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={'source': 'gumroad_create_product', 'reason': 'json_decode_error'},
+        )
 
     required_fields = ['name', 'description', 'price']
     for field in required_fields:
         if field not in data:
-            return api_error(f"Missing required field: {field}")
+            return emit_error_envelope(
+                reason_code='invalid_input',
+                request=request,
+                hint={'source': 'gumroad_create_product', 'reason': 'missing_field', 'field': field},
+            )
 
     try:
         account = UserPlatformAccount.objects.select_related('platform').get(
@@ -979,7 +1131,11 @@ def gumroad_create_product(request):
             account_status='active'
         )
     except UserPlatformAccount.DoesNotExist:
-        return api_error("No active Gumroad account connected")
+        return emit_error_envelope(
+            reason_code='not_found',
+            request=request,
+            hint={'source': 'gumroad_create_product', 'reason': 'no_active_account', 'platform': 'gumroad'},
+        )
 
     try:
         import requests as http_requests
@@ -1004,10 +1160,23 @@ def gumroad_create_product(request):
         )
 
         if response.status_code == 401:
-            return api_error("Token expired. Please refresh or reconnect.", status_code=401)
+            return emit_error_envelope(
+                reason_code='not_authenticated',
+                request=request,
+                hint={'source': 'gumroad_create_product', 'reason': 'token_expired', 'platform': 'gumroad'},
+            )
 
         if response.status_code not in [200, 201]:
-            return api_error(f"Gumroad API error: {response.status_code} - {response.text}")
+            return emit_error_envelope(
+                reason_code='upstream_provider_error',
+                request=request,
+                hint={
+                    'source': 'gumroad_create_product',
+                    'reason': 'upstream_error',
+                    'platform': 'gumroad',
+                    'upstream_status': response.status_code,
+                },
+            )
 
         gumroad_product = response.json().get('product', {})
 
@@ -1051,7 +1220,15 @@ def gumroad_create_product(request):
 
     except Exception as e:
         logger.exception(f"Gumroad product creation error: {e}")
-        return api_error(f"Failed to create product: {str(e)}")
+        return emit_error_envelope(
+            reason_code='internal_error',
+            request=request,
+            hint={
+                'source': 'gumroad_create_product',
+                'reason': 'unhandled_exception',
+                'exc_type': type(e).__name__,
+            },
+        )
 
 
 @csrf_exempt
@@ -1074,16 +1251,28 @@ def gumroad_publish_image(request):
     }
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'gumroad_publish_image'},
+        )
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return api_error("Invalid JSON")
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={'source': 'gumroad_publish_image', 'reason': 'json_decode_error'},
+        )
 
     image_id = data.get('image_id')
     if not image_id:
-        return api_error("Missing required field: image_id")
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={'source': 'gumroad_publish_image', 'reason': 'missing_field', 'field': 'image_id'},
+        )
 
     try:
         from core.services.gumroad_publishing import GumroadPublishingService
@@ -1099,15 +1288,20 @@ def gumroad_publish_image(request):
             try:
                 image = ImageHistory.objects.get(id=image_id, user=request.user)
             except (ImageHistory.DoesNotExist, ValueError):
-                return api_error(f"Image #{image_id} not found in your gallery")
+                return emit_error_envelope(
+                    reason_code='not_found',
+                    request=request,
+                    hint={'source': 'gumroad_publish_image', 'reason': 'image_not_found', 'image_id': image_id},
+                )
 
         # Initialize publishing service
         service = GumroadPublishingService(request.user)
 
         if not service.account:
-            return api_error(
-                "No Gumroad account connected. Please connect your Gumroad account in the Distribution tab.",
-                status_code=400
+            return emit_error_envelope(
+                reason_code='not_found',
+                request=request,
+                hint={'source': 'gumroad_publish_image', 'reason': 'no_active_account', 'platform': 'gumroad'},
             )
 
         # Publish to Gumroad with actual file upload
@@ -1129,10 +1323,27 @@ def gumroad_publish_image(request):
         })
 
     except ValueError as e:
-        return api_error(str(e))
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={
+                'source': 'gumroad_publish_image',
+                'reason': 'value_error',
+                'exc_type': 'ValueError',
+                'exc_msg': str(e),
+            },
+        )
     except Exception as e:
         logger.exception(f"Gumroad publish error: {e}")
-        return api_error(f"Failed to publish: {str(e)}")
+        return emit_error_envelope(
+            reason_code='internal_error',
+            request=request,
+            hint={
+                'source': 'gumroad_publish_image',
+                'reason': 'unhandled_exception',
+                'exc_type': type(e).__name__,
+            },
+        )
 
 
 @csrf_exempt
@@ -1237,7 +1448,11 @@ def sync_platform_revenue(request, platform):
     Sync revenue data from platform API.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'sync_platform_revenue'},
+        )
 
     try:
         account = UserPlatformAccount.objects.select_related('platform').get(
@@ -1246,7 +1461,11 @@ def sync_platform_revenue(request, platform):
             account_status='active'
         )
     except UserPlatformAccount.DoesNotExist:
-        return api_error(f"No active {platform} account connected")
+        return emit_error_envelope(
+            reason_code='not_found',
+            request=request,
+            hint={'source': 'sync_platform_revenue', 'reason': 'no_active_account', 'platform': platform},
+        )
 
     synced_data = {
         'platform': platform,
@@ -1261,7 +1480,11 @@ def sync_platform_revenue(request, platform):
         elif platform.lower() == 'etsy':
             synced_data = sync_etsy_revenue(account)
         else:
-            return api_error(f"Revenue sync not implemented for {platform}")
+            return emit_error_envelope(
+                reason_code='unavailable',
+                request=request,
+                hint={'source': 'sync_platform_revenue', 'reason': 'not_implemented', 'platform': platform},
+            )
 
         # Update account totals
         account.total_revenue = synced_data.get('total_revenue', account.total_revenue)
@@ -1275,7 +1498,16 @@ def sync_platform_revenue(request, platform):
 
     except Exception as e:
         logger.exception(f"Revenue sync error for {platform}: {e}")
-        return api_error(f"Revenue sync failed: {str(e)}")
+        return emit_error_envelope(
+            reason_code='internal_error',
+            request=request,
+            hint={
+                'source': 'sync_platform_revenue',
+                'reason': 'unhandled_exception',
+                'platform': platform,
+                'exc_type': type(e).__name__,
+            },
+        )
 
 
 def sync_gumroad_revenue(account):
@@ -1435,7 +1667,11 @@ def disconnect_platform(request, platform):
     Disconnect a platform account.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'disconnect_platform'},
+        )
 
     try:
         account = UserPlatformAccount.objects.get(
@@ -1457,4 +1693,8 @@ def disconnect_platform(request, platform):
         })
 
     except UserPlatformAccount.DoesNotExist:
-        return api_error(f"No {platform} account found")
+        return emit_error_envelope(
+            reason_code='not_found',
+            request=request,
+            hint={'source': 'disconnect_platform', 'reason': 'no_account_found', 'platform': platform},
+        )
