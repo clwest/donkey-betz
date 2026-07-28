@@ -2806,14 +2806,6 @@
       "url_name": "memory-clusters-detail",
       "view": "cluster_detail"
     },
-    "/api/memory-clusters/cluster/<uuid:cluster_id>/add-memory/": {
-      "gate": "none",
-      "is_cbv": false,
-      "module": "core.views_memory_clusters",
-      "prefix": "/api/memory-clusters/",
-      "url_name": "memory-clusters-add-memory",
-      "view": "add_memory_to_cluster"
-    },
     "/api/memory-clusters/cluster/<uuid:cluster_id>/memory/<uuid:memory_id>/": {
       "gate": "none",
       "is_cbv": false,
@@ -2829,14 +2821,6 @@
       "prefix": "/api/memory-clusters/",
       "url_name": "memory-clusters-evolution",
       "view": "cluster_evolution"
-    },
-    "/api/memory-clusters/find-similar/": {
-      "gate": "none",
-      "is_cbv": false,
-      "module": "core.views_memory_clusters",
-      "prefix": "/api/memory-clusters/",
-      "url_name": "memory-clusters-find-similar",
-      "view": "find_similar_clusters"
     },
     "/api/memory-clusters/generate-all/": {
       "gate": "none",
