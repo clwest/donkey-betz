@@ -64,10 +64,15 @@ class VIPReadOnlyMiddleware:
                 "VIP expiry/revoke block: %s %s user=%s",
                 request.method, request.path, request.user,
             )
-            return JsonResponse(
+            # §3.5 UX widening: X-VIP-Expired header discriminates this 401
+            # from session-expiry 401s so the frontend authFailureStore can
+            # render the correct modal variant (contact-host, not re-login).
+            response = JsonResponse(
                 {'error': 'Your VIP demo access has expired.'},
                 status=401,
             )
+            response['X-VIP-Expired'] = 'true'
+            return response
 
         path = request.path
 
