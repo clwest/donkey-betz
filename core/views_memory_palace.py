@@ -516,9 +516,16 @@ def connect_memories(request):
 
 
 @csrf_exempt
+@token_auth_required
 @require_http_methods(["GET"])
 def get_memory_connections(request, memory_id):
-    """Get all connections for a memory"""
+    """Get all connections for a memory.
+
+    S3017 F-3 (Rigby T1 SIGN zoom-out 5b): sibling of `get_memory_detail`
+    under the same `/api/memory-palace/memory/` bare-prefix bypass. Same
+    F-2-shape read leak — anon with a valid UUID could enumerate a row's
+    connection graph. Gated with the same `@token_auth_required`.
+    """
     try:
         from core.models_unified_system import AgentMemory, MemoryConnection
 
@@ -622,9 +629,16 @@ def get_memory_palace_overview(request):
 
 
 @csrf_exempt
+@token_auth_required
 @require_http_methods(["DELETE"])
 def delete_memory(request, memory_id):
-    """Delete a memory"""
+    """Delete a memory.
+
+    S3017 F-3 (Rigby T1 SIGN zoom-out 5b): mutation sibling under the same
+    `/api/memory-palace/memory/` bare-prefix bypass. Pre-fix any anon
+    caller with a valid UUID could DELETE the row — strictly worse than
+    the F-2 read leak. Gated with `@token_auth_required`.
+    """
     try:
         from core.models_unified_system import AgentMemory
 

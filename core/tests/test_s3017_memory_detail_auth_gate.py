@@ -15,6 +15,14 @@ S2789 pattern for PUBLIC_PATHS endpoints that need auth). These tests lock:
 3. session-auth caller reaches the view + gets `success=True`.
 4. Token-auth caller reaches the view + gets `success=True` (parity — the
    very failure mode Fold E was written for, applied to this endpoint).
+
+**F-3 (Rigby T1 SIGN zoom-out 5b):** sibling routes under the same
+`/api/memory-palace/memory/` bare-prefix bypass — `get_memory_connections`
+(same-class read leak) and `delete_memory` (worse-than-F-2 anon-DELETE
+mutation) — also gated in the same PR. Two additional tests below lock
+the anon-401 behavior on the siblings; deferring session/token parity for
+the siblings since the gate mechanism is identical to the detail view
+already covered above.
 """
 from __future__ import annotations
 
@@ -84,3 +92,24 @@ class MemoryDetailAuthGateTests(TestCase):
         resp = token_client_for(self.user).get(self._url(self.memory.id))
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.json().get("success"))
+
+    # ---- F-3: sibling routes under the same bare-prefix ---------------
+
+    def test_anonymous_connections_returns_401(self) -> None:
+        """`/api/memory-palace/memory/<uuid>/connections/` — same-class
+        F-2 read leak (anon could enumerate a memory's connection graph
+        pre-fix). Post-fix: 401 envelope."""
+        url = f"/api/memory-palace/memory/{self.memory.id}/connections/"
+        resp = Client(HTTP_HOST="localhost:8000").get(url)
+        self.assertEqual(resp.status_code, 401)
+        self.assertEqual(resp.json().get("reason_code"), "not_authenticated")
+
+    def test_anonymous_delete_returns_401_and_row_survives(self) -> None:
+        """`/api/memory-palace/memory/<uuid>/delete/` — worse-than-F-2
+        MUTATION leak (anon-DELETE-any-row pre-fix). Post-fix: 401
+        envelope + row still exists (no delete side effect)."""
+        url = f"/api/memory-palace/memory/{self.memory.id}/delete/"
+        resp = Client(HTTP_HOST="localhost:8000").delete(url)
+        self.assertEqual(resp.status_code, 401)
+        self.assertEqual(resp.json().get("reason_code"), "not_authenticated")
+        self.assertTrue(AgentMemory.objects.filter(id=self.memory.id).exists())
