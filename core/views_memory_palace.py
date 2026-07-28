@@ -10,6 +10,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 
+from core.auth_middleware import token_auth_required
+
 logger = logging.getLogger(__name__)
 
 
@@ -96,9 +98,19 @@ def get_agent_memories(request, agent_id):
 
 
 @csrf_exempt
+@token_auth_required
 @require_http_methods(["GET"])
 def get_memory_detail(request, memory_id):
-    """Get full details of a specific memory"""
+    """Get full details of a specific memory.
+
+    S3017 (F-2 remediation of Fold G, PUBLIC_PATHS bare-prefix audit):
+    `/api/memory-palace/memory/` sits in PUBLIC_PATHS as a bare prefix, so
+    the middleware short-circuits before token parsing. Without a decorator
+    gate any anon caller with a valid UUID could read the row + trigger the
+    access_count auto-increment (rows are unscoped). `@token_auth_required`
+    forces auth via session OR `Authorization: Token …` before the view
+    body runs; `request.user` is guaranteed authenticated below.
+    """
     try:
         from core.models_unified_system import AgentMemory, AgentExecution
 
