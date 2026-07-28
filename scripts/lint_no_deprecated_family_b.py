@@ -68,6 +68,10 @@ MIGRATED_FILES: tuple[str, ...] = (
     # emit_error_envelope(). Dead handlers retained pending follow-up
     # deletion PR (HALF_BUILT_FEATURES_AUDIT scope).
     "core/views_ab_testing.py",
+    # T-ENVELOPE-3 PR 2 (S3012, ADR-0007 §4.4) — 24 sites in learning
+    # loop views (15 auth-required → not_authenticated / 3 not_found /
+    # 3 invalid_json / 2 missing_field / 1 validation_error).
+    "core/views_learning_loop.py",
 )
 
 # Deprecated helper usages (regex matched as function calls with open paren).
