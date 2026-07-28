@@ -17,6 +17,7 @@ Public API (per design brief §4):
 - can_read_initiative / scope_queryset_initiative         (per-user)
 - can_read_agent_execution / scope_queryset_agent_execution (per-user + superuser carve-out for null-user Celery runs)
 - can_read_document / scope_queryset_document             (per-user)
+- can_read_agent_memory / scope_queryset_agent_memory     (per-user-assigned-agent + superuser carve-out for system-agent memories — ADR-0008)
 
 Predicates are pure + deterministic. No request context, no network, no
 filesystem. Both request-time (DRF views) + async-time (Celery task boundaries
@@ -267,6 +268,62 @@ def scope_queryset_document(user, qs):
     return qs.filter(owner=user)
 
 
+# --------------------------------------------------------------------------
+# AgentMemory (ADR-0008 — per-user-assigned-agent + null-assignment
+# superuser carve-out for system-agent memories)
+# --------------------------------------------------------------------------
+
+
+def can_read_agent_memory(user, memory) -> bool:
+    """AgentMemory is per-user-assigned-agent with SUPERUSER carve-out for
+    system-agent memories.
+
+    Ownership path: AgentMemory.agent (FK) → Agent.user_assignments (M2M
+    through AgentAssignment) → User. System agents (agents with no
+    user_assignments) are visible only to superusers — parallel to the
+    AgentExecution.user=NULL carve-out per Rigby SIGN F4.
+
+    Ratified by ADR-0008 (S3019, 2026-07-28) after S3017 shipped the
+    `@token_auth_required` gate (A.1) that closed anon-reach but left the
+    authenticated cross-user gap open.
+    """
+    if not _authed(user) or memory is None:
+        return False
+    agent = memory.agent
+    if agent.user_assignments.filter(id=user.id).exists():
+        return True
+    # System-agent carve-out: superuser sees memories of agents with NO
+    # user_assignments at all. This mirrors the queryset shape
+    # `Q(agent__user_assignments__isnull=True)` in scope_queryset_agent_memory.
+    # Do NOT broaden to "superuser sees everything" — that leaks cross-user
+    # memories of assigned agents (ADR-0008 §3.1 explicit warning).
+    if not agent.user_assignments.exists():
+        return getattr(user, "is_superuser", False)
+    return False
+
+
+def scope_queryset_agent_memory(user, qs):
+    """Filter queryset: user's assigned agents' memories + (if superuser)
+    system-agent memories.
+
+    IMPORTANT: superuser path is EXACTLY
+    ``Q(agent__user_assignments=user) | Q(agent__user_assignments__isnull=True)``.
+    Do NOT broaden this to "superuser sees everything"; superuser should see
+    only (their assigned agents' memories) + (system/unassigned agents'
+    memories) — the same defense-in-depth pattern as
+    ``scope_queryset_agent_execution``. ``.distinct()`` guards against M2M
+    row duplication if a user ever accrues multiple assignment rows to the
+    same agent (future through-model may allow role or priority variants).
+    """
+    if not _authed(user):
+        return qs.none()
+    if getattr(user, "is_superuser", False):
+        return qs.filter(
+            Q(agent__user_assignments=user) | Q(agent__user_assignments__isnull=True)
+        ).distinct()
+    return qs.filter(agent__user_assignments=user).distinct()
+
+
 __all__ = [
     "user_can_access_workspace",
     "can_read_deliverable",
@@ -279,4 +336,6 @@ __all__ = [
     "scope_queryset_agent_execution",
     "can_read_document",
     "scope_queryset_document",
+    "can_read_agent_memory",
+    "scope_queryset_agent_memory",
 ]
