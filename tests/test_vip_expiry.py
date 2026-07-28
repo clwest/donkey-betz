@@ -81,6 +81,7 @@ class TestVIPExpiryMiddleware:
         response = middleware(request)
         assert response.status_code == 401
         assert b'expired' in response.content
+        assert response['X-VIP-Expired'] == 'true'
 
     def test_revoked_vip_gets_401(self, middleware, factory):
         admin = _make_admin('admin_rev')
@@ -96,6 +97,7 @@ class TestVIPExpiryMiddleware:
         request.user = vip
         response = middleware(request)
         assert response.status_code == 401
+        assert response['X-VIP-Expired'] == 'true'
 
     def test_vip_without_invite_row_denied(self, middleware, factory):
         vip = _make_vip_user('vip_orphan')
@@ -103,6 +105,7 @@ class TestVIPExpiryMiddleware:
         request.user = vip
         response = middleware(request)
         assert response.status_code == 401
+        assert response['X-VIP-Expired'] == 'true'
 
     def test_non_vip_user_untouched_by_expiry_check(self, middleware, factory):
         regular = User.objects.create_user(username='regular')
