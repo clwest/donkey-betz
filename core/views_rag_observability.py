@@ -15,12 +15,17 @@ pattern to prevent cross-user document classification runs.
 """
 
 import json
+import logging
+
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 
 from core.security import superuser_required
 
-from .api_helpers import api_success, api_error
+from .api_helpers import api_success
+from core.security.error_envelope import emit_error_envelope
+
+logger = logging.getLogger(__name__)
 
 
 @csrf_exempt
@@ -40,7 +45,11 @@ def rag_observability_dashboard(request):
         - summary: Key metrics for quick view
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'rag_observability', 'reason': 'auth_required'},
+        )
 
     from .services.rag_observability_service import get_rag_observability_service
 
@@ -65,7 +74,11 @@ def rag_document_inventory(request):
         - freshness: age metrics for documents
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'rag_observability', 'reason': 'auth_required'},
+        )
 
     from .services.rag_observability_service import get_rag_observability_service
     from dataclasses import asdict
@@ -95,7 +108,11 @@ def rag_context_budget(request):
         - section_usage: Per-section allocation details
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'rag_observability', 'reason': 'auth_required'},
+        )
 
     from .services.rag_observability_service import get_rag_observability_service
     from dataclasses import asdict
@@ -124,7 +141,11 @@ def rag_risk_boost_stats(request):
         - boost_by_document_class: Breakdown by classification
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'rag_observability', 'reason': 'auth_required'},
+        )
 
     from .services.rag_observability_service import get_rag_observability_service
     from dataclasses import asdict
@@ -152,7 +173,11 @@ def rag_critical_docs(request):
         - retrieval_boost multiplier
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'rag_observability', 'reason': 'auth_required'},
+        )
 
     from .services.rag_observability_service import get_rag_observability_service
 
@@ -179,7 +204,11 @@ def rag_risk_distribution(request):
         - recommendations: Actions to improve coverage
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'rag_observability', 'reason': 'auth_required'},
+        )
 
     from .services.rag_observability_service import get_rag_observability_service
 
@@ -207,7 +236,11 @@ def rag_retrieval_channels(request):
         - Distribution percentages
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'rag_observability', 'reason': 'auth_required'},
+        )
 
     from .services.rag_observability_service import get_rag_observability_service
     from dataclasses import asdict
@@ -236,11 +269,19 @@ def rag_run_classification(request):
         - force: Re-classify already classified docs (default false)
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'rag_observability', 'reason': 'auth_required'},
+        )
 
     # Check for staff/admin permission
     if not request.user.is_staff:
-        return api_error("Staff access required", status_code=403)
+        return emit_error_envelope(
+            'permission_denied',
+            request,
+            hint={'source': 'rag_run_classification', 'reason': 'staff_required'},
+        )
 
     try:
         data = json.loads(request.body) if request.body else {}
@@ -290,7 +331,12 @@ def rag_run_classification(request):
         })
 
     except Exception as e:
-        return api_error(f"Classification failed: {str(e)}", status_code=500)
+        logger.exception("rag_observability internal_error source=rag_run_classification")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'rag_run_classification', 'exc_type': type(e).__name__},
+        )
 
 
 def _classify_document(doc) -> tuple:
@@ -396,11 +442,19 @@ def rag_intent_gate_diagnostics(request):
                         stable contract — subject to change without notice
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'rag_intent_gate_diagnostics', 'reason': 'auth_required'},
+        )
 
     query = (request.GET.get("query") or "").strip()
     if not query:
-        return api_error("query parameter is required", status=400)
+        return emit_error_envelope(
+            'invalid_input',
+            request,
+            hint={'source': 'rag_intent_gate_diagnostics', 'reason': 'missing_field', 'field': 'query'},
+        )
 
     try:
         limit = int(request.GET.get("limit") or 5)

@@ -72,6 +72,14 @@ MIGRATED_FILES: tuple[str, ...] = (
     # loop views (15 auth-required → not_authenticated / 3 not_found /
     # 3 invalid_json / 2 missing_field / 1 validation_error).
     "core/views_learning_loop.py",
+    # T-ENVELOPE-3 PR 3 (S3012, ADR-0007 §4.4) — 12 sites in RAG
+    # observability views (9 auth-required / 1 permission_denied /
+    # 1 internal_error with str(e) leak eliminated / 1 invalid_input).
+    # Bundled bug fix: 10 sites used status_code= kwarg api_error
+    # rejected → TypeError → middleware 500 envelope. Migration to
+    # emit_error_envelope (with typical_status inference) restores
+    # intended 401/403/500 semantics.
+    "core/views_rag_observability.py",
 )
 
 # Deprecated helper usages (regex matched as function calls with open paren).
