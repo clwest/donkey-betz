@@ -1,6 +1,8 @@
 """Session 3027 (S3023 Fold B re-scope): bulk_promote_decisions now emits
 the S3026-shaped canonical-promotion broadcast per row, via the same
-`_emit_canonical_promotion_broadcast` helper the single endpoint calls.
+`emit_canonical_promotion_broadcast` helper the single endpoint calls.
+(S3028 moved the helper to `core/services/canonical_decision_broadcast`
++ renamed to drop the private prefix now that it's a public services API.)
 
 S3026 Fold C fix removed the broken KT.create side-effect from single
 promote and fixed the Redis broadcast. Bulk promote (`Session 942`) was
