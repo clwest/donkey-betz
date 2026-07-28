@@ -49,6 +49,8 @@ def superuser_required(view_func: Callable) -> Callable:
             )
         return view_func(request, *args, **kwargs)
 
+    # S3018 route-decorator invariant marker (see token_auth_required for rationale).
+    _wrapped._auth_gate = 'superuser_required'  # type: ignore[attr-defined]
     return _wrapped
 
 

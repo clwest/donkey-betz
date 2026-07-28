@@ -1,0 +1,5874 @@
+{
+  "excluded_prefixes": [
+    "/admin/",
+    "/api-auth/"
+  ],
+  "in_scope_prefixes_count": 255,
+  "routes": {
+    "/api/action-items/<uuid:item_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/action-items/",
+      "url_name": "action-item-update",
+      "view": "action_item_update_api"
+    },
+    "/api/action-items/<uuid:item_id>/delete/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/action-items/",
+      "url_name": "action-item-delete",
+      "view": "action_item_delete_api"
+    },
+    "/api/action-items/extract/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/action-items/",
+      "url_name": "action-items-bulk-extract",
+      "view": "extract_action_items_api"
+    },
+    "/api/agent-conversations/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agent-conversations/",
+      "url_name": "agent-conversations",
+      "view": "get_agent_conversations"
+    },
+    "/api/agent-conversations/<uuid:conversation_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agent-conversations/",
+      "url_name": "agent-conversation-detail",
+      "view": "get_agent_conversation_detail"
+    },
+    "/api/agent-conversations/task/<str:task_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agent-conversations/",
+      "url_name": "conversation-task-status",
+      "view": "get_conversation_task_status"
+    },
+    "/api/agent-conversations/trigger/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agent-conversations/",
+      "url_name": "trigger-agent-conversation",
+      "view": "trigger_agent_conversation"
+    },
+    "/api/agent-dreams/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agent-dreams/",
+      "url_name": "agent-dreams",
+      "view": "get_agent_dreams"
+    },
+    "/api/agent-dreams/<uuid:dream_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agent-dreams/",
+      "url_name": "agent-dream-detail",
+      "view": "get_agent_dream_detail"
+    },
+    "/api/agent-dreams/<uuid:dream_id>/rate/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agent-dreams/",
+      "url_name": "rate-dream",
+      "view": "rate_dream"
+    },
+    "/api/agent-dreams/<uuid:dream_id>/react/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agent-dreams/",
+      "url_name": "react-to-dream",
+      "view": "react_to_dream"
+    },
+    "/api/agent-dreams/explorations/<uuid:exploration_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agent-dreams/",
+      "url_name": "dream-exploration",
+      "view": "get_dream_exploration"
+    },
+    "/api/agent-dreams/mark-shown/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agent-dreams/",
+      "url_name": "mark-dreams-shown",
+      "view": "mark_dreams_shown"
+    },
+    "/api/agent-dreams/preferences/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agent-dreams/",
+      "url_name": "dream-preferences",
+      "view": "get_dream_preferences"
+    },
+    "/api/agent-dreams/trigger/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agent-dreams/",
+      "url_name": "trigger-agent-dreams",
+      "view": "trigger_agent_dreams"
+    },
+    "/api/agent-evolution/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_evolution",
+      "prefix": "/api/agent-evolution/",
+      "url_name": "agent-evolution-overview",
+      "view": "get_evolution_overview"
+    },
+    "/api/agent-evolution/abilities/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_evolution",
+      "prefix": "/api/agent-evolution/",
+      "url_name": "agent-evolution-abilities",
+      "view": "get_available_abilities"
+    },
+    "/api/agent-evolution/abilities/create/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_evolution",
+      "prefix": "/api/agent-evolution/",
+      "url_name": "agent-evolution-ability-create",
+      "view": "create_ability"
+    },
+    "/api/agent-evolution/agent/<uuid:agent_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_evolution",
+      "prefix": "/api/agent-evolution/",
+      "url_name": "agent-evolution-detail",
+      "view": "get_agent_evolution"
+    },
+    "/api/agent-evolution/agent/<uuid:agent_id>/award-xp/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_evolution",
+      "prefix": "/api/agent-evolution/",
+      "url_name": "agent-evolution-award-xp",
+      "view": "award_agent_xp"
+    },
+    "/api/agent-evolution/agent/<uuid:agent_id>/prestige/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_evolution",
+      "prefix": "/api/agent-evolution/",
+      "url_name": "agent-evolution-prestige",
+      "view": "prestige_agent"
+    },
+    "/api/agent-evolution/agent/<uuid:agent_id>/task/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_evolution",
+      "prefix": "/api/agent-evolution/",
+      "url_name": "agent-evolution-task",
+      "view": "record_task_completion"
+    },
+    "/api/agent-evolution/agent/<uuid:agent_id>/unlock/<uuid:ability_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_evolution",
+      "prefix": "/api/agent-evolution/",
+      "url_name": "agent-evolution-unlock",
+      "view": "unlock_ability"
+    },
+    "/api/agent-evolution/initialize/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_evolution",
+      "prefix": "/api/agent-evolution/",
+      "url_name": "agent-evolution-initialize",
+      "view": "initialize_all_evolutions"
+    },
+    "/api/agent-evolution/leaderboard/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_evolution",
+      "prefix": "/api/agent-evolution/",
+      "url_name": "agent-evolution-leaderboard",
+      "view": "get_xp_leaderboard"
+    },
+    "/api/agent-evolution/xp-gains/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_evolution",
+      "prefix": "/api/agent-evolution/",
+      "url_name": "agent-evolution-xp-gains",
+      "view": "get_recent_xp_gains"
+    },
+    "/api/agent-learning/activity/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agent-learning/",
+      "url_name": "agent-learning-activity",
+      "view": "get_knowledge_transfer_feed"
+    },
+    "/api/agent-relationships/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_relationships",
+      "prefix": "/api/agent-relationships/",
+      "url_name": "agent-relationships-overview",
+      "view": "get_relationships_overview"
+    },
+    "/api/agent-relationships/agent/<uuid:agent_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_relationships",
+      "prefix": "/api/agent-relationships/",
+      "url_name": "agent-relationships-detail",
+      "view": "get_agent_relationships"
+    },
+    "/api/agent-relationships/auto-generate/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_relationships",
+      "prefix": "/api/agent-relationships/",
+      "url_name": "agent-relationships-auto",
+      "view": "auto_generate_relationships"
+    },
+    "/api/agent-relationships/create/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_relationships",
+      "prefix": "/api/agent-relationships/",
+      "url_name": "agent-relationship-create",
+      "view": "create_relationship"
+    },
+    "/api/agent-relationships/relationship/<uuid:relationship_id>/events/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_relationships",
+      "prefix": "/api/agent-relationships/",
+      "url_name": "agent-relationship-events",
+      "view": "get_relationship_events"
+    },
+    "/api/agent-relationships/relationship/<uuid:relationship_id>/interact/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_relationships",
+      "prefix": "/api/agent-relationships/",
+      "url_name": "agent-relationship-interact",
+      "view": "record_interaction"
+    },
+    "/api/agents/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_dashboard",
+      "prefix": "/api/agents/",
+      "url_name": "agents-list",
+      "view": "all_agents_list"
+    },
+    "/api/agents/<str:agent_name>/solutions/recent/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_path",
+      "prefix": "/api/agents/",
+      "url_name": "agent-solutions-recent",
+      "view": "get_agent_solutions_recent"
+    },
+    "/api/agents/<uuid:agent_id>/profile/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agents/",
+      "url_name": "agent-profile",
+      "view": "get_agent_profile"
+    },
+    "/api/agents/activity/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/agents/",
+      "url_name": "agent_activity",
+      "view": "<lambda>"
+    },
+    "/api/agents/assigned/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_user_profile",
+      "prefix": "/api/agents/",
+      "url_name": "agents-assigned",
+      "view": "agents_assigned"
+    },
+    "/api/agents/brand-styles/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-list-brand-styles",
+      "view": "list_brand_styles"
+    },
+    "/api/agents/brand-styles/<int:character_id>/status/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-check-brand-training-status",
+      "view": "check_brand_training_status"
+    },
+    "/api/agents/brand-styles/create/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-create-brand-style",
+      "view": "create_brand_style"
+    },
+    "/api/agents/brand-styles/train/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-submit-brand-training",
+      "view": "submit_brand_training"
+    },
+    "/api/agents/connections/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/agents/",
+      "url_name": "agent_spider_connections",
+      "view": "<lambda>"
+    },
+    "/api/agents/editing/execute/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-execute-single-edit",
+      "view": "execute_single_edit"
+    },
+    "/api/agents/editing/workflow/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-create-editing-workflow",
+      "view": "create_editing_workflow"
+    },
+    "/api/agents/editing/workflow/execute/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-execute-editing-workflow",
+      "view": "execute_editing_workflow"
+    },
+    "/api/agents/execute/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/agents/",
+      "url_name": "agent_execute",
+      "view": "<lambda>"
+    },
+    "/api/agents/execute/<str:agent_name>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/agents/",
+      "url_name": "agent_execute",
+      "view": "<lambda>"
+    },
+    "/api/agents/iteration/refine/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-refine-image",
+      "view": "refine_image"
+    },
+    "/api/agents/list/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_self_development",
+      "prefix": "/api/agents/",
+      "url_name": "list-agents",
+      "view": "list_agents_api"
+    },
+    "/api/agents/references/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-list-references",
+      "view": "list_references"
+    },
+    "/api/agents/references/<str:reference_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-delete-reference",
+      "view": "delete_reference"
+    },
+    "/api/agents/references/add/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-add-reference",
+      "view": "add_reference"
+    },
+    "/api/agents/simple/categories/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/agents/",
+      "url_name": "agent_simple_categories",
+      "view": "<lambda>"
+    },
+    "/api/agents/simple/list/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/agents/",
+      "url_name": "agent_simple_list",
+      "view": "<lambda>"
+    },
+    "/api/agents/stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/agents/",
+      "url_name": "agent_stats",
+      "view": "<lambda>"
+    },
+    "/api/agents/status/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/agents/",
+      "url_name": "agent_status_api",
+      "view": "<lambda>"
+    },
+    "/api/agents/templates/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-list-templates",
+      "view": "list_templates"
+    },
+    "/api/agents/templates/<str:template_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-delete-template",
+      "view": "delete_template"
+    },
+    "/api/agents/templates/generate/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-generate-from-template",
+      "view": "generate_from_template"
+    },
+    "/api/agents/templates/save/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-save-template",
+      "view": "save_as_template"
+    },
+    "/api/agents/versions/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-list-versions",
+      "view": "list_versions"
+    },
+    "/api/agents/versions/perfect/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-get-perfect-versions",
+      "view": "get_perfect_versions"
+    },
+    "/api/agents/versions/rate/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-rate-version",
+      "view": "rate_version"
+    },
+    "/api/agents/versions/track/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-track-generation",
+      "view": "track_generation"
+    },
+    "/api/agents/workflows/generate-with-options/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-workflow-generate-options",
+      "view": "execute_workflow_generate_with_options"
+    },
+    "/api/agents/workflows/refine-and-perfect/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-workflow-refine-perfect",
+      "view": "execute_workflow_refine_and_perfect"
+    },
+    "/api/agents/workflows/save-as-template/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-workflow-save-template",
+      "view": "execute_workflow_save_as_template"
+    },
+    "/api/agents/workflows/train-brand-style/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_ecosystem",
+      "prefix": "/api/agents/",
+      "url_name": "agent-workflow-train-brand",
+      "view": "execute_workflow_train_brand_style"
+    },
+    "/api/analytics/charts/agent-activity/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-agent-activity",
+      "view": "get_chart_agent_activity"
+    },
+    "/api/analytics/charts/agent-comparison/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-agent-comparison",
+      "view": "get_chart_agent_comparison"
+    },
+    "/api/analytics/charts/agent-heatmap/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-agent-heatmap",
+      "view": "get_chart_agent_heatmap"
+    },
+    "/api/analytics/charts/agent-trends/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-agent-trends",
+      "view": "get_chart_agent_trends"
+    },
+    "/api/analytics/charts/collaboration/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-collaboration",
+      "view": "get_chart_collaboration"
+    },
+    "/api/analytics/charts/content-production/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-content-production",
+      "view": "get_chart_content_production"
+    },
+    "/api/analytics/charts/dashboard/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-dashboard",
+      "view": "get_chart_dashboard"
+    },
+    "/api/analytics/charts/knowledge-domains/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-knowledge-domains",
+      "view": "get_chart_knowledge_domains"
+    },
+    "/api/analytics/charts/knowledge-growth/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-knowledge-growth",
+      "view": "get_chart_knowledge_growth"
+    },
+    "/api/analytics/charts/learning-progress/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-learning-progress",
+      "view": "get_chart_learning_progress"
+    },
+    "/api/analytics/charts/revenue/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-revenue",
+      "view": "get_chart_revenue"
+    },
+    "/api/analytics/charts/spider-performance/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-spider-performance",
+      "view": "get_chart_spider_performance"
+    },
+    "/api/analytics/charts/system-health/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-system-health",
+      "view": "get_chart_system_health"
+    },
+    "/api/analytics/charts/user-engagement/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-user-engagement",
+      "view": "get_chart_user_engagement"
+    },
+    "/api/analytics/charts/workflow-success/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-workflow-success",
+      "view": "get_chart_workflow_success"
+    },
+    "/api/analytics/charts/workflow-trends/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-workflow-trends",
+      "view": "get_chart_workflow_trends"
+    },
+    "/api/analytics/data/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_unified",
+      "prefix": "/api/analytics/",
+      "url_name": "api_analytics_data",
+      "view": "analytics_api_data_proxy"
+    },
+    "/api/analytics/overview/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_analytics_real",
+      "prefix": "/api/analytics/",
+      "url_name": "analytics-overview",
+      "view": "analytics_overview"
+    },
+    "/api/analytics/reports/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_analytics_real",
+      "prefix": "/api/analytics/",
+      "url_name": "analytics-reports-list",
+      "view": "analytics_reports_list"
+    },
+    "/api/analytics/reports/generate/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics_real",
+      "prefix": "/api/analytics/",
+      "url_name": "analytics-reports-generate",
+      "view": "analytics_reports_generate"
+    },
+    "/api/analytics/summary/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_analytics_real",
+      "prefix": "/api/analytics/",
+      "url_name": "analytics-summary",
+      "view": "analytics_summary"
+    },
+    "/api/analytics/v2/alerts/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "analytics-alerts-v2",
+      "view": "analytics_alerts_v2"
+    },
+    "/api/analytics/v2/anomalies/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "anomalies-v2",
+      "view": "anomalies_v2"
+    },
+    "/api/analytics/v2/breakdown/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "breakdown-v2",
+      "view": "breakdown_v2"
+    },
+    "/api/analytics/v2/comparison/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "comparison-v2",
+      "view": "comparison_v2"
+    },
+    "/api/analytics/v2/cost-breakdown/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "cost-breakdown-v2",
+      "view": "cost_breakdown_v2"
+    },
+    "/api/analytics/v2/dashboards/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "analytics-dashboards-v2",
+      "view": "analytics_dashboards_v2"
+    },
+    "/api/analytics/v2/export/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "export-v2",
+      "view": "export_v2"
+    },
+    "/api/analytics/v2/forecast/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "forecast-v2",
+      "view": "forecast_v2"
+    },
+    "/api/analytics/v2/overview/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "analytics-overview-v2",
+      "view": "analytics_overview_v2"
+    },
+    "/api/analytics/v2/performance-timeline/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "performance-timeline-v2",
+      "view": "performance_timeline_v2"
+    },
+    "/api/analytics/v2/realtime/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "realtime-stats-v2",
+      "view": "realtime_stats_v2"
+    },
+    "/api/analytics/v2/top-performers/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "top-performers-v2",
+      "view": "top_performers_v2"
+    },
+    "/api/analytics/v2/track/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "track-event-v2",
+      "view": "track_event_v2"
+    },
+    "/api/analytics/v2/trends/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "trends-v2",
+      "view": "trends_v2"
+    },
+    "/api/analytics/v2/usage-timeline/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "usage-timeline-v2",
+      "view": "usage_timeline_v2"
+    },
+    "/api/app/manifest/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_app_manifest",
+      "prefix": "/api/app/manifest/",
+      "url_name": "app-manifest",
+      "view": "app_manifest"
+    },
+    "/api/artifacts/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/artifacts/",
+      "url_name": "artifacts-list",
+      "view": "<lambda>"
+    },
+    "/api/artifacts/<uuid:artifact_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/artifacts/",
+      "url_name": "artifacts-detail",
+      "view": "<lambda>"
+    },
+    "/api/artifacts/<uuid:artifact_id>/classify/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/artifacts/",
+      "url_name": "artifacts-classify",
+      "view": "<lambda>"
+    },
+    "/api/artifacts/<uuid:artifact_id>/decide/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/artifacts/",
+      "url_name": "artifacts-decide",
+      "view": "<lambda>"
+    },
+    "/api/artifacts/<uuid:artifact_id>/execute/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/artifacts/",
+      "url_name": "artifacts-execute",
+      "view": "<lambda>"
+    },
+    "/api/artifacts/<uuid:artifact_id>/executions/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/artifacts/",
+      "url_name": "artifacts-executions",
+      "view": "<lambda>"
+    },
+    "/api/artifacts/<uuid:artifact_id>/generate-review/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/artifacts/",
+      "url_name": "artifacts-generate-review",
+      "view": "<lambda>"
+    },
+    "/api/artifacts/auto-review-stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/artifacts/",
+      "url_name": "artifacts-auto-review-stats",
+      "view": "<lambda>"
+    },
+    "/api/artifacts/execution-status/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/artifacts/",
+      "url_name": "artifacts-execution-status",
+      "view": "<lambda>"
+    },
+    "/api/artifacts/executions/<uuid:execution_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/artifacts/",
+      "url_name": "execution-detail",
+      "view": "<lambda>"
+    },
+    "/api/artifacts/needs-classification/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/artifacts/",
+      "url_name": "artifacts-needs-classification",
+      "view": "<lambda>"
+    },
+    "/api/artifacts/pending/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/artifacts/",
+      "url_name": "artifacts-pending",
+      "view": "<lambda>"
+    },
+    "/api/artifacts/trigger-auto-reviews/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/artifacts/",
+      "url_name": "artifacts-trigger-auto-reviews",
+      "view": "<lambda>"
+    },
+    "/api/audit-tracking/findings/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_audit_tracking",
+      "prefix": "/api/audit-tracking/findings/",
+      "url_name": "audit-findings-list",
+      "view": "findings_list"
+    },
+    "/api/audit-tracking/findings/<uuid:finding_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_audit_tracking",
+      "prefix": "/api/audit-tracking/findings/",
+      "url_name": "audit-finding-detail",
+      "view": "finding_detail"
+    },
+    "/api/audit-tracking/findings/<uuid:finding_id>/status/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_audit_tracking",
+      "prefix": "/api/audit-tracking/findings/",
+      "url_name": "audit-finding-status",
+      "view": "finding_update_status"
+    },
+    "/api/audit-tracking/findings/<uuid:finding_id>/task/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_audit_tracking",
+      "prefix": "/api/audit-tracking/findings/",
+      "url_name": "audit-finding-task",
+      "view": "finding_create_task"
+    },
+    "/api/audit-tracking/findings/<uuid:finding_id>/verify/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_audit_tracking",
+      "prefix": "/api/audit-tracking/findings/",
+      "url_name": "audit-finding-verify",
+      "view": "finding_verify"
+    },
+    "/api/audit-tracking/findings/p0/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_audit_tracking",
+      "prefix": "/api/audit-tracking/findings/",
+      "url_name": "audit-p0-findings",
+      "view": "open_p0_findings"
+    },
+    "/api/audit-tracking/findings/summary/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_audit_tracking",
+      "prefix": "/api/audit-tracking/findings/",
+      "url_name": "audit-findings-summary",
+      "view": "findings_summary"
+    },
+    "/api/audit-tracking/reports/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_audit_tracking",
+      "prefix": "/api/audit-tracking/reports/",
+      "url_name": "audit-reports-list",
+      "view": "audit_reports_list"
+    },
+    "/api/audit-tracking/reports/<uuid:report_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_audit_tracking",
+      "prefix": "/api/audit-tracking/reports/",
+      "url_name": "audit-report-detail",
+      "view": "audit_report_detail"
+    },
+    "/api/autonomous/analytics/summary/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/autonomous/",
+      "url_name": "autonomous-analytics-summary",
+      "view": "analytics_summary"
+    },
+    "/api/autonomous/situations/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/autonomous/",
+      "url_name": "autonomous-situations",
+      "view": "list_situations"
+    },
+    "/api/autonomous/situations/<str:situation_type>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/autonomous/",
+      "url_name": "autonomous-situation-detail",
+      "view": "situation_detail"
+    },
+    "/api/autonomous/situations/<str:situation_type>/run-now/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/autonomous/",
+      "url_name": "autonomous-situation-run-now",
+      "view": "run_situation_now"
+    },
+    "/api/autonomous/situations/<str:situation_type>/toggle/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/autonomous/",
+      "url_name": "autonomous-situation-toggle",
+      "view": "toggle_situation"
+    },
+    "/api/autonomous/skill-gaps/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/autonomous/",
+      "url_name": "skill-gaps",
+      "view": "skill_gap_api"
+    },
+    "/api/autonomous/trigger-events/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/autonomous/",
+      "url_name": "autonomous-trigger-events",
+      "view": "list_trigger_events"
+    },
+    "/api/autonomous/triggers/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/autonomous/",
+      "url_name": "autonomous-triggers",
+      "view": "list_triggers"
+    },
+    "/api/autonomous/triggers/<uuid:trigger_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/autonomous/",
+      "url_name": "autonomous-trigger-detail",
+      "view": "trigger_detail"
+    },
+    "/api/autonomous/triggers/<uuid:trigger_id>/analytics/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/autonomous/",
+      "url_name": "autonomous-trigger-analytics",
+      "view": "trigger_analytics"
+    },
+    "/api/autonomous/triggers/<uuid:trigger_id>/reset-cooldown/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/autonomous/",
+      "url_name": "autonomous-trigger-reset-cooldown",
+      "view": "reset_trigger_cooldown"
+    },
+    "/api/autonomous/triggers/<uuid:trigger_id>/toggle/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/autonomous/",
+      "url_name": "autonomous-trigger-toggle",
+      "view": "toggle_trigger"
+    },
+    "/api/autonomous/triggers/<uuid:trigger_id>/update/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/autonomous/",
+      "url_name": "autonomous-trigger-update",
+      "view": "update_trigger"
+    },
+    "/api/autonomous/viral-predictions/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/autonomous/",
+      "url_name": "viral-predictions",
+      "view": "viral_predictions_api"
+    },
+    "/api/boardroom/decisions/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/boardroom/",
+      "url_name": "boardroom-decisions",
+      "view": "get_boardroom_decisions"
+    },
+    "/api/boardroom/decisions/<uuid:decision_id>/learning/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/boardroom/",
+      "url_name": "decision-learning-context",
+      "view": "get_decision_learning_context"
+    },
+    "/api/boardroom/decisions/<uuid:decision_id>/priority/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/boardroom/",
+      "url_name": "decision-priority",
+      "view": "get_decision_priority"
+    },
+    "/api/boardroom/decisions/<uuid:decision_id>/promote/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/boardroom/",
+      "url_name": "promote-decision",
+      "view": "promote_decision"
+    },
+    "/api/boardroom/decisions/<uuid:decision_id>/reject/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/boardroom/",
+      "url_name": "reject-decision",
+      "view": "reject_decision"
+    },
+    "/api/boardroom/decisions/bulk-promote/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/boardroom/",
+      "url_name": "bulk-promote-decisions",
+      "view": "bulk_promote_decisions"
+    },
+    "/api/boardroom/decisions/bulk-reject/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/boardroom/",
+      "url_name": "bulk-reject-decisions",
+      "view": "bulk_reject_decisions"
+    },
+    "/api/boardroom/decisions/prioritized/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/boardroom/",
+      "url_name": "prioritized-decisions",
+      "view": "get_prioritized_decisions"
+    },
+    "/api/boardroom/dreams/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/boardroom/",
+      "url_name": "boardroom-dreams",
+      "view": "get_boardroom_dreams"
+    },
+    "/api/boardroom/dreams/<uuid:dream_id>/decide/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/boardroom/",
+      "url_name": "decide-dream",
+      "view": "decide_dream"
+    },
+    "/api/boardroom/governance-stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/boardroom/",
+      "url_name": "governance-stats",
+      "view": "get_governance_stats"
+    },
+    "/api/boardroom/learning-summary/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/boardroom/",
+      "url_name": "boardroom-learning-summary",
+      "view": "get_boardroom_learning_summary"
+    },
+    "/api/body/alerts/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_body",
+      "prefix": "/api/body/alerts/",
+      "url_name": "body-alerts",
+      "view": "body_alerts_view"
+    },
+    "/api/body/coordination/log/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_body",
+      "prefix": "/api/body/coordination/log/",
+      "url_name": "body-coordination-log",
+      "view": "body_coordination_log_view"
+    },
+    "/api/body/coordination/run/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_body",
+      "prefix": "/api/body/coordination/run/",
+      "url_name": "body-coordination-run",
+      "view": "body_coordination_run_view"
+    },
+    "/api/body/coordination/status/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_body",
+      "prefix": "/api/body/coordination/status/",
+      "url_name": "body-coordination-status",
+      "view": "body_coordination_status_view"
+    },
+    "/api/body/history/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_body",
+      "prefix": "/api/body/history/",
+      "url_name": "body-history",
+      "view": "body_history_view"
+    },
+    "/api/body/summary/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_body",
+      "prefix": "/api/body/summary/",
+      "url_name": "body-summary",
+      "view": "body_summary_view"
+    },
+    "/api/body/throttle/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_body",
+      "prefix": "/api/body/throttle/",
+      "url_name": "body-throttle",
+      "view": "body_throttle_status_view"
+    },
+    "/api/body/vitals/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_body",
+      "prefix": "/api/body/vitals/",
+      "url_name": "body-vitals",
+      "view": "body_vitals_view"
+    },
+    "/api/bpaas/example/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_bpaas_api",
+      "prefix": "/api/bpaas/example/",
+      "url_name": "bpaas-example",
+      "view": "bpaas_example"
+    },
+    "/api/bpaas/schema/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_bpaas_api",
+      "prefix": "/api/bpaas/schema/",
+      "url_name": "bpaas-schema",
+      "view": "bpaas_schema"
+    },
+    "/api/brain/history/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_brain",
+      "prefix": "/api/brain/history/",
+      "url_name": "brain-history",
+      "view": "BrainHistoryView"
+    },
+    "/api/brain/is-thinking/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_brain",
+      "prefix": "/api/brain/is-thinking/",
+      "url_name": "brain-is-thinking",
+      "view": "BrainIsThinkingView"
+    },
+    "/api/brain/think/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_brain",
+      "prefix": "/api/brain/think/",
+      "url_name": "brain-think",
+      "view": "BrainThinkView"
+    },
+    "/api/brain/vitals/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_brain",
+      "prefix": "/api/brain/vitals/",
+      "url_name": "brain-vitals",
+      "view": "BrainVitalsView"
+    },
+    "/api/celery/breakdown/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_celery_api",
+      "prefix": "/api/celery/",
+      "url_name": "celery-breakdown",
+      "view": "TaskBreakdownView"
+    },
+    "/api/celery/breakdown/task/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_celery_api",
+      "prefix": "/api/celery/",
+      "url_name": "celery-breakdown-task",
+      "view": "TaskBreakdownDetailView"
+    },
+    "/api/celery/ping/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_celery_api",
+      "prefix": "/api/celery/",
+      "url_name": "celery-ping",
+      "view": "CeleryPingView"
+    },
+    "/api/celery/queues/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_celery_api",
+      "prefix": "/api/celery/",
+      "url_name": "celery-queues",
+      "view": "CeleryQueuesView"
+    },
+    "/api/celery/quick/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_celery_api",
+      "prefix": "/api/celery/",
+      "url_name": "celery-quick",
+      "view": "CeleryQuickStatusView"
+    },
+    "/api/celery/schedule/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_celery_api",
+      "prefix": "/api/celery/",
+      "url_name": "celery-schedule",
+      "view": "CeleryScheduleView"
+    },
+    "/api/celery/stale/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_celery_api",
+      "prefix": "/api/celery/",
+      "url_name": "celery-stale",
+      "view": "CeleryStaleTasks"
+    },
+    "/api/celery/stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/celery/",
+      "url_name": "celery-stats",
+      "view": "get_celery_stats"
+    },
+    "/api/celery/status/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_analytics",
+      "prefix": "/api/celery/",
+      "url_name": "celery-status",
+      "view": "celery_status"
+    },
+    "/api/celery/tasks/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_celery_api",
+      "prefix": "/api/celery/",
+      "url_name": "celery-tasks",
+      "view": "CeleryTasksView"
+    },
+    "/api/celery/workers/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_celery_api",
+      "prefix": "/api/celery/",
+      "url_name": "celery-workers",
+      "view": "CeleryWorkersView"
+    },
+    "/api/circulatory/bottlenecks/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_circulatory",
+      "prefix": "/api/circulatory/bottlenecks/",
+      "url_name": "circulatory-bottlenecks",
+      "view": "bottlenecks_view"
+    },
+    "/api/circulatory/circulate/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_circulatory",
+      "prefix": "/api/circulatory/circulate/",
+      "url_name": "circulatory-circulate",
+      "view": "circulate_view"
+    },
+    "/api/circulatory/history/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_circulatory",
+      "prefix": "/api/circulatory/history/",
+      "url_name": "circulatory-history",
+      "view": "history_view"
+    },
+    "/api/circulatory/is-flowing/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_circulatory",
+      "prefix": "/api/circulatory/is-flowing/",
+      "url_name": "circulatory-is-flowing",
+      "view": "is_flowing_view"
+    },
+    "/api/circulatory/routes/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_circulatory",
+      "prefix": "/api/circulatory/routes/",
+      "url_name": "circulatory-routes",
+      "view": "routes_list_view"
+    },
+    "/api/circulatory/routes/<uuid:route_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_circulatory",
+      "prefix": "/api/circulatory/routes/",
+      "url_name": "circulatory-route-detail",
+      "view": "route_detail_view"
+    },
+    "/api/circulatory/velocity/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_circulatory",
+      "prefix": "/api/circulatory/velocity/",
+      "url_name": "circulatory-velocity",
+      "view": "velocity_view"
+    },
+    "/api/collaboration/history/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collaboration",
+      "prefix": "/api/collaboration/history/",
+      "url_name": "collaboration-history",
+      "view": "collaboration_history"
+    },
+    "/api/collective/agents/<str:agent_name>/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-agent-profile",
+      "view": "get_agent_collective_profile"
+    },
+    "/api/collective/boost-agent/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-boost-agent",
+      "view": "boost_agent"
+    },
+    "/api/collective/dashboard/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-dashboard",
+      "view": "get_dashboard_data"
+    },
+    "/api/collective/fix-collaboration/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-fix-collaboration",
+      "view": "fix_collaboration"
+    },
+    "/api/collective/improvements/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-improvements",
+      "view": "get_agent_improvements"
+    },
+    "/api/collective/insights/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-insights",
+      "view": "aggregate_insights"
+    },
+    "/api/collective/knowledge-gaps/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-knowledge-gaps",
+      "view": "get_knowledge_gaps"
+    },
+    "/api/collective/knowledge-gaps/resolve-all/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-resolve-all-gaps",
+      "view": "resolve_all_knowledge_gaps"
+    },
+    "/api/collective/knowledge-gaps/resolve/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-resolve-gap",
+      "view": "resolve_knowledge_gap"
+    },
+    "/api/collective/knowledge-topics/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-knowledge-topics",
+      "view": "get_knowledge_topics"
+    },
+    "/api/collective/monitor/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-monitor",
+      "view": "get_collaboration_monitor"
+    },
+    "/api/collective/network/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-network",
+      "view": "get_collaboration_network"
+    },
+    "/api/collective/orchestrate/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-orchestrate",
+      "view": "orchestrate_task"
+    },
+    "/api/collective/report/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-report",
+      "view": "generate_report"
+    },
+    "/api/collective/stats/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/collective/",
+      "url_name": "collective-stats",
+      "view": "get_collective_stats"
+    },
+    "/api/conceptforge/runs/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_conceptforge",
+      "prefix": "/api/conceptforge/runs/",
+      "url_name": "conceptforge-list-runs",
+      "view": "list_runs"
+    },
+    "/api/conceptforge/runs/<uuid:run_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_conceptforge",
+      "prefix": "/api/conceptforge/runs/",
+      "url_name": "conceptforge-run-detail",
+      "view": "get_run_detail"
+    },
+    "/api/conceptforge/runs/<uuid:run_id>/retry/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_conceptforge",
+      "prefix": "/api/conceptforge/runs/",
+      "url_name": "conceptforge-retry-run",
+      "view": "retry_run"
+    },
+    "/api/conceptforge/runs/<uuid:run_id>/stages/<str:stage_name>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_conceptforge",
+      "prefix": "/api/conceptforge/runs/",
+      "url_name": "conceptforge-stage-content",
+      "view": "get_stage_content"
+    },
+    "/api/conceptforge/stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_conceptforge",
+      "prefix": "/api/conceptforge/stats/",
+      "url_name": "conceptforge-stats",
+      "view": "get_stats"
+    },
+    "/api/content-calendar/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_content_calendar",
+      "prefix": "/api/content-calendar/",
+      "url_name": "content-calendar",
+      "view": "content_calendar_main"
+    },
+    "/api/content-calendar/episode/<uuid:episode_id>/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_content_calendar",
+      "prefix": "/api/content-calendar/",
+      "url_name": "content-calendar-episode-detail",
+      "view": "content_calendar_episode_detail"
+    },
+    "/api/content-calendar/generate/<uuid:channel_id>/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_content_calendar",
+      "prefix": "/api/content-calendar/",
+      "url_name": "content-calendar-generate",
+      "view": "content_calendar_generate"
+    },
+    "/api/content-calendar/history/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_content_calendar",
+      "prefix": "/api/content-calendar/",
+      "url_name": "content-calendar-history",
+      "view": "content_calendar_history"
+    },
+    "/api/content-calendar/reschedule/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_content_calendar",
+      "prefix": "/api/content-calendar/",
+      "url_name": "content-calendar-reschedule",
+      "view": "content_calendar_reschedule"
+    },
+    "/api/content-calendar/upcoming/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_content_calendar",
+      "prefix": "/api/content-calendar/",
+      "url_name": "content-calendar-upcoming",
+      "view": "content_calendar_upcoming"
+    },
+    "/api/content-channels/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_content_calendar",
+      "prefix": "/api/content-channels/",
+      "url_name": "content-channels-list",
+      "view": "content_channels_list"
+    },
+    "/api/content-channels/<uuid:channel_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_content_calendar",
+      "prefix": "/api/content-channels/",
+      "url_name": "content-channel-detail",
+      "view": "content_channel_detail"
+    },
+    "/api/content-channels/episode/<uuid:episode_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_content_calendar",
+      "prefix": "/api/content-channels/",
+      "url_name": "content-episode-detail",
+      "view": "content_episode_detail"
+    },
+    "/api/conversation-contract/<uuid:conversation_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/conversation-contract/",
+      "url_name": "conversation-contract-detail",
+      "view": "get_conversation_contract_detail"
+    },
+    "/api/conversation-contract/overview/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/conversation-contract/",
+      "url_name": "conversation-contract-overview",
+      "view": "get_conversation_contract_overview"
+    },
+    "/api/creative-projects/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "creative-projects-list",
+      "view": "list_projects"
+    },
+    "/api/creative-projects/<uuid:project_id>/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "creative-project-detail",
+      "view": "get_project"
+    },
+    "/api/creative-projects/<uuid:project_id>/delete/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "creative-project-delete",
+      "view": "delete_project"
+    },
+    "/api/creative-projects/<uuid:project_id>/export/csv/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "export-project-csv",
+      "view": "export_project_csv"
+    },
+    "/api/creative-projects/<uuid:project_id>/export/pdf/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "export-project-pdf",
+      "view": "export_project_pdf"
+    },
+    "/api/creative-projects/<uuid:project_id>/export/zip/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "export-project-zip",
+      "view": "export_project_zip"
+    },
+    "/api/creative-projects/<uuid:project_id>/share/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_share",
+      "prefix": "/api/creative-projects/",
+      "url_name": "get-project-share",
+      "view": "get_project_share"
+    },
+    "/api/creative-projects/<uuid:project_id>/share/create/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_share",
+      "prefix": "/api/creative-projects/",
+      "url_name": "create-project-share",
+      "view": "create_project_share"
+    },
+    "/api/creative-projects/<uuid:project_id>/share/revoke/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_share",
+      "prefix": "/api/creative-projects/",
+      "url_name": "revoke-project-share",
+      "view": "revoke_project_share"
+    },
+    "/api/creative-projects/<uuid:project_id>/update/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "creative-project-update",
+      "view": "update_project"
+    },
+    "/api/creative-projects/<uuid:project_id>/workflows/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_workflow",
+      "prefix": "/api/creative-projects/",
+      "url_name": "creative-project-add-workflow",
+      "view": "add_workflow_to_project"
+    },
+    "/api/creative-projects/<uuid:project_id>/workflows/<int:workflow_id>/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_workflow",
+      "prefix": "/api/creative-projects/",
+      "url_name": "creative-project-remove-workflow",
+      "view": "remove_workflow_from_project"
+    },
+    "/api/creative-projects/create/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "creative-project-create",
+      "view": "create_project"
+    },
+    "/api/dashboard/advisors/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_dashboard_stats",
+      "prefix": "/api/dashboard/advisors/",
+      "url_name": "advisor-insights",
+      "view": "advisor_insights"
+    },
+    "/api/dashboard/stats/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_dashboard_stats",
+      "prefix": "/api/dashboard/stats/",
+      "url_name": "dashboard-stats",
+      "view": "dashboard_stats"
+    },
+    "/api/db-health-rpc/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_db_health_rpc",
+      "prefix": "/api/db-health-rpc/",
+      "url_name": "db-health-rpc",
+      "view": "db_health_rpc"
+    },
+    "/api/deliberation/failure-stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_deliberation",
+      "prefix": "/api/deliberation/",
+      "url_name": "deliberation-failure-stats",
+      "view": "deliberation_failure_stats"
+    },
+    "/api/deliberation/sessions/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_deliberation",
+      "prefix": "/api/deliberation/",
+      "url_name": "deliberation-sessions-list",
+      "view": "deliberation_sessions_list"
+    },
+    "/api/deliberation/sessions/<uuid:session_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_deliberation",
+      "prefix": "/api/deliberation/",
+      "url_name": "deliberation-session-detail",
+      "view": "deliberation_session_detail"
+    },
+    "/api/deliberation/sessions/<uuid:session_id>/contracts/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_deliberation",
+      "prefix": "/api/deliberation/",
+      "url_name": "deliberation-contracts",
+      "view": "deliberation_contracts"
+    },
+    "/api/deliberation/sessions/<uuid:session_id>/evidence/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_deliberation",
+      "prefix": "/api/deliberation/",
+      "url_name": "deliberation-evidence",
+      "view": "deliberation_evidence"
+    },
+    "/api/deliberation/sessions/<uuid:session_id>/replay/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_deliberation",
+      "prefix": "/api/deliberation/",
+      "url_name": "deliberation-replay",
+      "view": "deliberation_replay"
+    },
+    "/api/deliberation/sessions/<uuid:session_id>/trace/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_deliberation",
+      "prefix": "/api/deliberation/",
+      "url_name": "deliberation-trace",
+      "view": "deliberation_trace"
+    },
+    "/api/deliberation/sessions/<uuid:session_id>/turns/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_deliberation",
+      "prefix": "/api/deliberation/",
+      "url_name": "deliberation-turns",
+      "view": "deliberation_turns"
+    },
+    "/api/deliberation/sessions/<uuid:session_id>/verification-report/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_deliberation",
+      "prefix": "/api/deliberation/",
+      "url_name": "deliberation-verification-report",
+      "view": "deliberation_verification_report"
+    },
+    "/api/digestive/bottlenecks/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_digestive",
+      "prefix": "/api/digestive/bottlenecks/",
+      "url_name": "digestive-bottlenecks",
+      "view": "digestive_bottlenecks_view"
+    },
+    "/api/digestive/digest/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_digestive",
+      "prefix": "/api/digestive/digest/",
+      "url_name": "digestive-digest",
+      "view": "digestive_digest_view"
+    },
+    "/api/digestive/history/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_digestive",
+      "prefix": "/api/digestive/history/",
+      "url_name": "digestive-history",
+      "view": "digestive_history_view"
+    },
+    "/api/digestive/is-digesting/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_digestive",
+      "prefix": "/api/digestive/is-digesting/",
+      "url_name": "digestive-is-digesting",
+      "view": "digestive_is_digesting_view"
+    },
+    "/api/digestive/metabolism/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_digestive",
+      "prefix": "/api/digestive/metabolism/",
+      "url_name": "digestive-metabolism",
+      "view": "digestive_metabolism_view"
+    },
+    "/api/digestive/routes/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_digestive",
+      "prefix": "/api/digestive/routes/",
+      "url_name": "digestive-routes",
+      "view": "digestive_routes_list_view"
+    },
+    "/api/digestive/routes/<uuid:route_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_digestive",
+      "prefix": "/api/digestive/routes/",
+      "url_name": "digestive-route-detail",
+      "view": "digestive_route_detail_view"
+    },
+    "/api/discord/verify-link-code/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_discord",
+      "prefix": "/api/discord/verify-link-code/",
+      "url_name": "discord-verify-link-code",
+      "view": "verify_discord_link_code"
+    },
+    "/api/distribution/<str:platform>/sync-revenue/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_integrations",
+      "prefix": "/api/distribution/",
+      "url_name": "sync-platform-revenue",
+      "view": "sync_platform_revenue"
+    },
+    "/api/distribution/<uuid:distribution_id>/cancel/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_auto_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "cancel-distribution",
+      "view": "cancel_scheduled_distribution"
+    },
+    "/api/distribution/<uuid:distribution_id>/reschedule/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_auto_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "reschedule-distribution",
+      "view": "reschedule_distribution"
+    },
+    "/api/distribution/accounts/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-accounts",
+      "view": "list_user_accounts"
+    },
+    "/api/distribution/accounts/connect/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-accounts-connect",
+      "view": "connect_platform"
+    },
+    "/api/distribution/analytics/<uuid:platform_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-analytics",
+      "view": "platform_analytics"
+    },
+    "/api/distribution/auto/create/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_auto_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "auto-distribution-create",
+      "view": "create_auto_distribution"
+    },
+    "/api/distribution/auto/settings/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_auto_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "auto-distribution-settings",
+      "view": "auto_distribution_settings"
+    },
+    "/api/distribution/batch/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_auto_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "batch-distribute",
+      "view": "batch_distribute"
+    },
+    "/api/distribution/content/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-content",
+      "view": "list_distributions"
+    },
+    "/api/distribution/content/<uuid:distribution_id>/publish/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-content-publish",
+      "view": "publish_distribution"
+    },
+    "/api/distribution/content/<uuid:distribution_id>/sale/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-content-sale",
+      "view": "record_sale"
+    },
+    "/api/distribution/content/<uuid:distribution_id>/submit/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-content-submit",
+      "view": "submit_distribution"
+    },
+    "/api/distribution/content/create/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-content-create",
+      "view": "create_distribution"
+    },
+    "/api/distribution/etsy/listings/create/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_integrations",
+      "prefix": "/api/distribution/",
+      "url_name": "etsy-create-listing",
+      "view": "etsy_create_listing"
+    },
+    "/api/distribution/etsy/shop/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_integrations",
+      "prefix": "/api/distribution/",
+      "url_name": "etsy-shop",
+      "view": "etsy_get_shop"
+    },
+    "/api/distribution/gumroad/products/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_integrations",
+      "prefix": "/api/distribution/",
+      "url_name": "gumroad-products",
+      "view": "gumroad_get_products"
+    },
+    "/api/distribution/gumroad/products/create/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_integrations",
+      "prefix": "/api/distribution/",
+      "url_name": "gumroad-create-product",
+      "view": "gumroad_create_product"
+    },
+    "/api/distribution/gumroad/publish/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_integrations",
+      "prefix": "/api/distribution/",
+      "url_name": "gumroad-publish-image",
+      "view": "gumroad_publish_image"
+    },
+    "/api/distribution/gumroad/webhook/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_integrations",
+      "prefix": "/api/distribution/",
+      "url_name": "gumroad-webhook",
+      "view": "gumroad_webhook"
+    },
+    "/api/distribution/integrations/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_integrations",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-integrations",
+      "view": "list_platform_integrations"
+    },
+    "/api/distribution/oauth/<str:platform>/callback/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_integrations",
+      "prefix": "/api/distribution/",
+      "url_name": "oauth-callback",
+      "view": "oauth_callback"
+    },
+    "/api/distribution/oauth/<str:platform>/connect/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_integrations",
+      "prefix": "/api/distribution/",
+      "url_name": "oauth-connect",
+      "view": "oauth_connect"
+    },
+    "/api/distribution/oauth/<str:platform>/disconnect/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_integrations",
+      "prefix": "/api/distribution/",
+      "url_name": "oauth-disconnect",
+      "view": "disconnect_platform"
+    },
+    "/api/distribution/oauth/<str:platform>/refresh/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_integrations",
+      "prefix": "/api/distribution/",
+      "url_name": "oauth-refresh",
+      "view": "refresh_token"
+    },
+    "/api/distribution/platforms/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-platforms",
+      "view": "list_platforms"
+    },
+    "/api/distribution/platforms/<uuid:platform_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-platform-detail",
+      "view": "get_platform"
+    },
+    "/api/distribution/platforms/create/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-platforms-create",
+      "view": "create_platform"
+    },
+    "/api/distribution/recommendations/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-recommendations",
+      "view": "get_recommendations"
+    },
+    "/api/distribution/revenue/compare/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_revenue_analytics",
+      "prefix": "/api/distribution/",
+      "url_name": "compare-platforms",
+      "view": "compare_platforms"
+    },
+    "/api/distribution/revenue/dashboard/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_revenue_analytics",
+      "prefix": "/api/distribution/",
+      "url_name": "revenue-dashboard",
+      "view": "revenue_dashboard"
+    },
+    "/api/distribution/revenue/export/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_revenue_analytics",
+      "prefix": "/api/distribution/",
+      "url_name": "export-revenue-data",
+      "view": "export_revenue_data"
+    },
+    "/api/distribution/revenue/forecast/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_revenue_analytics",
+      "prefix": "/api/distribution/",
+      "url_name": "revenue-forecast",
+      "view": "revenue_forecast"
+    },
+    "/api/distribution/revenue/goals/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_revenue_analytics",
+      "prefix": "/api/distribution/",
+      "url_name": "revenue-goals",
+      "view": "revenue_goals"
+    },
+    "/api/distribution/revenue/platform/<str:platform_name>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_revenue_analytics",
+      "prefix": "/api/distribution/",
+      "url_name": "platform-revenue-detail",
+      "view": "platform_revenue_detail"
+    },
+    "/api/distribution/revenue/roi/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_revenue_analytics",
+      "prefix": "/api/distribution/",
+      "url_name": "calculate-roi",
+      "view": "calculate_roi"
+    },
+    "/api/distribution/scheduled/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_auto_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "scheduled-distributions",
+      "view": "list_scheduled_distributions"
+    },
+    "/api/distribution/seed/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-seed",
+      "view": "seed_platforms_api"
+    },
+    "/api/distribution/shutterstock/portfolio/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_integrations",
+      "prefix": "/api/distribution/",
+      "url_name": "shutterstock-portfolio",
+      "view": "shutterstock_get_portfolio"
+    },
+    "/api/distribution/shutterstock/submit/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_integrations",
+      "prefix": "/api/distribution/",
+      "url_name": "shutterstock-submit",
+      "view": "shutterstock_submit_content"
+    },
+    "/api/distribution/stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-stats",
+      "view": "distribution_stats"
+    },
+    "/api/distribution/templates/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_auto_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "distribution-templates",
+      "view": "distribution_templates"
+    },
+    "/api/distribution/templates/apply/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_auto_distribution",
+      "prefix": "/api/distribution/",
+      "url_name": "apply-distribution-template",
+      "view": "apply_distribution_template"
+    },
+    "/api/docs/detail/<path:doc_path>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_docs_index",
+      "prefix": "/api/docs/",
+      "url_name": "docs-detail",
+      "view": "docs_detail"
+    },
+    "/api/docs/graph/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_docs_index",
+      "prefix": "/api/docs/",
+      "url_name": "docs-graph",
+      "view": "docs_graph_summary"
+    },
+    "/api/docs/index/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_docs_index",
+      "prefix": "/api/docs/",
+      "url_name": "docs-index",
+      "view": "docs_index"
+    },
+    "/api/docs/stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_docs_index",
+      "prefix": "/api/docs/",
+      "url_name": "docs-stats",
+      "view": "docs_stats"
+    },
+    "/api/docs/versions/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_deliberation",
+      "prefix": "/api/docs/",
+      "url_name": "doc-versions-list",
+      "view": "doc_versions_list"
+    },
+    "/api/docs/versions/<int:version_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_deliberation",
+      "prefix": "/api/docs/",
+      "url_name": "doc-version-detail",
+      "view": "doc_version_detail"
+    },
+    "/api/ecosystem/live-feed/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_ecosystem",
+      "prefix": "/api/ecosystem/live-feed/",
+      "url_name": "ecosystem-live-feed",
+      "view": "ecosystem_live_feed"
+    },
+    "/api/ecosystem/stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_ecosystem",
+      "prefix": "/api/ecosystem/stats/",
+      "url_name": "ecosystem-stats",
+      "view": "ecosystem_stats"
+    },
+    "/api/experiment-recommendations/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiment-recommendations/",
+      "url_name": "experiment-recommendations",
+      "view": "get_experiment_recommendations"
+    },
+    "/api/experiments/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_preferences",
+      "prefix": "/api/experiments/",
+      "url_name": "experiments-list",
+      "view": "list_experiments"
+    },
+    "/api/experiments/<str:experiment_id>/convert/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_preferences",
+      "prefix": "/api/experiments/",
+      "url_name": "experiments-convert",
+      "view": "track_ab_conversion"
+    },
+    "/api/experiments/<str:experiment_id>/results/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_preferences",
+      "prefix": "/api/experiments/",
+      "url_name": "experiments-results",
+      "view": "get_experiment_results"
+    },
+    "/api/experiments/<str:experiment_id>/start/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_preferences",
+      "prefix": "/api/experiments/",
+      "url_name": "experiments-start",
+      "view": "start_experiment"
+    },
+    "/api/experiments/<str:experiment_id>/stop/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_preferences",
+      "prefix": "/api/experiments/",
+      "url_name": "experiments-stop",
+      "view": "stop_experiment"
+    },
+    "/api/experiments/<str:experiment_id>/variant/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_preferences",
+      "prefix": "/api/experiments/",
+      "url_name": "experiments-variant",
+      "view": "get_my_variant"
+    },
+    "/api/experiments/<uuid:experiment_id>/complete/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "complete-experiment",
+      "view": "complete_experiment"
+    },
+    "/api/experiments/<uuid:experiment_id>/halt/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "halt-experiment",
+      "view": "halt_experiment"
+    },
+    "/api/experiments/<uuid:experiment_id>/kpi-trend/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "experiment-kpi-trend",
+      "view": "get_experiment_kpi_trend"
+    },
+    "/api/experiments/<uuid:experiment_id>/metrics/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "experiment-metrics",
+      "view": "get_experiment_metrics"
+    },
+    "/api/experiments/<uuid:experiment_id>/raise-target/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "raise-experiment-target",
+      "view": "raise_experiment_target"
+    },
+    "/api/experiments/<uuid:experiment_id>/remediation/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "experiment-remediation",
+      "view": "update_remediation_step"
+    },
+    "/api/experiments/<uuid:experiment_id>/rollback/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "experiment-rollback",
+      "view": "get_rollback_plan"
+    },
+    "/api/experiments/<uuid:experiment_id>/update-kpi/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "update-experiment-kpi",
+      "view": "update_experiment_kpi"
+    },
+    "/api/experiments/create/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_preferences",
+      "prefix": "/api/experiments/",
+      "url_name": "experiments-create",
+      "view": "create_experiment"
+    },
+    "/api/experiments/kpi-alerts/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "kpi-alerts",
+      "view": "get_kpi_alerts"
+    },
+    "/api/experiments/kpi-summary/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "kpi-weekly-summary",
+      "view": "get_weekly_kpi_summary"
+    },
+    "/api/experiments/kpi-trends/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "all-experiment-kpi-trends",
+      "view": "get_all_experiment_kpi_trends"
+    },
+    "/api/experiments/kpis/update/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "trigger-kpi-update",
+      "view": "trigger_kpi_update"
+    },
+    "/api/experiments/learnings/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "experiment-learnings",
+      "view": "get_experiment_learnings"
+    },
+    "/api/experiments/patterns/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "experiment-patterns",
+      "view": "get_success_patterns"
+    },
+    "/api/experiments/portfolio/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "experiment-portfolio",
+      "view": "get_experiment_portfolio"
+    },
+    "/api/experiments/suggestions/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/experiments/",
+      "url_name": "experiment-suggestions",
+      "view": "get_experiment_suggestions"
+    },
+    "/api/heart/alive/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_heart",
+      "prefix": "/api/heart/alive/",
+      "url_name": "heart-alive",
+      "view": "heart_is_alive"
+    },
+    "/api/heart/component/<str:component_name>/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_heart",
+      "prefix": "/api/heart/component/",
+      "url_name": "heart-component",
+      "view": "heart_component"
+    },
+    "/api/heart/history/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_heart",
+      "prefix": "/api/heart/history/",
+      "url_name": "heart-history",
+      "view": "heart_history"
+    },
+    "/api/heart/pulse/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_heart",
+      "prefix": "/api/heart/pulse/",
+      "url_name": "heart-pulse",
+      "view": "heart_pulse"
+    },
+    "/api/hive-mind/agents/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_hive_mind",
+      "prefix": "/api/hive-mind/",
+      "url_name": "hive-mind-agents",
+      "view": "get_available_agents"
+    },
+    "/api/hive-mind/preview/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_hive_mind",
+      "prefix": "/api/hive-mind/",
+      "url_name": "hive-mind-preview",
+      "view": "preview_agents"
+    },
+    "/api/hive-mind/session/<uuid:session_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_hive_mind",
+      "prefix": "/api/hive-mind/",
+      "url_name": "hive-mind-session",
+      "view": "get_hive_mind_session"
+    },
+    "/api/hive-mind/sessions/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_hive_mind",
+      "prefix": "/api/hive-mind/",
+      "url_name": "hive-mind-sessions",
+      "view": "list_hive_mind_sessions"
+    },
+    "/api/hive-mind/start/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_hive_mind",
+      "prefix": "/api/hive-mind/",
+      "url_name": "hive-mind-start",
+      "view": "start_hive_mind_session"
+    },
+    "/api/home/purge-queue/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_home",
+      "prefix": "/api/home/purge-queue/",
+      "url_name": "purge-queue",
+      "view": "purge_queue"
+    },
+    "/api/icc/health/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/icc/",
+      "url_name": "icc-health",
+      "view": "get_system_health"
+    },
+    "/api/immune/categories/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_immune",
+      "prefix": "/api/immune/categories/",
+      "url_name": "immune-categories",
+      "view": "categories_view"
+    },
+    "/api/immune/is-healthy/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_immune",
+      "prefix": "/api/immune/is-healthy/",
+      "url_name": "immune-is-healthy",
+      "view": "is_healthy_view"
+    },
+    "/api/immune/patterns/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_immune",
+      "prefix": "/api/immune/patterns/",
+      "url_name": "immune-patterns",
+      "view": "patterns_list_view"
+    },
+    "/api/immune/patterns/<uuid:pattern_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_immune",
+      "prefix": "/api/immune/patterns/",
+      "url_name": "immune-pattern-detail",
+      "view": "pattern_detail_view"
+    },
+    "/api/immune/quarantine/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_immune",
+      "prefix": "/api/immune/quarantine/",
+      "url_name": "immune-quarantine",
+      "view": "quarantine_list_view"
+    },
+    "/api/immune/quarantine/<str:entity_type>/<str:entity_value>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_immune",
+      "prefix": "/api/immune/quarantine/",
+      "url_name": "immune-quarantine-release",
+      "view": "quarantine_release_view"
+    },
+    "/api/immune/scan/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_immune",
+      "prefix": "/api/immune/scan/",
+      "url_name": "immune-scan",
+      "view": "scan_view"
+    },
+    "/api/immune/threats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_immune",
+      "prefix": "/api/immune/threats/",
+      "url_name": "immune-threats",
+      "view": "threats_list_view"
+    },
+    "/api/intelligence/cross-references/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/intelligence/cross-references/",
+      "url_name": "intelligence-cross-references",
+      "view": "intelligence_cross_references"
+    },
+    "/api/internal/config-snapshot/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_diagnostics",
+      "prefix": "/api/internal/config-snapshot/",
+      "url_name": "config-snapshot",
+      "view": "config_snapshot"
+    },
+    "/api/learning/achievements/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-achievements",
+      "view": "learning_achievements"
+    },
+    "/api/learning/analyze/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_ai_learning_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-analyze",
+      "view": "analyze_data"
+    },
+    "/api/learning/baseline/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_ai_learning_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-baseline",
+      "view": "baseline_knowledge"
+    },
+    "/api/learning/collect/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_ai_learning_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-collect",
+      "view": "collect_data"
+    },
+    "/api/learning/compare/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-compare",
+      "view": "get_performance_comparison"
+    },
+    "/api/learning/dashboard/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-dashboard",
+      "view": "learning_dashboard"
+    },
+    "/api/learning/data-flow/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/learning/",
+      "url_name": "learning-data-flow",
+      "view": "<lambda>"
+    },
+    "/api/learning/details/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "ai_platform.views",
+      "prefix": "/api/learning/",
+      "url_name": "learning_details",
+      "view": "get_learning_details"
+    },
+    "/api/learning/feed/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_path",
+      "prefix": "/api/learning/",
+      "url_name": "learning-feed",
+      "view": "get_learning_feed"
+    },
+    "/api/learning/history/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_ai_learning_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-history",
+      "view": "learning_history"
+    },
+    "/api/learning/insights/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-insights",
+      "view": "list_insights"
+    },
+    "/api/learning/insights/<uuid:insight_id>/dismiss/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-insight-dismiss",
+      "view": "dismiss_insight"
+    },
+    "/api/learning/insights/<uuid:insight_id>/read/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-insight-read",
+      "view": "mark_insight_read"
+    },
+    "/api/learning/insights/generate/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-insights-generate",
+      "view": "generate_insights"
+    },
+    "/api/learning/journeys/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journeys-list",
+      "view": "learning_journeys_list"
+    },
+    "/api/learning/journeys/<str:journey_id>/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journey-detail",
+      "view": "learning_journey_detail"
+    },
+    "/api/learning/journeys/<str:journey_id>/abandon/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journey-abandon",
+      "view": "learning_journey_abandon"
+    },
+    "/api/learning/journeys/<str:journey_id>/complete/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journey-complete",
+      "view": "learning_journey_complete"
+    },
+    "/api/learning/journeys/<str:journey_id>/pause/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journey-pause",
+      "view": "learning_journey_pause"
+    },
+    "/api/learning/journeys/<str:journey_id>/resume/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journey-resume",
+      "view": "learning_journey_resume"
+    },
+    "/api/learning/journeys/<str:journey_id>/step/<int:step_number>/complete/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-step-complete",
+      "view": "learning_step_complete"
+    },
+    "/api/learning/journeys/<str:journey_id>/step/<int:step_number>/content/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-step-content",
+      "view": "learning_step_content"
+    },
+    "/api/learning/journeys/<str:journey_id>/step/<int:step_number>/skip/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-step-skip",
+      "view": "learning_step_skip"
+    },
+    "/api/learning/journeys/<str:journey_id>/step/<int:step_number>/start/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-step-start",
+      "view": "learning_step_start"
+    },
+    "/api/learning/journeys/active/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journeys-active",
+      "view": "learning_journeys_active"
+    },
+    "/api/learning/journeys/analytics/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journey-analytics",
+      "view": "learning_journey_analytics"
+    },
+    "/api/learning/journeys/start/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journey-start",
+      "view": "learning_journey_start"
+    },
+    "/api/learning/knowledge-map/<str:agent_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_path",
+      "prefix": "/api/learning/",
+      "url_name": "agent-knowledge-map",
+      "view": "get_agent_knowledge_map"
+    },
+    "/api/learning/loop/agent/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-loop-agent",
+      "view": "get_agent_learnings"
+    },
+    "/api/learning/loop/run/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-loop-run",
+      "view": "run_learning_cycle"
+    },
+    "/api/learning/loop/stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-loop-stats",
+      "view": "learning_loop_stats"
+    },
+    "/api/learning/loop/track/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-loop-track",
+      "view": "track_learning_outcome"
+    },
+    "/api/learning/patterns/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-patterns",
+      "view": "list_success_patterns"
+    },
+    "/api/learning/patterns/<uuid:pattern_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-pattern-detail",
+      "view": "pattern_detail"
+    },
+    "/api/learning/patterns/analyze/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-patterns-analyze",
+      "view": "analyze_patterns"
+    },
+    "/api/learning/personalize/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/learning/",
+      "url_name": "personalize-learning",
+      "view": "<lambda>"
+    },
+    "/api/learning/predict/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-predict",
+      "view": "predict_performance"
+    },
+    "/api/learning/predictions/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-predictions",
+      "view": "list_predictions"
+    },
+    "/api/learning/pricing/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-pricing",
+      "view": "get_pricing_optimization"
+    },
+    "/api/learning/profile/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-profile",
+      "view": "get_learning_profile"
+    },
+    "/api/learning/profile/update/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_loop",
+      "prefix": "/api/learning/",
+      "url_name": "learning-profile-update",
+      "view": "update_learning_profile"
+    },
+    "/api/learning/progress/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/learning/",
+      "url_name": "learning-progress",
+      "view": "<lambda>"
+    },
+    "/api/learning/save/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_ai_learning_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-save",
+      "view": "save_learning_session"
+    },
+    "/api/learning/stats/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/learning/",
+      "url_name": "learning-stats",
+      "view": "learning_stats"
+    },
+    "/api/learning/status/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "ai_platform.views",
+      "prefix": "/api/learning/",
+      "url_name": "learning_status",
+      "view": "get_learning_status"
+    },
+    "/api/learning/synthesize/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_ai_learning_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-synthesize",
+      "view": "synthesize_knowledge"
+    },
+    "/api/learning/templates/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-templates",
+      "view": "learning_templates"
+    },
+    "/api/learning/templates/<str:template_id>/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-template-detail",
+      "view": "learning_template_detail"
+    },
+    "/api/learning/trigger/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_path",
+      "prefix": "/api/learning/",
+      "url_name": "learning-trigger",
+      "view": "trigger_learning_query"
+    },
+    "/api/learning/updates/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_learning_dashboard",
+      "prefix": "/api/learning/",
+      "url_name": "learning-updates-stream",
+      "view": "learning_updates_stream"
+    },
+    "/api/learning/velocity/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/learning/",
+      "url_name": "learning-velocity-dashboard",
+      "view": "get_learning_velocity_dashboard"
+    },
+    "/api/learning/velocity/theme/<str:theme>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/learning/",
+      "url_name": "theme-velocity",
+      "view": "get_theme_velocity"
+    },
+    "/api/legal/active-case/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_legal_cases",
+      "prefix": "/api/legal/active-case/",
+      "url_name": "legal-active-case",
+      "view": "active_case"
+    },
+    "/api/legal/case-files/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_legal",
+      "prefix": "/api/legal/case-files/",
+      "url_name": "legal-case-files-list",
+      "view": "list_legal_case_files"
+    },
+    "/api/legal/case-files/<uuid:document_id>/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_legal",
+      "prefix": "/api/legal/case-files/",
+      "url_name": "legal-case-files-get",
+      "view": "get_legal_case_file"
+    },
+    "/api/legal/case-files/<uuid:document_id>/analyze/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_legal",
+      "prefix": "/api/legal/case-files/",
+      "url_name": "legal-case-files-analyze",
+      "view": "analyze_legal_case_file"
+    },
+    "/api/legal/case-files/<uuid:document_id>/delete/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_legal",
+      "prefix": "/api/legal/case-files/",
+      "url_name": "legal-case-files-delete",
+      "view": "delete_legal_case_file"
+    },
+    "/api/legal/case-files/upload/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_legal",
+      "prefix": "/api/legal/case-files/",
+      "url_name": "legal-case-files-upload",
+      "view": "upload_legal_case_file"
+    },
+    "/api/legal/cases/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_legal_cases",
+      "prefix": "/api/legal/cases/",
+      "url_name": "legal-cases-list",
+      "view": "case_profiles_list"
+    },
+    "/api/legal/cases/<uuid:case_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_legal_cases",
+      "prefix": "/api/legal/cases/",
+      "url_name": "legal-case-detail",
+      "view": "case_profile_detail"
+    },
+    "/api/legal/cases/<uuid:case_id>/children/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_legal_cases",
+      "prefix": "/api/legal/cases/",
+      "url_name": "legal-case-add-child",
+      "view": "add_child"
+    },
+    "/api/legal/cases/<uuid:case_id>/children/<uuid:child_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_legal_cases",
+      "prefix": "/api/legal/cases/",
+      "url_name": "legal-case-delete-child",
+      "view": "delete_child"
+    },
+    "/api/legal/cases/<uuid:case_id>/context/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_legal_cases",
+      "prefix": "/api/legal/cases/",
+      "url_name": "legal-case-context",
+      "view": "get_case_context"
+    },
+    "/api/legal/cases/<uuid:case_id>/documents/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_legal_cases",
+      "prefix": "/api/legal/cases/",
+      "url_name": "legal-case-add-document",
+      "view": "add_document"
+    },
+    "/api/legal/cases/<uuid:case_id>/documents/<uuid:document_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_legal_cases",
+      "prefix": "/api/legal/cases/",
+      "url_name": "legal-case-delete-document",
+      "view": "delete_document"
+    },
+    "/api/llm-routing/agent-configs/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_llm_routing",
+      "prefix": "/api/llm-routing/agent-configs/",
+      "url_name": "llm-routing-agent-configs",
+      "view": "agent_llm_configs_list"
+    },
+    "/api/llm-routing/logs/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_llm_routing",
+      "prefix": "/api/llm-routing/logs/",
+      "url_name": "llm-routing-logs",
+      "view": "llm_call_logs_list"
+    },
+    "/api/llm-routing/models/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_llm_routing",
+      "prefix": "/api/llm-routing/models/",
+      "url_name": "llm-routing-models",
+      "view": "llm_models_list"
+    },
+    "/api/llm-routing/providers/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_llm_routing",
+      "prefix": "/api/llm-routing/providers/",
+      "url_name": "llm-routing-providers",
+      "view": "llm_providers_list"
+    },
+    "/api/lungs/alive/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_lungs",
+      "prefix": "/api/lungs/alive/",
+      "url_name": "lungs-alive",
+      "view": "lungs_is_breathing"
+    },
+    "/api/lungs/breathe/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_lungs",
+      "prefix": "/api/lungs/breathe/",
+      "url_name": "lungs-breathe",
+      "view": "lungs_breathe"
+    },
+    "/api/lungs/budgets/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_lungs",
+      "prefix": "/api/lungs/budgets/",
+      "url_name": "lungs-budgets",
+      "view": "lungs_budgets"
+    },
+    "/api/lungs/budgets/<uuid:budget_id>/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_lungs",
+      "prefix": "/api/lungs/budgets/",
+      "url_name": "lungs-budget-detail",
+      "view": "lungs_budget_detail"
+    },
+    "/api/lungs/can-breathe/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_lungs",
+      "prefix": "/api/lungs/can-breathe/",
+      "url_name": "lungs-can-breathe",
+      "view": "lungs_can_breathe"
+    },
+    "/api/lungs/forecast/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_lungs",
+      "prefix": "/api/lungs/forecast/",
+      "url_name": "lungs-forecast",
+      "view": "lungs_forecast"
+    },
+    "/api/lungs/oxygen/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_lungs",
+      "prefix": "/api/lungs/oxygen/",
+      "url_name": "lungs-oxygen",
+      "view": "lungs_oxygen"
+    },
+    "/api/memory-clusters/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_clusters",
+      "prefix": "/api/memory-clusters/",
+      "url_name": "memory-clusters-overview",
+      "view": "clusters_overview"
+    },
+    "/api/memory-clusters/agent/<uuid:agent_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_clusters",
+      "prefix": "/api/memory-clusters/",
+      "url_name": "memory-clusters-agent",
+      "view": "agent_clusters"
+    },
+    "/api/memory-clusters/cluster/<uuid:cluster_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_clusters",
+      "prefix": "/api/memory-clusters/",
+      "url_name": "memory-clusters-detail",
+      "view": "cluster_detail"
+    },
+    "/api/memory-clusters/cluster/<uuid:cluster_id>/add-memory/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_clusters",
+      "prefix": "/api/memory-clusters/",
+      "url_name": "memory-clusters-add-memory",
+      "view": "add_memory_to_cluster"
+    },
+    "/api/memory-clusters/cluster/<uuid:cluster_id>/memory/<uuid:memory_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_clusters",
+      "prefix": "/api/memory-clusters/",
+      "url_name": "memory-clusters-remove-memory",
+      "view": "remove_memory_from_cluster"
+    },
+    "/api/memory-clusters/evolution/<uuid:agent_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_clusters",
+      "prefix": "/api/memory-clusters/",
+      "url_name": "memory-clusters-evolution",
+      "view": "cluster_evolution"
+    },
+    "/api/memory-clusters/find-similar/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_clusters",
+      "prefix": "/api/memory-clusters/",
+      "url_name": "memory-clusters-find-similar",
+      "view": "find_similar_clusters"
+    },
+    "/api/memory-clusters/generate-all/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_clusters",
+      "prefix": "/api/memory-clusters/",
+      "url_name": "memory-clusters-generate-all",
+      "view": "generate_all_clusters"
+    },
+    "/api/memory-clusters/visualization/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_clusters",
+      "prefix": "/api/memory-clusters/",
+      "url_name": "memory-clusters-viz",
+      "view": "cluster_visualization_data"
+    },
+    "/api/memory-clusters/visualization/<uuid:agent_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_clusters",
+      "prefix": "/api/memory-clusters/",
+      "url_name": "memory-clusters-viz-agent",
+      "view": "cluster_visualization_data"
+    },
+    "/api/memory-palace/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-palace-overview",
+      "view": "get_memory_palace_overview"
+    },
+    "/api/memory-palace/agent/<uuid:agent_id>/memories/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-palace-agent-memories",
+      "view": "get_agent_memories"
+    },
+    "/api/memory-palace/agent/<uuid:agent_id>/rooms/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-palace-rooms",
+      "view": "get_memory_palace_rooms"
+    },
+    "/api/memory-palace/agent/<uuid:agent_id>/summary/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-palace-summary",
+      "view": "get_memory_summary"
+    },
+    "/api/memory-palace/assign/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-assign-room",
+      "view": "assign_memory_to_room"
+    },
+    "/api/memory-palace/connect/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-connect",
+      "view": "connect_memories"
+    },
+    "/api/memory-palace/create/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-create",
+      "view": "create_memory"
+    },
+    "/api/memory-palace/memories/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-palace-list",
+      "view": "list_all_memories"
+    },
+    "/api/memory-palace/memory/<uuid:memory_id>/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-palace-detail",
+      "view": "get_memory_detail"
+    },
+    "/api/memory-palace/memory/<uuid:memory_id>/connections/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-connections",
+      "view": "get_memory_connections"
+    },
+    "/api/memory-palace/memory/<uuid:memory_id>/delete/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-palace-delete",
+      "view": "delete_memory"
+    },
+    "/api/memory-palace/room/<uuid:room_id>/memories/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-room-memories",
+      "view": "get_room_memories"
+    },
+    "/api/memory-palace/search/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-search",
+      "view": "search_memories"
+    },
+    "/api/muscular/flex/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_muscular",
+      "prefix": "/api/muscular/flex/",
+      "url_name": "muscular-flex",
+      "view": "muscular_flex_view"
+    },
+    "/api/muscular/groups/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_muscular",
+      "prefix": "/api/muscular/groups/",
+      "url_name": "muscular-groups",
+      "view": "muscular_groups_list_view"
+    },
+    "/api/muscular/groups/<uuid:group_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_muscular",
+      "prefix": "/api/muscular/groups/",
+      "url_name": "muscular-group-detail",
+      "view": "muscular_group_detail_view"
+    },
+    "/api/muscular/history/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_muscular",
+      "prefix": "/api/muscular/history/",
+      "url_name": "muscular-history",
+      "view": "muscular_history_view"
+    },
+    "/api/muscular/is-strong/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_muscular",
+      "prefix": "/api/muscular/is-strong/",
+      "url_name": "muscular-is-strong",
+      "view": "muscular_is_strong_view"
+    },
+    "/api/muscular/overworked/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_muscular",
+      "prefix": "/api/muscular/overworked/",
+      "url_name": "muscular-overworked",
+      "view": "muscular_overworked_view"
+    },
+    "/api/muscular/weak/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_muscular",
+      "prefix": "/api/muscular/weak/",
+      "url_name": "muscular-weak",
+      "view": "muscular_weak_view"
+    },
+    "/api/mythology/guards/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "mythology.views",
+      "prefix": "/api/mythology/guards/",
+      "url_name": "guards_list",
+      "view": "list_guards"
+    },
+    "/api/mythology/patterns/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "mythology.views",
+      "prefix": "/api/mythology/patterns/",
+      "url_name": "patterns_list",
+      "view": "list_patterns"
+    },
+    "/api/nervous/consumers/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_nervous",
+      "prefix": "/api/nervous/consumers/",
+      "url_name": "nervous-consumers",
+      "view": "NervousConsumersView"
+    },
+    "/api/nervous/feel/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_nervous",
+      "prefix": "/api/nervous/feel/",
+      "url_name": "nervous-feel",
+      "view": "NervousFeelView"
+    },
+    "/api/nervous/history/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_nervous",
+      "prefix": "/api/nervous/history/",
+      "url_name": "nervous-history",
+      "view": "NervousHistoryView"
+    },
+    "/api/nervous/is-responsive/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_nervous",
+      "prefix": "/api/nervous/is-responsive/",
+      "url_name": "nervous-is-responsive",
+      "view": "NervousIsResponsiveView"
+    },
+    "/api/nervous/vitals/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_nervous",
+      "prefix": "/api/nervous/vitals/",
+      "url_name": "nervous-vitals",
+      "view": "NervousVitalsView"
+    },
+    "/api/neural-orchestra/agents/stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_neural_orchestra",
+      "prefix": "/api/neural-orchestra/",
+      "url_name": "neural-agents-stats",
+      "view": "agents_stats"
+    },
+    "/api/neural-orchestra/ecosystem/live-feed/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_neural_orchestra",
+      "prefix": "/api/neural-orchestra/",
+      "url_name": "neural-ecosystem-feed",
+      "view": "ecosystem_live_feed"
+    },
+    "/api/neural-orchestra/health/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_neural_orchestra",
+      "prefix": "/api/neural-orchestra/",
+      "url_name": "neural-orchestra-health",
+      "view": "neural_orchestra_health"
+    },
+    "/api/neural-orchestra/learning/feed/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_neural_orchestra",
+      "prefix": "/api/neural-orchestra/",
+      "url_name": "neural-learning-feed",
+      "view": "learning_feed"
+    },
+    "/api/neural-orchestra/learning/status/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_neural_orchestra",
+      "prefix": "/api/neural-orchestra/",
+      "url_name": "neural-learning-status",
+      "view": "learning_status"
+    },
+    "/api/neural-orchestra/reality-check/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_neural_orchestra",
+      "prefix": "/api/neural-orchestra/",
+      "url_name": "neural-orchestra-reality-check",
+      "view": "trigger_neural_orchestra_reality_check"
+    },
+    "/api/neural-orchestra/websocket-config/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_neural_orchestra",
+      "prefix": "/api/neural-orchestra/",
+      "url_name": "neural-websocket-config",
+      "view": "neural_orchestra_websocket_bridge"
+    },
+    "/api/newsletter/count/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_newsletter",
+      "prefix": "/api/newsletter/",
+      "url_name": "newsletter-count",
+      "view": "newsletter_subscriber_count"
+    },
+    "/api/newsletter/subscribe/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_newsletter",
+      "prefix": "/api/newsletter/",
+      "url_name": "newsletter-subscribe",
+      "view": "newsletter_subscribe"
+    },
+    "/api/opportunities/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_opportunity",
+      "prefix": "/api/opportunities/",
+      "url_name": "opportunity-list",
+      "view": "opportunity_list"
+    },
+    "/api/opportunities/<uuid:opportunity_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_opportunity",
+      "prefix": "/api/opportunities/",
+      "url_name": "opportunity-detail",
+      "view": "opportunity_detail"
+    },
+    "/api/opportunities/<uuid:opportunity_id>/act/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_opportunity",
+      "prefix": "/api/opportunities/",
+      "url_name": "opportunity-act",
+      "view": "opportunity_act"
+    },
+    "/api/opportunities/<uuid:opportunity_id>/content/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_opportunity",
+      "prefix": "/api/opportunities/",
+      "url_name": "opportunity-link-content",
+      "view": "opportunity_link_content"
+    },
+    "/api/opportunities/<uuid:opportunity_id>/content/list/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_opportunity",
+      "prefix": "/api/opportunities/",
+      "url_name": "opportunity-content-list",
+      "view": "opportunity_content_list"
+    },
+    "/api/opportunities/<uuid:opportunity_id>/dismiss/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_opportunity",
+      "prefix": "/api/opportunities/",
+      "url_name": "opportunity-dismiss",
+      "view": "opportunity_dismiss"
+    },
+    "/api/opportunities/<uuid:opportunity_id>/rescore/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_opportunity",
+      "prefix": "/api/opportunities/",
+      "url_name": "opportunity-rescore",
+      "view": "opportunity_rescore"
+    },
+    "/api/opportunities/<uuid:opportunity_id>/revenue/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_opportunity",
+      "prefix": "/api/opportunities/",
+      "url_name": "opportunity-log-revenue",
+      "view": "opportunity_log_revenue"
+    },
+    "/api/opportunities/<uuid:opportunity_id>/revenue/list/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_opportunity",
+      "prefix": "/api/opportunities/",
+      "url_name": "opportunity-revenue-list",
+      "view": "opportunity_revenue_list"
+    },
+    "/api/opportunities/actionable/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "ai_core.api.opportunity_aggregator",
+      "prefix": "/api/opportunities/",
+      "url_name": "get-actionable",
+      "view": "get_actionable"
+    },
+    "/api/opportunities/analyze/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_opportunity",
+      "prefix": "/api/opportunities/",
+      "url_name": "opportunity-analyze",
+      "view": "opportunity_analyze"
+    },
+    "/api/opportunities/live/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/opportunities/",
+      "url_name": "opportunities_api",
+      "view": "<lambda>"
+    },
+    "/api/opportunities/quick-apply/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.urls",
+      "prefix": "/api/opportunities/",
+      "url_name": "quick-apply",
+      "view": "<lambda>"
+    },
+    "/api/opportunities/revenue/stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_opportunity",
+      "prefix": "/api/opportunities/",
+      "url_name": "revenue-stats",
+      "view": "revenue_stats"
+    },
+    "/api/opportunities/score/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_opportunity",
+      "prefix": "/api/opportunities/",
+      "url_name": "opportunity-score",
+      "view": "opportunity_score"
+    },
+    "/api/opportunities/stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_opportunity",
+      "prefix": "/api/opportunities/",
+      "url_name": "opportunity-stats",
+      "view": "opportunity_stats"
+    },
+    "/api/opportunities/top/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_opportunity",
+      "prefix": "/api/opportunities/",
+      "url_name": "opportunity-top",
+      "view": "opportunity_top"
+    },
+    "/api/orchestrations/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views.agents",
+      "prefix": "/api/orchestrations/",
+      "url_name": "orchestrations-list",
+      "view": "orchestrations_list"
+    },
+    "/api/pilot-experiments/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-experiments/",
+      "url_name": "pilot-experiments-list",
+      "view": "get_experiments"
+    },
+    "/api/pilot-gates/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "pilot-gates",
+      "view": "get_pilot_readiness_gates"
+    },
+    "/api/pilot-gates/<uuid:gate_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "pilot-gate-detail",
+      "view": "get_pilot_gate_detail"
+    },
+    "/api/pilot-gates/<uuid:gate_id>/approve-all/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "approve-all-checklist-items",
+      "view": "approve_all_checklist_items"
+    },
+    "/api/pilot-gates/<uuid:gate_id>/items/<uuid:item_id>/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "pilot-gate-item",
+      "view": "update_checklist_item"
+    },
+    "/api/pilot-gates/<uuid:gate_id>/pilot/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "start-pilot-execution",
+      "view": "start_pilot_execution"
+    },
+    "/api/pilot-gates/<uuid:gate_id>/pilot/<uuid:pilot_id>/complete/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "complete-pilot-execution",
+      "view": "complete_pilot_execution"
+    },
+    "/api/pilot-gates/<uuid:gate_id>/regenerate/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "regenerate-checklist-content",
+      "view": "regenerate_checklist_content"
+    },
+    "/api/pilot-gates/<uuid:gate_id>/status/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "pilot-gate-status",
+      "view": "update_gate_status"
+    },
+    "/api/pilot-gates/create/<uuid:decision_id>/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "pilot-gate-create",
+      "view": "create_pilot_gate"
+    },
+    "/api/pilot-gates/dashboard/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "pilot-gate-dashboard",
+      "view": "get_pilot_gate_dashboard"
+    },
+    "/api/pilots/<uuid:pilot_id>/implement/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilots/",
+      "url_name": "trigger-pilot-implementation",
+      "view": "trigger_pilot_implementation"
+    },
+    "/api/pilots/<uuid:pilot_id>/implementation/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilots/",
+      "url_name": "pilot-implementation",
+      "view": "get_pilot_implementation"
+    },
+    "/api/pilots/dashboard/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilots/",
+      "url_name": "pilot-executions-dashboard",
+      "view": "get_pilot_executions_dashboard"
+    },
+    "/api/pilots/progress/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilots/",
+      "url_name": "pilot-progress-dashboard",
+      "view": "get_pilot_progress_dashboard"
+    },
+    "/api/pilots/progress/<uuid:experiment_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilots/",
+      "url_name": "pilot-progress-detail",
+      "view": "get_pilot_progress_detail"
+    },
+    "/api/platform/audits/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/audits/",
+      "url_name": "platform-audits",
+      "view": "audits_view"
+    },
+    "/api/platform/audits/run/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/audits/",
+      "url_name": "platform-audits-run",
+      "view": "audit_run_view"
+    },
+    "/api/platform/canon/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/canon/",
+      "url_name": "platform-canon",
+      "view": "canon_view"
+    },
+    "/api/platform/canon/promote/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/canon/",
+      "url_name": "platform-canon-promote",
+      "view": "canon_promote_view"
+    },
+    "/api/platform/doc-content/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/doc-content/",
+      "url_name": "platform-doc-content",
+      "view": "doc_content_view"
+    },
+    "/api/platform/governance/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/governance/",
+      "url_name": "platform-governance",
+      "view": "governance_view"
+    },
+    "/api/platform/live-metrics/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/live-metrics/",
+      "url_name": "platform-live-metrics",
+      "view": "live_metrics_view"
+    },
+    "/api/platform/metrics/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/metrics/",
+      "url_name": "platform-metrics",
+      "view": "metrics_view"
+    },
+    "/api/platform/mission/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/mission/",
+      "url_name": "platform-mission",
+      "view": "mission_view"
+    },
+    "/api/platform/playbooks/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/playbooks/",
+      "url_name": "platform-playbooks",
+      "view": "playbooks_view"
+    },
+    "/api/platform/remediation/status/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/remediation/",
+      "url_name": "platform-remediation-status",
+      "view": "remediation_status_view"
+    },
+    "/api/platform/triggers/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/triggers/",
+      "url_name": "platform-triggers-list",
+      "view": "triggers_list_view"
+    },
+    "/api/platform/triggers/<str:rule_name>/toggle/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/triggers/",
+      "url_name": "platform-trigger-toggle",
+      "view": "trigger_toggle_view"
+    },
+    "/api/platform/triggers/run-now/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/triggers/",
+      "url_name": "platform-trigger-run-now",
+      "view": "trigger_run_now_view"
+    },
+    "/api/podcasts/<uuid:episode_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_podcast",
+      "prefix": "/api/podcasts/",
+      "url_name": "podcast-delete",
+      "view": "podcast_delete"
+    },
+    "/api/podcasts/<uuid:episode_id>/generate-audio/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_podcast",
+      "prefix": "/api/podcasts/",
+      "url_name": "podcast-generate-audio",
+      "view": "podcast_generate_audio"
+    },
+    "/api/podcasts/<uuid:episode_id>/script/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_podcast",
+      "prefix": "/api/podcasts/",
+      "url_name": "podcast-script",
+      "view": "podcast_script"
+    },
+    "/api/podcasts/<uuid:episode_id>/status/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_podcast",
+      "prefix": "/api/podcasts/",
+      "url_name": "podcast-status",
+      "view": "podcast_status"
+    },
+    "/api/podcasts/create/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_podcast",
+      "prefix": "/api/podcasts/",
+      "url_name": "podcast-create",
+      "view": "podcast_create"
+    },
+    "/api/podcasts/list/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_podcast",
+      "prefix": "/api/podcasts/",
+      "url_name": "podcast-list-real",
+      "view": "podcast_list"
+    },
+    "/api/podcasts/stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_podcast",
+      "prefix": "/api/podcasts/",
+      "url_name": "podcast-stats",
+      "view": "podcast_stats"
+    },
+    "/api/prediction-markets/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/prediction-markets/",
+      "url_name": "prediction-markets",
+      "view": "get_prediction_markets"
+    },
+    "/api/recent-activity/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/recent-activity/",
+      "url_name": "recent-activity",
+      "view": "get_recent_activity"
+    },
+    "/api/review/<str:token>/context/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_preview_api",
+      "prefix": "/api/review/",
+      "url_name": "review-context",
+      "view": "review_context"
+    },
+    "/api/review/<str:token>/feedback/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_preview_api",
+      "prefix": "/api/review/",
+      "url_name": "review-feedback",
+      "view": "review_feedback"
+    },
+    "/api/schema/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "drf_spectacular.views",
+      "prefix": "/api/schema/",
+      "url_name": "schema",
+      "view": "SpectacularAPIView"
+    },
+    "/api/schema/redoc/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "drf_spectacular.views",
+      "prefix": "/api/schema/",
+      "url_name": "redoc",
+      "view": "SpectacularRedocView"
+    },
+    "/api/schema/swagger-ui/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "drf_spectacular.views",
+      "prefix": "/api/schema/",
+      "url_name": "swagger-ui",
+      "view": "SpectacularSwaggerView"
+    },
+    "/api/self-healing/progress/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_platform_command",
+      "prefix": "/api/self-healing/progress/",
+      "url_name": "self-healing-progress",
+      "view": "self_healing_progress_view"
+    },
+    "/api/situation-intelligence/detail/<str:situation_type>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_autonomous_dashboard",
+      "prefix": "/api/situation-intelligence/detail/",
+      "url_name": "situation-intelligence-detail",
+      "view": "situation_detail"
+    },
+    "/api/skin/feel/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_skin",
+      "prefix": "/api/skin/feel/",
+      "url_name": "skin-feel",
+      "view": "SkinFeelView"
+    },
+    "/api/skin/history/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_skin",
+      "prefix": "/api/skin/history/",
+      "url_name": "skin-history",
+      "view": "SkinHistoryView"
+    },
+    "/api/skin/is-healthy/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_skin",
+      "prefix": "/api/skin/is-healthy/",
+      "url_name": "skin-is-healthy",
+      "view": "SkinIsHealthyView"
+    },
+    "/api/skin/vitals/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_skin",
+      "prefix": "/api/skin/vitals/",
+      "url_name": "skin-vitals",
+      "view": "SkinVitalsView"
+    },
+    "/api/skin/workspaces/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_skin",
+      "prefix": "/api/skin/workspaces/",
+      "url_name": "skin-workspaces",
+      "view": "SkinWorkspacesView"
+    },
+    "/api/spider-dashboard/activity/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_dashboard",
+      "prefix": "/api/spider-dashboard/",
+      "url_name": "spider-dashboard-activity",
+      "view": "spider_activity_feed"
+    },
+    "/api/spider-dashboard/data/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_dashboard",
+      "prefix": "/api/spider-dashboard/",
+      "url_name": "spider-dashboard-stats",
+      "view": "spider_data_stats"
+    },
+    "/api/spider-dashboard/execute/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_dashboard",
+      "prefix": "/api/spider-dashboard/",
+      "url_name": "spider-dashboard-execute",
+      "view": "execute_spider"
+    },
+    "/api/spider-dashboard/network/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_dashboard",
+      "prefix": "/api/spider-dashboard/",
+      "url_name": "spider-dashboard-network",
+      "view": "spider_network_data"
+    },
+    "/api/spider-feed/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_feed",
+      "prefix": "/api/spider-feed/",
+      "url_name": "spider-feed",
+      "view": "spider_feed"
+    },
+    "/api/spider-feed/<uuid:item_id>/annotate/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_feed",
+      "prefix": "/api/spider-feed/",
+      "url_name": "spider-feed-annotate",
+      "view": "spider_feed_annotate"
+    },
+    "/api/spider-feed/<uuid:item_id>/vote/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_feed",
+      "prefix": "/api/spider-feed/",
+      "url_name": "spider-feed-vote",
+      "view": "spider_feed_vote"
+    },
+    "/api/spider-feed/item/<uuid:item_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_feed",
+      "prefix": "/api/spider-feed/",
+      "url_name": "spider-feed-item-detail",
+      "view": "spider_feed_item_detail"
+    },
+    "/api/spider-feed/stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_feed",
+      "prefix": "/api/spider-feed/",
+      "url_name": "spider-feed-stats",
+      "view": "spider_feed_stats"
+    },
+    "/api/spider-feed/trending/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_feed",
+      "prefix": "/api/spider-feed/",
+      "url_name": "spider-feed-trending",
+      "view": "spider_feed_trending"
+    },
+    "/api/spider-health/embedding-coverage/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_dashboard",
+      "prefix": "/api/spider-health/",
+      "url_name": "spider-health-embedding-coverage",
+      "view": "spider_embedding_coverage"
+    },
+    "/api/spider-health/executions/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_dashboard",
+      "prefix": "/api/spider-health/",
+      "url_name": "spider-health-executions",
+      "view": "spider_execution_logs"
+    },
+    "/api/spider-health/executions/<uuid:execution_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_dashboard",
+      "prefix": "/api/spider-health/",
+      "url_name": "spider-health-error-detail",
+      "view": "spider_error_detail"
+    },
+    "/api/spider-health/executions/<uuid:execution_id>/retry/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_dashboard",
+      "prefix": "/api/spider-health/",
+      "url_name": "spider-health-retry",
+      "view": "retry_spider_execution"
+    },
+    "/api/spider-health/run/<str:spider_name>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_dashboard",
+      "prefix": "/api/spider-health/",
+      "url_name": "spider-health-run",
+      "view": "run_spider_manual"
+    },
+    "/api/spider-health/summary/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_dashboard",
+      "prefix": "/api/spider-health/",
+      "url_name": "spider-health-summary",
+      "view": "spider_health_summary"
+    },
+    "/api/spider-intelligence/dashboard-stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-dashboard-stats",
+      "view": "dashboard_stats"
+    },
+    "/api/spider-intelligence/detail/<str:spider_name>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-detail",
+      "view": "spider_detail"
+    },
+    "/api/spider-intelligence/feed/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-feed",
+      "view": "spider_data_feed"
+    },
+    "/api/spider-intelligence/insights/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-insights",
+      "view": "prompt_insights"
+    },
+    "/api/spider-intelligence/jobs/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-jobs",
+      "view": "job_market"
+    },
+    "/api/spider-intelligence/knowledge/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-knowledge",
+      "view": "spider_knowledge"
+    },
+    "/api/spider-intelligence/market-research/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-market-research",
+      "view": "market_research_dashboard"
+    },
+    "/api/spider-intelligence/market/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-market",
+      "view": "market_insights"
+    },
+    "/api/spider-intelligence/opportunities/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-opportunities",
+      "view": "opportunities_dashboard"
+    },
+    "/api/spider-intelligence/registry/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-registry",
+      "view": "spider_registry"
+    },
+    "/api/spider-intelligence/report/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-report",
+      "view": "daily_report"
+    },
+    "/api/spider-intelligence/run-all/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-run-all",
+      "view": "run_all_spiders"
+    },
+    "/api/spider-intelligence/search/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-search",
+      "view": "search_data"
+    },
+    "/api/spider-intelligence/summary/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-summary",
+      "view": "data_summary"
+    },
+    "/api/spider-intelligence/tech/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-tech",
+      "view": "tech_trends"
+    },
+    "/api/spider-intelligence/timeline/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-timeline",
+      "view": "spider_timeline"
+    },
+    "/api/spider-intelligence/trends/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/spider-intelligence/",
+      "url_name": "spider-intelligence-trends",
+      "view": "trending_topics"
+    },
+    "/api/spine/align/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spine",
+      "prefix": "/api/spine/align/",
+      "url_name": "spine-align",
+      "view": "align_view"
+    },
+    "/api/spine/can-route/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spine",
+      "prefix": "/api/spine/can-route/",
+      "url_name": "spine-can-route",
+      "view": "can_route_view"
+    },
+    "/api/spine/categories/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spine",
+      "prefix": "/api/spine/categories/",
+      "url_name": "spine-categories",
+      "view": "categories_view"
+    },
+    "/api/spine/history/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spine",
+      "prefix": "/api/spine/history/",
+      "url_name": "spine-history",
+      "view": "history_view"
+    },
+    "/api/spine/is-aligned/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spine",
+      "prefix": "/api/spine/is-aligned/",
+      "url_name": "spine-is-aligned",
+      "view": "is_aligned_view"
+    },
+    "/api/spine/metrics/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spine",
+      "prefix": "/api/spine/metrics/",
+      "url_name": "spine-metrics",
+      "view": "route_metrics_view"
+    },
+    "/api/spine/patterns/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spine",
+      "prefix": "/api/spine/patterns/",
+      "url_name": "spine-patterns",
+      "view": "patterns_list_view"
+    },
+    "/api/spine/patterns/<uuid:pattern_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spine",
+      "prefix": "/api/spine/patterns/",
+      "url_name": "spine-pattern-detail",
+      "view": "pattern_detail_view"
+    },
+    "/api/sports-odds/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_spider_intelligence",
+      "prefix": "/api/sports-odds/",
+      "url_name": "sports-odds",
+      "view": "get_sports_odds"
+    },
+    "/api/status/overview/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_status_api",
+      "prefix": "/api/status/overview/",
+      "url_name": "status-overview",
+      "view": "status_overview"
+    },
+    "/api/stripe/billing-portal/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-billing-portal",
+      "view": "stripe_billing_portal"
+    },
+    "/api/stripe/cancel-subscription/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-cancel-subscription",
+      "view": "stripe_cancel_subscription"
+    },
+    "/api/stripe/invoices/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-invoices",
+      "view": "stripe_invoices"
+    },
+    "/api/stripe/invoices/<str:invoice_id>/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-invoice-detail",
+      "view": "stripe_invoice_detail"
+    },
+    "/api/stripe/payment-methods/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-payment-methods",
+      "view": "stripe_payment_methods"
+    },
+    "/api/stripe/payment-methods/<str:payment_method_id>/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-remove-payment-method",
+      "view": "stripe_remove_payment_method"
+    },
+    "/api/stripe/payment-methods/<str:payment_method_id>/default/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-set-default-payment-method",
+      "view": "stripe_set_default_payment_method"
+    },
+    "/api/stripe/payment-methods/add/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-add-payment-method",
+      "view": "stripe_add_payment_method"
+    },
+    "/api/stripe/plans/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-plans",
+      "view": "stripe_plans"
+    },
+    "/api/stripe/resume-subscription/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-resume-subscription",
+      "view": "stripe_resume_subscription"
+    },
+    "/api/stripe/subscribe/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-subscribe",
+      "view": "stripe_subscribe"
+    },
+    "/api/stripe/subscription-status/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_stripe",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-subscription-status",
+      "view": "subscription_status"
+    },
+    "/api/stripe/upcoming-invoice/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-upcoming-invoice",
+      "view": "stripe_upcoming_invoice"
+    },
+    "/api/stripe/usage/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-usage",
+      "view": "stripe_usage"
+    },
+    "/api/stripe/webhook/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_stripe",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-webhook",
+      "view": "stripe_webhook"
+    },
+    "/api/system-health/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_agent_analytics",
+      "prefix": "/api/system-health/",
+      "url_name": "system-health",
+      "view": "system_health_check"
+    },
+    "/api/system/demo-status/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_diagnostics",
+      "prefix": "/api/system/demo-status/",
+      "url_name": "demo-mode-status",
+      "view": "demo_mode_status"
+    },
+    "/api/teams/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-list",
+      "view": "list_teams"
+    },
+    "/api/teams/<uuid:team_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-detail",
+      "view": "get_team"
+    },
+    "/api/teams/<uuid:team_id>/members/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-add-member",
+      "view": "add_team_member"
+    },
+    "/api/teams/create/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-create",
+      "view": "create_team"
+    },
+    "/api/teams/messages/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-messages-send",
+      "view": "send_agent_message"
+    },
+    "/api/teams/messages/<uuid:agent_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-messages-agent",
+      "view": "get_agent_messages"
+    },
+    "/api/teams/messages/thread/<uuid:thread_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-messages-thread",
+      "view": "get_message_thread"
+    },
+    "/api/teams/roles/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-roles-list",
+      "view": "list_agent_roles"
+    },
+    "/api/teams/roles/create/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-roles-create",
+      "view": "create_agent_role"
+    },
+    "/api/teams/stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-stats",
+      "view": "team_stats"
+    },
+    "/api/teams/workflows/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-workflows-create",
+      "view": "create_team_workflow"
+    },
+    "/api/teams/workflows/<uuid:workflow_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-workflows-detail",
+      "view": "get_team_workflow"
+    },
+    "/api/teams/workflows/<uuid:workflow_id>/execute/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-workflows-execute",
+      "view": "execute_workflow"
+    },
+    "/api/teams/workflows/<uuid:workflow_id>/run/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-workflows-run",
+      "view": "run_full_workflow"
+    },
+    "/api/teams/workflows/<uuid:workflow_id>/start/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-workflows-start",
+      "view": "start_team_workflow"
+    },
+    "/api/teams/workflows/<uuid:workflow_id>/status/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-workflows-status",
+      "view": "workflow_status"
+    },
+    "/api/teams/workflows/<uuid:workflow_id>/steps/<uuid:step_id>/complete/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-workflows-step-complete",
+      "view": "complete_workflow_step"
+    },
+    "/api/teams/workflows/<uuid:workflow_id>/steps/<uuid:step_id>/execute/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_workflow",
+      "prefix": "/api/teams/",
+      "url_name": "teams-workflows-step-execute",
+      "view": "execute_workflow_step"
+    },
+    "/api/teams/workflows/active/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-workflows-active",
+      "view": "list_active_workflows"
+    },
+    "/api/teams/workflows/templates/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_team_collaboration",
+      "prefix": "/api/teams/",
+      "url_name": "teams-workflows-templates",
+      "view": "list_workflow_templates"
+    },
+    "/api/time-capsules/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_time_capsules",
+      "prefix": "/api/time-capsules/",
+      "url_name": "time-capsules-overview",
+      "view": "TimeCapsuleOverviewView"
+    },
+    "/api/time-capsules/<uuid:capsule_id>/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_time_capsules",
+      "prefix": "/api/time-capsules/",
+      "url_name": "time-capsules-detail",
+      "view": "TimeCapsuleDetailView"
+    },
+    "/api/time-capsules/<uuid:capsule_id>/react/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_time_capsules",
+      "prefix": "/api/time-capsules/",
+      "url_name": "time-capsules-react",
+      "view": "TimeCapsuleReactView"
+    },
+    "/api/time-capsules/<uuid:capsule_id>/reveal/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_time_capsules",
+      "prefix": "/api/time-capsules/",
+      "url_name": "time-capsules-reveal",
+      "view": "RevealTimeCapsuleView"
+    },
+    "/api/time-capsules/agent/<uuid:agent_id>/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_time_capsules",
+      "prefix": "/api/time-capsules/",
+      "url_name": "time-capsules-agent",
+      "view": "AgentTimeCapsuleView"
+    },
+    "/api/time-capsules/expire-old/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_time_capsules",
+      "prefix": "/api/time-capsules/",
+      "url_name": "time-capsules-expire",
+      "view": "ExpireOldCapsulesView"
+    },
+    "/api/time-capsules/generate/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_time_capsules",
+      "prefix": "/api/time-capsules/",
+      "url_name": "time-capsules-generate",
+      "view": "GenerateTimeCapsuleView"
+    },
+    "/api/time-capsules/ready-to-reveal/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_time_capsules",
+      "prefix": "/api/time-capsules/",
+      "url_name": "time-capsules-ready",
+      "view": "ReadyToRevealView"
+    },
+    "/api/time-travel/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-overview",
+      "view": "get_time_travel_overview"
+    },
+    "/api/time-travel/agent/<uuid:agent_id>/sessions/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-agent-sessions",
+      "view": "get_agent_sessions"
+    },
+    "/api/time-travel/agent/<uuid:agent_id>/simulate/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-simulate",
+      "view": "simulate_session"
+    },
+    "/api/time-travel/annotation/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-add-annotation",
+      "view": "add_annotation"
+    },
+    "/api/time-travel/annotation/<uuid:annotation_id>/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-delete-annotation",
+      "view": "delete_annotation"
+    },
+    "/api/time-travel/bookmark/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-create-bookmark",
+      "view": "create_bookmark"
+    },
+    "/api/time-travel/bookmark/<uuid:bookmark_id>/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-delete-bookmark",
+      "view": "delete_bookmark"
+    },
+    "/api/time-travel/decision/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-record-decision",
+      "view": "record_decision"
+    },
+    "/api/time-travel/decision/<uuid:decision_id>/flag/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-flag",
+      "view": "flag_decision"
+    },
+    "/api/time-travel/decision/<uuid:decision_id>/outcome/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-update-outcome",
+      "view": "update_decision_outcome"
+    },
+    "/api/time-travel/flagged/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-flagged",
+      "view": "get_flagged_decisions"
+    },
+    "/api/time-travel/search/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-search",
+      "view": "search_sessions"
+    },
+    "/api/time-travel/session/<uuid:session_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-session-detail",
+      "view": "get_session_detail"
+    },
+    "/api/time-travel/session/<uuid:session_id>/bookmark/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-bookmark-session",
+      "view": "toggle_bookmark_session"
+    },
+    "/api/time-travel/session/<uuid:session_id>/end/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-end",
+      "view": "end_session"
+    },
+    "/api/time-travel/session/start/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-start",
+      "view": "start_session"
+    },
+    "/api/v1/advisors/<uuid:advisor_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_advisor_api",
+      "prefix": "/api/v1/advisors/",
+      "url_name": "advisor-detail",
+      "view": "advisor_detail"
+    },
+    "/api/v1/advisors/consult/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_advisor_api",
+      "prefix": "/api/v1/advisors/",
+      "url_name": "advisor-consult",
+      "view": "advisor_consult"
+    },
+    "/api/v1/advisors/list/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_advisor_api",
+      "prefix": "/api/v1/advisors/",
+      "url_name": "advisor-list",
+      "view": "advisor_list"
+    },
+    "/api/v1/agents/comprehensive/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_agent_orchestration",
+      "prefix": "/api/v1/agents/comprehensive/",
+      "url_name": "agents-comprehensive",
+      "view": "comprehensive_agents_list"
+    },
+    "/api/v1/agents/health/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_agent_orchestration",
+      "prefix": "/api/v1/agents/health/",
+      "url_name": "agents-health",
+      "view": "health_check_agents"
+    },
+    "/api/v1/agents/list/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_agent_orchestration",
+      "prefix": "/api/v1/agents/list/",
+      "url_name": "agents-list",
+      "view": "list_agents"
+    },
+    "/api/v1/agents/monitoring/agent/<str:agent_name>/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_agent_execution",
+      "prefix": "/api/v1/agents/monitoring/",
+      "url_name": "agent-monitoring-detail",
+      "view": "monitoring_agent_detail"
+    },
+    "/api/v1/agents/monitoring/alerts/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_agent_execution",
+      "prefix": "/api/v1/agents/monitoring/",
+      "url_name": "agent-monitoring-alerts",
+      "view": "monitoring_alerts"
+    },
+    "/api/v1/agents/monitoring/dashboard/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_agent_execution",
+      "prefix": "/api/v1/agents/monitoring/",
+      "url_name": "agent-monitoring-dashboard",
+      "view": "monitoring_dashboard"
+    },
+    "/api/v1/agents/unified-executions/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_agent_execution",
+      "prefix": "/api/v1/agents/unified-executions/",
+      "url_name": "unified-execution-history",
+      "view": "unified_execution_history"
+    },
+    "/api/v1/auth/forgot-password/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.auth_views_enhanced",
+      "prefix": "/api/v1/auth/forgot-password/",
+      "url_name": "auth-forgot-password",
+      "view": "forgot_password_view"
+    },
+    "/api/v1/auth/login/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.auth_views",
+      "prefix": "/api/v1/auth/login/",
+      "url_name": "auth-login",
+      "view": "login_view"
+    },
+    "/api/v1/auth/register/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.auth_views_enhanced",
+      "prefix": "/api/v1/auth/register/",
+      "url_name": "auth-register",
+      "view": "register_view"
+    },
+    "/api/v1/auth/reset-password/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.auth_views_enhanced",
+      "prefix": "/api/v1/auth/reset-password/",
+      "url_name": "auth-reset-password",
+      "view": "reset_password_view"
+    },
+    "/api/v1/auth/validate-token/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.auth_views_enhanced",
+      "prefix": "/api/v1/auth/validate-token/",
+      "url_name": "auth-validate-token",
+      "view": "validate_token_view"
+    },
+    "/api/v1/betting/arbitrage/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_odds_sports",
+      "prefix": "/api/v1/betting/arbitrage/",
+      "url_name": "betting-arbitrage",
+      "view": "detect_arbitrage"
+    },
+    "/api/v1/betting/arbitrage/scan/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_odds_sports",
+      "prefix": "/api/v1/betting/arbitrage/",
+      "url_name": "betting-arbitrage-scan",
+      "view": "scan_arbitrage_opportunities"
+    },
+    "/api/v1/betting/futures/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_odds_sports",
+      "prefix": "/api/v1/betting/futures/",
+      "url_name": "betting-futures",
+      "view": "get_futures_odds"
+    },
+    "/api/v1/betting/line-movement/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_odds_sports",
+      "prefix": "/api/v1/betting/line-movement/",
+      "url_name": "betting-line-movement",
+      "view": "get_line_movement"
+    },
+    "/api/v1/betting/line-movement/<str:game_id>/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_odds_sports",
+      "prefix": "/api/v1/betting/line-movement/",
+      "url_name": "betting-line-movement-game",
+      "view": "get_line_movement"
+    },
+    "/api/v1/betting/movers/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_odds_sports",
+      "prefix": "/api/v1/betting/movers/",
+      "url_name": "betting-movers",
+      "view": "get_games_with_movement"
+    },
+    "/api/v1/betting/place/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_betting",
+      "prefix": "/api/v1/betting/place/",
+      "url_name": "betting-place",
+      "view": "place_bet"
+    },
+    "/api/v1/betting/recent/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_betting",
+      "prefix": "/api/v1/betting/recent/",
+      "url_name": "betting-recent",
+      "view": "get_recent_activity"
+    },
+    "/api/v1/betting/stats/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_betting",
+      "prefix": "/api/v1/betting/stats/",
+      "url_name": "betting-stats",
+      "view": "get_betting_stats"
+    },
+    "/api/v1/betting/wagers/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_betting",
+      "prefix": "/api/v1/betting/wagers/",
+      "url_name": "betting-wagers",
+      "view": "get_wagers"
+    },
+    "/api/v1/betting/wagers/<uuid:wager_id>/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_betting",
+      "prefix": "/api/v1/betting/wagers/",
+      "url_name": "betting-wager-detail",
+      "view": "get_wager_detail"
+    },
+    "/api/v1/betting/wagers/<uuid:wager_id>/cancel/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_betting",
+      "prefix": "/api/v1/betting/wagers/",
+      "url_name": "betting-wager-cancel",
+      "view": "cancel_wager"
+    },
+    "/api/v1/betting/wagers/<uuid:wager_id>/settle/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_betting",
+      "prefix": "/api/v1/betting/wagers/",
+      "url_name": "betting-wager-settle",
+      "view": "settle_wager"
+    },
+    "/api/v1/collective/shared-knowledge/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_collective_intelligence",
+      "prefix": "/api/v1/collective/shared-knowledge/",
+      "url_name": "collective-shared-knowledge",
+      "view": "get_shared_knowledge"
+    },
+    "/api/v1/content/templates/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_content",
+      "prefix": "/api/v1/content/templates/",
+      "url_name": "content-templates",
+      "view": "content_templates"
+    },
+    "/api/v1/ecosystem/advisors/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_ecosystem_activation",
+      "prefix": "/api/v1/ecosystem/advisors/",
+      "url_name": "ecosystem-advisors",
+      "view": "get_advisor_network"
+    },
+    "/api/v1/gallery/all/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_image_gallery",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "unified-gallery",
+      "view": "unified_gallery"
+    },
+    "/api/v1/gallery/batch-download/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_gallery",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "unified-batch-download",
+      "view": "unified_batch_download"
+    },
+    "/api/v1/gallery/generate/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_gallery",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "gallery-generate",
+      "view": "gallery_generate"
+    },
+    "/api/v1/gallery/list/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_content",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "gallery-list",
+      "view": "gallery_list"
+    },
+    "/api/v1/gallery/optimize-prompt/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "optimize-image-prompt",
+      "view": "optimize_image_prompt"
+    },
+    "/api/v1/gallery/session/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_gallery",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "session-gallery",
+      "view": "session_gallery"
+    },
+    "/api/v1/gallery/toggle-favorite/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "unified-toggle-favorite",
+      "view": "unified_toggle_favorite"
+    },
+    "/api/v1/gallery/videos/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_content",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "gallery-videos",
+      "view": "gallery_videos"
+    },
+    "/api/v1/health/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "backend.auto_endpoints.urls",
+      "prefix": "/api/v1/health/",
+      "url_name": "",
+      "view": "healthcheck"
+    },
+    "/api/v1/intelligence/opportunities/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "intelligence.views",
+      "prefix": "/api/v1/intelligence/opportunities/",
+      "url_name": "live_opportunities",
+      "view": "LiveOpportunitiesView"
+    },
+    "/api/v1/intelligence/predictions/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "intelligence.views",
+      "prefix": "/api/v1/intelligence/predictions/",
+      "url_name": "live_predictions",
+      "view": "LivePredictionsView"
+    },
+    "/api/v1/intelligence/skynet/status/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "intelligence.views",
+      "prefix": "/api/v1/intelligence/skynet/status/",
+      "url_name": "skynet_status",
+      "view": "SkynetStatusView"
+    },
+    "/api/v1/intelligence/spider-status/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_intelligence_api",
+      "prefix": "/api/v1/intelligence/spider-status/",
+      "url_name": "spider-status",
+      "view": "spider_network_status"
+    },
+    "/api/v1/odds/bankroll/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_odds_sports",
+      "prefix": "/api/v1/odds/bankroll/",
+      "url_name": "bankroll",
+      "view": "get_bankroll_management"
+    },
+    "/api/v1/odds/bankroll/stats/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_odds_sports",
+      "prefix": "/api/v1/odds/bankroll/",
+      "url_name": "bankroll-stats",
+      "view": "get_bankroll_stats"
+    },
+    "/api/v1/odds/markets/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_odds_sports",
+      "prefix": "/api/v1/odds/markets/",
+      "url_name": "betting-markets",
+      "view": "list_betting_markets"
+    },
+    "/api/v1/push/subscribe/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_push_notifications",
+      "prefix": "/api/v1/push/subscribe/",
+      "url_name": "push-subscribe",
+      "view": "subscribe_push"
+    },
+    "/api/v1/push/unsubscribe/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_push_notifications",
+      "prefix": "/api/v1/push/unsubscribe/",
+      "url_name": "push-unsubscribe",
+      "view": "unsubscribe_push"
+    },
+    "/api/v1/push/vapid-key/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_push_notifications",
+      "prefix": "/api/v1/push/vapid-key/",
+      "url_name": "push-vapid-key",
+      "view": "get_vapid_public_key"
+    },
+    "/api/v1/reasoning/actions/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/actions/",
+      "url_name": "reasoning-actions",
+      "view": "actions_api"
+    },
+    "/api/v1/reasoning/actions/<uuid:notification_id>/respond/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/actions/",
+      "url_name": "handle-action",
+      "view": "handle_human_action_api"
+    },
+    "/api/v1/reasoning/actions/create/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/actions/",
+      "url_name": "create-actions",
+      "view": "create_action_notifications_api"
+    },
+    "/api/v1/reasoning/actions/pending/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/actions/",
+      "url_name": "pending-actions",
+      "view": "pending_human_actions_api"
+    },
+    "/api/v1/reasoning/concerns/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/concerns/",
+      "url_name": "concerns-dashboard",
+      "view": "concerns_dashboard_api"
+    },
+    "/api/v1/reasoning/concerns/<uuid:concern_id>/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/concerns/",
+      "url_name": "concern-detail",
+      "view": "concern_detail_api"
+    },
+    "/api/v1/reasoning/concerns/register-historical/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/concerns/",
+      "url_name": "concerns-register-historical",
+      "view": "register_historical_concerns_api"
+    },
+    "/api/v1/reasoning/concerns/verify/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/concerns/",
+      "url_name": "concerns-verify",
+      "view": "verify_concerns_api"
+    },
+    "/api/v1/reasoning/config/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/config/",
+      "url_name": "reasoning-config",
+      "view": "reasoning_config_api"
+    },
+    "/api/v1/reasoning/config/update/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/config/",
+      "url_name": "reasoning-config-update",
+      "view": "update_reasoning_config_api"
+    },
+    "/api/v1/reasoning/dashboard/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/dashboard/",
+      "url_name": "reasoning-dashboard",
+      "view": "reasoning_dashboard_api"
+    },
+    "/api/v1/reasoning/gates/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/gates/",
+      "url_name": "reasoning-gates",
+      "view": "gates_api"
+    },
+    "/api/v1/reasoning/task/<str:task_id>/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/task/",
+      "url_name": "reasoning-task-status",
+      "view": "thinking_task_status_api"
+    },
+    "/api/v1/reasoning/thoughts/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/thoughts/",
+      "url_name": "reasoning-thoughts",
+      "view": "thoughts_api"
+    },
+    "/api/v1/reasoning/thoughts/<uuid:thought_id>/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/thoughts/",
+      "url_name": "reasoning-thought-detail",
+      "view": "thought_detail_api"
+    },
+    "/api/v1/reasoning/trigger/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_autonomous_reasoning",
+      "prefix": "/api/v1/reasoning/trigger/",
+      "url_name": "reasoning-trigger",
+      "view": "trigger_thinking_api"
+    },
+    "/api/v1/research/deliverables/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/deliverables/",
+      "url_name": "research-deliverables",
+      "view": "deliverables_api"
+    },
+    "/api/v1/research/live-feed/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/live-feed/",
+      "url_name": "research-live-feed",
+      "view": "live_feed_api"
+    },
+    "/api/v1/research/mythology-gate/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/mythology-gate/",
+      "url_name": "research-mythology-gate",
+      "view": "mythology_gate_api"
+    },
+    "/api/v1/research/network-graph/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/network-graph/",
+      "url_name": "research-network-graph",
+      "view": "network_graph_api"
+    },
+    "/api/v1/research/self-blog/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/self-blog/",
+      "url_name": "research-self-blog",
+      "view": "self_blog_api"
+    },
+    "/api/v1/research/self-blog/<uuid:blog_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/self-blog/",
+      "url_name": "research-self-blog-by-id",
+      "view": "self_blog_by_id_api"
+    },
+    "/api/v1/research/self-blog/<uuid:blog_id>/approve/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/self-blog/",
+      "url_name": "research-self-blog-approve",
+      "view": "approve_self_blog_api"
+    },
+    "/api/v1/research/self-blog/<uuid:blog_id>/delete/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/self-blog/",
+      "url_name": "research-self-blog-delete",
+      "view": "delete_self_blog_api"
+    },
+    "/api/v1/research/self-blog/<uuid:blog_id>/enhance/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/self-blog/",
+      "url_name": "research-self-blog-enhance",
+      "view": "enhance_self_blog_api"
+    },
+    "/api/v1/research/self-blog/<uuid:blog_id>/publish/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/self-blog/",
+      "url_name": "research-self-blog-publish",
+      "view": "publish_self_blog_api"
+    },
+    "/api/v1/research/self-blog/<uuid:blog_id>/related/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/self-blog/",
+      "url_name": "research-self-blog-related",
+      "view": "related_self_blogs_api"
+    },
+    "/api/v1/research/self-blog/generate-v2/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/self-blog/",
+      "url_name": "generate-v2-blog",
+      "view": "generate_v2_blog_api"
+    },
+    "/api/v1/research/self-blog/generate/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/self-blog/",
+      "url_name": "research-generate-self-blog",
+      "view": "generate_self_blog_api"
+    },
+    "/api/v1/research/self-blog/list/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/self-blog/",
+      "url_name": "research-self-blog-list",
+      "view": "self_blog_list_api"
+    },
+    "/api/v1/research/self-blog/task/<str:task_id>/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/self-blog/",
+      "url_name": "research-self-blog-task",
+      "view": "self_blog_task_status_api"
+    },
+    "/api/v1/research/stats/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/stats/",
+      "url_name": "research-stats",
+      "view": "stats_api"
+    },
+    "/api/v1/research/system-insights/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_research_demo",
+      "prefix": "/api/v1/research/system-insights/",
+      "url_name": "research-system-insights",
+      "view": "system_insights_api"
+    },
+    "/api/v1/sports/events/<str:event_id>/props/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_odds_sports",
+      "prefix": "/api/v1/sports/events/",
+      "url_name": "player-props",
+      "view": "get_player_props"
+    },
+    "/api/v1/sports/live-odds-scores/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_odds_sports",
+      "prefix": "/api/v1/sports/live-odds",
+      "url_name": "live-odds-scores",
+      "view": "live_odds_with_scores"
+    },
+    "/api/v1/sports/live-odds/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_odds_sports",
+      "prefix": "/api/v1/sports/live-odds",
+      "url_name": "live-odds",
+      "view": "live_odds"
+    },
+    "/api/v1/telemetry/event/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_telemetry",
+      "prefix": "/api/v1/telemetry/",
+      "url_name": "telemetry-event",
+      "view": "event_api"
+    },
+    "/api/v1/telemetry/page-view/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "core.views_telemetry",
+      "prefix": "/api/v1/telemetry/",
+      "url_name": "telemetry-page-view",
+      "view": "page_view_api"
+    },
+    "/api/v1/vip-invites/exchange/": {
+      "gate": "none",
+      "is_cbv": true,
+      "module": "core.views_vip_invite",
+      "prefix": "/api/v1/vip-invites/exchange/",
+      "url_name": "vip-invite-exchange",
+      "view": "vip_invite_exchange"
+    },
+    "/health/health/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "backend.auto_endpoints.urls",
+      "prefix": "/health/",
+      "url_name": "",
+      "view": "healthcheck"
+    },
+    "/health/ping/": {
+      "gate": "none",
+      "is_cbv": false,
+      "module": "backend.auto_endpoints.urls",
+      "prefix": "/health/",
+      "url_name": "",
+      "view": "healthcheck"
+    }
+  },
+  "schema_version": 1
+}
