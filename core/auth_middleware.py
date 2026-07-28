@@ -169,7 +169,10 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/v1/initiatives/',  # View initiatives and their stages
         '/api/v1/initiatives/populate/',  # Auto-populate from deliverables
         # Session 912: Initiative Action Items API (non-versioned)
-        '/api/initiatives/',  # Action items endpoints (/api/initiatives/<uuid>/action-items/*)
+        # S3015 hotfix: `/api/initiatives/` moved to OPTIONAL_AUTH_PATHS below so
+        # Token-authenticated callers get their scoped results. Bare-prefix PUBLIC
+        # meant every /api/initiatives/* request was treated anonymous, causing
+        # `scope_queryset_initiative` to return .none() for Token-auth browsers.
         '/api/action-items/',  # Bulk action item operations
 
         # Session 544: Autonomous Reasoning Engine APIs
@@ -536,6 +539,11 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/voice-marketplace/',  # Browse marketplace is public, purchasing requires auth
         '/api/monitoring/',  # Public monitoring dashboard for stress tests
         '/api/deliverables/',  # Deliverables: anonymous gets public, authed gets scoped by user/workspace
+        # S3015 hotfix: initiatives list endpoint. Moved from PUBLIC_PATHS so Token-auth
+        # browsers get their scoped results (scope_queryset_initiative returns .none()
+        # for anon, so anonymous access is still safe). Fixes empty-Initiatives-tab
+        # for token-auth-only browser sessions (no Django session cookie).
+        '/api/initiatives/',
         # Session 1129 Move 2 — fleet artifact endpoints authenticate via
         # X-Fleet-Signature headers at the DRF layer, not via PA token /
         # session. This middleware would otherwise reject signed-but-
