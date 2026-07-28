@@ -171,6 +171,11 @@ class DecisionPromotionRules:
 
         Returns:
             True if successful
+
+        S3028: after the field mutation commits, emit the canonical-
+        promotion Redis broadcast so the Session 589 rules path fires
+        the same event the boardroom endpoints + AI-AutoPromoter fire.
+        Broadcast is best-effort and never fails promotion.
         """
         try:
             decision.status = 'canonical'
@@ -181,11 +186,15 @@ class DecisionPromotionRules:
 
             self.stats['promoted'] += 1
             logger.info(f"Auto-promoted decision: {decision.topic[:50]}... -> canonical")
-            return True
-
         except Exception as e:
             logger.error(f"Failed to promote decision {decision.id}: {e}")
             return False
+
+        from core.services.canonical_decision_broadcast import (
+            emit_canonical_promotion_broadcast,
+        )
+        emit_canonical_promotion_broadcast(decision)
+        return True
 
     def run_auto_promotion(self, dry_run: bool = False) -> Dict[str, Any]:
         """
