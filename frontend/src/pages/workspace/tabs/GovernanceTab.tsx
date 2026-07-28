@@ -4,7 +4,7 @@
 // Session 831: Added error handling and success feedback for mutations
 // Session 852: Added clickable decision cards with modal
 // Extracted from WorkspacePage.tsx for modular architecture
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
   CheckSquare,
@@ -21,6 +21,11 @@ import {
   XCircle,
   AlertCircle,
   Eye,
+  Square,
+  Filter,
+  ThumbsUp,
+  ThumbsDown,
+  X as XIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { platformApi } from '@/lib/api'
@@ -34,12 +39,22 @@ interface FeedbackMessage {
   timestamp: number
 }
 
+// Session 3013 (U1): Batch triage — filter values for pending decisions
+type UrgencyFilter = 'all' | 'critical' | 'high' | 'medium' | 'low'
+type TypeFilter = 'all' | 'decision' | 'alert' | 'opportunity'
+
 export function GovernanceTab() {
   const queryClient = useQueryClient()
   const [remediationLimit, setRemediationLimit] = useState(20)
   const [isPolling, setIsPolling] = useState(true) // Session 830: Polling toggle (default ON)
   const [feedback, setFeedback] = useState<FeedbackMessage | null>(null) // Session 831: User feedback
   const [selectedDecisionId, setSelectedDecisionId] = useState<string | null>(null) // Session 852: Decision modal
+
+  // Session 3013 (U1): Batch triage state
+  const [selectedItemIds, setSelectedItemIds] = useState<Set<string>>(new Set())
+  const [urgencyFilter, setUrgencyFilter] = useState<UrgencyFilter>('all')
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
+  const [confirmRejectOpen, setConfirmRejectOpen] = useState(false)
 
   const {
     data: governanceData,
@@ -142,6 +157,81 @@ export function GovernanceTab() {
       })
     },
   })
+
+  // Session 3013 (U1): Bulk decide mutation — calls existing BulkAttentionDecideView
+  const bulkDecideMutation = useMutation({
+    mutationFn: (params: { decision: 'approved' | 'ignored' | 'rejected'; item_ids: string[] }) =>
+      platformApi.bulkAttentionDecide(params),
+    onSuccess: (response, variables) => {
+      const count = response.data?.count ?? 0
+      const requested = variables.item_ids.length
+      queryClient.invalidateQueries({ queryKey: ['platform-governance'] })
+      setSelectedItemIds(new Set())
+      if (response.data?.success === false) {
+        setFeedback({
+          type: 'error',
+          message: response.data?.error || 'Bulk decide failed',
+          timestamp: Date.now(),
+        })
+        return
+      }
+      const partial = count < requested
+      setFeedback({
+        type: partial ? 'info' : 'success',
+        message: partial
+          ? `${count} of ${requested} items ${variables.decision} (${requested - count} skipped — may have changed status)`
+          : `${count} items ${variables.decision}`,
+        timestamp: Date.now(),
+      })
+    },
+    onError: (error: any) => {
+      console.error('Bulk decide error:', error)
+      setFeedback({
+        type: 'error',
+        message: error.response?.data?.error || error.message || 'Failed to bulk decide',
+        timestamp: Date.now(),
+      })
+    },
+  })
+
+  // Session 3013 (U1): Filter pending_decisions by urgency + item_type
+  const filteredDecisions = useMemo(() => {
+    const raw = governanceData?.pending_decisions ?? []
+    return raw.filter((d: any) => {
+      if (urgencyFilter !== 'all' && d.urgency !== urgencyFilter) return false
+      if (typeFilter !== 'all' && d.item_type !== typeFilter) return false
+      return true
+    })
+  }, [governanceData?.pending_decisions, urgencyFilter, typeFilter])
+
+  // Session 3013 (U1): Derived selection state (only counts items still visible under current filters)
+  const visibleSelectedIds = useMemo(
+    () => filteredDecisions.filter((d: any) => selectedItemIds.has(d.id)).map((d: any) => d.id),
+    [filteredDecisions, selectedItemIds]
+  )
+  const allVisibleSelected = filteredDecisions.length > 0 && visibleSelectedIds.length === filteredDecisions.length
+
+  const toggleItemSelection = (id: string) => {
+    setSelectedItemIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const selectAllVisible = () => {
+    setSelectedItemIds(new Set(filteredDecisions.map((d: any) => d.id)))
+  }
+
+  const clearSelection = () => {
+    setSelectedItemIds(new Set())
+  }
+
+  const runBulkDecide = (decision: 'approved' | 'ignored' | 'rejected') => {
+    if (visibleSelectedIds.length === 0) return
+    bulkDecideMutation.mutate({ decision, item_ids: visibleSelectedIds })
+  }
 
   // Format timestamp for display
   const formatLastUpdated = (timestamp: number | undefined) => {
@@ -431,52 +521,263 @@ export function GovernanceTab() {
             <h3 className="text-md font-semibold uppercase">
               Pending Decisions ({governanceData.pending_decisions_count})
             </h3>
+            {filteredDecisions.length !== governanceData.pending_decisions.length && (
+              <span className="text-xs text-gray-500">
+                showing {filteredDecisions.length} of {governanceData.pending_decisions.length}
+              </span>
+            )}
           </div>
-          {governanceData.pending_decisions.length === 0 ? (
+
+          {/* Session 3013 (U1): Filter chips + batch selection controls */}
+          {governanceData.pending_decisions.length > 0 && (
+            <div className="space-y-3 mb-4">
+              {/* Filter chips */}
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                <div className="flex items-center gap-1 text-gray-400">
+                  <Filter size={12} />
+                  Urgency:
+                </div>
+                {(['all', 'critical', 'high', 'medium', 'low'] as UrgencyFilter[]).map((u) => (
+                  <button
+                    key={u}
+                    onClick={() => setUrgencyFilter(u)}
+                    className={cn(
+                      'px-2 py-0.5 rounded-md transition-colors',
+                      urgencyFilter === u
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-dark-border text-gray-400 hover:bg-gray-700'
+                    )}
+                  >
+                    {u}
+                  </button>
+                ))}
+                <div className="flex items-center gap-1 text-gray-400 ml-2">Type:</div>
+                {(['all', 'decision', 'alert', 'opportunity'] as TypeFilter[]).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => setTypeFilter(t)}
+                    className={cn(
+                      'px-2 py-0.5 rounded-md transition-colors',
+                      typeFilter === t
+                        ? 'bg-primary-500 text-white'
+                        : 'bg-dark-border text-gray-400 hover:bg-gray-700'
+                    )}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+
+              {/* Select all / clear */}
+              {filteredDecisions.length > 0 && (
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={() => (allVisibleSelected ? clearSelection() : selectAllVisible())}
+                      className="flex items-center gap-1 text-gray-400 hover:text-primary-400 transition-colors"
+                    >
+                      {allVisibleSelected ? (
+                        <CheckSquare size={14} className="text-primary-400" />
+                      ) : (
+                        <Square size={14} />
+                      )}
+                      {allVisibleSelected ? 'Deselect all' : 'Select all visible'}
+                    </button>
+                    {selectedItemIds.size > 0 && (
+                      <span className="text-primary-400">
+                        {visibleSelectedIds.length} selected
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-gray-500 italic">
+                    Actions apply to Human Attention Items
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Session 3013 (U1): Sticky bulk-action bar when ≥1 selected */}
+          {visibleSelectedIds.length > 0 && (
+            <div className="sticky top-0 z-10 mb-3 flex flex-wrap items-center gap-2 p-3 bg-dark-bg border border-primary-500/40 rounded-lg shadow-lg">
+              <span className="text-sm font-medium text-primary-400">
+                {visibleSelectedIds.length} selected
+              </span>
+              <div className="flex-1" />
+              <button
+                onClick={() => runBulkDecide('approved')}
+                disabled={bulkDecideMutation.isPending}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors',
+                  'bg-accent-green/20 text-accent-green hover:bg-accent-green/30',
+                  bulkDecideMutation.isPending && 'opacity-50 cursor-not-allowed'
+                )}
+              >
+                {bulkDecideMutation.isPending && bulkDecideMutation.variables?.decision === 'approved' ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <ThumbsUp size={14} />
+                )}
+                Approve {visibleSelectedIds.length}
+              </button>
+              <button
+                onClick={() => runBulkDecide('ignored')}
+                disabled={bulkDecideMutation.isPending}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors',
+                  'bg-gray-700 text-gray-300 hover:bg-gray-600',
+                  bulkDecideMutation.isPending && 'opacity-50 cursor-not-allowed'
+                )}
+              >
+                {bulkDecideMutation.isPending && bulkDecideMutation.variables?.decision === 'ignored' ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Pause size={14} />
+                )}
+                Ignore {visibleSelectedIds.length}
+              </button>
+              <button
+                onClick={() => setConfirmRejectOpen(true)}
+                disabled={bulkDecideMutation.isPending}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm transition-colors',
+                  'bg-accent-red/20 text-accent-red hover:bg-accent-red/30',
+                  bulkDecideMutation.isPending && 'opacity-50 cursor-not-allowed'
+                )}
+              >
+                {bulkDecideMutation.isPending && bulkDecideMutation.variables?.decision === 'rejected' ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <ThumbsDown size={14} />
+                )}
+                Reject {visibleSelectedIds.length}
+              </button>
+              <button
+                onClick={clearSelection}
+                className="p-1.5 hover:bg-dark-border rounded-md transition-colors text-gray-400"
+                title="Clear selection"
+              >
+                <XIcon size={14} />
+              </button>
+            </div>
+          )}
+
+          {filteredDecisions.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <CheckCircle className="mx-auto mb-2" size={24} />
-              <p>No pending decisions</p>
+              <p>
+                {governanceData.pending_decisions.length === 0
+                  ? 'No pending decisions'
+                  : 'No decisions match current filters'}
+              </p>
             </div>
           ) : (
             <div className="space-y-3">
-              {governanceData.pending_decisions.map((decision: any) => (
-                <div
-                  key={decision.id}
-                  onClick={() => setSelectedDecisionId(decision.id)}
-                  className="p-4 bg-gray-800/50 hover:bg-gray-800/80 rounded-lg cursor-pointer transition-colors group"
-                >
-                  <div className="flex items-start justify-between mb-2">
+              {filteredDecisions.map((decision: any) => {
+                const isSelected = selectedItemIds.has(decision.id)
+                return (
+                  <div
+                    key={decision.id}
+                    onClick={() => setSelectedDecisionId(decision.id)}
+                    className={cn(
+                      'p-4 bg-gray-800/50 hover:bg-gray-800/80 rounded-lg cursor-pointer transition-colors group flex items-start gap-3',
+                      isSelected && 'ring-1 ring-primary-500/60 bg-primary-500/5'
+                    )}
+                  >
+                    {/* Session 3013 (U1): Checkbox — stopPropagation preserves card-click → modal */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleItemSelection(decision.id)
+                      }}
+                      className="mt-1 text-gray-500 hover:text-primary-400 transition-colors"
+                      aria-label={isSelected ? 'Deselect item' : 'Select item'}
+                    >
+                      {isSelected ? (
+                        <CheckSquare size={16} className="text-primary-400" />
+                      ) : (
+                        <Square size={16} />
+                      )}
+                    </button>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium group-hover:text-primary-400 transition-colors">
-                        {decision.title}
-                      </h4>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {decision.source_agent || decision.source_type}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={cn(
-                          'text-xs px-2 py-0.5 rounded',
-                          decision.urgency === 'critical'
-                            ? 'bg-accent-red/20 text-accent-red'
-                            : decision.urgency === 'high'
-                            ? 'bg-accent-amber/20 text-accent-amber'
-                            : 'bg-gray-700 text-gray-400'
-                        )}
-                      >
-                        {decision.urgency}
-                      </span>
-                      <Eye size={14} className="text-gray-500 group-hover:text-primary-400 transition-colors" />
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium group-hover:text-primary-400 transition-colors">
+                            {decision.title}
+                          </h4>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {decision.source_agent || decision.source_type}
+                            {decision.item_type && (
+                              <span className="ml-2 text-gray-500">· {decision.item_type}</span>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              'text-xs px-2 py-0.5 rounded',
+                              decision.urgency === 'critical'
+                                ? 'bg-accent-red/20 text-accent-red'
+                                : decision.urgency === 'high'
+                                ? 'bg-accent-amber/20 text-accent-amber'
+                                : 'bg-gray-700 text-gray-400'
+                            )}
+                          >
+                            {decision.urgency}
+                          </span>
+                          <Eye size={14} className="text-gray-500 group-hover:text-primary-400 transition-colors" />
+                        </div>
+                      </div>
+                      {decision.summary && (
+                        <p className="text-sm text-gray-400 line-clamp-2">{decision.summary}</p>
+                      )}
                     </div>
                   </div>
-                  {decision.description && (
-                    <p className="text-sm text-gray-400 line-clamp-2">{decision.description}</p>
-                  )}
-                </div>
-              ))}
+                )
+              })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Session 3013 (U1): Reject confirm dialog — Rigby A1 SIGN guardrail (prevents fat-finger mass-reject) */}
+      {confirmRejectOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+          onClick={() => setConfirmRejectOpen(false)}
+        >
+          <div
+            className="max-w-md w-full mx-4 p-6 bg-dark-bg border border-accent-red/40 rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <ThumbsDown className="text-accent-red" size={20} />
+              <h3 className="text-lg font-semibold">Reject {visibleSelectedIds.length} items?</h3>
+            </div>
+            <p className="text-sm text-gray-400 mb-4">
+              This marks {visibleSelectedIds.length} Human Attention Item{visibleSelectedIds.length === 1 ? '' : 's'} as{' '}
+              <span className="text-accent-red font-medium">rejected</span>. This is a terminal action — items
+              cannot be re-opened via bulk actions.
+            </p>
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setConfirmRejectOpen(false)}
+                className="px-4 py-2 text-sm rounded-md bg-dark-border hover:bg-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setConfirmRejectOpen(false)
+                  runBulkDecide('rejected')
+                }}
+                className="flex items-center gap-1.5 px-4 py-2 text-sm rounded-md bg-accent-red/20 text-accent-red hover:bg-accent-red/30 transition-colors"
+              >
+                <ThumbsDown size={14} />
+                Reject {visibleSelectedIds.length}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
