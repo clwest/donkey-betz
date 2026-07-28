@@ -62,6 +62,12 @@ MIGRATED_FILES: tuple[str, ...] = (
     # to S3011 pending verification of Gumroad webhook body-shape
     # sensitivity.
     "core/views_platform_integrations.py",
+    # T-ENVELOPE-3 PR 1 (S3012, ADR-0007 §4.4) — 36 sites in A/B testing
+    # views (~26 in dead-code A/B test handlers per Session 1103c dead-
+    # code note + 10 in wired goals handlers). All 36 sites migrated to
+    # emit_error_envelope(). Dead handlers retained pending follow-up
+    # deletion PR (HALF_BUILT_FEATURES_AUDIT scope).
+    "core/views_ab_testing.py",
 )
 
 # Deprecated helper usages (regex matched as function calls with open paren).
