@@ -154,8 +154,16 @@ class PromoteDecisionFoldCTests(TestCase):
         self.assertEqual(event["type"], "canonical_decision_promoted")
         self.assertEqual(event["topic"], "broadcast-check")
         # Rationale wins the accessor cascade — verifies no AttributeError
-        # on decision.summary AND that the fallback isn't recommended_stance.
+        # on the removed summary field AND that the fallback isn't stance.
         self.assertEqual(event["summary"], "Because we said so")
+        # S3026 A2 REVISE: schema_version + agents_involved back-compat.
+        self.assertEqual(event["schema_version"], 1)
+        # `participants` is the canonical key going forward; `agents_involved`
+        # is the S657-source back-compat alias. Both emit the same list for
+        # one compatibility window.
+        self.assertIn("participants", event)
+        self.assertIn("agents_involved", event)
+        self.assertEqual(event["agents_involved"], event["participants"])
 
     def test_redis_broadcast_falls_back_to_stance_when_no_rationale(self) -> None:
         """Accessor cascade — rationale > recommended_stance > empty string."""
