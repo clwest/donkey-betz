@@ -226,6 +226,17 @@ app.conf.beat_schedule = {
         'options': {'queue': 'broadcast', 'expires': 3600},
     },
 
+    # T-VIP-1 backstop (ADR-0005 §3.5 F-C-VIP-1 risk-gate). Primary
+    # enforcement is middleware-side; this deactivates any VIP user
+    # whose invite is past account_expires_at within one beat cycle
+    # even if they never make another request. Offset from other 2 AM
+    # cleanups.
+    'cleanup-expired-vip-users': {
+        'task': 'core.tasks_vip.cleanup_expired_vip_users',
+        'schedule': crontab(hour=2, minute=55),  # 2:55 AM MST daily
+        'options': {'queue': 'broadcast', 'expires': 3600},
+    },
+
     # Session 1130 Move 3 Round 2 — Hard-delete expired fleet events.
     # Slightly later than the artifact cleanup so the two don't both
     # hit Postgres at once. Retention controlled by
@@ -1055,6 +1066,12 @@ app.conf.imports = (
     # S2735), PR #3040 (Web Push, 2026-07-09 S2735), and PR #3050 (Inbox,
     # 2026-07-09 S2737).
     'core.tasks_push_notifications',
+    # S3003 T-VIP-1 — VIP invite lifecycle cleanup (backstop for
+    # middleware enforcement of VIPInvite.account_expires_at). Same
+    # lesson as the docs-manager / platform-audit / bug-triage entries
+    # above — non-standard `tasks_vip.py` needs explicit listing so
+    # worker dispatch resolves the task name on beat fires.
+    'core.tasks_vip',
 )
 
 
@@ -1103,6 +1120,10 @@ def _eager_import_session1115_modules(sender, **kwargs):
         # so `bug_triage_daily_run` shows up in app.tasks without
         # waiting for worker boot.
         'core.tasks_bug_triage',
+        # S3003 T-VIP-1: VIP cleanup task — same lesson. Forces
+        # `cleanup_expired_vip_users` into app.tasks at finalize time
+        # so build_celery_audit / beat_schedule_task_refs_resolve see it.
+        'core.tasks_vip',
     )
     for mod in eager_modules:
         try:
