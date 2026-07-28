@@ -110,13 +110,22 @@ def get_memory_detail(request, memory_id):
     access_count auto-increment (rows are unscoped). `@token_auth_required`
     forces auth via session OR `Authorization: Token …` before the view
     body runs; `request.user` is guaranteed authenticated below.
+
+    S3019 (ADR-0008 A.2): row-level scoping via `scope_queryset_agent_memory`
+    closes the authenticated cross-user gap. Users see only memories
+    belonging to agents they're assigned to (superusers additionally see
+    system-agent memories with no user_assignments).
     """
     try:
         from core.models_unified_system import AgentMemory, AgentExecution
+        from core.security.object_authz import scope_queryset_agent_memory
 
         try:
-            # Session 810: Defer embedding fields to reduce egress costs
-            memory = AgentMemory.objects.defer('embedding').get(id=memory_id)
+            # Session 810: Defer embedding fields to reduce egress costs.
+            # S3019 (ADR-0008): scope the .get() so cross-user reads 404.
+            memory = scope_queryset_agent_memory(
+                request.user, AgentMemory.objects.defer('embedding')
+            ).get(id=memory_id)
         except AgentMemory.DoesNotExist:
             return JsonResponse({'error': 'Memory not found'}, status=404)
 
@@ -525,13 +534,19 @@ def get_memory_connections(request, memory_id):
     under the same `/api/memory-palace/memory/` bare-prefix bypass. Same
     F-2-shape read leak — anon with a valid UUID could enumerate a row's
     connection graph. Gated with the same `@token_auth_required`.
+
+    S3019 (ADR-0008 A.2): row-level scoping via `scope_queryset_agent_memory`.
     """
     try:
         from core.models_unified_system import AgentMemory, MemoryConnection
+        from core.security.object_authz import scope_queryset_agent_memory
 
         try:
-            # Session 810: Defer embedding fields to reduce egress costs
-            memory = AgentMemory.objects.defer('embedding').get(id=memory_id)
+            # Session 810: Defer embedding fields to reduce egress costs.
+            # S3019 (ADR-0008): scope the .get() so cross-user reads 404.
+            memory = scope_queryset_agent_memory(
+                request.user, AgentMemory.objects.defer('embedding')
+            ).get(id=memory_id)
         except AgentMemory.DoesNotExist:
             return JsonResponse({'error': 'Memory not found'}, status=404)
 
@@ -638,13 +653,22 @@ def delete_memory(request, memory_id):
     `/api/memory-palace/memory/` bare-prefix bypass. Pre-fix any anon
     caller with a valid UUID could DELETE the row — strictly worse than
     the F-2 read leak. Gated with `@token_auth_required`.
+
+    S3019 (ADR-0008 A.2): row-level scoping via `scope_queryset_agent_memory`
+    closes the authenticated cross-user delete gap. A user attempting to
+    DELETE a memory belonging to an agent they're not assigned to gets 404;
+    the row survives.
     """
     try:
         from core.models_unified_system import AgentMemory
+        from core.security.object_authz import scope_queryset_agent_memory
 
         try:
-            # Session 810: Defer embedding fields to reduce egress costs
-            memory = AgentMemory.objects.defer('embedding').get(id=memory_id)
+            # Session 810: Defer embedding fields to reduce egress costs.
+            # S3019 (ADR-0008): scope the .get() so cross-user deletes 404.
+            memory = scope_queryset_agent_memory(
+                request.user, AgentMemory.objects.defer('embedding')
+            ).get(id=memory_id)
         except AgentMemory.DoesNotExist:
             return JsonResponse({'error': 'Memory not found'}, status=404)
 
