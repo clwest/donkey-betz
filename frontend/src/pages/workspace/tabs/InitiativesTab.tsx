@@ -2375,8 +2375,10 @@ export function InitiativesTab() {
   // Filter initiatives based on active tab
   const filteredInitiatives = (data?.initiatives || []).filter((init) => {
     if (activeTab === 'active') {
-      // Active tab: show ACTIVE and ON_HOLD, filter by health
-      if (init.status !== 'ACTIVE' && init.status !== 'ON_HOLD') return false
+      // Active tab: show ACTIVE, ON_HOLD, and TRIAGE (Session 994: auto-created, awaiting review).
+      // TRIAGE was previously excluded which hid all cluster-derived initiatives (S3014 U2 /
+      // S3015 U3) since they auto-create in TRIAGE state.
+      if (init.status !== 'ACTIVE' && init.status !== 'ON_HOLD' && init.status !== 'TRIAGE') return false
       if (filter === 'all') return true
       const health = getHealth(init)
       if (filter === 'active') return init.status === 'ACTIVE'
@@ -2384,8 +2386,8 @@ export function InitiativesTab() {
       return health === filter
     }
     if (activeTab === 'portfolio') {
-      // Portfolio: show all active initiatives
-      return init.status === 'ACTIVE' || init.status === 'ON_HOLD'
+      // Portfolio: show all in-progress initiatives (incl. TRIAGE for auto-created visibility)
+      return init.status === 'ACTIVE' || init.status === 'ON_HOLD' || init.status === 'TRIAGE'
     }
     if (activeTab === 'archive') {
       // Archive: completed and archived
