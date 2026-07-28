@@ -2,82 +2,124 @@
 
 ---
 
-## READ THIS FIRST — SESSION 3006 CLOSED. **T-ENVELOPE-2-DEPRECATION Batch 1 shipped (11 call-sites + lint gate).** S3007 opens with Batch 2 (auth_middleware.py, 10 sites) or Option B/C.
+## READ THIS FIRST — SESSION 3007 CLOSED. **T-ENVELOPE-2-DEPRECATION Batch 2 shipped (10 auth-middleware sites + lint gate extended).** S3008 opens with helper extraction (Fold A/B promoted) → prove on 1 test site → Batch 3.
 
-**1 PR merged this session** (Batch 1 migrations + lint gate).
+**1 PR merged this session** (Batch 2 migrations + lint gate extension).
 
-**PR #3685 (`197174a60`) — T-ENVELOPE-2-DEPRECATION Batch 1.** 11 Family B error call-sites migrated to Family E across 2 files (`views_odds_sports.py`, `views_revenue_analytics.py`). Per-site pattern: `assign payload → logger.warning(reason+support+endpoint+hint) → JsonResponse`. Details payload dropped per safety-contract §3.1 allowlist; debuggability preserved via structured logging. New `scripts/lint_no_deprecated_family_b.py` file-scoped zero-tolerance lint + `.github/workflows/check-envelope-migration.yml` CI workflow.
+**PR #3687 (`d00dd5b05`) — T-ENVELOPE-2-DEPRECATION Batch 2.** 10 Family B error call-sites migrated to Family E in `core/auth_middleware.py` (`token_auth_required` decorator + `UnifiedTokenAuthenticationMiddleware.process_request` — session-auth path + token-auth path). Per-site pattern from Batch 1 reused verbatim: `payload → logger.warning(reason+support+endpoint+hint) → JsonResponse`. Details payload dropped per safety-contract §3.1 allowlist. Site 6 (`TokenValidationInfrastructureError` / 503) → `busy` (retryable=True, terminal_state=BUSY) preserves S1171 fix intent. Lint gate `MIGRATED_FILES` extended 2 → 3 files (machinery unchanged from S3006).
 
-**Rigby A2 SIGN quality signal:** 10+ real tool_runs across two turns. 2 STRENGTHEN applied pre-merge (guardrails cross-link + operator-context preservation via structured logging). Substantive per PLAYBOOK-7.7.2.
+**Rigby SIGN quality signal:** A1 SIGN 4 substantive tool_runs (line-by-line site verification + reason_code enum + Batch 1 pattern), AGREE on mapping table + D1 (busy) + D2 (decorator in scope). A2 SIGN 4 substantive tool_runs (spot-check sites 1/6/10 + import surface + lint config), AGREE ship-ready, **no STRENGTHEN required**. Substantive per PLAYBOOK-7.7.2. Zoom-out asks yielded 3 folds (see handoff Folds A-E).
 
-**HEAD at close:** `197174a60` + docs cascade PR (this file + handoff + INDEX + wrapper pin bump).
+**Middleware-restart discipline discovered:** first live-smoke curl after `make celery-recycle` returned legacy Family B shape; second curl after `make restart` returned Family E. Middleware runs in Daphne, not Celery workers → `make celery-recycle` alone insufficient for middleware/URL/settings/installed-apps changes. Fold C `informational` (1st trigger) — watch for 2nd occurrence before proposing feedback rule refinement.
+
+**HEAD at close:** `d00dd5b05` + docs cascade PR (this file + handoff + INDEX + wrapper pin bump).
 
 Full context:
-- `docs/handoffs/SESSION_3006_T_ENVELOPE_2_DEPRECATION_BATCH_1.md` — single-PR close, 4 folds, forward carries
+- `docs/handoffs/SESSION_3007_T_ENVELOPE_2_DEPRECATION_BATCH_2.md` — single-PR close, 5 folds (A/B/C/D/E), forward carries
 - `docs/adr/ADR-0007-layered-envelope-policy.md` — parent ADR (ratified S3005)
-- `scripts/lint_no_deprecated_family_b.py` + `.github/workflows/check-envelope-migration.yml` — new lint gate
+- `scripts/lint_no_deprecated_family_b.py` — 3 files tracked (Batch 1 + Batch 2)
 
 ---
 
-## S3007 primary directive — T-ENVELOPE-2-DEPRECATION Batch 2 (auth_middleware.py) or Option B/C
+## S3008 primary directive — Extract `emit_error_envelope()` helper → prove on 1 test site → migrate Batch 3
 
-### Option A — T-ENVELOPE-2-DEPRECATION Batch 2 (recommended)
+### Option A — Helper extraction + Batch 3 (recommended, Chris ratified S3007 close)
 
-Migrate `core/auth_middleware.py` — 10 call-sites. Estimate ~1 session. Middleware placement invariants require extra scrutiny per PLAYBOOK 3.2.3-ish patterns (middleware runs on every request; regressions have larger blast radius than view-file changes). Rigby joint agreement on reason_code mapping + any middleware-invariant preservation should precede implementation.
+**Phase 1 — Helper extraction (~30-60 min):**
+Add to `core/security/error_envelope.py`:
 
-**Pattern from Batch 1 (reuse):**
 ```python
-payload = build_user_facing_envelope(reason_code=X)
-logger.warning("envelope_emit reason=%s support=%s endpoint=%s [hint=%s]",
-               payload['reason_code'], payload['support_code'], request.path,
-               {redacted_hint})
-return JsonResponse(payload, status=X)
+from django.http import JsonResponse
+from core.security.reason_codes import get_reason
+
+def emit_error_envelope(
+    reason_code: str,
+    request,
+    hint: dict | None = None,
+    status_code: int | None = None,
+    retry_after_seconds: int | None = None,
+) -> JsonResponse:
+    """Emit a Family E user-facing envelope with structured operator log.
+
+    Wraps the 3-line pattern used across T-ENVELOPE-2-DEPRECATION batches:
+        payload = build_user_facing_envelope(reason_code=X)
+        logger.warning("envelope_emit reason=%s support=%s endpoint=%s hint=%s", ...)
+        return JsonResponse(payload, status=X)
+
+    status_code defaults to ReasonCode.typical_status per Fold B — override
+    only when caller has a legitimate reason (e.g., DRF Throttled semantics).
+    """
+    payload = build_user_facing_envelope(
+        reason_code=reason_code,
+        retry_after_seconds=retry_after_seconds,
+    )
+    if status_code is None:
+        status_code = get_reason(reason_code).typical_status
+    logger.warning(
+        "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+        payload['reason_code'], payload['support_code'], request.path,
+        hint or {},
+    )
+    return JsonResponse(payload, status=status_code)
 ```
 
-**Fold-A candidate check for Batch 2:** if Batch 2 uses the same 3-line pattern 10 more times, that's the 2nd concrete instance (Batch 1 was 1st). Fold-B combined check: are we passing `status=X` explicitly when `ReasonCode.typical_status` is already in the enum? If both hold, propose helper extraction: `emit_error_envelope(reason_code, request, hint=None) → JsonResponse` (auto-infer status).
+**Phase 2 — Prove on 1 test site (~15 min):**
+Pick 1 site in the already-migrated `core/auth_middleware.py` (suggest site 5 or 7 — simplest, no user-context). Convert 5-line pattern → 1-line `return emit_error_envelope('not_authenticated', request, hint={'source': 'no_credentials'})`. Verify grep + lint + Django check + live-smoke curl still returns Family E. Do NOT rewrite all 10 sites — the point is helper proof-of-life, not Batch-2 rewrite.
 
-### Option B — Substrate helper extraction (Fold A/B follow-on if 2 batches ship)
+**Phase 3 — Batch 3 (~1-2 sessions):**
+Migrate `core/views_auto_distribution.py` (25 call-sites) using the new helper. All 25 sites should be 1-line `return emit_error_envelope(...)` — massive reduction from 5-line pattern.
 
-If Batch 2 confirms the pattern, extract `emit_error_envelope()` helper at `core/security/error_envelope.py` before Batch 3. Reduces per-site code from ~5 lines to 1 line. ~30-60 min.
+**Rigby joint agreement needed BEFORE Phase 1:** helper signature (arg order, defaults, hint schema); Fold-B status-inference boundary (when to override typical_status).
+
+### Option B — Batch 3 without helper
+
+Skip helper; per-site 5-line pattern for all 25 sites in views_auto_distribution.py. Not recommended (Chris + Rigby + Claude joint agreement S3007 = extract first).
 
 ### Option C — T-ENVELOPE-6 Telemetry hookup (logs-only interim)
 
-`componentDidCatch` at `frontend/src/components/ErrorBoundary.tsx` is annotated as T-ENVELOPE-6 hook-point. Handler at `queryClientErrorHandler.ts` could emit structured logs. **30-60 min estimate.**
+`componentDidCatch` at `frontend/src/components/ErrorBoundary.tsx` is annotated as T-ENVELOPE-6 hook-point. Handler at `queryClientErrorHandler.ts` could emit structured logs. **30-60 min estimate.** Deferred through S3006-S3007 — could pick up here if T-ENVELOPE-2 arc needs a breather.
 
 ### Option D — Different arc entirely
 
-- v2 fold ledger drain (10+ items still open from S2991-S3005)
+- Fold E from S3007: `RateLimitingMiddleware` inline 429 dict migration (~15 min + client-behavior surface)
+- v2 fold ledger drain (12+ items still open from S2991-S3006)
 - Fresh research arc (2100 RAG / 2300 Mobile / 2600 PA)
 - Chris's own priority
 
 **Standard opener:**
 1. Run `context-kit orient` (auto-injected).
 2. Absorb this file + MEMORY.md + CLAUDE.md.
-3. Read S3006 handoff.
-4. Read `core/auth_middleware.py` if Batch 2 chosen — grep `api_error|api_unauthorized|api_forbidden` for the 10 call-sites.
-5. Optional pre-response state probes:
-   - `git log --oneline -8` — should show docs cascade → `197174a60` (PR #3685 Batch 1) → `8d2d64b13` (S3005 close cascade) → `957fee61f` (PR #3683 ADR-0007) → `f97501c3a` (S3004 close cascade) → `85fffdfc1` (PR #3681 §3.5 UX widening).
-   - `python scripts/lint_no_deprecated_family_b.py --list` — confirm 2 tracked files.
+3. Read S3007 handoff.
+4. Read `core/security/error_envelope.py` (existing envelope infrastructure; helper lands there).
+5. Read `core/auth_middleware.py` (pick test site for Phase 2).
+6. Optional pre-response state probes:
+   - `git log --oneline -8` — should show docs cascade → `d00dd5b05` (PR #3687 Batch 2) → `c8f608087` (S3006 close cascade) → `197174a60` (PR #3685 Batch 1) → `8d2d64b13` (S3005 close cascade) → `957fee61f` (PR #3683 ADR-0007) → `f97501c3a` (S3004 close cascade).
+   - `python scripts/lint_no_deprecated_family_b.py --list` — confirm 3 tracked files.
+   - `grep -c "envelope_emit reason=" core/auth_middleware.py` — confirm 10 envelope emits (Batch 2 landed).
 
-**Joint recommendation at close:** Preferred order for S3007 is **A (Batch 2: auth_middleware.py)** > B (helper extraction, IF Batch 2 confirms the 3-line pattern) > C (T-ENVELOPE-6 telemetry) > D. Reason: momentum on T-ENVELOPE-2-DEPRECATION; smallest of the remaining 3 files; middleware invariants worth first-touch care. **Route to Rigby first before presenting to Chris.**
+**Joint recommendation at close:** Preferred order for S3008 is **A (helper extraction + Batch 3)** > D (Fold E: RateLimitingMiddleware) > B (Batch 3 without helper — not recommended) > C. Reason: Chris ratified helper-extraction defer at S3007 close specifically to open S3008 with it; 87 remaining sites (25 Batch 3 + 62 Batch 4) benefit from 1-line-per-site vs 5-line-per-site pattern. **Route helper signature to Rigby first before Phase 1 implementation.**
 
 ---
 
-## S3007 carry-forward seeds
+## S3008 carry-forward seeds
 
-### New carry-forward from S3006
+### New carry-forward from S3007
 
-- **Fold A + Fold B combined** — helper extraction candidate: `emit_error_envelope(reason_code, request, hint=None) → JsonResponse` wrapping 3-line pattern + auto-inferring `status` from `ReasonCode.typical_status`. Watch for 2nd batch (Batch 2 = 2nd instance). If pattern confirmed, extract in Batch 3 or as separate refactor.
-- **Fold C `future_trigger`** — DRF-decorator refactor for inline auth checks. 5 sites in views_revenue_analytics.py used `if not request.user.is_authenticated: return 401`. Idiomatic DRF replacement is decorator-based. Bigger behavioral surface; deferred; separate arc.
-- **Fold D `informational` (3rd trigger)** — S3xxx continuous-cascade session-shape pattern. S3003→S3004 (Fold-Drain-Same-Surface), S3004→S3005 (Substrate-invalidation-cascade), S3005→S3006 (Implementation-of-just-ratified-ADR). Watch for 4th; if hits, propose Playbook rule codifying automatic batch-1 dispatch in ratifying session's close cascade.
-- **Operator-envelope-from-explicit-emissions** wiring — full substrate change OR new helper. Currently: interim structured logging. Not on roadmap.
+- **Fold A + Fold B combined** (PROMOTED to S3008 primary directive) — `emit_error_envelope(reason_code, request, hint=None, status_code=None, retry_after_seconds=None) → JsonResponse` helper wrapping 3-line pattern + auto-inferring `status` from `ReasonCode.typical_status`. **2nd concrete trigger** confirmed pattern is stable.
+- **Fold C `informational` (1st trigger)** — `feedback_recycle_after_merge` middleware-restart class. Live-smoke evidence: `make celery-recycle` insufficient for Daphne-loaded code (middleware / URLs / settings / installed_apps). Watch for 2nd occurrence before proposing feedback rule refinement.
+- **Fold D `4th continuous cascade` (class-distinguished)** — S3006→S3007 = queue-drain across batches of same T-slot. DIFFERENT class from prior three S3xxx cascades. Not sufficient for S3006 Fold D Playbook proposal (that targeted ratification→implementation specifically). Log as separate observation. If cascade classes proliferate beyond 3-4 distinct types, propose broader Playbook observation.
+- **Fold E `future_trigger`** — `RateLimitingMiddleware.process_request` at `core/auth_middleware.py:915-925` has inline `JsonResponse({'success': False, 'error': {...}}, status=429)` — legacy Family B shape, NOT caught by regex-based lint (inline dict, not helper call). ~15 min migration but has 429-client-parsing behavior surface. Separate small PR candidate.
 
-### T-ENVELOPE-2-DEPRECATION queue after Batch 1
+### T-ENVELOPE-2-DEPRECATION queue after Batch 2
 
-- **Batch 2** (S3007): `core/auth_middleware.py` (10 sites) — ~1 session, middleware-invariant care
-- **Batch 3** (S3008): `core/views_auto_distribution.py` (25 sites) — 2 sessions if verbose
-- **Batch 4** (S3009-3010): `core/views_platform_integrations.py` (62 sites) — 2 sessions minimum
+- **S3008 (primary directive):** Helper extraction + Phase 2 proof + Batch 3 (`core/views_auto_distribution.py`, 25 sites) — 1-2 sessions with helper
+- **Batch 4** (S3009-3010): `core/views_platform_integrations.py` (62 sites) — 2 sessions minimum, easier if helper is in place
 - **Batch 5** (post-2-4): `core/api_helpers.py` disposition — separate substrate arc
+
+### Carry-forward from S3006 (STILL OPEN)
+
+- **Fold C `future_trigger`** — DRF-decorator refactor for inline auth checks. 5 sites in views_revenue_analytics.py used `if not request.user.is_authenticated: return 401`. Idiomatic DRF replacement is decorator-based. Bigger behavioral surface; deferred; separate arc.
+- **Operator-envelope-from-explicit-emissions** wiring — full substrate change OR new helper. Currently: interim structured logging. Not on roadmap.
 
 ### Carry-forward from S3005 (STILL OPEN)
 
@@ -99,7 +141,7 @@ If Batch 2 confirms the pattern, extract `emit_error_envelope()` helper at `core
 
 ### Carry-forward from S3002 (STILL OPEN)
 
-- **Fold A** — session-shape observation. **3rd concrete continuous-cascade** now (S3003→S3004 + S3004→S3005 + S3005→S3006). Watch for 4th.
+- **Fold A** — session-shape observation. **4th concrete continuous-cascade** now with S3006→S3007 (class-distinguished; see S3007 Fold D). Watch for 5th.
 - **Fold C `informational` (T-ENVELOPE-0 dev-only)** — `componentDidCatch` fires twice in dev under StrictMode.
 - **Fold D — ADR successor discipline VALIDATED PATTERN.** ADR-0005 ↔ ADR-0006.
 
@@ -193,19 +235,19 @@ If Batch 2 confirms the pattern, extract `emit_error_envelope()` helper at `core
 
 ## Cross-cutting workflow references
 
-- **Constitutional governance chain:** CLAUDE.md constitutional blockquote (Playbook v0.10.0). No amendments this session. Candidate seeds from S3005 Folds A/B/C + S3006 Fold D (3rd trigger continuous-cascade) still awaiting further triggers before Playbook amendment proposal.
-- **ADR corpus:** ADR-0001 through ADR-0007. ADR-0007 §4.3 T-ENVELOPE-2-DEPRECATION now 2-of-5 files migrated (Batch 1).
-- **Spec→ship contract:** PLAYBOOK-7.7.1. 1× Flow B clean spec→ship: primary-directive → Rigby joint agreement → Chris course-correction opportunity → implementation → verification → A2 SIGN → merge → recycle → close.
-- **SIGN evidence discipline:** PLAYBOOK-7.7.2. 1× Rigby A2-pre-merge SIGN with 10+ real tool_runs. 2 STRENGTHEN applied. Substantive.
-- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Course-correction framing (variant on decision framing) used per `feedback_plain_english_decision_framing_for_chris`.
-- **Recycle discipline:** backend-only diff → `make celery-recycle` (NOT `make recycle-all`) per `feedback_recycle_after_merge`.
+- **Constitutional governance chain:** CLAUDE.md constitutional blockquote (Playbook v0.10.0). No amendments this session. Candidate seeds from S3005 Folds A/B/C + S3006 Fold D + S3007 Fold C (middleware-restart) still awaiting further triggers before Playbook / feedback amendment proposal.
+- **ADR corpus:** ADR-0001 through ADR-0007. ADR-0007 §4.3 T-ENVELOPE-2-DEPRECATION now 3-of-5 files migrated (Batches 1+2).
+- **Spec→ship contract:** PLAYBOOK-7.7.1. 1× Flow B clean spec→ship: primary-directive → Rigby A1 joint agreement → Chris course-correction opportunity → implementation → Rigby A2 SIGN → merge → restart → live-smoke → close.
+- **SIGN evidence discipline:** PLAYBOOK-7.7.2. 2× Rigby SIGN cycles (A1 + A2), 4+4 = 8 total real tool_runs. 0 STRENGTHENs needed. Substantive.
+- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Two questions plainly asked for helper-extraction defer decision (per `feedback_plain_english_decision_framing_for_chris`).
+- **Recycle discipline:** middleware/URL/settings/installed-apps diff → `make restart` (NOT `make celery-recycle`) per S3007 Fold C observation. Frontend diff → `make recycle-all` per existing `feedback_recycle_after_merge`.
 
 ---
 
 ## Wrapper pin note
 
-The active PA conversation pin at S3006 close is minted by `session_lifecycle close` at close time and the wrapper `tools/pa_local.sh` rewritten atomically. Commit the wrapper diff in the S3006 close cascade PR per `feedback_commit_wrapper_pin_bump_at_close`.
+The active PA conversation pin at S3007 close is minted by `session_lifecycle close` at close time and the wrapper `tools/pa_local.sh` rewritten atomically. Commit the wrapper diff in the S3007 close cascade PR per `feedback_commit_wrapper_pin_bump_at_close`.
 
 ---
 
-**Reminder — the workflow is constitutional. S3006 is a clean single-focus implementation session executing the just-ratified ADR-0007's obligated Batch 1:** joint reason_code mapping agreement → Chris course-correction opportunity → 11 call-site migration + lint gate + CI workflow → Rigby A2 SIGN with 2 STRENGTHEN applied (guardrails cross-link + operator-context preservation via structured logging) → merge → celery-recycle → close cascade. ADR-0007 §4.3 T-ENVELOPE-2-DEPRECATION now 2-of-5 files complete; 3 files (97 call-sites) remain across Batches 2-4.
+**Reminder — the workflow is constitutional. S3007 is a clean single-focus implementation session executing ADR-0007's obligated Batch 2:** Rigby A1 joint agreement on reason_code mapping + 2 open decisions → Chris course-correction opportunity → 10 call-site migration + lint gate extension → Rigby A2 SIGN AGREE ship-ready (no STRENGTHEN) → merge → make restart (Daphne+Celery) → live-dispatch smoke confirming Family E envelope shape → close cascade. ADR-0007 §4.3 T-ENVELOPE-2-DEPRECATION now 3-of-5 files complete; 2 files (87 call-sites) remain across Batches 3-4. S3008 opens with helper extraction to compress remaining 87 sites from 5-line to 1-line per site.
