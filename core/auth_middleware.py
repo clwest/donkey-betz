@@ -87,6 +87,13 @@ def token_auth_required(view_func):
             hint={'source': 'decorator_missing_token'},
         )
 
+    # S3018 route-decorator invariant marker (Rigby T0 SIGN §2 recommendation):
+    # marker + unwrap traversal is more robust than __wrapped__-only detection.
+    # The invariant test (tests/security/test_public_paths_gate_invariant_s3018.py)
+    # walks __wrapped__ chains looking for this attribute to classify views under
+    # a PUBLIC_PATHS bare-prefix as gated.
+    _wrapped_view._auth_gate = 'token_required'  # type: ignore[attr-defined]
+
     return _wrapped_view
 User = get_user_model()
 
