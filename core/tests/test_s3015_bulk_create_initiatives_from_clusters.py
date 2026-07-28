@@ -22,6 +22,7 @@ from django.test import Client, TestCase
 from core.models_document_registry import Initiative
 from core.models_signal_intelligence import SignalCluster
 from core.models_skin_layer import ProjectWorkspace
+from core.tests.helpers.token_auth import token_client_for
 
 
 User = get_user_model()
@@ -185,3 +186,35 @@ class BulkCreateInitiativesFromClustersTests(TestCase):
         body = response.json()
         returned_order = [r["cluster_id"] for r in body["results"]]
         self.assertEqual(returned_order, cluster_ids)
+
+    def test_token_auth_reaches_bulk_endpoint_parity(self):
+        """S3016 Fold E: Token-auth (React frontend) must reach this endpoint.
+
+        Regression guard for the S3015 hotfix class — a bare-prefix entry in
+        UnifiedTokenAuthenticationMiddleware.PUBLIC_PATHS would short-circuit
+        before token parsing, drop the caller to AnonymousUser, and produce
+        a 403 or empty result. Session-auth (force_login, see other tests)
+        would not surface the regression.
+        """
+        clusters = [_make_cluster(f"Token parity {i}") for i in range(2)]
+        cluster_ids = [str(c.id) for c in clusters]
+        token_client = token_client_for(self.user)
+        response = token_client.post(
+            BULK_URL,
+            data=json.dumps({"cluster_ids": cluster_ids, "generate_brief": False}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(body["summary"]["requested"], 2)
+        self.assertEqual(body["summary"]["succeeded"], 2)
+        # Provenance goes to the same user's workspace under Token-auth.
+        # Assert target_workspace.user_id — anon-fallthrough could pass
+        # owner_id via other code paths; anon cannot resolve the user's
+        # first workspace.
+        for cluster in clusters:
+            initiative = Initiative.objects.get(parent_topic=f"signal_cluster:{cluster.id}")
+            self.assertEqual(initiative.owner_id, self.user.id)
+            self.assertIsNotNone(initiative.target_workspace_id)
+            self.assertEqual(initiative.target_workspace.user_id, self.user.id)

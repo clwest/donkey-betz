@@ -22,6 +22,7 @@ from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 
 from core.models_human_interface import HumanAttentionItem
+from core.tests.helpers.token_auth import token_client_for
 
 
 User = get_user_model()
@@ -154,3 +155,28 @@ class BulkAttentionDecideMutationTests(TestCase):
         theirs.refresh_from_db()
         self.assertEqual(mine.status, HumanAttentionItem.STATUS_ACTED)
         self.assertEqual(theirs.status, HumanAttentionItem.STATUS_PENDING)  # untouched
+
+    def test_token_auth_reaches_bulk_decide_endpoint_parity(self) -> None:
+        """S3016 Fold E: Token-auth (React frontend) must reach BulkAttentionDecideView.
+
+        Same regression class as the S3015 hotfix — a PUBLIC_PATHS bare prefix
+        matching `/api/human/attention/` would silently drop Token-auth callers
+        to AnonymousUser, so cross-user scoping would leave `mine.count() == 0`
+        and this mutation would appear to succeed on nothing. Session-auth
+        tests above would not surface it.
+        """
+        items = [_make_item(self.user) for _ in range(2)]
+        token_client = token_client_for(self.user)
+        response = token_client.post(
+            "/api/human/attention/bulk-decide/",
+            data=json.dumps({"decision": "approved", "item_ids": [str(i.id) for i in items]}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertTrue(body["success"])
+        self.assertEqual(body["count"], 2)
+        for item in items:
+            item.refresh_from_db()
+            self.assertEqual(item.status, HumanAttentionItem.STATUS_ACTED)
+            self.assertEqual(item.decision, HumanAttentionItem.DECISION_APPROVE)
