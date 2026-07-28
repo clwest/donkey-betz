@@ -121,15 +121,42 @@ class MemoryClustersScopeTests(TestCase):
         )
 
     def test_alice_can_add_own_memory(self) -> None:
+        """Rigby T1 REVISE §c: assert not-401/not-404 + membership row exists.
+        Doesn't treat 500 as success (would mask regressions unrelated to authz).
+        """
         resp = self._client_for(self.alice).post(
             self._add_url(self.cluster_alice.id),
             data=json.dumps({"memory_id": str(self.mem_alice.id)}),
             content_type="application/json",
         )
-        # Cluster methods (calculate_centroid etc.) may still fail on a
-        # sparsely-seeded test row, but the auth+scope path must reach
-        # them without a 401/404.
-        self.assertIn(resp.status_code, (200, 500))
+        # Cluster methods (calculate_centroid) may 500 on sparse test data;
+        # the durable invariant is: auth+scope path let alice through AND
+        # the membership row was created before centroid recalc ran.
+        self.assertNotIn(resp.status_code, (401, 404))
+        self.assertTrue(
+            MemoryClusterMembership.objects.filter(
+                cluster=self.cluster_alice, memory=self.mem_alice,
+            ).exists()
+        )
+
+    def test_alice_cannot_add_own_memory_to_bobs_cluster(self) -> None:
+        """S3020 F-1b (Rigby T1 REVISE Layer 1 cluster-ownership fold):
+        even own-memory-to-cross-user-cluster fails at the cluster-fetch
+        step. Alice's memory does not land in Bob's cluster."""
+        cluster_bob = MemoryCluster.objects.create(
+            agent=self.agent_bob, name="bob cluster",
+        )
+        resp = self._client_for(self.alice).post(
+            self._add_url(cluster_bob.id),
+            data=json.dumps({"memory_id": str(self.mem_alice.id)}),
+            content_type="application/json",
+        )
+        self.assertEqual(resp.status_code, 404)
+        self.assertFalse(
+            MemoryClusterMembership.objects.filter(
+                cluster=cluster_bob, memory=self.mem_alice,
+            ).exists()
+        )
 
     # ---- F-2: find-similar-clusters ---------------------------------------
 

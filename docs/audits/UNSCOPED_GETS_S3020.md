@@ -29,9 +29,10 @@ Ratified as S3020 Option A at S3019 close: the memory-palace 4-session arc (S301
 
 | Hit | File:Line | Model | Predicate | Classification |
 |-----|-----------|-------|-----------|----------------|
-| F-1 | `core/views_memory_clusters.py:464` | `AgentMemory` | `scope_queryset_agent_memory` | **REAL GAP** — F-3-shape |
-| F-2 | `core/views_memory_clusters.py:585` | `AgentMemory` | `scope_queryset_agent_memory` | **REAL GAP** — F-3-shape |
-| F-3 | `core/views_diagnostics.py:4310` | `Deliverable` | `scope_queryset_deliverable` | **NEEDS AUTH TRIAGE** |
+| F-1 | `core/views_memory_clusters.py:464` | `AgentMemory` | `scope_queryset_agent_memory` | **REAL GAP** — F-3-shape → FIXED same-PR |
+| F-1b | `core/views_memory_clusters.py:451` | `MemoryCluster` | (new axis) | **REAL GAP** — cluster-ownership → FIXED same-PR (Rigby T1 REVISE) |
+| F-2 | `core/views_memory_clusters.py:585` | `AgentMemory` | `scope_queryset_agent_memory` | **REAL GAP** — F-3-shape → FIXED same-PR |
+| F-3 | `core/views_diagnostics.py:4310` | `Deliverable` | `scope_queryset_deliverable` | **FALSE POSITIVE** (hand-reviewed) — server-derived id |
 | F-4 | `core/views_preview_api.py:391` | `Initiative` | `scope_queryset_initiative` | **FALSE POSITIVE** — inline-scoping |
 
 ## Findings
@@ -54,14 +55,13 @@ Ratified as S3020 Option A at S3019 close: the memory-palace 4-session arc (S301
 - **Severity:** F-2-shape read leak; also an embedding-vector leak (embeddings can encode text semantics).
 - **Remediation candidate:** same as F-1 — decorator + predicate.
 
-### F-3 — `views_diagnostics.py:4310` (cockpit VIP context) — NEEDS AUTH TRIAGE
+### F-3 — `views_diagnostics.py:4310` (cockpit VIP context) — FALSE POSITIVE (hand-reviewed)
 
 - **Endpoint:** `cockpit_vip_context` at line 4276; unscoped `Deliverable.objects.get(id=scope.prospect_profile_id)` at line 4310 (inside the `if scope.prospect_profile_id:` branch).
-- **Enclosing decorator:** `@csrf_exempt` + `@require_http_methods(["GET"])`. **No auth gate.**
-- **URL prefix:** `/api/cockpit/vip-context/` — **NOT** in `PUBLIC_PATHS` (verified by grep). Goes through `UnifiedTokenAuthenticationMiddleware` full path, so anon is rejected at middleware.
-- **Failure mode:** authenticated caller can pass a `scope.prospect_profile_id` that references another user's Deliverable and retrieve its title + preview. But `scope` is derived from `request.user` earlier in the view (see line 4276 context) — needs deeper hand-review to determine whether an authenticated user can influence `scope.prospect_profile_id` cross-user.
-- **Severity:** low if `scope.prospect_profile_id` is server-derived from `request.user` (no user-controlled input); medium if the user can influence it via query params.
-- **Remediation candidate:** defer to S3021+ hand-review; if server-derived, no action; else wire `scope_queryset_deliverable`.
+- **Hand-review verdict (Rigby T1 REVISE §b, resolved same-session):** `scope.prospect_profile_id` is server-derived from `VIPInvite.objects.filter(redeemed_by=user)` at `core/vip_scope.py:47-49` — the invite is bound to the authenticated user identity. The user CANNOT influence `prospect_profile_id` via query params, request body, or headers.
+- **Additional guards:** view starts with an explicit `if not (request.user and request.user.is_authenticated): return 401` at line 4282; endpoint is NOT in `PUBLIC_PATHS` so middleware also enforces auth.
+- **Severity:** none. Server-derived identity binding is the intent.
+- **Action:** no remediation required.
 
 ### F-4 — `views_preview_api.py:391` (initiative auto-populate) — FALSE POSITIVE
 
