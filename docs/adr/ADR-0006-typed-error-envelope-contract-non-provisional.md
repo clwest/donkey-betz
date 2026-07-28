@@ -78,6 +78,8 @@ The `provisional: true` posture is REMOVED. The γ mechanism (Layer 1 + Layer 2 
 
 All content of ADR-0005 §3 is incorporated by reference. This ADR is a **posture flip**, not a decision re-authoring.
 
+> **Refinement note (ADR-0007 layered envelope policy, ratified 2026-07-27):** ADR-0005/0006 §3.2's declaration of `APIResponseEnvelope` (Family B) as the SoT emission shape is REFINED by ADR-0007 to a layered policy — Family E (`build_user_facing_envelope`, safety-contract) is the canonical ERROR-RESPONSE SoT; Family B is retained as SUCCESS-RESPONSE SoT with error-adjacent methods deprecated. See `docs/adr/ADR-0007-layered-envelope-policy.md` for the full refinement. This ADR's §3.1 / §3.3 / §3.4 / §3.5 delegations remain canonical without modification.
+
 ## 4. Consequences
 
 ### 4.1 ADR corpus state
