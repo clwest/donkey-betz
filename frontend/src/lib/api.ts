@@ -672,7 +672,9 @@ export const signalsApi = {
   clusterDetail: (clusterId: string) =>
     api.get(`/v1/signal-clusters/${clusterId}/`),
   // Session 3014 (U2): Create Initiative + optional brief deliverable from a cluster.
-  createInitiativeFromCluster: (clusterId: string, params: { name?: string; generate_brief?: boolean }) =>
+  // Session 3015 hotfix: added workspace_id override so UI can route to the currently-
+  // active workspace (backend default is "user's oldest workspace" which is often wrong).
+  createInitiativeFromCluster: (clusterId: string, params: { name?: string; generate_brief?: boolean; workspace_id?: string }) =>
     api.post<{
       success: boolean
       error?: string
