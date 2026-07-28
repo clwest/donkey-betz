@@ -1,0 +1,1027 @@
+{
+  "bucket": "gated",
+  "excluded_prefixes": [
+    "/admin/",
+    "/api-auth/"
+  ],
+  "in_scope_prefixes_count": 255,
+  "routes": {
+    "/api/agent-dreams/<uuid:dream_id>/rate/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/agent-dreams/",
+      "url_name": "rate-dream",
+      "view": "rate_dream"
+    },
+    "/api/agents/assigned/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_user_profile",
+      "prefix": "/api/agents/",
+      "url_name": "agents-assigned",
+      "view": "agents_assigned"
+    },
+    "/api/analytics/charts/agent-activity/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-agent-activity",
+      "view": "get_chart_agent_activity"
+    },
+    "/api/analytics/charts/agent-comparison/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-agent-comparison",
+      "view": "get_chart_agent_comparison"
+    },
+    "/api/analytics/charts/agent-heatmap/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-agent-heatmap",
+      "view": "get_chart_agent_heatmap"
+    },
+    "/api/analytics/charts/agent-trends/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-agent-trends",
+      "view": "get_chart_agent_trends"
+    },
+    "/api/analytics/charts/collaboration/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-collaboration",
+      "view": "get_chart_collaboration"
+    },
+    "/api/analytics/charts/content-production/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-content-production",
+      "view": "get_chart_content_production"
+    },
+    "/api/analytics/charts/dashboard/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-dashboard",
+      "view": "get_chart_dashboard"
+    },
+    "/api/analytics/charts/knowledge-domains/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-knowledge-domains",
+      "view": "get_chart_knowledge_domains"
+    },
+    "/api/analytics/charts/knowledge-growth/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-knowledge-growth",
+      "view": "get_chart_knowledge_growth"
+    },
+    "/api/analytics/charts/learning-progress/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-learning-progress",
+      "view": "get_chart_learning_progress"
+    },
+    "/api/analytics/charts/revenue/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-revenue",
+      "view": "get_chart_revenue"
+    },
+    "/api/analytics/charts/spider-performance/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-spider-performance",
+      "view": "get_chart_spider_performance"
+    },
+    "/api/analytics/charts/system-health/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-system-health",
+      "view": "get_chart_system_health"
+    },
+    "/api/analytics/charts/user-engagement/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-user-engagement",
+      "view": "get_chart_user_engagement"
+    },
+    "/api/analytics/charts/workflow-success/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-workflow-success",
+      "view": "get_chart_workflow_success"
+    },
+    "/api/analytics/charts/workflow-trends/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "chart-workflow-trends",
+      "view": "get_chart_workflow_trends"
+    },
+    "/api/analytics/reports/generate/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics_real",
+      "prefix": "/api/analytics/",
+      "url_name": "analytics-reports-generate",
+      "view": "analytics_reports_generate"
+    },
+    "/api/analytics/v2/alerts/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "analytics-alerts-v2",
+      "view": "analytics_alerts_v2"
+    },
+    "/api/analytics/v2/anomalies/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "anomalies-v2",
+      "view": "anomalies_v2"
+    },
+    "/api/analytics/v2/breakdown/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "breakdown-v2",
+      "view": "breakdown_v2"
+    },
+    "/api/analytics/v2/comparison/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "comparison-v2",
+      "view": "comparison_v2"
+    },
+    "/api/analytics/v2/cost-breakdown/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "cost-breakdown-v2",
+      "view": "cost_breakdown_v2"
+    },
+    "/api/analytics/v2/dashboards/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "analytics-dashboards-v2",
+      "view": "analytics_dashboards_v2"
+    },
+    "/api/analytics/v2/export/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "export-v2",
+      "view": "export_v2"
+    },
+    "/api/analytics/v2/forecast/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "forecast-v2",
+      "view": "forecast_v2"
+    },
+    "/api/analytics/v2/overview/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "analytics-overview-v2",
+      "view": "analytics_overview_v2"
+    },
+    "/api/analytics/v2/performance-timeline/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "performance-timeline-v2",
+      "view": "performance_timeline_v2"
+    },
+    "/api/analytics/v2/realtime/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "realtime-stats-v2",
+      "view": "realtime_stats_v2"
+    },
+    "/api/analytics/v2/top-performers/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "top-performers-v2",
+      "view": "top_performers_v2"
+    },
+    "/api/analytics/v2/track/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "track-event-v2",
+      "view": "track_event_v2"
+    },
+    "/api/analytics/v2/trends/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "trends-v2",
+      "view": "trends_v2"
+    },
+    "/api/analytics/v2/usage-timeline/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_analytics",
+      "prefix": "/api/analytics/",
+      "url_name": "usage-timeline-v2",
+      "view": "usage_timeline_v2"
+    },
+    "/api/boardroom/dreams/<uuid:dream_id>/decide/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/boardroom/",
+      "url_name": "decide-dream",
+      "view": "decide_dream"
+    },
+    "/api/content-calendar/episode/<uuid:episode_id>/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_content_calendar",
+      "prefix": "/api/content-calendar/",
+      "url_name": "content-calendar-episode-detail",
+      "view": "content_calendar_episode_detail"
+    },
+    "/api/content-calendar/generate/<uuid:channel_id>/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_content_calendar",
+      "prefix": "/api/content-calendar/",
+      "url_name": "content-calendar-generate",
+      "view": "content_calendar_generate"
+    },
+    "/api/content-calendar/history/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_content_calendar",
+      "prefix": "/api/content-calendar/",
+      "url_name": "content-calendar-history",
+      "view": "content_calendar_history"
+    },
+    "/api/content-calendar/reschedule/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_content_calendar",
+      "prefix": "/api/content-calendar/",
+      "url_name": "content-calendar-reschedule",
+      "view": "content_calendar_reschedule"
+    },
+    "/api/content-calendar/upcoming/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_content_calendar",
+      "prefix": "/api/content-calendar/",
+      "url_name": "content-calendar-upcoming",
+      "view": "content_calendar_upcoming"
+    },
+    "/api/creative-projects/<uuid:project_id>/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "creative-project-detail",
+      "view": "get_project"
+    },
+    "/api/creative-projects/<uuid:project_id>/delete/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "creative-project-delete",
+      "view": "delete_project"
+    },
+    "/api/creative-projects/<uuid:project_id>/export/csv/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "export-project-csv",
+      "view": "export_project_csv"
+    },
+    "/api/creative-projects/<uuid:project_id>/export/pdf/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "export-project-pdf",
+      "view": "export_project_pdf"
+    },
+    "/api/creative-projects/<uuid:project_id>/export/zip/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "export-project-zip",
+      "view": "export_project_zip"
+    },
+    "/api/creative-projects/<uuid:project_id>/share/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_share",
+      "prefix": "/api/creative-projects/",
+      "url_name": "get-project-share",
+      "view": "get_project_share"
+    },
+    "/api/creative-projects/<uuid:project_id>/share/create/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_share",
+      "prefix": "/api/creative-projects/",
+      "url_name": "create-project-share",
+      "view": "create_project_share"
+    },
+    "/api/creative-projects/<uuid:project_id>/share/revoke/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_share",
+      "prefix": "/api/creative-projects/",
+      "url_name": "revoke-project-share",
+      "view": "revoke_project_share"
+    },
+    "/api/creative-projects/<uuid:project_id>/update/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "creative-project-update",
+      "view": "update_project"
+    },
+    "/api/creative-projects/<uuid:project_id>/workflows/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_workflow",
+      "prefix": "/api/creative-projects/",
+      "url_name": "creative-project-add-workflow",
+      "view": "add_workflow_to_project"
+    },
+    "/api/creative-projects/<uuid:project_id>/workflows/<int:workflow_id>/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_workflow",
+      "prefix": "/api/creative-projects/",
+      "url_name": "creative-project-remove-workflow",
+      "view": "remove_workflow_from_project"
+    },
+    "/api/creative-projects/create/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/creative-projects/",
+      "url_name": "creative-project-create",
+      "view": "create_project"
+    },
+    "/api/dashboard/advisors/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_dashboard_stats",
+      "prefix": "/api/dashboard/advisors/",
+      "url_name": "advisor-insights",
+      "view": "advisor_insights"
+    },
+    "/api/dashboard/stats/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_dashboard_stats",
+      "prefix": "/api/dashboard/stats/",
+      "url_name": "dashboard-stats",
+      "view": "dashboard_stats"
+    },
+    "/api/experiments/<str:experiment_id>/results/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_preferences",
+      "prefix": "/api/experiments/",
+      "url_name": "experiments-results",
+      "view": "get_experiment_results"
+    },
+    "/api/experiments/<str:experiment_id>/start/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_preferences",
+      "prefix": "/api/experiments/",
+      "url_name": "experiments-start",
+      "view": "start_experiment"
+    },
+    "/api/experiments/<str:experiment_id>/stop/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_preferences",
+      "prefix": "/api/experiments/",
+      "url_name": "experiments-stop",
+      "view": "stop_experiment"
+    },
+    "/api/experiments/create/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_preferences",
+      "prefix": "/api/experiments/",
+      "url_name": "experiments-create",
+      "view": "create_experiment"
+    },
+    "/api/learning/achievements/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-achievements",
+      "view": "learning_achievements"
+    },
+    "/api/learning/journeys/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journeys-list",
+      "view": "learning_journeys_list"
+    },
+    "/api/learning/journeys/<str:journey_id>/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journey-detail",
+      "view": "learning_journey_detail"
+    },
+    "/api/learning/journeys/<str:journey_id>/abandon/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journey-abandon",
+      "view": "learning_journey_abandon"
+    },
+    "/api/learning/journeys/<str:journey_id>/complete/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journey-complete",
+      "view": "learning_journey_complete"
+    },
+    "/api/learning/journeys/<str:journey_id>/pause/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journey-pause",
+      "view": "learning_journey_pause"
+    },
+    "/api/learning/journeys/<str:journey_id>/resume/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journey-resume",
+      "view": "learning_journey_resume"
+    },
+    "/api/learning/journeys/<str:journey_id>/step/<int:step_number>/complete/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-step-complete",
+      "view": "learning_step_complete"
+    },
+    "/api/learning/journeys/<str:journey_id>/step/<int:step_number>/content/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-step-content",
+      "view": "learning_step_content"
+    },
+    "/api/learning/journeys/<str:journey_id>/step/<int:step_number>/skip/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-step-skip",
+      "view": "learning_step_skip"
+    },
+    "/api/learning/journeys/<str:journey_id>/step/<int:step_number>/start/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-step-start",
+      "view": "learning_step_start"
+    },
+    "/api/learning/journeys/active/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journeys-active",
+      "view": "learning_journeys_active"
+    },
+    "/api/learning/journeys/analytics/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journey-analytics",
+      "view": "learning_journey_analytics"
+    },
+    "/api/learning/journeys/start/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_learning_journey_api",
+      "prefix": "/api/learning/",
+      "url_name": "learning-journey-start",
+      "view": "learning_journey_start"
+    },
+    "/api/legal/case-files/<uuid:document_id>/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_legal",
+      "prefix": "/api/legal/case-files/",
+      "url_name": "legal-case-files-get",
+      "view": "get_legal_case_file"
+    },
+    "/api/legal/case-files/<uuid:document_id>/analyze/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_legal",
+      "prefix": "/api/legal/case-files/",
+      "url_name": "legal-case-files-analyze",
+      "view": "analyze_legal_case_file"
+    },
+    "/api/legal/case-files/<uuid:document_id>/delete/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_legal",
+      "prefix": "/api/legal/case-files/",
+      "url_name": "legal-case-files-delete",
+      "view": "delete_legal_case_file"
+    },
+    "/api/legal/case-files/upload/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_legal",
+      "prefix": "/api/legal/case-files/",
+      "url_name": "legal-case-files-upload",
+      "view": "upload_legal_case_file"
+    },
+    "/api/memory-palace/memory/<uuid:memory_id>/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-palace-detail",
+      "view": "get_memory_detail"
+    },
+    "/api/memory-palace/memory/<uuid:memory_id>/connections/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-connections",
+      "view": "get_memory_connections"
+    },
+    "/api/memory-palace/memory/<uuid:memory_id>/delete/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_memory_palace",
+      "prefix": "/api/memory-palace/",
+      "url_name": "memory-palace-delete",
+      "view": "delete_memory"
+    },
+    "/api/nervous/consumers/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_nervous",
+      "prefix": "/api/nervous/consumers/",
+      "url_name": "nervous-consumers",
+      "view": "NervousConsumersView"
+    },
+    "/api/nervous/feel/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_nervous",
+      "prefix": "/api/nervous/feel/",
+      "url_name": "nervous-feel",
+      "view": "NervousFeelView"
+    },
+    "/api/nervous/history/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_nervous",
+      "prefix": "/api/nervous/history/",
+      "url_name": "nervous-history",
+      "view": "NervousHistoryView"
+    },
+    "/api/nervous/vitals/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_nervous",
+      "prefix": "/api/nervous/vitals/",
+      "url_name": "nervous-vitals",
+      "view": "NervousVitalsView"
+    },
+    "/api/pilot-gates/<uuid:gate_id>/approve-all/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "approve-all-checklist-items",
+      "view": "approve_all_checklist_items"
+    },
+    "/api/pilot-gates/<uuid:gate_id>/items/<uuid:item_id>/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "pilot-gate-item",
+      "view": "update_checklist_item"
+    },
+    "/api/pilot-gates/<uuid:gate_id>/pilot/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "start-pilot-execution",
+      "view": "start_pilot_execution"
+    },
+    "/api/pilot-gates/<uuid:gate_id>/pilot/<uuid:pilot_id>/complete/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "complete-pilot-execution",
+      "view": "complete_pilot_execution"
+    },
+    "/api/pilot-gates/<uuid:gate_id>/regenerate/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "regenerate-checklist-content",
+      "view": "regenerate_checklist_content"
+    },
+    "/api/pilot-gates/<uuid:gate_id>/status/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "pilot-gate-status",
+      "view": "update_gate_status"
+    },
+    "/api/pilot-gates/create/<uuid:decision_id>/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_agent_learning",
+      "prefix": "/api/pilot-gates/",
+      "url_name": "pilot-gate-create",
+      "view": "create_pilot_gate"
+    },
+    "/api/platform/doc-content/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_platform_command",
+      "prefix": "/api/platform/doc-content/",
+      "url_name": "platform-doc-content",
+      "view": "doc_content_view"
+    },
+    "/api/status/overview/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_status_api",
+      "prefix": "/api/status/overview/",
+      "url_name": "status-overview",
+      "view": "status_overview"
+    },
+    "/api/stripe/billing-portal/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-billing-portal",
+      "view": "stripe_billing_portal"
+    },
+    "/api/stripe/cancel-subscription/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-cancel-subscription",
+      "view": "stripe_cancel_subscription"
+    },
+    "/api/stripe/invoices/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-invoices",
+      "view": "stripe_invoices"
+    },
+    "/api/stripe/invoices/<str:invoice_id>/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-invoice-detail",
+      "view": "stripe_invoice_detail"
+    },
+    "/api/stripe/payment-methods/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-payment-methods",
+      "view": "stripe_payment_methods"
+    },
+    "/api/stripe/payment-methods/<str:payment_method_id>/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-remove-payment-method",
+      "view": "stripe_remove_payment_method"
+    },
+    "/api/stripe/payment-methods/<str:payment_method_id>/default/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-set-default-payment-method",
+      "view": "stripe_set_default_payment_method"
+    },
+    "/api/stripe/payment-methods/add/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-add-payment-method",
+      "view": "stripe_add_payment_method"
+    },
+    "/api/stripe/resume-subscription/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-resume-subscription",
+      "view": "stripe_resume_subscription"
+    },
+    "/api/stripe/subscribe/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-subscribe",
+      "view": "stripe_subscribe"
+    },
+    "/api/stripe/upcoming-invoice/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-upcoming-invoice",
+      "view": "stripe_upcoming_invoice"
+    },
+    "/api/stripe/usage/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_stripe_billing",
+      "prefix": "/api/stripe/",
+      "url_name": "stripe-usage",
+      "view": "stripe_usage"
+    },
+    "/api/teams/workflows/<uuid:workflow_id>/steps/<uuid:step_id>/execute/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_workflow",
+      "prefix": "/api/teams/",
+      "url_name": "teams-workflows-step-execute",
+      "view": "execute_workflow_step"
+    },
+    "/api/time-travel/agent/<uuid:agent_id>/simulate/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-simulate",
+      "view": "simulate_session"
+    },
+    "/api/time-travel/annotation/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-add-annotation",
+      "view": "add_annotation"
+    },
+    "/api/time-travel/annotation/<uuid:annotation_id>/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-delete-annotation",
+      "view": "delete_annotation"
+    },
+    "/api/time-travel/bookmark/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-create-bookmark",
+      "view": "create_bookmark"
+    },
+    "/api/time-travel/bookmark/<uuid:bookmark_id>/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-delete-bookmark",
+      "view": "delete_bookmark"
+    },
+    "/api/time-travel/decision/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-record-decision",
+      "view": "record_decision"
+    },
+    "/api/time-travel/decision/<uuid:decision_id>/flag/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-flag",
+      "view": "flag_decision"
+    },
+    "/api/time-travel/decision/<uuid:decision_id>/outcome/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-update-outcome",
+      "view": "update_decision_outcome"
+    },
+    "/api/time-travel/session/<uuid:session_id>/bookmark/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-bookmark-session",
+      "view": "toggle_bookmark_session"
+    },
+    "/api/time-travel/session/<uuid:session_id>/end/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-end",
+      "view": "end_session"
+    },
+    "/api/time-travel/session/start/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_time_travel",
+      "prefix": "/api/time-travel/",
+      "url_name": "time-travel-start",
+      "view": "start_session"
+    },
+    "/api/v1/advisors/consult/": {
+      "gate": "decorator:token_required",
+      "is_cbv": false,
+      "module": "core.views_advisor_api",
+      "prefix": "/api/v1/advisors/",
+      "url_name": "advisor-consult",
+      "view": "advisor_consult"
+    },
+    "/api/v1/gallery/batch-download/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_gallery",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "unified-batch-download",
+      "view": "unified_batch_download"
+    },
+    "/api/v1/gallery/generate/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_gallery",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "gallery-generate",
+      "view": "gallery_generate"
+    },
+    "/api/v1/gallery/list/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_content",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "gallery-list",
+      "view": "gallery_list"
+    },
+    "/api/v1/gallery/optimize-prompt/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "optimize-image-prompt",
+      "view": "optimize_image_prompt"
+    },
+    "/api/v1/gallery/session/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_gallery",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "session-gallery",
+      "view": "session_gallery"
+    },
+    "/api/v1/gallery/toggle-favorite/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_image_misc",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "unified-toggle-favorite",
+      "view": "unified_toggle_favorite"
+    },
+    "/api/v1/gallery/videos/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "core.views_content",
+      "prefix": "/api/v1/gallery/",
+      "url_name": "gallery-videos",
+      "view": "gallery_videos"
+    },
+    "/api/v1/intelligence/opportunities/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "intelligence.views",
+      "prefix": "/api/v1/intelligence/opportunities/",
+      "url_name": "live_opportunities",
+      "view": "LiveOpportunitiesView"
+    },
+    "/api/v1/intelligence/predictions/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "intelligence.views",
+      "prefix": "/api/v1/intelligence/predictions/",
+      "url_name": "live_predictions",
+      "view": "LivePredictionsView"
+    },
+    "/api/v1/intelligence/skynet/status/": {
+      "gate": "drf:IsAuthenticated",
+      "is_cbv": true,
+      "module": "intelligence.views",
+      "prefix": "/api/v1/intelligence/skynet/status/",
+      "url_name": "skynet_status",
+      "view": "SkynetStatusView"
+    }
+  },
+  "schema_version": 1
+}
