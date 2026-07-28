@@ -18,9 +18,13 @@ import os
 import logging
 
 # Import standardized API responses
-from core.api_responses import (
-    api_success, api_validation_error
-)
+# T-ENVELOPE-2-DEPRECATION Batch 1 (S3006, ADR-0007): success responses
+# use APIResponseEnvelope (Family B — canonical for success). Error
+# responses use build_user_facing_envelope (Family E — safety-contract
+# §3.1, canonical for errors per ADR-0007 §3.1).
+from core.api_responses import api_success
+from django.http import JsonResponse
+from core.security.error_envelope import build_user_facing_envelope
 
 # Import rate limiting
 from core.rate_limiter import rate_limit_api
@@ -70,10 +74,14 @@ def convert_odds(request):
             try:
                 odds_value = float(odds_input)
             except (ValueError, TypeError):
-                return api_validation_error(
-                    message=f'Invalid odds value: {odds_input}',
-                    details={'odds_input': odds_input, 'expected': 'numeric value'}
+                # Parse failure — invalid_input per safety-contract §4.
+                payload = build_user_facing_envelope(reason_code='invalid_input')
+                logger.warning(
+                    "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+                    payload['reason_code'], payload['support_code'], request.path,
+                    {'parse_error': 'odds_float_coerce', 'from_format': from_format},
                 )
+                return JsonResponse(payload, status=400)
         else:
             odds_value = odds_input  # Keep fractional as string
     else:
@@ -81,10 +89,14 @@ def convert_odds(request):
     
     # For non-fractional formats, check if positive
     if from_format != 'fractional' and (not odds_value or odds_value == 0):
-        return api_validation_error(
-            message='Invalid odds value',
-            details={'odds_value': odds_value, 'from_format': from_format}
+        # Business-rule failure — validation_error per safety-contract §4.
+        payload = build_user_facing_envelope(reason_code='validation_error')
+        logger.warning(
+            "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+            payload['reason_code'], payload['support_code'], request.path,
+            {'rule': 'odds_nonzero', 'from_format': from_format},
         )
+        return JsonResponse(payload, status=400)
     
     # Conversion logic
     result = {}
@@ -234,12 +246,15 @@ def calculate_kelly_criterion(request):
     if odds_format not in valid_formats:
         validation_errors['odds_format'] = f'Invalid format. Must be one of: {valid_formats}'
     
-    # Return validation errors if any
+    # Return validation errors if any (business-rule — validation_error).
     if validation_errors:
-        return api_validation_error(
-            message='Validation failed for Kelly Criterion calculation',
-            details=validation_errors
+        payload = build_user_facing_envelope(reason_code='validation_error')
+        logger.warning(
+            "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+            payload['reason_code'], payload['support_code'], request.path,
+            {'rule': 'kelly_criterion', 'error_keys': list(validation_errors.keys())},
         )
+        return JsonResponse(payload, status=400)
     
     # Check cache first
     cached_result = KellyCache.get_calculation(
