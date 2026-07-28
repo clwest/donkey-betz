@@ -1004,6 +1004,7 @@ def _create_initiative_from_cluster_core(cluster, user, name_override='', genera
             owner=user,
             target_workspace=target_workspace,
             parent_topic=f'signal_cluster:{cluster.id}',
+            signal_cluster=cluster,
         )
     except Exception as e:
         logger.error(f"S3014 core: Initiative create failed for cluster {cluster.id}: {e}")
