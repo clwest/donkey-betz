@@ -11,7 +11,7 @@ ratified: 2026-07-27
 ratifier: chris
 chris_ratification: "Ratify and open the PR" 2026-07-27 — after ADR-0005 T1 SIGN Cycle 1 completed across 2 dispatch turns (Q1 AGREE + minor STRENGTHEN / Q2 AGREE / Q3 AGREE with tool-verified HEAD claims / Q4 substantive zoom-out); Fold A applied pre-ratification (frontmatter provisional_reason wording aligned to Layer-1 independence per Q1 STRENGTHEN + Q4 (ii)). Draft-first workflow honored per playbook §16.
 supersedes: (none)
-superseded_by: (none)
+superseded_by: ADR-0006  # 2026-07-27 — provisional posture flipped via ADR-0006 after T-ENVELOPE-0 ship (PR #3676)
 design_prep: docs/research/domains/api/2503_api_error_envelope_refresh_logout_contracts_design_prep_audit.md
 source_refs:
   - docs/research/domains/api/2503_api_error_envelope_refresh_logout_contracts_design_prep_audit.md §19.1 R1 (CRITICAL — Chris-D-verdict-request for typed-error-envelope + session-lifecycle + whitelist-replacement intersection)
