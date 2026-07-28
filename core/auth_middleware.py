@@ -15,7 +15,13 @@ from channels.db import database_sync_to_async
 from channels.middleware import BaseMiddleware
 from urllib.parse import parse_qs
 
-from .api_responses import api_unauthorized, api_forbidden, api_error
+# T-ENVELOPE-2-DEPRECATION Batch 2 (S3007, ADR-0007 §4.3): error responses
+# migrated from Family B (api_unauthorized/api_forbidden/api_error) to
+# Family E (build_user_facing_envelope, safety-contract §3.1). Existing
+# f-string operator logs preserved for username/path context; envelope_emit
+# structured log added for reason_code + support_code + hint per Batch 1
+# STRENGTHEN pattern.
+from core.security.error_envelope import build_user_facing_envelope
 from functools import wraps
 
 logger = logging.getLogger(__name__)
@@ -76,7 +82,13 @@ def token_auth_required(view_func):
                 pass
 
         # No valid auth found
-        return api_unauthorized("Authentication required")
+        payload = build_user_facing_envelope(reason_code='not_authenticated')
+        logger.warning(
+            "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+            payload['reason_code'], payload['support_code'], request.path,
+            {'source': 'decorator_missing_token'},
+        )
+        return JsonResponse(payload, status=401)
 
     return _wrapped_view
 User = get_user_model()
@@ -615,17 +627,35 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
             if any(request.path.startswith(path) for path in self.STAFF_REQUIRED_PATHS):
                 if not request.user.is_staff:
                     logger.warning(f"Staff access required for {request.path}, user: {request.user.username}")
-                    return api_forbidden("Staff access required")
+                    payload = build_user_facing_envelope(reason_code='permission_denied')
+                    logger.warning(
+                        "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+                        payload['reason_code'], payload['support_code'], request.path,
+                        {'source': 'session_staff_required', 'user': request.user.username},
+                    )
+                    return JsonResponse(payload, status=403)
 
             # Session 998: Block write paths for read-only reviewers
             if hasattr(request.user, 'is_reviewer') and request.user.is_reviewer:
                 if any(request.path.startswith(p) for p in self.REVIEWER_BLOCKED_PATHS):
-                    return api_forbidden("Read-only reviewer access — this action is restricted")
+                    payload = build_user_facing_envelope(reason_code='permission_denied')
+                    logger.warning(
+                        "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+                        payload['reason_code'], payload['support_code'], request.path,
+                        {'source': 'session_reviewer_blocked_path', 'user': request.user.username},
+                    )
+                    return JsonResponse(payload, status=403)
                 # Block non-GET methods on /api/ paths (except auth endpoints)
                 if (request.method not in ('GET', 'HEAD', 'OPTIONS')
                         and request.path.startswith('/api/')
                         and not any(request.path.startswith(p) for p in self.REVIEWER_ALLOWED_PATHS)):
-                    return api_forbidden("Read-only reviewer access — write operations are restricted")
+                    payload = build_user_facing_envelope(reason_code='permission_denied')
+                    logger.warning(
+                        "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+                        payload['reason_code'], payload['support_code'], request.path,
+                        {'source': 'session_reviewer_write_blocked', 'user': request.user.username, 'method': request.method},
+                    )
+                    return JsonResponse(payload, status=403)
 
             return None
 
@@ -635,7 +665,13 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         if not token:
             # No token and no session authentication
             logger.warning(f"No authentication provided for {request.path}")
-            return api_unauthorized("Authentication required")
+            payload = build_user_facing_envelope(reason_code='not_authenticated')
+            logger.warning(
+                "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+                payload['reason_code'], payload['support_code'], request.path,
+                {'source': 'no_credentials'},
+            )
+            return JsonResponse(payload, status=401)
 
         # Validate token and get user.
         # Session 1171 #4: separate "token not in DB" (→ 401) from "auth backend
@@ -652,30 +688,60 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
                 "Auth backend unreachable while validating token for %s: %s",
                 request.path, infra_exc,
             )
-            return api_error(
-                "Authentication backend unavailable, please retry",
-                error_code="auth_backend_unavailable",
-                status_code=503,
+            # S1171 fix intent preserved: retryable=True + terminal_state=BUSY
+            # (reason_code=busy) signals transient infrastructure failure,
+            # NOT a bad-credentials 401. 'auth_backend_unavailable' identity
+            # preserved in structured-log hint for operator diagnostics.
+            payload = build_user_facing_envelope(reason_code='busy')
+            logger.warning(
+                "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+                payload['reason_code'], payload['support_code'], request.path,
+                {'source': 'auth_backend_unavailable', 'exc_type': type(infra_exc).__name__},
             )
+            return JsonResponse(payload, status=503)
 
         if not user:
             logger.warning(f"Invalid authentication token for {request.path}")
-            return api_unauthorized("Invalid authentication token")
+            payload = build_user_facing_envelope(reason_code='not_authenticated')
+            logger.warning(
+                "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+                payload['reason_code'], payload['support_code'], request.path,
+                {'source': 'invalid_token'},
+            )
+            return JsonResponse(payload, status=401)
 
         # Check if staff access required
         if any(request.path.startswith(path) for path in self.STAFF_REQUIRED_PATHS):
             if not user.is_staff:
                 logger.warning(f"Staff access required for {request.path}, user: {user.username}")
-                return api_forbidden("Staff access required")
+                payload = build_user_facing_envelope(reason_code='permission_denied')
+                logger.warning(
+                    "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+                    payload['reason_code'], payload['support_code'], request.path,
+                    {'source': 'token_staff_required', 'user': user.username},
+                )
+                return JsonResponse(payload, status=403)
 
         # Session 998: Block write paths for read-only reviewers (token auth path)
         if hasattr(user, 'is_reviewer') and user.is_reviewer:
             if any(request.path.startswith(p) for p in self.REVIEWER_BLOCKED_PATHS):
-                return api_forbidden("Read-only reviewer access — this action is restricted")
+                payload = build_user_facing_envelope(reason_code='permission_denied')
+                logger.warning(
+                    "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+                    payload['reason_code'], payload['support_code'], request.path,
+                    {'source': 'token_reviewer_blocked_path', 'user': user.username},
+                )
+                return JsonResponse(payload, status=403)
             if (request.method not in ('GET', 'HEAD', 'OPTIONS')
                     and request.path.startswith('/api/')
                     and not any(request.path.startswith(p) for p in self.REVIEWER_ALLOWED_PATHS)):
-                return api_forbidden("Read-only reviewer access — write operations are restricted")
+                payload = build_user_facing_envelope(reason_code='permission_denied')
+                logger.warning(
+                    "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+                    payload['reason_code'], payload['support_code'], request.path,
+                    {'source': 'token_reviewer_write_blocked', 'user': user.username, 'method': request.method},
+                )
+                return JsonResponse(payload, status=403)
 
         # Attach user to request
         request.user = user
