@@ -1,0 +1,58 @@
+[
+  {
+    "prefix": "/api/celery/",
+    "matched_scoped_endpoints": [
+      {
+        "url": "api/celery/breakdown/",
+        "view_name": "TaskBreakdownView",
+        "file": "core/views_celery_api.py",
+        "line": 256,
+        "scope_predicates_called": [
+          "scope_queryset_agent_execution"
+        ]
+      }
+    ]
+  },
+  {
+    "prefix": "/api/celery/",
+    "matched_scoped_endpoints": [
+      {
+        "url": "api/celery/breakdown/",
+        "view_name": "TaskBreakdownView",
+        "file": "core/views_celery_api.py",
+        "line": 256,
+        "scope_predicates_called": [
+          "scope_queryset_agent_execution"
+        ]
+      }
+    ]
+  },
+  {
+    "prefix": "/api/memory-palace/",
+    "matched_scoped_endpoints": [
+      {
+        "url": "api/memory-palace/memory/<uuid:memory_id>/",
+        "view_name": "get_memory_detail",
+        "file": "core/views_memory_palace.py",
+        "line": 98,
+        "scope_predicates_called": [
+          "scope_queryset_agent_execution"
+        ]
+      }
+    ]
+  },
+  {
+    "prefix": "/api/memory-palace/memory/",
+    "matched_scoped_endpoints": [
+      {
+        "url": "api/memory-palace/memory/<uuid:memory_id>/",
+        "view_name": "get_memory_detail",
+        "file": "core/views_memory_palace.py",
+        "line": 98,
+        "scope_predicates_called": [
+          "scope_queryset_agent_execution"
+        ]
+      }
+    ]
+  }
+]
