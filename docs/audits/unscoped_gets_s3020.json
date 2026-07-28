@@ -1,0 +1,34 @@
+[
+  {
+    "predicate": "scope_queryset_deliverable",
+    "model": "Deliverable",
+    "file": "core/views_diagnostics.py",
+    "line": 4310,
+    "snippet": "profile = Deliverable.objects.get(id=scope.prospect_profile_id)",
+    "predicate_in_file": false
+  },
+  {
+    "predicate": "scope_queryset_agent_memory",
+    "model": "AgentMemory",
+    "file": "core/views_memory_clusters.py",
+    "line": 464,
+    "snippet": "memory = AgentMemory.objects.get(id=memory_id)",
+    "predicate_in_file": false
+  },
+  {
+    "predicate": "scope_queryset_agent_memory",
+    "model": "AgentMemory",
+    "file": "core/views_memory_clusters.py",
+    "line": 585,
+    "snippet": "memory = AgentMemory.objects.get(id=memory_id)",
+    "predicate_in_file": false
+  },
+  {
+    "predicate": "scope_queryset_initiative",
+    "model": "Initiative",
+    "file": "core/views_preview_api.py",
+    "line": 391,
+    "snippet": "initiative = Initiative.objects.filter(owner=request.user).get(id=initiative_id)",
+    "predicate_in_file": false
+  }
+]
