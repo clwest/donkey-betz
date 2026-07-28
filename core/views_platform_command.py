@@ -1160,7 +1160,13 @@ def bulk_create_initiatives_from_clusters_view(request):
         {
             "cluster_ids": ["<uuid>", "<uuid>", ...],   # required, len ≥ 1
             "generate_brief": true|false,               # default: true, applies to all
-            "workspace_id": "<uuid>"                    # optional override for all rows
+            "workspace_id": "<uuid>",                   # optional override for all rows
+            "names": {"<cluster_uuid>": "<name>", ...}, # S3024 (U6): optional per-row
+                                                        #   name overrides keyed by
+                                                        #   cluster_id. Missing keys,
+                                                        #   empty strings, and a
+                                                        #   non-dict param all fall
+                                                        #   back to the default name.
         }
 
     Returns 200 for well-formed requests (partial failures are per-row, not global):
@@ -1203,6 +1209,12 @@ def bulk_create_initiatives_from_clusters_view(request):
     generate_brief = body.get('generate_brief', True)
     target_workspace = _resolve_target_workspace(request.user, body.get('workspace_id'))
 
+    # S3024 (U6): optional per-row name overrides keyed by cluster_id. Non-dict
+    # param silently ignored (falls back to defaults for all rows) so a
+    # frontend bug can't 500 the endpoint.
+    raw_names = body.get('names')
+    names_by_cluster_id = raw_names if isinstance(raw_names, dict) else {}
+
     # Preserve request order + de-dup within request
     seen = set()
     ordered_ids = []
@@ -1222,10 +1234,16 @@ def bulk_create_initiatives_from_clusters_view(request):
             results.append({'cluster_id': str(cid), 'error': 'Cluster not found'})
             continue
         try:
+            # S3024 (U6): honor per-row name override when present. Missing key,
+            # empty string, or non-string value all fall back to core's default
+            # (`{pattern_label}: {cluster.name}`); core also enforces the
+            # 200-char cap.
+            raw_override = names_by_cluster_id.get(str(cid), '')
+            per_row_name = raw_override if isinstance(raw_override, str) else ''
             status_code, row = _create_initiative_from_cluster_core(
                 cluster=cluster,
                 user=request.user,
-                name_override='',  # bulk always uses defaults
+                name_override=per_row_name,
                 generate_brief=generate_brief,
                 target_workspace=target_workspace,
             )

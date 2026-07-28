@@ -376,7 +376,11 @@ export function SignalsClustersView({ windowHours }: Props) {
   )
 }
 
-// Session 3015 (U3): Confirm-and-submit modal for bulk cluster → initiative promotion
+// Session 3015 (U3): Confirm-and-submit modal for bulk cluster → initiative promotion.
+// Session 3024 (U6): each row is now editable; the modal always sends the full
+// `names` dict (Rigby A1 REVISE) so the final name is never inferred from an
+// implicit "did the user diff against a default" heuristic. Backend still
+// falls back to the default on empty strings / missing keys.
 function BulkPromoteModal({
   clusters,
   onClose,
@@ -394,6 +398,19 @@ function BulkPromoteModal({
   const [generateBrief, setGenerateBrief] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
+  // S3024 (U6): pre-fill with the same default the backend computes:
+  // `{Pattern Label}: {cluster.name}`. Backend enforces a 200-char cap in
+  // `_create_initiative_from_cluster_core`; mirror that in the input maxLength
+  // for immediate feedback.
+  const NAME_MAX = 200
+  const defaultNameFor = (c: ClusterRow) => {
+    const label = c.pattern_type.replace(/_/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase())
+    return `${label}: ${c.name}`.slice(0, NAME_MAX)
+  }
+  const [names, setNames] = useState<Record<string, string>>(() =>
+    Object.fromEntries(clusters.map((c) => [c.id, defaultNameFor(c)]))
+  )
+
   const mutation = useMutation({
     mutationFn: () =>
       signalsApi.bulkCreateInitiativesFromClusters({
@@ -401,6 +418,8 @@ function BulkPromoteModal({
         generate_brief: generateBrief,
         // Session 3015 hotfix: route to the currently-active workspace.
         workspace_id: activeWorkspace?.id,
+        // S3024 (U6): send the full names dict (Rigby A1 REVISE).
+        names,
       }),
     onSuccess: (resp) => {
       const body = resp.data
@@ -432,9 +451,6 @@ function BulkPromoteModal({
     },
   })
 
-  const preview = clusters.slice(0, 10)
-  const extra = clusters.length - preview.length
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
       <div
@@ -452,17 +468,36 @@ function BulkPromoteModal({
           <p className="text-xs text-gray-400">
             One Initiative (status <span className="text-accent-amber">TRIAGE</span>) will be created per cluster in{' '}
             <span className="text-primary-300 font-medium">{activeWorkspace?.name ?? '(default workspace)'}</span>.
-            Names auto-generate from pattern + cluster name (edit individually via the single-cluster flow if needed).
+            Names are pre-filled from pattern + cluster name; edit inline if you'd like something different.
           </p>
-          <div className="rounded border border-gray-800 bg-gray-900/60 p-2 max-h-52 overflow-y-auto text-xs">
-            {preview.map((c) => (
-              <div key={c.id} className="truncate text-gray-300 py-0.5">
-                • {c.name}
-              </div>
-            ))}
-            {extra > 0 && (
-              <div className="pt-1 text-gray-500 italic">…and {extra} more</div>
-            )}
+          {/* S3024 (U6): editable name per row. Scroll container keeps the modal
+              size sane at the 100-cluster batch cap. */}
+          <div className="rounded border border-gray-800 bg-gray-900/60 p-2 max-h-72 overflow-y-auto space-y-1.5">
+            {clusters.map((c) => {
+              const value = names[c.id] ?? ''
+              const over = value.length >= NAME_MAX - 20
+              return (
+                <div key={c.id} className="space-y-0.5">
+                  <input
+                    type="text"
+                    value={value}
+                    maxLength={NAME_MAX}
+                    disabled={mutation.isPending}
+                    onChange={(e) =>
+                      setNames((prev) => ({ ...prev, [c.id]: e.target.value }))
+                    }
+                    className="w-full px-2 py-1 text-xs rounded bg-gray-950 border border-gray-800 text-gray-200 focus:border-primary-500/50 focus:outline-none disabled:opacity-50"
+                    placeholder="Initiative name"
+                    aria-label={`Initiative name for cluster ${c.name}`}
+                  />
+                  {over && (
+                    <div className="px-1 text-[10px] text-gray-500 flex justify-end">
+                      {value.length}/{NAME_MAX}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
 
