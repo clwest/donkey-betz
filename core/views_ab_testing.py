@@ -6,12 +6,26 @@ Provides complete CRUD operations for A/B tests, variants, events, and goals.
 """
 
 import json
+import logging
+
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils import timezone
 
 from .models_unified_system import ABTest, ABTestVariant, ABTestEvent, UserGoal
-from .api_helpers import api_success, api_error
+from .api_helpers import api_success
+from core.security.error_envelope import emit_error_envelope
+
+logger = logging.getLogger(__name__)
+
+
+# ==============================================================================
+# NOTE: A/B Test / Variant / Event handlers below (L~40-501) are DEAD CODE.
+# URL routes removed at Session 1103c (see core/urls.py:882 + docs/audit-2026/
+# HALF_BUILT_FEATURES_AUDIT.md). Kept temporarily pending scoped deletion PR.
+# Migrated to Family E envelopes here to prevent str(e) leaks if ever
+# re-exposed (T-ENVELOPE-3, S3012).
+# ==============================================================================
 
 
 # ==============================================================================
@@ -79,7 +93,12 @@ def ab_testing_dashboard(request):
         })
 
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=ab_testing_dashboard")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'ab_testing_dashboard', 'exc_type': type(e).__name__},
+        )
 
 
 # ==============================================================================
@@ -122,7 +141,12 @@ def list_tests(request):
         return api_success({'tests': tests_data})
 
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=list_tests")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'list_tests', 'exc_type': type(e).__name__},
+        )
 
 
 @csrf_exempt
@@ -135,7 +159,11 @@ def create_test(request):
         required_fields = ['name', 'test_type']
         for field in required_fields:
             if not data.get(field):
-                return api_error(f"Missing required field: {field}")
+                return emit_error_envelope(
+                    'invalid_input',
+                    request,
+                    hint={'source': 'create_test', 'reason': 'missing_field', 'field': field},
+                )
 
         user = request.user if request.user.is_authenticated else None
 
@@ -192,9 +220,18 @@ def create_test(request):
         }, message='A/B test created successfully')
 
     except json.JSONDecodeError:
-        return api_error("Invalid JSON data")
+        return emit_error_envelope(
+            'invalid_input',
+            request,
+            hint={'source': 'create_test', 'reason': 'json_decode_failed'},
+        )
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=create_test")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'create_test', 'exc_type': type(e).__name__},
+        )
 
 
 @csrf_exempt
@@ -274,9 +311,18 @@ def test_detail(request, test_id):
             return api_success(message=f'Test "{test_name}" deleted successfully')
 
     except ABTest.DoesNotExist:
-        return api_error("Test not found", status=404)
+        return emit_error_envelope(
+            'not_found',
+            request,
+            hint={'source': 'test_detail', 'resource_type': 'ABTest', 'resource_id': str(test_id)},
+        )
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=test_detail")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'test_detail', 'exc_type': type(e).__name__},
+        )
 
 
 @csrf_exempt
@@ -287,7 +333,11 @@ def start_test(request, test_id):
         test = ABTest.objects.get(id=test_id)
 
         if test.variants.count() < 2:
-            return api_error("Test must have at least 2 variants")
+            return emit_error_envelope(
+                'validation_error',
+                request,
+                hint={'source': 'start_test', 'reason': 'insufficient_variants', 'required': 2},
+            )
 
         if test.start_test():
             return api_success({
@@ -298,12 +348,25 @@ def start_test(request, test_id):
                 }
             }, message='Test started successfully')
         else:
-            return api_error(f"Cannot start test in {test.status} status")
+            return emit_error_envelope(
+                'validation_error',
+                request,
+                hint={'source': 'start_test', 'reason': 'invalid_state_transition', 'current_status': test.status},
+            )
 
     except ABTest.DoesNotExist:
-        return api_error("Test not found", status=404)
+        return emit_error_envelope(
+            'not_found',
+            request,
+            hint={'source': 'start_test', 'resource_type': 'ABTest', 'resource_id': str(test_id)},
+        )
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=start_test")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'start_test', 'exc_type': type(e).__name__},
+        )
 
 
 @csrf_exempt
@@ -321,12 +384,25 @@ def pause_test(request, test_id):
                 }
             }, message='Test paused successfully')
         else:
-            return api_error(f"Cannot pause test in {test.status} status")
+            return emit_error_envelope(
+                'validation_error',
+                request,
+                hint={'source': 'pause_test', 'reason': 'invalid_state_transition', 'current_status': test.status},
+            )
 
     except ABTest.DoesNotExist:
-        return api_error("Test not found", status=404)
+        return emit_error_envelope(
+            'not_found',
+            request,
+            hint={'source': 'pause_test', 'resource_type': 'ABTest', 'resource_id': str(test_id)},
+        )
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=pause_test")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'pause_test', 'exc_type': type(e).__name__},
+        )
 
 
 @csrf_exempt
@@ -350,12 +426,25 @@ def complete_test(request, test_id):
                 }
             }, message='Test completed successfully')
         else:
-            return api_error("Failed to complete test")
+            return emit_error_envelope(
+                'validation_error',
+                request,
+                hint={'source': 'complete_test', 'reason': 'complete_failed'},
+            )
 
     except ABTest.DoesNotExist:
-        return api_error("Test not found", status=404)
+        return emit_error_envelope(
+            'not_found',
+            request,
+            hint={'source': 'complete_test', 'resource_type': 'ABTest', 'resource_id': str(test_id)},
+        )
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=complete_test")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'complete_test', 'exc_type': type(e).__name__},
+        )
 
 
 @csrf_exempt
@@ -379,9 +468,18 @@ def test_results(request, test_id):
         return api_success(results)
 
     except ABTest.DoesNotExist:
-        return api_error("Test not found", status=404)
+        return emit_error_envelope(
+            'not_found',
+            request,
+            hint={'source': 'test_results', 'resource_type': 'ABTest', 'resource_id': str(test_id)},
+        )
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=test_results")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'test_results', 'exc_type': type(e).__name__},
+        )
 
 
 # ==============================================================================
@@ -396,7 +494,11 @@ def add_variant(request, test_id):
         test = ABTest.objects.get(id=test_id)
 
         if test.status != 'draft':
-            return api_error("Cannot add variants to a non-draft test")
+            return emit_error_envelope(
+                'validation_error',
+                request,
+                hint={'source': 'add_variant', 'reason': 'invalid_state_transition', 'current_status': test.status},
+            )
 
         data = json.loads(request.body) if request.body else {}
 
@@ -418,9 +520,18 @@ def add_variant(request, test_id):
         }, message='Variant added successfully')
 
     except ABTest.DoesNotExist:
-        return api_error("Test not found", status=404)
+        return emit_error_envelope(
+            'not_found',
+            request,
+            hint={'source': 'add_variant', 'resource_type': 'ABTest', 'resource_id': str(test_id)},
+        )
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=add_variant")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'add_variant', 'exc_type': type(e).__name__},
+        )
 
 
 @csrf_exempt
@@ -453,15 +564,28 @@ def variant_detail(request, variant_id):
 
         elif request.method == "DELETE":
             if variant.is_control and variant.test.variants.count() <= 2:
-                return api_error("Cannot delete control variant with only 2 variants")
+                return emit_error_envelope(
+                    'validation_error',
+                    request,
+                    hint={'source': 'variant_detail', 'reason': 'cannot_delete_control_with_two_variants'},
+                )
 
             variant.delete()
             return api_success(message='Variant deleted successfully')
 
     except ABTestVariant.DoesNotExist:
-        return api_error("Variant not found", status=404)
+        return emit_error_envelope(
+            'not_found',
+            request,
+            hint={'source': 'variant_detail', 'resource_type': 'ABTestVariant', 'resource_id': str(variant_id)},
+        )
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=variant_detail")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'variant_detail', 'exc_type': type(e).__name__},
+        )
 
 
 # ==============================================================================
@@ -496,9 +620,18 @@ def record_event(request, variant_id):
         }, message='Event recorded successfully')
 
     except ABTestVariant.DoesNotExist:
-        return api_error("Variant not found", status=404)
+        return emit_error_envelope(
+            'not_found',
+            request,
+            hint={'source': 'record_event', 'resource_type': 'ABTestVariant', 'resource_id': str(variant_id)},
+        )
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=record_event")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'record_event', 'exc_type': type(e).__name__},
+        )
 
 
 # ==============================================================================
@@ -540,7 +673,12 @@ def list_goals(request):
         return api_success({'goals': goals_data})
 
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=list_goals")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'list_goals', 'exc_type': type(e).__name__},
+        )
 
 
 @csrf_exempt
@@ -553,7 +691,11 @@ def create_goal(request):
         required_fields = ['name', 'goal_type', 'target_value', 'start_date']
         for field in required_fields:
             if not data.get(field):
-                return api_error(f"Missing required field: {field}")
+                return emit_error_envelope(
+                    'invalid_input',
+                    request,
+                    hint={'source': 'create_goal', 'reason': 'missing_field', 'field': field},
+                )
 
         user = request.user if request.user.is_authenticated else None
 
@@ -581,9 +723,18 @@ def create_goal(request):
         }, message='Goal created successfully')
 
     except json.JSONDecodeError:
-        return api_error("Invalid JSON data")
+        return emit_error_envelope(
+            'invalid_input',
+            request,
+            hint={'source': 'create_goal', 'reason': 'json_decode_failed'},
+        )
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=create_goal")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'create_goal', 'exc_type': type(e).__name__},
+        )
 
 
 @csrf_exempt
@@ -644,9 +795,18 @@ def goal_detail(request, goal_id):
             return api_success(message=f'Goal "{goal_name}" deleted successfully')
 
     except UserGoal.DoesNotExist:
-        return api_error("Goal not found", status=404)
+        return emit_error_envelope(
+            'not_found',
+            request,
+            hint={'source': 'goal_detail', 'resource_type': 'UserGoal', 'resource_id': str(goal_id)},
+        )
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=goal_detail")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'goal_detail', 'exc_type': type(e).__name__},
+        )
 
 
 @csrf_exempt
@@ -659,7 +819,11 @@ def update_goal_progress(request, goal_id):
 
         new_value = data.get('current_value')
         if new_value is None:
-            return api_error("Missing current_value")
+            return emit_error_envelope(
+                'invalid_input',
+                request,
+                hint={'source': 'update_goal_progress', 'reason': 'missing_field', 'field': 'current_value'},
+            )
 
         result = goal.update_progress(new_value)
 
@@ -674,6 +838,15 @@ def update_goal_progress(request, goal_id):
         }, message='Goal progress updated')
 
     except UserGoal.DoesNotExist:
-        return api_error("Goal not found", status=404)
+        return emit_error_envelope(
+            'not_found',
+            request,
+            hint={'source': 'update_goal_progress', 'resource_type': 'UserGoal', 'resource_id': str(goal_id)},
+        )
     except Exception as e:
-        return api_error(str(e), status=500)
+        logger.exception("ab_testing internal_error source=update_goal_progress")
+        return emit_error_envelope(
+            'internal_error',
+            request,
+            hint={'source': 'update_goal_progress', 'exc_type': type(e).__name__},
+        )
