@@ -2,7 +2,7 @@
 
 ---
 
-## READ THIS FIRST — SESSION 3015 CLOSED. **U3 Bulk-promote SignalClusters shipped** (PR #3710, `c388f006a`). Third consecutive user-facing session (S3013 U1 → S3014 U2 → S3015 U3). One bundled PR: refactored U2's core creation logic into shared helper + new bulk endpoint `POST /api/platform/signal-cluster/bulk-create-initiative/` + Cluster Explorer table gets checkboxes + sticky action bar + confirm modal + dismissible result summary card + 10 new tests (all PASS, S3014's 8 also still PASS = 18/18). Rigby A2 zoom-out mitigation: 100-item batch cap. Zero new model fields.
+## READ THIS FIRST — SESSION 3015 CLOSED. **U3 Bulk-promote SignalClusters shipped** (PR #3710, `c388f006a`) + **4 post-ship browser-layer hotfixes** (PR #3712 `a01bb6740` active-workspace routing / PR #3713 `756f7a6f` TRIAGE visibility + dedupe UX polish / PR #3714 `47c1cbd57` Token-auth on `/api/initiatives/`). Third consecutive user-facing session (S3013 U1 → S3014 U2 → S3015 U3). Backend U3: refactored U2's core creation logic into shared helper + new bulk endpoint `POST /api/platform/signal-cluster/bulk-create-initiative/` + Cluster Explorer table gets checkboxes + sticky action bar + confirm modal + dismissible result summary card + 10 new tests (all PASS, S3014's 8 also still PASS = 18/18). Rigby A2 zoom-out mitigation: 100-item batch cap. Zero new model fields. **Chris browser-verified end-to-end** — U2 single-cluster promotion + U3 bulk promotion both write to the active workspace, land in TRIAGE, visible in Initiatives tab.
 
 **1 feature PR shipped this session.**
 
@@ -15,7 +15,7 @@
 
 **Rigby SIGN quality this session:** 3 substantive SIGN cycles, all tool-grounded, ZERO hallucination triggers (matches S3010 → S3014 pattern — **6 sessions continuous**).
 
-**HEAD at close:** `c388f006a` + docs cascade PR (this file + handoff + INDEX regen + wrapper pin bump).
+**HEAD at close:** `47c1cbd57` (Token-auth hotfix) after the ship trail: `c388f006a` (U3) → `b8f9b889f` (docs cascade) → `a01bb6740` (active-workspace) → `756f7a6f` (TRIAGE visibility + dedupe polish) → `47c1cbd57` (Token-auth fix) + this docs cascade PR (handoff post-ship section + 00-START refresh + INDEX regen).
 
 Full context:
 - `docs/handoffs/SESSION_3015_U3_BULK_CLUSTER_PROMOTION.md` — full session close, 4 folds (A/B/C/D), forward carries.
@@ -76,6 +76,9 @@ Chris-driven directive supersedes A/B/C/D/E.
 
 ### New from S3015
 
+- **Fold E `1st trigger`** — Browser-layer defects invisible to shell tests + Rigby SIGN. 4 hotfixes shipped this session broke immediately in Chris's real browser despite passing all backend tests + Rigby A2 SIGN + shell probes. Missing coverage class: browser-session + Token-auth path testing. Every test in this session used session auth; frontend uses Token auth exclusively. Watch for 2nd trigger.
+- **Fold F `1st trigger`** — "Empty state" symptom has multiple silent-degradation causes (browser cache / auth session/token / middleware auth path / queryset scope / frontend filter). Formalize the diagnostic tree so future triage compresses.
+- **Fold G `informational`** — `UnifiedTokenAuthenticationMiddleware.PUBLIC_PATHS` uses `startswith` matching. Audit for other bare-prefix entries that might be broader than their comment suggests (the `/api/initiatives/` entry was meant for `/api/initiatives/<uuid>/action-items/` sub-path but caught the list endpoint).
 - **U4 candidate:** AgentDecisionSummary bulk-decide.
 - **U5 candidate:** Post-create auto-link via `initiative_signal_linker`.
 - **U6 candidate:** Per-row name editing in bulk cluster confirm modal.

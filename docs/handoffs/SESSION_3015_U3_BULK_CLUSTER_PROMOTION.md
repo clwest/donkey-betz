@@ -151,6 +151,98 @@ S3013 U1 (BulkAttentionDecideView already existed). S3014 U2 (create_initiative_
 
 ---
 
+## Post-ship hotfix trail (browser-smoke driven)
+
+After U3 shipped + docs cascade merged, Chris exercised the flow in the real browser
+and surfaced 4 real defects that only appear at the browser/session layer (all missed
+by tests + Rigby SIGN + shell-level probes). All 4 shipped as small follow-up PRs
+before session close:
+
+**PR #3712 (`a01bb6740`) — U2/U3 route to active workspace** (frontend-only hotfix).
+Both modals now read `useWorkspaceStore().activeWorkspace` and pass `workspace_id`
+to the API. Backend already honored the override (S3014 A2 STRENGTHEN); the
+frontend just wasn't using it. Chris was viewing `Donkey Betz` but initiatives
+landed in `chris-personal` (user's *oldest* workspace, the pre-hotfix backend
+default). Also added "Target workspace: <name>" visible in both modals BEFORE
+submit.
+
+**PR #3713 (`756f7a6f`) — TRIAGE visibility + dedupe UX polish.** Two bundled:
+- `InitiativesTab` Active tab predicate now includes `TRIAGE` (was silently
+  excluded). Cluster-derived initiatives auto-create in `TRIAGE` state per S994
+  semantic ("auto-created, awaiting review") — so *every* U2/U3-created initiative
+  was invisible in the default Active tab even when the data was there.
+- `BulkPromoteResultCard` splits dedupe hits (amber "already exists · <name>" +
+  deep link to existing initiative) from real errors (red). Chris saw "0 of 1
+  created / 1 failure" and thought U3 was broken when it was actually a correct
+  dedupe pointer at an existing initiative from Rigby's live-probe smoke.
+
+**PR #3714 (`47c1cbd57`) — Token-auth reaches `/api/initiatives/`.** Deepest
+defect of the trail. `/api/initiatives/` sat in
+`UnifiedTokenAuthenticationMiddleware.PUBLIC_PATHS` as a bare prefix (Session 912
+comment says it was intended for the `/api/initiatives/<uuid>/action-items/`
+sub-path, but the bare prefix caught the list endpoint too). `PUBLIC_PATHS`
+short-circuits before Token extraction runs → `request.user` stays as
+`AnonymousUser` → `scope_queryset_initiative(AnonymousUser)` returns `.none()`
+→ `count=0`. React frontend uses Token auth only (Django session cookie was
+never issued), so Chris's browser saw an empty tab even though the same URL via
+`Client.force_login()` (session auth) returned 22 initiatives. Fix: moved
+`/api/initiatives/` to `OPTIONAL_AUTH_PATHS` — middleware now runs
+`extract_token` + `validate_token` without requiring auth. Wire verified:
+`curl -H "Authorization: Token <chris_token>" /api/initiatives/?workspace=...`
+went from `count=0` to `count=22`.
+
+**Data patches during triage (~1 min each, no PRs):**
+- Moved `Face, Hugging emerging trend` initiative + brief from `chris-personal`
+  to `Donkey Betz` workspace via ORM shell.
+- Moved 2 more cluster-derived initiatives from Rigby's smoke
+  (`Trump, Court`, `President, Trump`) + the `Paypal, Corning demand spike`
+  initiative to `Donkey Betz` (they were stranded in `chris-personal` /
+  `None` workspace from the pre-hotfix default).
+
+**Final browser-verified state:** Chris confirmed Workspace → Work → Initiatives
+now shows all cluster-derived initiatives in the Donkey Betz workspace's Active
+tab (TRIAGE status).
+
+## Post-ship folds
+
+### Fold E `1st trigger` — Browser-layer defects invisible to shell tests + Rigby SIGN
+
+All 4 hotfixes above passed:
+- Backend tests (S3014 8/8, S3015 10/10 = 18/18).
+- Frontend typecheck + build (0 new errors).
+- Rigby A2 SIGN with live web_fetch probe.
+- Shell `Client.force_login` probes.
+
+...but broke immediately in Chris's real browser. Missing coverage class:
+**browser-session + token-auth path testing**. Every test in this session used
+session auth (`Client.force_login`); the frontend uses Token auth exclusively.
+Divergence in middleware handling silently caused zero-count responses. **Codification
+candidate:** every new user-facing API endpoint should have (a) a token-auth
+smoke test in addition to session-auth tests, (b) a `_optional_auth` decorator
+or middleware config review. Watch for 2nd trigger.
+
+### Fold F `1st trigger` — "Everything looks right at the API layer" is not sufficient
+
+The Chris → browser → API → ORM chain has multiple silent-degradation modes:
+- Frontend cache serving old bundle (usually fixed by hard refresh).
+- Middleware auth-path exemption (this session's PUBLIC_PATHS issue).
+- User-scoped queryset returning `.none()` when auth resolves to anon.
+- Tab-level status-filter predicate hiding data.
+
+All 4 fired in sequence this session. Each one made "no data visible" look like
+the same symptom, when the causes were unrelated. **Codification candidate:**
+when a user reports "empty state" and shell probes show data exists, the diagnostic
+tree should systematically walk: (1) browser cache, (2) auth session/token, (3)
+middleware auth path, (4) queryset scope, (5) frontend filter predicate. This
+session did it ad-hoc; formalizing would compress future triage.
+
+### Fold G `informational` — `PUBLIC_PATHS` bare-prefix matching is dangerous
+
+`PUBLIC_PATHS` uses `startswith` matching. The `/api/initiatives/` entry was
+meant for a specific sub-path but caught the whole tree. **Discovery candidate:**
+audit `PUBLIC_PATHS` for other bare-prefix entries that might be broader than
+their comment suggests. Cheap sweep.
+
 ## Wrapper pin
 
 Active PA conversation pin at S3015 close is minted by `session_lifecycle close` at close time and the wrapper `tools/pa_local.sh` rewritten atomically. Commit the wrapper diff in the S3015 close cascade PR per `feedback_commit_wrapper_pin_bump_at_close`.
