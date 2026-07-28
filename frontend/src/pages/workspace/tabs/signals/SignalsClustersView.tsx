@@ -8,8 +8,8 @@
  */
 
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Loader2, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Loader2, X, ChevronLeft, ChevronRight, Rocket, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { signalsApi } from '@/lib/api'
 import { formatMST, formatNumber, formatConfidence } from './formatters'
 import type { SignalsWindow } from './SignalsTab'
@@ -277,6 +277,16 @@ function ClusterDrawer({
     ? (detail.spider_data_ids?.length || 0) + (detail.trigger_event_ids?.length || 0)
     : 0
 
+  // Session 3014 (U2): Create initiative modal state
+  const [createModalOpen, setCreateModalOpen] = useState(false)
+  const [createResult, setCreateResult] = useState<{
+    initiativeId: string
+    initiativeName: string
+    deliverableId: string | null
+    deliverableTitle: string | null
+    deliverableError?: string
+  } | null>(null)
+
   return (
     <div
       role="dialog"
@@ -384,8 +394,185 @@ function ClusterDrawer({
                 Evidence linkage not available in v1.
               </div>
             )}
+
+            {/* Session 3014 (U2): Create initiative bridge */}
+            <div className="pt-3 border-t border-gray-800">
+              {createResult ? (
+                <div className="rounded-lg border border-accent-green/30 bg-accent-green/5 p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-accent-green text-sm">
+                    <CheckCircle2 size={14} />
+                    <span className="font-medium">Initiative created</span>
+                  </div>
+                  <div className="text-xs text-gray-300">{createResult.initiativeName}</div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <a
+                      href={`/workspace?tab=initiatives&id=${createResult.initiativeId}`}
+                      className="px-2 py-1 rounded bg-primary-500/20 text-primary-300 hover:bg-primary-500/30"
+                    >
+                      Open initiative
+                    </a>
+                    {createResult.deliverableId && (
+                      <a
+                        href={`/workspace?tab=deliverables&id=${createResult.deliverableId}`}
+                        className="px-2 py-1 rounded bg-primary-500/20 text-primary-300 hover:bg-primary-500/30"
+                      >
+                        View brief
+                      </a>
+                    )}
+                    {createResult.deliverableError && (
+                      <span className="flex items-center gap-1 text-accent-amber">
+                        <AlertTriangle size={12} />
+                        Brief skipped: {createResult.deliverableError}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setCreateModalOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm bg-primary-500/20 text-primary-300 hover:bg-primary-500/30 transition-colors"
+                >
+                  <Rocket size={14} />
+                  Create initiative from this cluster
+                </button>
+              )}
+            </div>
           </>
         )}
+      </div>
+
+      {createModalOpen && detail && (
+        <CreateInitiativeModal
+          cluster={detail}
+          onClose={() => setCreateModalOpen(false)}
+          onCreated={(res) => {
+            setCreateResult(res)
+            setCreateModalOpen(false)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+// Session 3014 (U2): Confirm-and-submit modal for signal-cluster → initiative bridge
+function CreateInitiativeModal({
+  cluster,
+  onClose,
+  onCreated,
+}: {
+  cluster: ClusterDetail
+  onClose: () => void
+  onCreated: (result: {
+    initiativeId: string
+    initiativeName: string
+    deliverableId: string | null
+    deliverableTitle: string | null
+    deliverableError?: string
+  }) => void
+}) {
+  const queryClient = useQueryClient()
+  const defaultName = `${cluster.pattern_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}: ${cluster.name}`.slice(0, 200)
+  const [name, setName] = useState(defaultName)
+  const [generateBrief, setGenerateBrief] = useState(true)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      signalsApi.createInitiativeFromCluster(cluster.id, {
+        name: name.trim() && name.trim() !== defaultName ? name.trim() : undefined,
+        generate_brief: generateBrief,
+      }),
+    onSuccess: (resp) => {
+      const body = resp.data
+      if (!body.success || !body.initiative) {
+        setErrorMsg(body.error || 'Initiative creation failed')
+        return
+      }
+      queryClient.invalidateQueries({ queryKey: ['initiatives'] })
+      onCreated({
+        initiativeId: body.initiative.id,
+        initiativeName: body.initiative.name,
+        deliverableId: body.deliverable?.id ?? null,
+        deliverableTitle: body.deliverable?.title ?? null,
+        deliverableError: body.deliverable_error,
+      })
+    },
+    onError: (err: any) => {
+      const msg = err?.response?.data?.error || err?.message || 'Request failed'
+      setErrorMsg(msg)
+    },
+  })
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      onClick={onClose}
+    >
+      <div
+        className="max-w-md w-full mx-4 p-5 bg-gray-950 border border-primary-500/30 rounded-lg shadow-2xl space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2">
+          <Rocket className="text-primary-400" size={18} />
+          <h3 className="text-base font-semibold text-gray-100">Create initiative from cluster</h3>
+        </div>
+
+        <div className="space-y-3 text-sm">
+          <div>
+            <label className="block text-xs uppercase tracking-wide text-gray-500 mb-1">Initiative name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={200}
+              className="w-full px-3 py-2 rounded bg-gray-900 border border-gray-800 text-sm text-white focus:border-primary-500 focus:outline-none"
+            />
+            <div className="text-[10px] text-gray-500 mt-1">{name.length}/200 characters</div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-gray-300">
+            <input
+              type="checkbox"
+              checked={generateBrief}
+              onChange={(e) => setGenerateBrief(e.target.checked)}
+              className="accent-primary-500"
+            />
+            Generate Signal Brief deliverable
+          </label>
+
+          {errorMsg && (
+            <div className="flex items-start gap-2 p-2 rounded bg-accent-red/10 text-accent-red text-xs">
+              <AlertTriangle size={12} className="mt-0.5" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-800">
+          <button
+            onClick={onClose}
+            disabled={mutation.isPending}
+            className="px-3 py-1.5 text-sm rounded-md bg-gray-800 hover:bg-gray-700 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => mutation.mutate()}
+            disabled={mutation.isPending || !name.trim()}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary-500/20 text-primary-300 hover:bg-primary-500/30 disabled:opacity-50"
+          >
+            {mutation.isPending ? (
+              <>
+                <Loader2 size={14} className="animate-spin" /> Creating…
+              </>
+            ) : (
+              <>
+                <Rocket size={14} /> Create
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   )

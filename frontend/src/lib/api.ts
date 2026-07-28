@@ -671,6 +671,15 @@ export const signalsApi = {
     api.get('/v1/signal-clusters/', { params }),
   clusterDetail: (clusterId: string) =>
     api.get(`/v1/signal-clusters/${clusterId}/`),
+  // Session 3014 (U2): Create Initiative + optional brief deliverable from a cluster.
+  createInitiativeFromCluster: (clusterId: string, params: { name?: string; generate_brief?: boolean }) =>
+    api.post<{
+      success: boolean
+      error?: string
+      initiative: { id: string; name: string; status: string; current_stage: number } | null
+      deliverable: { id: string; title: string } | null
+      deliverable_error?: string
+    }>(`/platform/signal-cluster/${clusterId}/create-initiative/`, params),
   // S2978: Theme Signals v1 — tab-scoped Buildable/Investable cards.
   // S2980: `build_only` filters Buildable to action==build cards only.
   themeSignals: (params?: { tab?: 'buildable' | 'investable'; days?: number; limit?: number; min_confidence?: number; build_only?: boolean }) =>
