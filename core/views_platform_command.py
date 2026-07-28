@@ -928,75 +928,60 @@ def create_initiative_from_decision_view(request, decision_id):
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 
-@require_POST
-@login_required
-@_platform_staff_only
-def create_initiative_from_cluster_view(request, cluster_id):
+def _resolve_target_workspace(user, workspace_override_id=None):
     """
-    POST /api/platform/signal-cluster/<uuid:cluster_id>/create-initiative/
-
-    Session 3014 (U2): One-click "Signal Cluster → Initiative + Brief" bridge for the
-    Signal Intelligence UI. Copies the shape of create_initiative_from_decision_view
-    (Session 852) but sources from SignalCluster + optionally emits a Brief deliverable
-    linked to the new initiative.
-
-    Body (optional):
-        {
-            "name": "<override name>",        # default: "{pattern_type}: {cluster.name}"
-            "generate_brief": true|false      # default: true
-        }
-
-    Returns:
-        {
-            "success": bool,
-            "initiative": {id, name, status, current_stage} | None,
-            "deliverable": {id, title} | None,
-            "deliverable_error": "..." (only present if brief generation failed)
-        }
+    Session 3014 A2: pick a non-null target_workspace to avoid
+    `diagnostic_status='diagnostic' / diagnostic_code='missing_target_workspace_id'`.
+    Explicit override → user's oldest workspace → any workspace → None (rare).
     """
-    from core.models_signal_intelligence import SignalCluster
-    from core.models_document_registry import Initiative
     from core.models_skin_layer import ProjectWorkspace
+
+    if workspace_override_id:
+        ws = ProjectWorkspace.objects.filter(id=workspace_override_id).first()
+        if ws:
+            return ws
+    return (
+        ProjectWorkspace.objects.filter(user=user).order_by('created_at').first()
+        or ProjectWorkspace.objects.order_by('created_at').first()
+    )
+
+
+def _create_initiative_from_cluster_core(cluster, user, name_override='', generate_brief=True, target_workspace=None):
+    """
+    Session 3014 (U2) + S3015 (U3): Core logic for turning a SignalCluster into an
+    Initiative (+ optional Brief Deliverable). Shared by single-cluster + bulk endpoints.
+
+    Returns a (status_code, result_dict) tuple. Status codes:
+      * 200 — created OK
+      * 400 — dedupe hit on Initiative name (result has existing initiative reference)
+      * 500 — Initiative create raised
+
+    result_dict shape:
+        {
+            'success': bool,
+            'error'?: str,
+            'initiative': {id, name, status, current_stage} | None,
+            'deliverable': {id, title} | None,
+            'deliverable_error'?: str
+        }
+    """
+    from core.models_document_registry import Initiative
     from core.services.deliverable_factory import create_deliverable
 
-    try:
-        cluster = SignalCluster.objects.get(id=cluster_id)
-    except SignalCluster.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Cluster not found'}, status=404)
-
-    try:
-        body = json.loads(request.body) if request.body else {}
-    except json.JSONDecodeError:
-        body = {}
-
-    name_override = (body.get('name') or '').strip()
-    generate_brief = body.get('generate_brief', True)
-    workspace_override_id = body.get('workspace_id')
-
-    # Rigby A2 STRENGTHEN: set target_workspace to avoid
-    # `diagnostic_status='diagnostic'` / `diagnostic_code='missing_target_workspace_id'`.
-    # Explicit override wins; otherwise pick the user's oldest workspace; otherwise
-    # any workspace. If none exist at all the FK is left null (rare — new-install only).
-    target_workspace = None
-    if workspace_override_id:
-        target_workspace = ProjectWorkspace.objects.filter(id=workspace_override_id).first()
     if target_workspace is None:
-        target_workspace = (
-            ProjectWorkspace.objects.filter(user=request.user).order_by('created_at').first()
-            or ProjectWorkspace.objects.order_by('created_at').first()
-        )
+        target_workspace = _resolve_target_workspace(user)
 
     pattern_label = cluster.pattern_type.replace('_', ' ').title()
     default_name = f"{pattern_label}: {cluster.name}"[:200]
-    initiative_name = (name_override or default_name)[:200]
+    initiative_name = ((name_override or '').strip() or default_name)[:200]
 
     existing = Initiative.objects.filter(name=initiative_name).first()
     if existing:
-        return JsonResponse({
+        return 400, {
             'success': False,
             'error': 'An initiative already exists with this name',
             'initiative': {'id': str(existing.id), 'name': existing.name},
-        }, status=400)
+        }
 
     desc_parts = [
         f"**Pattern:** {pattern_label}",
@@ -1015,16 +1000,14 @@ def create_initiative_from_cluster_view(request, cluster_id):
             name=initiative_name,
             description='\n'.join(desc_parts),
             status=Initiative.Status.TRIAGE,
-            created_by=request.user.username or 'system',
-            owner=request.user,  # I-0302 Phase 3 A1: owner NOT NULL
-            target_workspace=target_workspace,  # Rigby A2 STRENGTHEN: avoid missing_target_workspace_id diagnostic
-            # Rigby A2 STRENGTHEN: quick-scan hint for cluster provenance (structured
-            # provenance lives on the brief Deliverable via parent_object_type/id).
+            created_by=user.username or 'system',
+            owner=user,
+            target_workspace=target_workspace,
             parent_topic=f'signal_cluster:{cluster.id}',
         )
     except Exception as e:
-        logger.error(f"S3014 create_initiative_from_cluster: Initiative create failed for cluster {cluster_id}: {e}")
-        return JsonResponse({'success': False, 'error': 'Initiative creation failed'}, status=500)
+        logger.error(f"S3014 core: Initiative create failed for cluster {cluster.id}: {e}")
+        return 500, {'success': False, 'error': 'Initiative creation failed'}
 
     result = {
         'success': True,
@@ -1074,12 +1057,9 @@ def create_initiative_from_cluster_view(request, cluster_id):
                     brief_lines.append(f"- {prefix}{text}")
                 brief_lines.append('')
             brief_lines.append(
-                f"---\n*Auto-generated by S3014 U2 from SignalCluster `{cluster.id}`.*"
+                f"---\n*Auto-generated by SignalClusterBridge from SignalCluster `{cluster.id}`.*"
             )
 
-            # Pad brief to satisfy MIN_CONTENT_LENGTH=300 gate (see deliverable_factory).
-            # Auto-generated brief bodies are always structured; short clusters produce
-            # short briefs that would otherwise be rejected as low-quality.
             brief_content = '\n'.join(brief_lines)
             if len(brief_content) < 300:
                 brief_content += (
@@ -1096,13 +1076,11 @@ def create_initiative_from_cluster_view(request, cluster_id):
                 category='Signal Intelligence',
                 deliverable_type='document',
                 content_format='markdown',
-                user=request.user,
+                user=user,
                 initiative_id=str(initiative.id),
                 workspace_id=str(target_workspace.id) if target_workspace else None,
                 tags=['signal_cluster_brief', cluster.pattern_type],
-                # user-triggered UI action — skip the automated-agent min-length gate
                 metadata={'trigger_source': 'user_request', 'signal_cluster_id': str(cluster.id)},
-                # Rigby A2 STRENGTHEN: authoritative queryable provenance (Session 843 pattern)
                 parent_object_type='signal_cluster',
                 parent_object_id=str(cluster.id),
             )
@@ -1116,17 +1094,182 @@ def create_initiative_from_cluster_view(request, cluster_id):
                 result['deliverable_error'] = 'Brief creation gated by quality checks; initiative created'
         except Exception as e:
             logger.warning(
-                f"S3014 create_initiative_from_cluster: brief deliverable failed "
-                f"(initiative still ok): {type(e).__name__}: {e}"
+                f"S3014 core: brief deliverable failed (initiative still ok): "
+                f"{type(e).__name__}: {e}"
             )
             result['deliverable_error'] = 'Brief generation failed; initiative was still created'
 
     logger.info(
         f"S3014: Created Initiative '{initiative.name}' "
-        f"(brief={bool(result['deliverable'])}) from cluster {cluster_id}"
+        f"(brief={bool(result['deliverable'])}) from cluster {cluster.id}"
+    )
+    return 200, result
+
+
+@require_POST
+@login_required
+@_platform_staff_only
+def create_initiative_from_cluster_view(request, cluster_id):
+    """
+    POST /api/platform/signal-cluster/<uuid:cluster_id>/create-initiative/
+
+    Session 3014 (U2): One-click "Signal Cluster → Initiative + Brief" bridge.
+
+    Body (optional):
+        {
+            "name": "<override name>",       # default: "{pattern_type}: {cluster.name}"
+            "generate_brief": true|false,    # default: true
+            "workspace_id": "<uuid>"         # optional override
+        }
+    """
+    from core.models_signal_intelligence import SignalCluster
+
+    try:
+        cluster = SignalCluster.objects.get(id=cluster_id)
+    except SignalCluster.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Cluster not found'}, status=404)
+
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        body = {}
+
+    target_workspace = _resolve_target_workspace(request.user, body.get('workspace_id'))
+    status_code, result = _create_initiative_from_cluster_core(
+        cluster=cluster,
+        user=request.user,
+        name_override=body.get('name') or '',
+        generate_brief=body.get('generate_brief', True),
+        target_workspace=target_workspace,
+    )
+    return JsonResponse(result, status=status_code)
+
+
+@require_POST
+@login_required
+@_platform_staff_only
+def bulk_create_initiatives_from_clusters_view(request):
+    """
+    POST /api/platform/signal-cluster/bulk-create-initiative/
+
+    Session 3015 (U3): Bulk-promote N SignalClusters to Initiatives (+ optional briefs).
+    Parallels the S3013 U1 `BulkAttentionDecideView` pattern.
+
+    Body:
+        {
+            "cluster_ids": ["<uuid>", "<uuid>", ...],   # required, len ≥ 1
+            "generate_brief": true|false,               # default: true, applies to all
+            "workspace_id": "<uuid>"                    # optional override for all rows
+        }
+
+    Returns 200 for well-formed requests (partial failures are per-row, not global):
+        {
+            "success": true,
+            "summary": {
+                "requested": N,
+                "succeeded": M,
+                "failed": N - M,
+                "briefs_succeeded": B,
+                "briefs_failed": N - M - B_skipped
+            },
+            "results": [
+                {"cluster_id": "...", "initiative": {...}, "deliverable": {...}, "deliverable_error"?},
+                {"cluster_id": "...", "error": "..."}
+            ]
+        }
+    """
+    from core.models_signal_intelligence import SignalCluster
+
+    try:
+        body = json.loads(request.body) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+
+    cluster_ids = body.get('cluster_ids') or []
+    if not isinstance(cluster_ids, list) or not cluster_ids:
+        return JsonResponse({'success': False, 'error': 'cluster_ids (non-empty list) required'}, status=400)
+
+    # Rigby A2 zoom-out: cap batch to prevent accidental "select huge set" foot-gun.
+    # Frontend paginates clusters at 25 per page; 100 gives 4x headroom while bounding
+    # the sync-request loop.
+    BULK_CLUSTER_LIMIT = 100
+    if len(cluster_ids) > BULK_CLUSTER_LIMIT:
+        return JsonResponse({
+            'success': False,
+            'error': f'cluster_ids exceeds max batch size ({len(cluster_ids)} > {BULK_CLUSTER_LIMIT}). Split into smaller batches.',
+        }, status=400)
+
+    generate_brief = body.get('generate_brief', True)
+    target_workspace = _resolve_target_workspace(request.user, body.get('workspace_id'))
+
+    # Preserve request order + de-dup within request
+    seen = set()
+    ordered_ids = []
+    for cid in cluster_ids:
+        if cid and cid not in seen:
+            seen.add(cid)
+            ordered_ids.append(cid)
+
+    clusters_by_id = {str(c.id): c for c in SignalCluster.objects.filter(id__in=ordered_ids)}
+
+    results = []
+    succeeded = 0
+    briefs_succeeded = 0
+    for cid in ordered_ids:
+        cluster = clusters_by_id.get(str(cid))
+        if cluster is None:
+            results.append({'cluster_id': str(cid), 'error': 'Cluster not found'})
+            continue
+        try:
+            status_code, row = _create_initiative_from_cluster_core(
+                cluster=cluster,
+                user=request.user,
+                name_override='',  # bulk always uses defaults
+                generate_brief=generate_brief,
+                target_workspace=target_workspace,
+            )
+        except Exception as e:
+            logger.exception(f"S3015 bulk: unhandled exception on cluster {cid}: {e}")
+            results.append({'cluster_id': str(cid), 'error': f'Unhandled server error: {type(e).__name__}'})
+            continue
+
+        if status_code == 200 and row.get('success'):
+            succeeded += 1
+            if row.get('deliverable'):
+                briefs_succeeded += 1
+            results.append({
+                'cluster_id': str(cid),
+                'initiative': row.get('initiative'),
+                'deliverable': row.get('deliverable'),
+                **({'deliverable_error': row['deliverable_error']} if row.get('deliverable_error') else {}),
+            })
+        else:
+            entry = {'cluster_id': str(cid), 'error': row.get('error', 'Unknown error')}
+            if row.get('initiative'):
+                entry['existing_initiative'] = row['initiative']
+            results.append(entry)
+
+    failed = len(results) - succeeded
+    briefs_requested = succeeded if generate_brief else 0
+    briefs_failed = briefs_requested - briefs_succeeded
+
+    logger.info(
+        f"S3015 bulk_create_initiatives: requested={len(ordered_ids)} "
+        f"succeeded={succeeded} failed={failed} briefs_succeeded={briefs_succeeded}"
     )
 
-    return JsonResponse(result)
+    return JsonResponse({
+        'success': True,
+        'summary': {
+            'requested': len(ordered_ids),
+            'succeeded': succeeded,
+            'failed': failed,
+            'briefs_requested': briefs_requested,
+            'briefs_succeeded': briefs_succeeded,
+            'briefs_failed': briefs_failed,
+        },
+        'results': results,
+    })
 
 
 @require_POST
