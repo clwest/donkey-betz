@@ -39,7 +39,8 @@ from core.models_unified_system import (
     UserPlatformAccount,
     ContentDistribution,
 )
-from core.api_responses import api_success, api_error
+from core.api_responses import api_success, api_error  # api_error retained pending PR B (46 remaining sites)
+from core.security.error_envelope import emit_error_envelope
 
 logger = logging.getLogger(__name__)
 
@@ -171,18 +172,27 @@ def oauth_connect(request, platform):
     Initiates OAuth flow for a platform.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'oauth_connect'},
+        )
 
     if platform not in PLATFORM_CONFIGS:
-        return api_error(f"Platform '{platform}' not supported", status_code=400)
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={'source': 'oauth_connect', 'reason': 'unsupported_platform', 'platform': platform},
+        )
 
     config = PLATFORM_CONFIGS[platform]
     creds = get_platform_credentials(platform)
 
     if not creds.get('client_id'):
-        return api_error(
-            f"Platform '{platform}' not configured. Please set up API credentials.",
-            status_code=503
+        return emit_error_envelope(
+            reason_code='unavailable',
+            request=request,
+            hint={'source': 'oauth_connect', 'reason': 'platform_not_configured', 'platform': platform},
         )
 
     # Generate state token
@@ -237,21 +247,37 @@ def oauth_callback(request, platform):
     error = request.GET.get('error')
 
     if error:
-        return api_error(f"OAuth error: {error}")
+        return emit_error_envelope(
+            reason_code='validation_error',
+            request=request,
+            hint={'source': 'oauth_callback', 'reason': 'oauth_provider_error', 'platform': platform, 'error': error},
+        )
 
     if not code or not state:
-        return api_error("Missing authorization code or state")
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={'source': 'oauth_callback', 'reason': 'missing_code_or_state'},
+        )
 
     # Verify state token
     user_id, verified_platform = verify_state_token(state)
     if not user_id or verified_platform != platform:
-        return api_error("Invalid state token")
+        return emit_error_envelope(
+            reason_code='invalid_input',
+            request=request,
+            hint={'source': 'oauth_callback', 'reason': 'invalid_state_token'},
+        )
 
     config = PLATFORM_CONFIGS.get(platform)
     creds = get_platform_credentials(platform)
 
     if not config or not creds.get('client_id'):
-        return api_error("Platform not configured")
+        return emit_error_envelope(
+            reason_code='unavailable',
+            request=request,
+            hint={'source': 'oauth_callback', 'reason': 'platform_not_configured', 'platform': platform},
+        )
 
     # Exchange code for tokens
     redirect_uri = request.build_absolute_uri(f'/api/distribution/oauth/{platform}/callback/')
@@ -281,7 +307,16 @@ def oauth_callback(request, platform):
 
         if response.status_code != 200:
             logger.error(f"Token exchange failed: {response.text}")
-            return api_error(f"Token exchange failed: {response.status_code}")
+            return emit_error_envelope(
+                reason_code='upstream_provider_error',
+                request=request,
+                hint={
+                    'source': 'oauth_callback',
+                    'reason': 'token_exchange_failed',
+                    'platform': platform,
+                    'upstream_status': response.status_code,
+                },
+            )
 
         tokens = response.json()
 
@@ -295,7 +330,15 @@ def oauth_callback(request, platform):
         ).first()
 
         if not platform_obj:
-            return api_error(f"Platform '{config['name']}' not found in database")
+            return emit_error_envelope(
+                reason_code='internal_error',
+                request=request,
+                hint={
+                    'source': 'oauth_callback',
+                    'reason': 'platform_missing_in_db',
+                    'platform_name': config['name'],
+                },
+            )
 
         # Save tokens to user account
         account, created = UserPlatformAccount.objects.update_or_create(
@@ -323,7 +366,16 @@ def oauth_callback(request, platform):
 
     except Exception as e:
         logger.exception(f"OAuth callback error for {platform}: {e}")
-        return api_error(f"OAuth error: {str(e)}")
+        return emit_error_envelope(
+            reason_code='internal_error',
+            request=request,
+            hint={
+                'source': 'oauth_callback',
+                'reason': 'oauth_unhandled_exception',
+                'platform': platform,
+                'exc_type': type(e).__name__,
+            },
+        )
 
 
 def fetch_platform_user_info(platform, access_token):
@@ -392,7 +444,11 @@ def refresh_token(request, platform):
     Refresh OAuth tokens for a platform.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status_code=401)
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'refresh_token'},
+        )
 
     try:
         account = UserPlatformAccount.objects.select_related('platform').get(
@@ -400,16 +456,28 @@ def refresh_token(request, platform):
             platform__name__icontains=platform
         )
     except UserPlatformAccount.DoesNotExist:
-        return api_error(f"No account connected for {platform}")
+        return emit_error_envelope(
+            reason_code='not_found',
+            request=request,
+            hint={'source': 'refresh_token', 'reason': 'no_account_connected', 'platform': platform},
+        )
 
     if not account.refresh_token:
-        return api_error("No refresh token available. Please reconnect.")
+        return emit_error_envelope(
+            reason_code='not_authenticated',
+            request=request,
+            hint={'source': 'refresh_token', 'reason': 'no_refresh_token', 'platform': platform},
+        )
 
     config = PLATFORM_CONFIGS.get(platform)
     creds = get_platform_credentials(platform)
 
     if not config or not creds.get('client_id'):
-        return api_error("Platform not configured")
+        return emit_error_envelope(
+            reason_code='unavailable',
+            request=request,
+            hint={'source': 'refresh_token', 'reason': 'platform_not_configured', 'platform': platform},
+        )
 
     try:
         import requests as http_requests
@@ -425,7 +493,16 @@ def refresh_token(request, platform):
         )
 
         if response.status_code != 200:
-            return api_error(f"Token refresh failed: {response.status_code}")
+            return emit_error_envelope(
+                reason_code='upstream_provider_error',
+                request=request,
+                hint={
+                    'source': 'refresh_token',
+                    'reason': 'refresh_upstream_failed',
+                    'platform': platform,
+                    'upstream_status': response.status_code,
+                },
+            )
 
         tokens = response.json()
 
@@ -444,7 +521,16 @@ def refresh_token(request, platform):
 
     except Exception as e:
         logger.exception(f"Token refresh error: {e}")
-        return api_error(f"Token refresh failed: {str(e)}")
+        return emit_error_envelope(
+            reason_code='internal_error',
+            request=request,
+            hint={
+                'source': 'refresh_token',
+                'reason': 'refresh_unhandled_exception',
+                'platform': platform,
+                'exc_type': type(e).__name__,
+            },
+        )
 
 
 # =============================================================================
