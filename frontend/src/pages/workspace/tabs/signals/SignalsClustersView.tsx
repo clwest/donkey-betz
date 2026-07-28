@@ -7,9 +7,9 @@
  *   GET /api/v1/signal-clusters/<uuid>/ (detail)
  */
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, X, ChevronLeft, ChevronRight, Rocket, CheckCircle2, AlertTriangle } from 'lucide-react'
+import { Loader2, X, ChevronLeft, ChevronRight, Rocket, CheckCircle2, AlertTriangle, CheckSquare, Square } from 'lucide-react'
 import { signalsApi } from '@/lib/api'
 import { formatMST, formatNumber, formatConfidence } from './formatters'
 import type { SignalsWindow } from './SignalsTab'
@@ -67,6 +67,13 @@ export function SignalsClustersView({ windowHours }: Props) {
   const [sourceSpiders, setSourceSpiders] = useState<string>('')  // comma-separated
   const [page, setPage] = useState(1)
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  // Session 3015 (U3): Bulk selection state
+  const [selectedForBulk, setSelectedForBulk] = useState<Set<string>>(new Set())
+  const [bulkModalOpen, setBulkModalOpen] = useState(false)
+  const [bulkResult, setBulkResult] = useState<{
+    summary: { requested: number; succeeded: number; failed: number; briefs_succeeded: number; briefs_failed: number }
+    failures: Array<{ cluster_id: string; error: string; existing_initiative?: { id: string; name: string } }>
+  } | null>(null)
 
   const clustersQ = useQuery({
     queryKey: ['signals-clusters', query, patternType, minConfidence, sourceSpiders, windowHours, page],
@@ -103,6 +110,35 @@ export function SignalsClustersView({ windowHours }: Props) {
   const total = clustersQ.data?.count ?? 0
   const pageStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
   const pageEnd = Math.min(page * PAGE_SIZE, total)
+
+  // Session 3015 (U3): derived selection state (only counts rows currently visible on page)
+  const visibleClusters = clustersQ.data?.results ?? []
+  const visibleSelectedIds = useMemo(
+    () => visibleClusters.filter((c) => selectedForBulk.has(c.id)).map((c) => c.id),
+    [visibleClusters, selectedForBulk]
+  )
+  const allVisibleSelected = visibleClusters.length > 0 && visibleSelectedIds.length === visibleClusters.length
+  const selectedClusters = useMemo(
+    () => visibleClusters.filter((c) => selectedForBulk.has(c.id)),
+    [visibleClusters, selectedForBulk]
+  )
+
+  const toggleSelection = (id: string) => {
+    setSelectedForBulk((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const selectAllVisible = () => {
+    setSelectedForBulk(new Set(visibleClusters.map((c) => c.id)))
+  }
+
+  const clearSelection = () => {
+    setSelectedForBulk(new Set())
+  }
 
   return (
     <div className="relative">
@@ -160,8 +196,27 @@ export function SignalsClustersView({ windowHours }: Props) {
 
       {/* Results header */}
       <div className="flex items-center justify-between mb-2 text-xs text-gray-500">
-        <div>
-          {clustersQ.isLoading ? 'Loading…' : `${formatNumber(pageStart)}-${formatNumber(pageEnd)} of ${formatNumber(total)}`}
+        <div className="flex items-center gap-3">
+          <span>
+            {clustersQ.isLoading ? 'Loading…' : `${formatNumber(pageStart)}-${formatNumber(pageEnd)} of ${formatNumber(total)}`}
+          </span>
+          {/* Session 3015 (U3): select-all-visible / clear */}
+          {visibleClusters.length > 0 && (
+            <button
+              onClick={() => (allVisibleSelected ? clearSelection() : selectAllVisible())}
+              className="flex items-center gap-1 text-gray-400 hover:text-primary-400 transition-colors"
+            >
+              {allVisibleSelected ? (
+                <CheckSquare size={12} className="text-primary-400" />
+              ) : (
+                <Square size={12} />
+              )}
+              {allVisibleSelected ? 'Deselect all' : 'Select all visible'}
+            </button>
+          )}
+          {selectedForBulk.size > 0 && (
+            <span className="text-primary-400">{selectedForBulk.size} selected</span>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <button
@@ -181,11 +236,36 @@ export function SignalsClustersView({ windowHours }: Props) {
         </div>
       </div>
 
+      {/* Session 3015 (U3): Sticky bulk-action bar */}
+      {visibleSelectedIds.length > 0 && (
+        <div className="sticky top-0 z-20 mb-3 flex flex-wrap items-center gap-3 p-3 bg-gray-950 border border-primary-500/40 rounded-lg shadow-lg">
+          <span className="text-sm font-medium text-primary-400">
+            {visibleSelectedIds.length} cluster{visibleSelectedIds.length === 1 ? '' : 's'} selected
+          </span>
+          <span className="text-xs text-gray-500 italic">Actions apply to SignalClusters</span>
+          <div className="flex-1" />
+          <button
+            onClick={clearSelection}
+            className="px-2 py-1 text-xs rounded bg-gray-800 hover:bg-gray-700 text-gray-400"
+          >
+            Clear
+          </button>
+          <button
+            onClick={() => setBulkModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary-500/20 text-primary-300 hover:bg-primary-500/30 transition-colors"
+          >
+            <Rocket size={14} />
+            Create {visibleSelectedIds.length} initiative{visibleSelectedIds.length === 1 ? '' : 's'}
+          </button>
+        </div>
+      )}
+
       {/* Table */}
       <div className="rounded-lg border border-gray-800 overflow-hidden">
         <table className="w-full text-xs">
           <thead className="bg-gray-900/60 text-gray-400 uppercase text-[10px]">
             <tr>
+              <th className="px-3 py-2 w-8"></th>
               <th className="text-left px-3 py-2">Detected</th>
               <th className="text-left px-3 py-2">Name</th>
               <th className="text-left px-3 py-2">Pattern</th>
@@ -196,17 +276,17 @@ export function SignalsClustersView({ windowHours }: Props) {
           </thead>
           <tbody>
             {clustersQ.isLoading && (
-              <tr><td colSpan={6} className="px-3 py-6 text-center text-gray-500">
+              <tr><td colSpan={7} className="px-3 py-6 text-center text-gray-500">
                 <Loader2 size={14} className="inline animate-spin mr-2" />Loading clusters…
               </td></tr>
             )}
             {clustersQ.error && (
-              <tr><td colSpan={6} className="px-3 py-6 text-center text-red-400">
+              <tr><td colSpan={7} className="px-3 py-6 text-center text-red-400">
                 {(clustersQ.error as Error).message || 'Failed to load'}
               </td></tr>
             )}
             {clustersQ.data && clustersQ.data.results.length === 0 && (
-              <tr><td colSpan={6} className="px-3 py-6 text-center text-gray-500">
+              <tr><td colSpan={7} className="px-3 py-6 text-center text-gray-500">
                 No clusters match the current filters.
               </td></tr>
             )}
@@ -214,8 +294,23 @@ export function SignalsClustersView({ windowHours }: Props) {
               <tr
                 key={row.id}
                 onClick={() => setSelectedId(row.id)}
-                className="border-t border-gray-800/60 hover:bg-gray-800/40 cursor-pointer"
+                className={`border-t border-gray-800/60 hover:bg-gray-800/40 cursor-pointer ${
+                  selectedForBulk.has(row.id) ? 'bg-primary-500/5' : ''
+                }`}
               >
+                <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    onClick={() => toggleSelection(row.id)}
+                    className="text-gray-500 hover:text-primary-400 transition-colors"
+                    aria-label={selectedForBulk.has(row.id) ? 'Deselect cluster' : 'Select cluster'}
+                  >
+                    {selectedForBulk.has(row.id) ? (
+                      <CheckSquare size={14} className="text-primary-400" />
+                    ) : (
+                      <Square size={14} />
+                    )}
+                  </button>
+                </td>
                 <td className="px-3 py-2 whitespace-nowrap text-gray-400">{formatMST(row.detected_at)}</td>
                 <td className="px-3 py-2 text-gray-200 max-w-[260px]">
                   <div className="truncate" title={row.name}>{row.name}</div>
@@ -257,6 +352,224 @@ export function SignalsClustersView({ windowHours }: Props) {
           error={detailQ.error as Error | null}
           onClose={() => setSelectedId(null)}
         />
+      )}
+
+      {/* Session 3015 (U3): Bulk-promote confirm modal */}
+      {bulkModalOpen && (
+        <BulkPromoteModal
+          clusters={selectedClusters}
+          onClose={() => setBulkModalOpen(false)}
+          onCompleted={(res) => {
+            setBulkResult(res)
+            setBulkModalOpen(false)
+            clearSelection()
+          }}
+        />
+      )}
+
+      {/* Session 3015 (U3): Result summary card (dismissible) */}
+      {bulkResult && (
+        <BulkPromoteResultCard result={bulkResult} onDismiss={() => setBulkResult(null)} />
+      )}
+    </div>
+  )
+}
+
+// Session 3015 (U3): Confirm-and-submit modal for bulk cluster → initiative promotion
+function BulkPromoteModal({
+  clusters,
+  onClose,
+  onCompleted,
+}: {
+  clusters: ClusterRow[]
+  onClose: () => void
+  onCompleted: (result: {
+    summary: { requested: number; succeeded: number; failed: number; briefs_succeeded: number; briefs_failed: number }
+    failures: Array<{ cluster_id: string; error: string; existing_initiative?: { id: string; name: string } }>
+  }) => void
+}) {
+  const queryClient = useQueryClient()
+  const [generateBrief, setGenerateBrief] = useState(true)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      signalsApi.bulkCreateInitiativesFromClusters({
+        cluster_ids: clusters.map((c) => c.id),
+        generate_brief: generateBrief,
+      }),
+    onSuccess: (resp) => {
+      const body = resp.data
+      if (!body.success) {
+        setErrorMsg(body.error || 'Bulk create failed')
+        return
+      }
+      queryClient.invalidateQueries({ queryKey: ['initiatives'] })
+      const failures = body.results
+        .filter((r) => r.error)
+        .map((r) => ({
+          cluster_id: r.cluster_id,
+          error: r.error as string,
+          existing_initiative: r.existing_initiative,
+        }))
+      onCompleted({
+        summary: {
+          requested: body.summary.requested,
+          succeeded: body.summary.succeeded,
+          failed: body.summary.failed,
+          briefs_succeeded: body.summary.briefs_succeeded,
+          briefs_failed: body.summary.briefs_failed,
+        },
+        failures,
+      })
+    },
+    onError: (err: any) => {
+      setErrorMsg(err?.response?.data?.error || err?.message || 'Request failed')
+    },
+  })
+
+  const preview = clusters.slice(0, 10)
+  const extra = clusters.length - preview.length
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+      <div
+        className="max-w-lg w-full mx-4 p-5 bg-gray-950 border border-primary-500/30 rounded-lg shadow-2xl space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-2">
+          <Rocket className="text-primary-400" size={18} />
+          <h3 className="text-base font-semibold text-gray-100">
+            Create {clusters.length} initiative{clusters.length === 1 ? '' : 's'}
+          </h3>
+        </div>
+
+        <div className="text-sm text-gray-300 space-y-2">
+          <p className="text-xs text-gray-400">
+            One Initiative (status <span className="text-accent-amber">TRIAGE</span>) will be created per cluster.
+            Names auto-generate from pattern + cluster name (edit individually via the single-cluster flow if needed).
+          </p>
+          <div className="rounded border border-gray-800 bg-gray-900/60 p-2 max-h-52 overflow-y-auto text-xs">
+            {preview.map((c) => (
+              <div key={c.id} className="truncate text-gray-300 py-0.5">
+                • {c.name}
+              </div>
+            ))}
+            {extra > 0 && (
+              <div className="pt-1 text-gray-500 italic">…and {extra} more</div>
+            )}
+          </div>
+        </div>
+
+        <label className="flex items-center gap-2 text-sm text-gray-300">
+          <input
+            type="checkbox"
+            checked={generateBrief}
+            onChange={(e) => setGenerateBrief(e.target.checked)}
+            className="accent-primary-500"
+          />
+          Generate Signal Brief deliverable for each
+        </label>
+
+        {errorMsg && (
+          <div className="flex items-start gap-2 p-2 rounded bg-accent-red/10 text-accent-red text-xs">
+            <AlertTriangle size={12} className="mt-0.5" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-800">
+          <button
+            onClick={onClose}
+            disabled={mutation.isPending}
+            className="px-3 py-1.5 text-sm rounded-md bg-gray-800 hover:bg-gray-700 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => mutation.mutate()}
+            disabled={mutation.isPending || clusters.length === 0}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary-500/20 text-primary-300 hover:bg-primary-500/30 disabled:opacity-50"
+          >
+            {mutation.isPending ? (
+              <>
+                <Loader2 size={14} className="animate-spin" /> Creating {clusters.length}…
+              </>
+            ) : (
+              <>
+                <Rocket size={14} /> Create {clusters.length}
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// Session 3015 (U3): Dismissible summary card shown after a bulk-promote completes
+function BulkPromoteResultCard({
+  result,
+  onDismiss,
+}: {
+  result: {
+    summary: { requested: number; succeeded: number; failed: number; briefs_succeeded: number; briefs_failed: number }
+    failures: Array<{ cluster_id: string; error: string; existing_initiative?: { id: string; name: string } }>
+  }
+  onDismiss: () => void
+}) {
+  const [showFailures, setShowFailures] = useState(false)
+  const { summary, failures } = result
+  const hasFailures = summary.failed > 0
+
+  return (
+    <div className="fixed bottom-4 right-4 z-40 max-w-md w-[92%] p-4 bg-gray-950 border border-primary-500/30 rounded-lg shadow-2xl space-y-2">
+      <div className="flex items-start justify-between">
+        <div className="flex items-center gap-2">
+          {hasFailures ? (
+            <AlertTriangle className="text-accent-amber" size={16} />
+          ) : (
+            <CheckCircle2 className="text-accent-green" size={16} />
+          )}
+          <div className="text-sm font-medium text-gray-100">
+            {summary.succeeded} of {summary.requested} initiative{summary.requested === 1 ? '' : 's'} created
+          </div>
+        </div>
+        <button onClick={onDismiss} className="text-gray-500 hover:text-gray-300">
+          <X size={14} />
+        </button>
+      </div>
+      <div className="text-xs text-gray-400">
+        {summary.briefs_succeeded} brief{summary.briefs_succeeded === 1 ? '' : 's'} generated
+        {summary.briefs_failed > 0 && ` · ${summary.briefs_failed} brief${summary.briefs_failed === 1 ? '' : 's'} skipped`}
+      </div>
+      {hasFailures && (
+        <div className="pt-2 border-t border-gray-800">
+          <button
+            onClick={() => setShowFailures(!showFailures)}
+            className="text-xs text-accent-amber hover:text-accent-amber/80"
+          >
+            {showFailures ? 'Hide' : 'Show'} {summary.failed} failure{summary.failed === 1 ? '' : 's'}
+          </button>
+          {showFailures && (
+            <div className="mt-2 max-h-40 overflow-y-auto space-y-1 text-xs">
+              {failures.map((f) => (
+                <div key={f.cluster_id} className="p-1.5 rounded bg-accent-red/5 text-gray-300">
+                  <div className="text-accent-red text-[10px] uppercase">{f.cluster_id.slice(0, 8)}</div>
+                  <div>{f.error}</div>
+                  {f.existing_initiative && (
+                    <a
+                      href={`/workspace?tab=initiatives&id=${f.existing_initiative.id}`}
+                      className="text-primary-300 hover:underline"
+                    >
+                      → {f.existing_initiative.name}
+                    </a>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   )
