@@ -2,34 +2,36 @@
 
 ---
 
-## READ THIS FIRST — SESSION 3023 CLOSED. **U4-H (Boardroom bulk decisions hardening) shipped.** The original U4 primary directive ("AgentDecisionSummary bulk-decide") turned into a **Cycle 1A verify-before-build win**: the capability was already shipped in S942 (backend endpoints + auth + CSRF tests + frontend UI). What was missing: mutation-path tests + a latent `updated_at` bug on `bulk_reject_decisions`. Chris ratified Path 1 (retitled hardening) after plain-English framing. 9-session zero-hallucination Rigby SIGN streak. **8th consecutive Cycle 1A verify-before-build session (largest scope reduction of the arc).**
+## READ THIS FIRST — SESSION 3024 CLOSED. **U6 (per-row name editing in bulk cluster confirm modal) shipped.** Users can now edit each initiative name inline before submitting the bulk create; previously the modal was read-only with defaults. Backend accepts an optional `names` sparse dict keyed by cluster_id (Rigby A1 REVISE: full dict on submit, never diff-only — avoids default-drift coupling). 10-session zero-hallucination Rigby SIGN streak. **9th consecutive Cycle 1A verify-before-build session** (backend was 90% parameterized already; MVP reduced to ~18 backend + ~45 frontend lines).
 
 **1 feature PR shipped this session.**
 
-**PR #3731 (`3140ba512`) — `feat(s3023): U4-H — Boardroom bulk decisions hardening (mutation-path tests + updated_at fix)`.**
+**PR #3733 (`6166d7cb3`) — `feat(s3024): U6 — per-row name editing in bulk cluster confirm modal`.**
 
-- **NEW** `core/tests/test_s3023_bulk_agent_decision_mutation.py` — 11 tests across 3 classes: bulk-promote mutation path (5), bulk-reject mutation path (4) including Fix A regression, Token-auth parity (2).
-- **Fix A `core/views_agent_learning.py:2384-2386`** — added `updated_at=timezone.now()` to `bulk_reject_decisions`'s `queryset.update()` so `auto_now=True` isn't silently bypassed. Kept `.update()` shape for O(1) DB roundtrip per Rigby A1.
-- **Test result:** 11/11 pass in 1.111s. Regression bundle (S3013 + S3014 + S3015 + S2785 + S2787 + S3023): 90/90 pass in 6.545s.
-- **Deferred (per Rigby):** Folds B/C are **single-promote semantic bugs**, not bulk. Ledger candidates. NOT U4-H's regressions to fix.
+- **Backend `core/views_platform_command.py`** — `bulk_create_initiatives_from_clusters_view` accepts optional `names` dict. Missing keys / empty strings / non-dict param → silent fallback to backend default (`{pattern_label}: {cluster.name}`, 200-char cap). Frontend bug cannot 500 the endpoint.
+- **Frontend `SignalsClustersView.tsx` `BulkPromoteModal`** — read-only preview replaced with scrollable list of editable inputs; pre-filled with computed defaults; inline character counter when approaching cap; inputs disabled during submit.
+- **API client `frontend/src/lib/api.ts`** — signature extended with `names?: Record<string, string>`.
+- **NEW** `core/tests/test_s3024_bulk_cluster_names_override.py` — 6 tests including `test_names_applied_by_cluster_id_not_by_position` (Rigby A1 REVISE regression).
+- **Test result:** 6/6 pass in 0.638s. Regression bundle (S3013 + S3014 + S3015 + S3023 + S3024): 48/48 pass in 5.818s.
+- **Deferred (Rigby A2 zoom-out — Fold A):** `defaultNameFor()` frontend formatter shadows backend default; watch for future default-format change. Codification candidate.
 
-**HEAD at close:** docs cascade → `3140ba512` (PR #3731).
+**HEAD at close:** docs cascade → `6166d7cb3` (PR #3733).
 
 Full context:
-- `docs/handoffs/SESSION_3023_U4_H_BOARDROOM_BULK_DECISIONS_HARDENING.md` — full session close.
+- `docs/handoffs/SESSION_3024_U6_BULK_CLUSTER_PER_ROW_NAMES.md` — full session close.
 
 ---
 
-## S3024 primary directive candidates
+## S3025 primary directive candidates
 
-**No in-flight arc.** Chris directive-required. **U-series bulk-actions arc still trending user-visible:** S3013 U1 → S3014 U2 → S3015 U3 → S3021 U5 → S3022 U5b → S3023 U4-H. Fresh engineering queue continues.
+**No in-flight arc.** Chris directive-required. **U-series bulk-actions arc trending user-visible:** S3013 U1 → S3014 U2 → S3015 U3 → S3021 U5 → S3022 U5b → S3023 U4-H → S3024 U6. The user-facing bulk polish is now well-covered; remaining tail is progress signaling + fold cleanup.
 
 ### Option A — Continue fresh engineering (bias-engineering rule)
 
-- **U6:** per-row name editing in bulk cluster confirm modal. Currently bulk always uses defaults. ~1 session.
-- **Progress bar for bulk create** (SSE or optimistic UI): from S3015 forward-carry.
-- **Fold B fix (single-promote → collective-intelligence parity):** wire `bulk_promote_decisions` to trigger Redis broadcast + KnowledgeTransfer for each promoted row (S657 parity). ~1 session.
-- **Fold C fix (masked AttributeError in `promote_decision`):** replace `decision.summary` refs with `decision.rationale or decision.recommended_stance`. Un-mask `learning_created` for single-promote. ~30 min.
+- **Progress bar for bulk create** (SSE or optimistic UI): from S3015 forward-carry. Still open; users don't see per-row progress during long batches. ~1 session.
+- **S3023 Fold B fix (single-promote → collective-intelligence parity):** wire `bulk_promote_decisions` to trigger Redis broadcast + KnowledgeTransfer for each promoted row (S657 parity). ~1 session.
+- **S3023 Fold C fix (masked AttributeError in `promote_decision`):** replace `decision.summary` refs with `decision.rationale or decision.recommended_stance`. Un-mask `learning_created` for single-promote. ~30 min.
+- **S3024 Fold A: backend-source default preview API.** Add `GET /api/platform/signal-cluster/<uuid>/default-initiative-name/` OR a bulk variant so frontend stops shadowing the backend default formatter. Watch-for-2nd-trigger candidate (not yet earned codification).
 
 ### Option B — Continue audit trajectory
 
@@ -49,33 +51,38 @@ Full context:
 - WebSocket auth-parity coverage class.
 - `Bearer <token>` helper extension.
 
-### Option E — Governance unification (Rigby A1 zoom-out standing carry)
+### Option E — Governance unification (Rigby A1 zoom-out standing carry, S3023)
 
-- **Decision lifecycle parity:** HAI has decide/defer/verify/execute; ADS has promote/reject/approve + bulk variants. If product intent is "one governance queue", unification hasn't happened. S3023 Fold D notes that unification is now a conscious breaking change (tests ratify current contract). Multi-session arc — needs Chris ratification before scoping.
+- **Decision lifecycle parity:** HAI has decide/defer/verify/execute; ADS has promote/reject/approve + bulk variants. Multi-session arc — needs Chris ratification before scoping.
 
 ### Option F — Chris's own priority (supersedes A-E)
 
-**Joint recommendation at close:** **Option A U6 (per-row name editing in bulk cluster confirm modal)** — natural next in the user-facing bulk-actions arc (S3013 U1 → S3014 U2 → S3015 U3 → S3021 U5 → S3022 U5b → S3023 U4-H → S3024 U6). Ships another user-visible capability improvement.
+**Joint recommendation at close:** **Option A Progress bar for bulk create** — natural next in the user-facing bulk-actions arc. Bulk create at N=100 is opaque; SSE stream of per-row completion (or optimistic UI showing per-row spinners) would close the last UX gap in the bulk cluster promotion flow. Alt (equally good): S3023 Fold B/C bundle fixes (single-promote Redis + AttributeError un-mask), ~1.5 sessions total, closes two known latent bugs from prior arc.
 
 **Standard opener:**
 1. Run `context-kit orient` (auto-injected).
 2. Absorb this file + MEMORY.md + CLAUDE.md.
-3. Read S3023 handoff (`docs/handoffs/SESSION_3023_U4_H_BOARDROOM_BULK_DECISIONS_HARDENING.md`).
+3. Read S3024 handoff (`docs/handoffs/SESSION_3024_U6_BULK_CLUSTER_PER_ROW_NAMES.md`).
 4. Optional state probes:
-   - `git log --oneline -6` — should show docs cascade → `3140ba512` (PR #3731) → `a14eae13a` (S3022 close cascade).
-   - `python manage.py test core.tests.test_s3023_bulk_agent_decision_mutation --keepdb` — 11/11 OK.
+   - `git log --oneline -6` — should show docs cascade → `6166d7cb3` (PR #3733) → S3023 close cascade.
+   - `python manage.py test core.tests.test_s3024_bulk_cluster_names_override --keepdb` — 6/6 OK.
 
 ---
 
-## S3024 carry-forward seeds
+## S3025 carry-forward seeds
 
-### New from S3023
+### New from S3024
 
-- **Fold A `informational`** — pressure-test 2-session-old forward-carry notes before spec'ing off of them (S3014 note about `_get_pending_decisions` returning both HAI + ADS was false).
-- **Fold B `informational` (single-promote semantics only)** — `bulk_promote_decisions` doesn't trigger the Redis broadcast + KnowledgeTransfer that single `promote_decision` does (S657). Silent side-effect skip. NOT a U4-H regression.
-- **Fold C `informational` (single-promote semantics only)** — `promote_decision` line 2177 references `decision.summary` (field doesn't exist on `AgentDecisionSummary`). Masked by try/except so `learning_created=False` silently. NOT a U4-H regression.
-- **Fold D `1st trigger`** — U4-H tests ratify current status/lifecycle contract; future governance unification is a conscious breaking change requiring backend+frontend migration.
-- **Decision lifecycle parity (Rigby A1 zoom-out standing carry)** — HAI vs ADS lifecycle families still fragmented; product intent unclear.
+- **Fold A `1st trigger`** — cross-tier default-formatting shadowing (frontend `defaultNameFor()` mirrors backend). Watch for 2nd trigger before codification.
+- **Fold B `informational`** — silent-fallback vs strict-validate asymmetry for optional bulk params (`names` silently ignores non-dict; `cluster_ids` 400s on non-list). Codification candidate.
+
+### Carried from S3023 (STATUS PRESERVED)
+
+- **S3023 Fold A `informational`** — pressure-test 2-session-old forward-carry notes before spec'ing (S3014 note that `_get_pending_decisions` returned both HAI + ADS was false).
+- **S3023 Fold B `informational` (single-promote semantics only)** — `bulk_promote_decisions` doesn't trigger the Redis broadcast + KnowledgeTransfer that single `promote_decision` does (S657).
+- **S3023 Fold C `informational` (single-promote semantics only)** — `promote_decision` line 2177 masked AttributeError on `decision.summary`.
+- **S3023 Fold D `1st trigger`** — U4-H tests ratify current status/lifecycle contract; future governance unification is a conscious breaking change.
+- **Decision lifecycle parity (Rigby A1 zoom-out standing carry)** — HAI vs ADS lifecycle families still fragmented.
 
 ### Carried from S3022 (STATUS PRESERVED)
 
@@ -105,7 +112,7 @@ Full context:
 - **S3018 Fold D (Rigby response truncation)** — still at 1st trigger.
 - **Method-decorator detection extension** — still open.
 
-### Carried from S3017 / older — all preserved from S3022 close 00-START (see S3022 + S3023 handoffs).
+### Carried from S3017 / older — all preserved from S3023 close 00-START.
 
 ---
 
@@ -113,19 +120,19 @@ Full context:
 
 - **Constitutional governance chain:** CLAUDE.md constitutional blockquote (Playbook v0.10.0). No amendments this session.
 - **ADR corpus:** ADR-0001 through ADR-0008.
-- **Spec→ship contract:** PLAYBOOK-7.7.1. **1× Flow B spec→ship** (discovery → shape recalibration via A1 → implement → A2 → ship → recycle-all).
-- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **2× substantive Rigby SIGN cycles. Zero rubber-stamp. 15 sessions continuous.**
-- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Chris routing: session-open directive + Path 1/2 mid-session ratification (plain English) + merge decision via Rigby.
-- **Recycle discipline (PLAYBOOK-7.4.4):** `make recycle-all` once — post-PR-3731 merge (`sha=3140ba512f0d`, clean).
-- **Fold classification (PLAYBOOK-6.10.8):** 4 folds. 3 `informational` (A/B/C). Fold D `1st trigger`. Fix A `same_pr_mitigatable` bundled with test suite.
-- **Verify-before-build (Cycle 1A):** **8th consecutive session** — largest scope reduction of the arc.
+- **Spec→ship contract:** PLAYBOOK-7.7.1. **1× Flow B spec→ship** (discovery → A1 REVISE → implement → A2 AGREE → ship → recycle-all).
+- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **2× substantive Rigby SIGN cycles. Zero rubber-stamp. 16 sessions continuous.**
+- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Chris routing: session-open directive "continue" + merge decision via Rigby.
+- **Recycle discipline (PLAYBOOK-7.4.4):** `make recycle-all` once — post-PR-3733 merge, frontend dist rebuilt confirmed (`sha=6166d7cb3173`).
+- **Fold classification (PLAYBOOK-6.10.8):** 2 folds. Fold A `1st trigger`. Fold B `informational`. Rigby A1 REVISE concern `same_pr_mitigatable` (adopted before A2).
+- **Verify-before-build (Cycle 1A):** **9th consecutive session** — backend was already 90% parameterized.
 
 ---
 
 ## Wrapper pin note
 
-The active PA conversation pin at S3023 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
+The active PA conversation pin at S3024 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
 
 ---
 
-**Reminder — the workflow is constitutional. S3023 shipped 1-PR U4-H hardening (11 mutation-path tests + Fix A) after Cycle 1A discovery revealed the underlying capability was already shipped in S942. Rigby endorsed retitled framing. Chris ratified. The U-series bulk-actions arc continues user-visible improvements. S3024 opens with U6 (per-row name editing in bulk cluster confirm modal) as joint recommendation.**
+**Reminder — the workflow is constitutional. S3024 shipped 1-PR U6 per-row name editing after discovery revealed the backend was already 90% parameterized (Cycle 1A 9th consecutive win). Rigby A1 REVISE caught the diff-only-payload coupling risk before implementation; final shape sends full names dict. The U-series bulk-actions arc is now user-visible-polished. S3025 opens with Progress bar for bulk create as joint recommendation (alt: S3023 Fold B/C bundle fixes).**
