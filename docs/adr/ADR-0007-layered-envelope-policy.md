@@ -194,6 +194,20 @@ This ADR introduces a **new T-slot T-ENVELOPE-2-DEPRECATION** (see §4.3) to mig
 
   **Out of scope**: `core/api_helpers.py` (separate module) also exports `api_error` / `api_success` used by `core/views_ab_testing.py`, `core/views_learning_loop.py`, `core/views_rag_observability.py`, and `core/error_messages.py`. This is a different substrate; disposition is a future arc, not part of T-ENVELOPE-2-DEPRECATION.
 
+  *(Close-notes below are execution records, not policy changes.)*
+
+  **T-ENVELOPE-2-DEPRECATION CLOSED at S3011** (PRs #3695 / #3696 / #3697 / #3698 / #3699 / #3700 / #3691 / #3692 — all 108 sites across the 5 files above migrated to `emit_error_envelope()`; str(e) body-leak lint added).
+
+  **T-ENVELOPE-3 (successor arc) CLOSED at S3012.** The out-of-scope `core/api_helpers.py` disposition mentioned above completed in 4 PRs:
+  - PR #3701 (`04bc553ea`) — `core/views_ab_testing.py` 36 sites migrated (10 wired goals + 26 dead A/B testing handlers retained pending HALF_BUILT_FEATURES_AUDIT deletion).
+  - PR #3702 (`3cffe6f0d`) — `core/views_learning_loop.py` 24 sites migrated (15 auth guards + 9 mixed).
+  - PR #3703 (`055bd8734`) — `core/views_rag_observability.py` 12 sites migrated + bundled `status_code=` kwarg bug fix (behavior restoration: 10 endpoints were silently 500-ing due to `api_error` rejecting the kwarg; now correctly return 401/403/500).
+  - PR 4 (this PR) — `api_error()` function retired from `core/api_helpers.py`. Zero real callers remained after PRs 1-3. `agents/views_monitoring.py`'s `api_error` is a DIFFERENT function (`core.api_responses.api_error`) — out of T-ENVELOPE-3 scope.
+
+  S3011 audit reality-check: original audit counted 92 caller sites across 4 primary + 6 minor files; real callers were 72 (11 tasks_conversations + 6 minor files were all false positives — variable names + string literal error-type labels).
+
+  `core/error_messages.py` uses a different helper (`parse_api_error`) — out of scope.
+
 ### 4.4 What this ADR does NOT change
 
 - **γ mechanism** (ADR-0005/0006 §3.1) — unchanged. Layer 1 (QueryClient default onError) + Layer 2 (top-level ErrorBoundary) + Layer 3 (per-hook opt-in) continue to be shape-agnostic per §3.3.
