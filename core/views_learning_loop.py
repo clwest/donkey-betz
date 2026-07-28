@@ -31,7 +31,8 @@ from .models_unified_system import (
     ContentDistribution,
     DistributionPlatform,
 )
-from .api_helpers import api_success, api_error
+from .api_helpers import api_success
+from core.security.error_envelope import emit_error_envelope
 
 
 # ============================================================
@@ -98,7 +99,11 @@ def pattern_detail(request, pattern_id):
     Get detailed information about a success pattern.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'pattern_detail', 'reason': 'auth_required'},
+        )
 
     try:
         pattern = SuccessPattern.objects.get(
@@ -106,7 +111,11 @@ def pattern_detail(request, pattern_id):
             Q(user=request.user) | Q(is_global=True)
         )
     except SuccessPattern.DoesNotExist:
-        return api_error("Pattern not found", status=404)
+        return emit_error_envelope(
+            'not_found',
+            request,
+            hint={'source': 'pattern_detail', 'resource_type': 'SuccessPattern', 'resource_id': str(pattern_id)},
+        )
 
     return api_success({
         'pattern': {
@@ -142,7 +151,11 @@ def analyze_patterns(request):
     Trigger pattern analysis for the user's distribution history.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'analyze_patterns', 'reason': 'auth_required'},
+        )
 
     # Get user's successful distributions
     distributions = ContentDistribution.objects.filter(
@@ -269,12 +282,20 @@ def predict_performance(request):
     Uses ContentScoringEngine from learning_engine.py
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'predict_performance', 'reason': 'auth_required'},
+        )
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return api_error("Invalid JSON")
+        return emit_error_envelope(
+            'invalid_input',
+            request,
+            hint={'source': 'predict_performance', 'reason': 'json_decode_failed'},
+        )
 
     content_type = data.get('content_type', 'image')
     content_id = data.get('content_id')
@@ -394,7 +415,11 @@ def list_predictions(request):
     List recent performance predictions.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'list_predictions', 'reason': 'auth_required'},
+        )
 
     limit = int(request.GET.get('limit', 20))
     predictions = ContentPerformancePrediction.objects.filter(
@@ -431,7 +456,11 @@ def get_pricing_optimization(request):
     Get pricing optimization recommendations using PricingEngine.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'get_pricing_optimization', 'reason': 'auth_required'},
+        )
 
     platform = request.GET.get('platform', 'etsy')
     content_type = request.GET.get('content_type', 'image')
@@ -494,7 +523,11 @@ def get_learning_profile(request):
     Get user's learning profile with insights.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'get_learning_profile', 'reason': 'auth_required'},
+        )
 
     # Get or create profile
     profile, created = UserLearningProfile.objects.get_or_create(
@@ -567,12 +600,20 @@ def update_learning_profile(request):
     Update user's learning preferences.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'update_learning_profile', 'reason': 'auth_required'},
+        )
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return api_error("Invalid JSON")
+        return emit_error_envelope(
+            'invalid_input',
+            request,
+            hint={'source': 'update_learning_profile', 'reason': 'json_decode_failed'},
+        )
 
     profile, _ = UserLearningProfile.objects.get_or_create(user=request.user)
 
@@ -658,7 +699,11 @@ def generate_insights(request):
     Generate new insights based on recent activity.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'generate_insights', 'reason': 'auth_required'},
+        )
 
     insights_created = []
 
@@ -761,7 +806,11 @@ def mark_insight_read(request, insight_id):
     Mark an insight as read.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'mark_insight_read', 'reason': 'auth_required'},
+        )
 
     try:
         insight = DistributionInsight.objects.get(id=insight_id, user=request.user)
@@ -769,7 +818,11 @@ def mark_insight_read(request, insight_id):
         insight.save()
         return api_success({'message': 'Insight marked as read'})
     except DistributionInsight.DoesNotExist:
-        return api_error("Insight not found", status=404)
+        return emit_error_envelope(
+            'not_found',
+            request,
+            hint={'source': 'mark_insight_read', 'resource_type': 'Insight'},
+        )
 
 
 @csrf_exempt
@@ -780,7 +833,11 @@ def dismiss_insight(request, insight_id):
     Dismiss an insight.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'dismiss_insight', 'reason': 'auth_required'},
+        )
 
     try:
         insight = DistributionInsight.objects.get(id=insight_id, user=request.user)
@@ -788,7 +845,11 @@ def dismiss_insight(request, insight_id):
         insight.save()
         return api_success({'message': 'Insight dismissed'})
     except DistributionInsight.DoesNotExist:
-        return api_error("Insight not found", status=404)
+        return emit_error_envelope(
+            'not_found',
+            request,
+            hint={'source': 'dismiss_insight', 'resource_type': 'Insight'},
+        )
 
 
 # ============================================================
@@ -803,7 +864,11 @@ def get_performance_comparison(request):
     Get user's performance compared to benchmarks.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'get_performance_comparison', 'reason': 'auth_required'},
+        )
 
     comparison_type = request.GET.get('type', 'platform')
     scope_value = request.GET.get('scope', 'all')
@@ -918,7 +983,11 @@ def learning_dashboard(request):
     Get comprehensive learning dashboard data.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'learning_dashboard', 'reason': 'auth_required'},
+        )
 
     # Get profile
     profile, _ = UserLearningProfile.objects.get_or_create(user=request.user)
@@ -1026,18 +1095,30 @@ def track_learning_outcome(request):
         was_successful: boolean indicating outcome
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'track_learning_outcome', 'reason': 'auth_required'},
+        )
 
     try:
         data = json.loads(request.body)
     except json.JSONDecodeError:
-        return api_error("Invalid JSON")
+        return emit_error_envelope(
+            'invalid_input',
+            request,
+            hint={'source': 'track_learning_outcome', 'reason': 'json_decode_failed'},
+        )
 
     pattern_id = data.get('pattern_id')
     was_successful = data.get('was_successful', False)
 
     if not pattern_id:
-        return api_error("pattern_id is required")
+        return emit_error_envelope(
+            'invalid_input',
+            request,
+            hint={'source': 'track_learning_outcome', 'reason': 'missing_field', 'field': 'pattern_id'},
+        )
 
     from .services.learning_loop_orchestrator import get_learning_loop_orchestrator
 
@@ -1051,7 +1132,11 @@ def track_learning_outcome(request):
             'was_successful': was_successful,
         })
     else:
-        return api_error("Failed to track learning outcome", status=400)
+        return emit_error_envelope(
+            'validation_error',
+            request,
+            hint={'source': 'track_learning_outcome', 'reason': 'track_failed'},
+        )
 
 
 @csrf_exempt
@@ -1065,7 +1150,11 @@ def run_learning_cycle(request):
     to extract actionable learning patterns.
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'run_learning_cycle', 'reason': 'auth_required'},
+        )
 
     from .services.learning_loop_orchestrator import get_learning_loop_orchestrator
 
@@ -1089,11 +1178,19 @@ def get_agent_learnings(request):
         max_learnings: Maximum number of learnings (default 5)
     """
     if not request.user.is_authenticated:
-        return api_error("Authentication required", status=401)
+        return emit_error_envelope(
+            'not_authenticated',
+            request,
+            hint={'source': 'get_agent_learnings', 'reason': 'auth_required'},
+        )
 
     agent_name = request.GET.get('agent_name')
     if not agent_name:
-        return api_error("agent_name query parameter is required")
+        return emit_error_envelope(
+            'invalid_input',
+            request,
+            hint={'source': 'get_agent_learnings', 'reason': 'missing_field', 'field': 'agent_name'},
+        )
 
     max_learnings = int(request.GET.get('max_learnings', 5))
 
