@@ -11,6 +11,7 @@ import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Loader2, X, ChevronLeft, ChevronRight, Rocket, CheckCircle2, AlertTriangle, CheckSquare, Square } from 'lucide-react'
 import { signalsApi } from '@/lib/api'
+import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { formatMST, formatNumber, formatConfidence } from './formatters'
 import type { SignalsWindow } from './SignalsTab'
 
@@ -389,6 +390,7 @@ function BulkPromoteModal({
   }) => void
 }) {
   const queryClient = useQueryClient()
+  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace)
   const [generateBrief, setGenerateBrief] = useState(true)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -397,6 +399,8 @@ function BulkPromoteModal({
       signalsApi.bulkCreateInitiativesFromClusters({
         cluster_ids: clusters.map((c) => c.id),
         generate_brief: generateBrief,
+        // Session 3015 hotfix: route to the currently-active workspace.
+        workspace_id: activeWorkspace?.id,
       }),
     onSuccess: (resp) => {
       const body = resp.data
@@ -446,7 +450,8 @@ function BulkPromoteModal({
 
         <div className="text-sm text-gray-300 space-y-2">
           <p className="text-xs text-gray-400">
-            One Initiative (status <span className="text-accent-amber">TRIAGE</span>) will be created per cluster.
+            One Initiative (status <span className="text-accent-amber">TRIAGE</span>) will be created per cluster in{' '}
+            <span className="text-primary-300 font-medium">{activeWorkspace?.name ?? '(default workspace)'}</span>.
             Names auto-generate from pattern + cluster name (edit individually via the single-cluster flow if needed).
           </p>
           <div className="rounded border border-gray-800 bg-gray-900/60 p-2 max-h-52 overflow-y-auto text-xs">
@@ -785,6 +790,7 @@ function CreateInitiativeModal({
   }) => void
 }) {
   const queryClient = useQueryClient()
+  const activeWorkspace = useWorkspaceStore((s) => s.activeWorkspace)
   const defaultName = `${cluster.pattern_type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}: ${cluster.name}`.slice(0, 200)
   const [name, setName] = useState(defaultName)
   const [generateBrief, setGenerateBrief] = useState(true)
@@ -795,6 +801,9 @@ function CreateInitiativeModal({
       signalsApi.createInitiativeFromCluster(cluster.id, {
         name: name.trim() && name.trim() !== defaultName ? name.trim() : undefined,
         generate_brief: generateBrief,
+        // Session 3015 hotfix: route to the currently-active workspace rather than
+        // backend's "user's oldest workspace" fallback.
+        workspace_id: activeWorkspace?.id,
       }),
     onSuccess: (resp) => {
       const body = resp.data
@@ -842,6 +851,10 @@ function CreateInitiativeModal({
               className="w-full px-3 py-2 rounded bg-gray-900 border border-gray-800 text-sm text-white focus:border-primary-500 focus:outline-none"
             />
             <div className="text-[10px] text-gray-500 mt-1">{name.length}/200 characters</div>
+          </div>
+
+          <div className="text-xs text-gray-400">
+            Target workspace: <span className="text-primary-300 font-medium">{activeWorkspace?.name ?? '(default)'}</span>
           </div>
 
           <label className="flex items-center gap-2 text-sm text-gray-300">
