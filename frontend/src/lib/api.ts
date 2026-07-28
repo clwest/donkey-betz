@@ -683,10 +683,13 @@ export const signalsApi = {
       deliverable_error?: string
     }>(`/platform/signal-cluster/${clusterId}/create-initiative/`, params),
   // Session 3015 (U3): Bulk-promote N clusters at once.
+  // Session 3024 (U6): optional `names` — full dict of {cluster_id: name}. Missing
+  // keys, empty strings, and non-dict values fall back to the backend default.
   bulkCreateInitiativesFromClusters: (params: {
     cluster_ids: string[]
     generate_brief?: boolean
     workspace_id?: string
+    names?: Record<string, string>
   }) =>
     api.post<{
       success: boolean
