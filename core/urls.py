@@ -4640,6 +4640,7 @@ from core.views_platform_command import (
     governance_view,
     decision_summary_detail_view,  # Session 845
     create_initiative_from_decision_view,  # Session 852
+    create_initiative_from_cluster_view,  # Session 3014 (U2)
     emergency_halt_view,
     canon_view,
     canon_promote_view,  # Session 819
@@ -4673,6 +4674,8 @@ urlpatterns += [
     path('api/platform/decision-summary/<uuid:decision_id>/', decision_summary_detail_view, name='platform-decision-summary-detail'),
     # Session 852: Create initiative from decision
     path('api/platform/decision-summary/<uuid:decision_id>/create-initiative/', create_initiative_from_decision_view, name='platform-decision-create-initiative'),
+    # Session 3014 (U2): Create initiative + optional brief deliverable from a SignalCluster
+    path('api/platform/signal-cluster/<uuid:cluster_id>/create-initiative/', create_initiative_from_cluster_view, name='platform-signal-cluster-create-initiative'),
     path('api/platform/emergency-halt/', emergency_halt_view, name='platform-emergency-halt'),
     path('api/platform/canon/', canon_view, name='platform-canon'),
     path('api/platform/canon/promote/', canon_promote_view, name='platform-canon-promote'),  # Session 819
