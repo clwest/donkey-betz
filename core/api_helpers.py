@@ -3,6 +3,12 @@ API Helper Functions
 Common utilities for API responses.
 
 Session 850: Added smart_truncate for cleaner text truncation at sentence boundaries.
+Session 3012: Retired `api_error()` per T-ENVELOPE-3 (ADR-0007 §4.3
+out-of-scope disposition follow-on). All 72 real caller sites in
+views_ab_testing / views_learning_loop / views_rag_observability
+migrated to `core.security.error_envelope.emit_error_envelope`
+across PRs #3701 / #3702 / #3703. Use `emit_error_envelope(reason_code,
+request, hint=...)` for all error responses.
 """
 
 import re
@@ -70,12 +76,7 @@ def api_success(data=None, message=None, status=200):
     return JsonResponse(response, status=status)
 
 
-def api_error(message, status=400, errors=None):
-    """Return an error response."""
-    response = {
-        'success': False,
-        'error': {'message': message}
-    }
-    if errors:
-        response['error']['details'] = errors
-    return JsonResponse(response, status=status)
+# `api_error()` retired at S3012 per T-ENVELOPE-3 (ADR-0007 §4.3
+# out-of-scope disposition follow-on). Use
+# `core.security.error_envelope.emit_error_envelope(reason_code, request,
+# hint=...)` for all error responses.
