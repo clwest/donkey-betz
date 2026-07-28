@@ -473,6 +473,19 @@ class BulkAttentionDecideView(View):
     Supports deciding by specific IDs or by filter criteria.
     """
 
+    # Session 3013 (U1): API accepts past-tense enum ('approved'/'ignored'/'rejected') for
+    # backward compatibility with the bulk contract, but the HumanAttentionItem model uses
+    # imperative-form DECISION_CHOICES + separate STATUS_CHOICES. These maps preserve the
+    # canonical model semantics (matches record_decision(): approved/rejected → STATUS_ACTED,
+    # ignored → STATUS_IGNORED). Fixes latent defect where prior code wrote invalid status
+    # values ('approved'/'rejected' are not in STATUS_CHOICES) and to a nonexistent
+    # `handled_at` field.
+    _BULK_DECISION_TO_MODEL = {
+        'approved': ('approve', 'acted'),
+        'rejected': ('reject', 'acted'),
+        'ignored': ('ignore', 'ignored'),
+    }
+
     def post(self, request):
         """POST /api/human/attention/bulk-decide/"""
         from core.models_human_interface import HumanAttentionItem
@@ -483,11 +496,13 @@ class BulkAttentionDecideView(View):
             return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
 
         decision = data.get('decision')
-        if not decision or decision not in ['approved', 'ignored', 'rejected']:
+        if not decision or decision not in self._BULK_DECISION_TO_MODEL:
             return JsonResponse({
                 'success': False,
                 'error': 'Valid decision required (approved, ignored, rejected)'
             }, status=400)
+
+        model_decision, model_status = self._BULK_DECISION_TO_MODEL[decision]
 
         item_ids = data.get('item_ids', [])
         item_type = data.get('item_type')
@@ -520,14 +535,18 @@ class BulkAttentionDecideView(View):
                 'message': 'No matching items found'
             })
 
-        # Update all matching items
+        # Update all matching items with valid model enum values + canonical timestamp field.
         queryset.update(
-            status=decision,
-            decision=decision,
-            handled_at=now
+            status=model_status,
+            decision=model_decision,
+            decided_at=now,
         )
 
-        logger.info(f"[Session 942] Bulk decided {count} attention items as '{decision}' for user {request.user.id}")
+        logger.info(
+            f"[Session 3013] Bulk decided {count} attention items as '{decision}' "
+            f"(model_decision={model_decision}, model_status={model_status}) "
+            f"for user {request.user.id}"
+        )
 
         return JsonResponse({
             'success': True,
