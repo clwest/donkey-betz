@@ -64,6 +64,18 @@ anon 401 loudly, or the scope predicate silently returns `.none()`.
 
 ### F-2 (unscoped detail endpoint in PUBLIC_PATHS) — `/api/memory-palace/` (and narrower `/api/memory-palace/memory/`) → `/api/memory-palace/memory/<uuid:memory_id>/` (`get_memory_detail`)
 
+> **CLOSED S3017 (PR #3719, merge `09f6e91e7`).** Option A.1 shipped —
+> `@token_auth_required` gate on `get_memory_detail`. Rigby T1 SIGN
+> zoom-out 5b surfaced **F-3** (sibling routes under the same bare-prefix
+> bypass): `get_memory_connections` (same-class read leak) and
+> `delete_memory` (anon-DELETE-any-row mutation leak — strictly worse
+> than F-2). Both folded into the same PR per PLAYBOOK-6.10.8
+> `same_pr_actionable`. Cross-user isolation (A.2 alternative — new
+> `scope_queryset_agent_memory` predicate) remains a forward-carry.
+> Live smoke: GET detail / GET connections / DELETE all return 401 +
+> `not_authenticated` envelope against real memory UUIDs.
+
+
 - **File:** `core/views_memory_palace.py:98` (`get_memory_detail`).
 - **Primary issue:** the memory detail row itself is **unscoped and public**.
   The top-level `AgentMemory.objects.defer('embedding').get(id=memory_id)`
