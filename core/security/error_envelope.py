@@ -114,6 +114,45 @@ def build_user_facing_envelope(
     return envelope
 
 
+def emit_error_envelope(
+    reason_code: str,
+    request,
+    hint: Optional[dict[str, Any]] = None,
+    status_code: Optional[int] = None,
+    retry_after_seconds: Optional[int] = None,
+) -> JsonResponse:
+    """Emit a Family E user-facing envelope with structured operator log.
+
+    Wraps the 3-line pattern used across T-ENVELOPE-2-DEPRECATION batches:
+        payload = build_user_facing_envelope(reason_code=X)
+        logger.warning("envelope_emit reason=%s support=%s endpoint=%s hint=%s", ...)
+        return JsonResponse(payload, status=X)
+
+    ``status_code`` defaults to ``ReasonCode.typical_status`` — override
+    only when the caller has a legitimate reason to diverge (e.g. DRF
+    Throttled which computes its own status). Rigby S3008 A1 SIGN
+    confirmed all 10 Batch-2 sites in ``core/auth_middleware.py`` match
+    their typical_status, so auto-inference is safe by default.
+
+    ``retry_after_seconds`` is pass-through; ``build_user_facing_envelope``
+    already gates emission to ``terminal_state in {RATE_LIMITED, BUSY}``.
+    """
+    payload = build_user_facing_envelope(
+        reason_code=reason_code,
+        retry_after_seconds=retry_after_seconds,
+    )
+    if status_code is None:
+        status_code = get_reason(reason_code).typical_status
+    logger.warning(
+        "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
+        payload["reason_code"],
+        payload["support_code"],
+        request.path,
+        hint or {},
+    )
+    return JsonResponse(payload, status=status_code)
+
+
 def build_operator_envelope(
     request,
     exc: BaseException,

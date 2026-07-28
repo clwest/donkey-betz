@@ -21,7 +21,7 @@ from urllib.parse import parse_qs
 # f-string operator logs preserved for username/path context; envelope_emit
 # structured log added for reason_code + support_code + hint per Batch 1
 # STRENGTHEN pattern.
-from core.security.error_envelope import build_user_facing_envelope
+from core.security.error_envelope import build_user_facing_envelope, emit_error_envelope
 from functools import wraps
 
 logger = logging.getLogger(__name__)
@@ -665,13 +665,11 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         if not token:
             # No token and no session authentication
             logger.warning(f"No authentication provided for {request.path}")
-            payload = build_user_facing_envelope(reason_code='not_authenticated')
-            logger.warning(
-                "envelope_emit reason=%s support=%s endpoint=%s hint=%s",
-                payload['reason_code'], payload['support_code'], request.path,
-                {'source': 'no_credentials'},
+            return emit_error_envelope(
+                reason_code='not_authenticated',
+                request=request,
+                hint={'source': 'no_credentials'},
             )
-            return JsonResponse(payload, status=401)
 
         # Validate token and get user.
         # Session 1171 #4: separate "token not in DB" (→ 401) from "auth backend
