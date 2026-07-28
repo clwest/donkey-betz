@@ -29,7 +29,8 @@ import json
 from django.test import TestCase
 
 from tests.security.public_paths_gate_snapshot_builder import (
-    SNAPSHOT_PATH,
+    GATED_SNAPSHOT_PATH,
+    UNGATED_SNAPSHOT_PATH,
     build_snapshot,
     read_snapshot,
 )
@@ -46,7 +47,8 @@ class PublicPathsGateSnapshotInvariant(TestCase):
             stored = read_snapshot()
         except FileNotFoundError:
             self.fail(
-                f"Snapshot missing at {SNAPSHOT_PATH}. Regenerate with "
+                f"Snapshot missing at {GATED_SNAPSHOT_PATH} or "
+                f"{UNGATED_SNAPSHOT_PATH}. Regenerate with "
                 "`python manage.py refresh_public_paths_gate_snapshot`."
             )
 
