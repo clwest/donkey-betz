@@ -7,9 +7,9 @@
  *   GET /api/v1/signal-clusters/<uuid>/ (detail)
  */
 
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Loader2, X, ChevronLeft, ChevronRight, Rocket, CheckCircle2, AlertTriangle, CheckSquare, Square } from 'lucide-react'
+import { Loader2, X, ChevronLeft, ChevronRight, Rocket, CheckCircle2, AlertTriangle, CheckSquare, Square, Circle } from 'lucide-react'
 import { signalsApi } from '@/lib/api'
 import { useWorkspaceStore } from '@/stores/workspaceStore'
 import { formatMST, formatNumber, formatConfidence } from './formatters'
@@ -381,6 +381,15 @@ export function SignalsClustersView({ windowHours }: Props) {
 // `names` dict (Rigby A1 REVISE) so the final name is never inferred from an
 // implicit "did the user diff against a default" heuristic. Backend still
 // falls back to the default on empty strings / missing keys.
+// Session 3025 (U7): client-side chunked submit + per-row progress. Cycle 1A win
+// — zero backend changes. Splits cluster_ids into K-sized chunks, calls existing
+// endpoint sequentially, updates per-row status + progress bar between chunks.
+// K=10 for N>=50 (fewer round trips), K=5 for smaller batches (smoother bar) —
+// per Rigby A1 REVISE. Failure of one chunk doesn't halt the rest; user can
+// abort mid-batch via Stop button (in-flight chunk aborts via AbortController).
+
+type RowStatus = 'pending' | 'in_progress' | 'success' | 'already_exists' | 'failed'
+
 function BulkPromoteModal({
   clusters,
   onClose,
@@ -411,48 +420,173 @@ function BulkPromoteModal({
     Object.fromEntries(clusters.map((c) => [c.id, defaultNameFor(c)]))
   )
 
-  const mutation = useMutation({
-    mutationFn: () =>
-      signalsApi.bulkCreateInitiativesFromClusters({
-        cluster_ids: clusters.map((c) => c.id),
-        generate_brief: generateBrief,
-        // Session 3015 hotfix: route to the currently-active workspace.
-        workspace_id: activeWorkspace?.id,
-        // S3024 (U6): send the full names dict (Rigby A1 REVISE).
-        names,
-      }),
-    onSuccess: (resp) => {
-      const body = resp.data
-      if (!body.success) {
-        setErrorMsg(body.error || 'Bulk create failed')
-        return
-      }
-      queryClient.invalidateQueries({ queryKey: ['initiatives'] })
-      const failures = body.results
-        .filter((r) => r.error)
-        .map((r) => ({
-          cluster_id: r.cluster_id,
-          error: r.error as string,
-          existing_initiative: r.existing_initiative,
-        }))
-      onCompleted({
-        summary: {
-          requested: body.summary.requested,
-          succeeded: body.summary.succeeded,
-          failed: body.summary.failed,
-          briefs_succeeded: body.summary.briefs_succeeded,
-          briefs_failed: body.summary.briefs_failed,
-        },
-        failures,
+  // S3025 (U7): per-row status map + progress + submitting flag. All clusters
+  // start `pending`; a chunk marks its members `in_progress` before POST and
+  // resolves each to `success` / `already_exists` / `failed` from the backend's
+  // per-row `results[]`.
+  const [submitting, setSubmitting] = useState(false)
+  const [rowStatus, setRowStatus] = useState<Record<string, RowStatus>>(() =>
+    Object.fromEntries(clusters.map((c) => [c.id, 'pending' as RowStatus])),
+  )
+  const stopRef = useRef(false)
+  const abortRef = useRef<AbortController | null>(null)
+
+  // S3025 (U7): K=10 for larger batches keeps middleware/auth overhead in
+  // check; K=5 for small batches keeps the progress bar visibly moving.
+  const CHUNK_SIZE = clusters.length >= 50 ? 10 : 5
+  const CHUNK_DELAY_MS = 300 // Rigby A1 REVISE #4: smoother bar, less bursty.
+  const chunks: ClusterRow[][] = useMemo(() => {
+    const out: ClusterRow[][] = []
+    for (let i = 0; i < clusters.length; i += CHUNK_SIZE) {
+      out.push(clusters.slice(i, i + CHUNK_SIZE))
+    }
+    return out
+  }, [clusters, CHUNK_SIZE])
+
+  const completedCount = Object.values(rowStatus).filter((s) => s !== 'pending' && s !== 'in_progress').length
+  const progressPct = clusters.length === 0 ? 0 : Math.round((completedCount / clusters.length) * 100)
+  const showLargeBatchWarning = clusters.length >= 25
+
+  async function handleSubmit() {
+    if (submitting || clusters.length === 0) return
+    setSubmitting(true)
+    setErrorMsg(null)
+    stopRef.current = false
+
+    // Fold per-chunk responses into a single summary. `briefs_requested` is
+    // returned per chunk but we recompute the overall from `succeeded` * flag.
+    const aggregated = {
+      requested: 0,
+      succeeded: 0,
+      failed: 0,
+      briefs_succeeded: 0,
+      briefs_failed: 0,
+    }
+    const failures: Array<{ cluster_id: string; error: string; existing_initiative?: { id: string; name: string } }> = []
+
+    for (const chunk of chunks) {
+      if (stopRef.current) break
+
+      // Mark this chunk's rows as in_progress so the UI shows the spinner
+      // just for the batch currently being sent, not everything at once.
+      setRowStatus((prev) => {
+        const next = { ...prev }
+        for (const c of chunk) next[c.id] = 'in_progress'
+        return next
       })
-    },
-    onError: (err: any) => {
-      setErrorMsg(err?.response?.data?.error || err?.message || 'Request failed')
-    },
-  })
+
+      const ac = new AbortController()
+      abortRef.current = ac
+      try {
+        const resp = await signalsApi.bulkCreateInitiativesFromClusters(
+          {
+            cluster_ids: chunk.map((c) => c.id),
+            generate_brief: generateBrief,
+            workspace_id: activeWorkspace?.id,
+            names: Object.fromEntries(chunk.map((c) => [c.id, names[c.id] ?? ''])),
+          },
+          { signal: ac.signal },
+        )
+        const body = resp.data
+        if (!body.success) {
+          // Rare: backend rejected the well-formed request (e.g., over cap).
+          // Since we chunked ourselves, this shouldn't fire — surface it and
+          // stop the loop so the user isn't stuck watching a broken bar.
+          setErrorMsg(body.error || 'Bulk create failed')
+          setRowStatus((prev) => {
+            const next = { ...prev }
+            for (const c of chunk) if (next[c.id] === 'in_progress') next[c.id] = 'failed'
+            return next
+          })
+          break
+        }
+        aggregated.requested += body.summary.requested
+        aggregated.succeeded += body.summary.succeeded
+        aggregated.failed += body.summary.failed
+        aggregated.briefs_succeeded += body.summary.briefs_succeeded
+        aggregated.briefs_failed += body.summary.briefs_failed
+
+        // Resolve each row from the per-row results[].
+        setRowStatus((prev) => {
+          const next = { ...prev }
+          for (const r of body.results) {
+            if (r.error) {
+              next[r.cluster_id] = r.existing_initiative ? 'already_exists' : 'failed'
+            } else {
+              next[r.cluster_id] = 'success'
+            }
+          }
+          return next
+        })
+        for (const r of body.results) {
+          if (r.error) {
+            failures.push({
+              cluster_id: r.cluster_id,
+              error: r.error,
+              existing_initiative: r.existing_initiative,
+            })
+          }
+        }
+      } catch (err: any) {
+        // AbortController rejection when user hit Stop — treat as clean break,
+        // not an error surface. Rows still `in_progress` stay that way; the
+        // summary aggregates only what completed.
+        if (ac.signal.aborted) {
+          setRowStatus((prev) => {
+            const next = { ...prev }
+            for (const c of chunk) if (next[c.id] === 'in_progress') next[c.id] = 'pending'
+            return next
+          })
+          break
+        }
+        // Network / server error — mark this chunk failed but continue with
+        // the next per Rigby A1 REVISE #3 (failure isolation).
+        const msg = err?.response?.data?.error || err?.message || 'Chunk failed'
+        setRowStatus((prev) => {
+          const next = { ...prev }
+          for (const c of chunk) if (next[c.id] === 'in_progress') next[c.id] = 'failed'
+          return next
+        })
+        for (const c of chunk) {
+          aggregated.requested += 1
+          aggregated.failed += 1
+          failures.push({ cluster_id: c.id, error: msg })
+        }
+      }
+      abortRef.current = null
+
+      // Rigby A1 REVISE #4: brief inter-chunk delay smooths the bar and
+      // reduces burstiness on the auth/log middleware.
+      if (!stopRef.current && chunks.indexOf(chunk) < chunks.length - 1) {
+        await new Promise((r) => setTimeout(r, CHUNK_DELAY_MS))
+      }
+    }
+
+    setSubmitting(false)
+    queryClient.invalidateQueries({ queryKey: ['initiatives'] })
+    onCompleted({
+      summary: aggregated,
+      failures,
+    })
+  }
+
+  function handleCancel() {
+    if (submitting) {
+      // Stop mid-batch: flip flag + abort the in-flight chunk. handleSubmit's
+      // loop will exit at the next chunk boundary and call onCompleted with
+      // partial results.
+      stopRef.current = true
+      abortRef.current?.abort()
+    } else {
+      onClose()
+    }
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+      onClick={submitting ? undefined : onClose}
+    >
       <div
         className="max-w-lg w-full mx-4 p-5 bg-gray-950 border border-primary-500/30 rounded-lg shadow-2xl space-y-4"
         onClick={(e) => e.stopPropagation()}
@@ -470,26 +604,53 @@ function BulkPromoteModal({
             <span className="text-primary-300 font-medium">{activeWorkspace?.name ?? '(default workspace)'}</span>.
             Names are pre-filled from pattern + cluster name; edit inline if you'd like something different.
           </p>
+          {showLargeBatchWarning && !submitting && (
+            <p className="text-xs text-accent-amber">
+              Large batch: this may take a few minutes when briefs are enabled.
+            </p>
+          )}
+          {/* S3025 (U7): progress bar shown once the submit starts. Reflects
+              rows completed (not chunks completed) so the bar advances
+              linearly regardless of chunk boundaries. */}
+          {submitting && (
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-[11px] text-gray-400">
+                <span>{completedCount} of {clusters.length} processed</span>
+                <span>{progressPct}%</span>
+              </div>
+              <div className="h-1.5 rounded bg-gray-800 overflow-hidden">
+                <div
+                  className="h-full bg-primary-500 transition-all duration-300"
+                  style={{ width: `${progressPct}%` }}
+                />
+              </div>
+            </div>
+          )}
           {/* S3024 (U6): editable name per row. Scroll container keeps the modal
-              size sane at the 100-cluster batch cap. */}
+              size sane at the 100-cluster batch cap.
+              S3025 (U7): per-row status icon lands to the left of each input. */}
           <div className="rounded border border-gray-800 bg-gray-900/60 p-2 max-h-72 overflow-y-auto space-y-1.5">
             {clusters.map((c) => {
               const value = names[c.id] ?? ''
               const over = value.length >= NAME_MAX - 20
+              const status = rowStatus[c.id] ?? 'pending'
               return (
                 <div key={c.id} className="space-y-0.5">
-                  <input
-                    type="text"
-                    value={value}
-                    maxLength={NAME_MAX}
-                    disabled={mutation.isPending}
-                    onChange={(e) =>
-                      setNames((prev) => ({ ...prev, [c.id]: e.target.value }))
-                    }
-                    className="w-full px-2 py-1 text-xs rounded bg-gray-950 border border-gray-800 text-gray-200 focus:border-primary-500/50 focus:outline-none disabled:opacity-50"
-                    placeholder="Initiative name"
-                    aria-label={`Initiative name for cluster ${c.name}`}
-                  />
+                  <div className="flex items-center gap-1.5">
+                    <RowStatusIcon status={status} />
+                    <input
+                      type="text"
+                      value={value}
+                      maxLength={NAME_MAX}
+                      disabled={submitting}
+                      onChange={(e) =>
+                        setNames((prev) => ({ ...prev, [c.id]: e.target.value }))
+                      }
+                      className="flex-1 min-w-0 px-2 py-1 text-xs rounded bg-gray-950 border border-gray-800 text-gray-200 focus:border-primary-500/50 focus:outline-none disabled:opacity-50"
+                      placeholder="Initiative name"
+                      aria-label={`Initiative name for cluster ${c.name}`}
+                    />
+                  </div>
                   {over && (
                     <div className="px-1 text-[10px] text-gray-500 flex justify-end">
                       {value.length}/{NAME_MAX}
@@ -505,6 +666,7 @@ function BulkPromoteModal({
           <input
             type="checkbox"
             checked={generateBrief}
+            disabled={submitting}
             onChange={(e) => setGenerateBrief(e.target.checked)}
             className="accent-primary-500"
           />
@@ -520,20 +682,19 @@ function BulkPromoteModal({
 
         <div className="flex items-center justify-end gap-2 pt-2 border-t border-gray-800">
           <button
-            onClick={onClose}
-            disabled={mutation.isPending}
-            className="px-3 py-1.5 text-sm rounded-md bg-gray-800 hover:bg-gray-700 disabled:opacity-50"
+            onClick={handleCancel}
+            className="px-3 py-1.5 text-sm rounded-md bg-gray-800 hover:bg-gray-700"
           >
-            Cancel
+            {submitting ? 'Stop' : 'Cancel'}
           </button>
           <button
-            onClick={() => mutation.mutate()}
-            disabled={mutation.isPending || clusters.length === 0}
+            onClick={handleSubmit}
+            disabled={submitting || clusters.length === 0}
             className="flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md bg-primary-500/20 text-primary-300 hover:bg-primary-500/30 disabled:opacity-50"
           >
-            {mutation.isPending ? (
+            {submitting ? (
               <>
-                <Loader2 size={14} className="animate-spin" /> Creating {clusters.length}…
+                <Loader2 size={14} className="animate-spin" /> Creating {completedCount} of {clusters.length}…
               </>
             ) : (
               <>
@@ -545,6 +706,23 @@ function BulkPromoteModal({
       </div>
     </div>
   )
+}
+
+// S3025 (U7): compact per-row status glyph shown left of each name input.
+function RowStatusIcon({ status }: { status: RowStatus }) {
+  switch (status) {
+    case 'in_progress':
+      return <Loader2 size={12} className="text-primary-400 animate-spin shrink-0" aria-label="In progress" />
+    case 'success':
+      return <CheckCircle2 size={12} className="text-accent-green shrink-0" aria-label="Created" />
+    case 'already_exists':
+      return <CheckCircle2 size={12} className="text-accent-amber shrink-0" aria-label="Already exists" />
+    case 'failed':
+      return <AlertTriangle size={12} className="text-accent-red shrink-0" aria-label="Failed" />
+    case 'pending':
+    default:
+      return <Circle size={12} className="text-gray-600 shrink-0" aria-label="Pending" />
+  }
 }
 
 // Session 3015 (U3): Dismissible summary card shown after a bulk-promote completes.

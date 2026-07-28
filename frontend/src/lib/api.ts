@@ -685,12 +685,17 @@ export const signalsApi = {
   // Session 3015 (U3): Bulk-promote N clusters at once.
   // Session 3024 (U6): optional `names` — full dict of {cluster_id: name}. Missing
   // keys, empty strings, and non-dict values fall back to the backend default.
-  bulkCreateInitiativesFromClusters: (params: {
-    cluster_ids: string[]
-    generate_brief?: boolean
-    workspace_id?: string
-    names?: Record<string, string>
-  }) =>
+  // Session 3025 (U7): accepts optional axios `signal` so callers can abort
+  // mid-request (client-side chunked submit with a Stop button).
+  bulkCreateInitiativesFromClusters: (
+    params: {
+      cluster_ids: string[]
+      generate_brief?: boolean
+      workspace_id?: string
+      names?: Record<string, string>
+    },
+    opts?: { signal?: AbortSignal },
+  ) =>
     api.post<{
       success: boolean
       error?: string
@@ -710,7 +715,7 @@ export const signalsApi = {
         error?: string
         existing_initiative?: { id: string; name: string }
       }>
-    }>('/platform/signal-cluster/bulk-create-initiative/', params),
+    }>('/platform/signal-cluster/bulk-create-initiative/', params, { signal: opts?.signal }),
   // S2978: Theme Signals v1 — tab-scoped Buildable/Investable cards.
   // S2980: `build_only` filters Buildable to action==build cards only.
   themeSignals: (params?: { tab?: 'buildable' | 'investable'; days?: number; limit?: number; min_confidence?: number; build_only?: boolean }) =>
