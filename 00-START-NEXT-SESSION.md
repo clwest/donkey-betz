@@ -2,124 +2,89 @@
 
 ---
 
-## READ THIS — SESSION 3037 CLOSED. **First execution of the A1 Reliability Audit wedge, shipped on ourselves.**
+## READ THIS — SESSION 3038 CLOSED. **S8 instrumentation + A3 classifier shipped. S3039 first action = S7 (ThinkingAgent root-cause).**
 
-S3037 executed the Reliability Audit v0 methodology (that Rigby scoped for herself at S2951 ~85 sessions ago) against Donkey Betz. **5 audit deliverables, 15 findings, 10-item remediation backlog** — of which **5 items shipped this session** (A1 + A2 + A6 + S4 + S5). Real reliability bugs surfaced, real fixes shipped, wedge proven.
+S3038 shipped two S3037-backlog remediations back-to-back on a two-PR slate: **S8** (WEDGE-BLOCKING instrumentation for the Rigby persistence-gap) and **A3** (LLMCallLog `error_type` auto-classifier + backfill). Both merged and recycled; 305 historical rows tagged; 3 remediation items remain from the S3037 backlog.
 
-**HEAD at close:** filled at cascade merge (post-`ced5b7ea0`).
+**HEAD at close:** filled at cascade merge (post-`80ac66499`).
 
 ### Two code PRs shipped
 
-- **PR #3767 (`690ba8c6a`)** — `fix(s3037-a6): AGENT_MAP fallback fail-loud in workflow orchestrator`. Surfaces actual Python exception + agent_name + duration_ms on falsy `router.route` success instead of "Unknown error" fallback. Tomorrow's morning_brief failure will carry a real exception in the escalation deliverable's `error_tail`.
-- **PR #3768 (`ced5b7ea0`)** — `feat(s3037-s4): cleanup_stale_ops_runs Celery beat task`. Mirrors AgentExecution 60-min cleanup pattern for OpsRun. Discharges "no lost dispatches" reliability rule violation. Beat live and scheduled `*/10 * * * *` on broadcast queue.
+- **PR #3770 (`a29085b38`)** — `feat(s3038-s8): instrument deliverable_tool.create for persistence-gap isolation`. Paired `[PA_DELIVERABLES_INTENT]` + `[PA_DELIVERABLES_ENVELOPE]` log lines sharing `trace_id` with existing `[PA_TASK_SUMMARY]`. Cross-referencing the three signatures against `Deliverable` rows classifies the failure mode deterministically next time it fires. **Diagnostic finding:** ORM sweep of the S3037 audit window shows zero `pa_deliverables_tool` rows — the handler was never reached, so the fix is upstream (PA loop / prompt convergence). Validated with 4 synthetic dispatches, all persisted.
+- **PR #3771 (`80ac66499`)** — `feat(s3038-a3): auto-classify LLMCallLog.error_type from error_message`. Pure regex classifier (11 patterns + `unknown_error` fallback), `LLMCallLog.save()` pre-persist hook (respects caller intent, fail-open), `manage.py backfill_llm_error_types [--apply]`. Backfill applied: **305/305 historical rows → `connection_error`**.
 
-### Three in-session ORM fixes
+### One in-session artifact update
 
-- **A1** — 2 orphaned OpsRun rows (16d + 18d stuck) manually recovered
-- **S5** — S3036 Chief of Staff Escalation `de861fe2-…` reopened with contradicting evidence (WiFi mis-attribution invalidated)
-- **A2** — Chris `AutonomyConfiguration` row created (id `6d4aef2d-…`) — fills the Step 4 governance-artifact gap
-
-### Rigby Tool Gap Ledger — 3rd trigger appended
-
-Rigby persistence-gap (dispatches run tool_runs, don't persist deliverable) logged on `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0`. Discharge path = S8 (30-45 min, WEDGE-BLOCKING).
+- **Rigby Tool Gap Ledger** (`5c84e75a-…`) — S8 discharge note appended (1,478 chars). 3rd trigger status flipped `open → mitigated`.
 
 ---
 
-## Audit artifacts (all in Donkey Betz workspace `b4503364-…`)
+## S3039 primary directive (Chris's ratified pick)
 
-| Deliverable | Content |
-|---|---|
-| `aec0e6da-b2b4-4d28-8cca-b69da920b1f4` | Scope Card (Step 1) |
-| `361e8209-c24c-4401-8a3d-f5387f972dea` | Step 2 — Telemetry Pull & Failure Signature Sweep |
-| `ce9ca37b-c544-4672-be9f-5b29e14aa59d` | Step 3 — Tool Reliability Matrix |
-| `1ac5f0dc-aa09-44da-8353-dea3e3cbdc2e` | Step 4 — Governance Posture |
-| `c3cad098-6d29-447f-b949-456913f7d343` | Step 6 — Remediation Backlog (10 items) |
+**S7 — Root-cause `ThinkingAgent` 67% async failure.** ~1 session estimate. CRITICAL classification per S3037 Step 6 backlog.
 
----
-
-## S3038 primary directive candidates
-
-**No forced pick — Chris picks fresh.** 5 remediation-backlog items still open:
-
-### Highest-leverage remaining (from Step 6 deliverable)
-
-- **S8** (30-45 min, **WEDGE-BLOCKING** cheap win) — Instrument `deliverable_tool.create` to isolate Rigby persistence-gap root cause. This is what blocks selling the wedge to a paying customer. Test with minimum-scope dispatch (single tool call, no exploration allowed) as first probe.
-- **A3** (45-60 min, QUICK WIN) — Backfill `LLMCallLog.error_type` from `error_message` via regex classifier + save() hook. Closes silent-monitoring gap surfaced in Step 4.
-- **A6 Phase 2** — Watch tomorrow's 7:00 AM MDT morning_brief run. If it fails, the escalation deliverable will now carry a real Python exception type (via PR #3767 fix). That's the trigger to root-cause the underlying bug in `lane_1_platform_readiness`. If it passes, note as "intermittent conditions cleared" and monitor.
-- **S7** (~1 session, CRITICAL) — Root-cause ThinkingAgent 67% async failure. Instrument each ORM call site in `.think()`.
-- **S9** (~1 session, HIGH) — Wire downgrade/fallback logic to populate `was_downgraded` / `was_fallback` fields on `LLMCallLog` that S2853 shipping claim implied. Right now 39,971 calls / 30d show zero downgrades.
-
-### Also open (not from audit backlog)
-
-- **`typing.Literal[actor]` enforcement** on emit helpers (S3036 T1 Fold future_trigger)
-- **Actor-taxonomy vs frontend-palette drift guard** (S3036 A2 Fold future_trigger)
-- **S3033 Fold B** ledger-persistence timing (watch for 3rd trigger)
-- **S3030 prod deploy carry** — `backfill_canonical_drift --apply` on Railway prod
-- **S3031 Fold B** spy fragility
-- **S3032 Fold E** — `orm_inspect_tool` allowlist accretion pattern
-- **S3034 A2 Fold** (subscriber wire-contract fragility) — carry preserved
-
-### Chris's own priority (supersedes all above)
-
-**Joint recommendation:** if unsure, **S8** is the cheapest strategic win of the audit backlog — 30-45 min instrumentation that unblocks selling the wedge. Alternatively, **A3** if you want another quick governance improvement in the same shape as A2.
+**Approach:**
+- Instrument each ORM call site in `.think()` — where does the sync/async boundary get crossed?
+- Look for `SynchronousOnlyOperation` errors in an async context — the most likely shape is a missing `sync_to_async` wrapper at an ORM boundary.
+- 67% failure rate is high enough that a rerun should reproduce quickly; if flaky, use `--iterations 10` on any exec harness to force the failure signature.
+- S3037 Step 3 (Tool Reliability Matrix `ce9ca37b-…`) probably has the initial trace evidence — read it first.
 
 **Standard opener:**
 1. `context-kit orient` (auto-injected)
 2. Absorb this file + MEMORY.md + CLAUDE.md
-3. Read S3037 handoff (`docs/handoffs/SESSION_3037_RELIABILITY_AUDIT_V0_A6_S4_A2.md`)
-4. Read audit remediation backlog (`c3cad098-6d29-447f-b949-456913f7d343` — 10 action items with PLAYBOOK-format ratification for top 3)
-5. Ask Chris: "What would you like to work on?"
-6. Optional state probes:
-   - `git log --oneline -8` — should show `ced5b7ea0` (S4) + `690ba8c6a` (A6) on top of the S3036 cascade
-   - `python manage.py shell -c "from django_celery_beat.models import PeriodicTask; print(PeriodicTask.objects.filter(task='core.tasks.cleanup_stale_ops_runs').first())"` — should show the new task
-   - Check today's morning_brief run (fired at 7:00 AM MDT) — if failed, escalation deliverable now carries real exception in `error_tail`
+3. Read S3038 handoff (`docs/handoffs/SESSION_3038_S8_INSTRUMENTATION_A3_CLASSIFIER.md`)
+4. Read the S7 line item in `c3cad098-6d29-447f-b949-456913f7d343` (S3037 audit remediation backlog Step 6) AND the ThinkingAgent findings in `ce9ca37b-c544-4672-be9f-5b29e14aa59d` (Step 3 Tool Reliability Matrix)
+5. Optional state probes:
+   - `git log --oneline -8` — should show `80ac66499` (A3) + `a29085b38` (S8) on top of the S3037 cascade
+   - `python manage.py shell -c "from core.models_llm_routing import LLMCallLog; print(LLMCallLog.objects.filter(agent_name='ThinkingAgent', success=False).values('error_type').annotate(from django.db.models import Count; n=Count('id')).order_by('-n')[:10])"` — check current error_type distribution for ThinkingAgent post-A3-backfill
+   - Trigger a fresh ThinkingAgent run to capture new INTENT/ENVELOPE + new `error_type` on any failure
 
 ---
 
-## S3038 carry-forward seeds
+## S3039 carry-forward seeds
 
-### New from S3037
+### New from S3038
 
-- **S8 (Rigby persistence-gap instrumentation)** — 3rd trigger logged to Tool Gap Ledger; wedge-blocking
-- **A6 Phase 2 watch** — tomorrow's morning_brief failure now surfaces real exception; root-cause when it fires
-- **AutonomyConfiguration** row now exists — monitor for cases where autonomy caps trip (require_approval_above=$25); tune if too tight
-- **Wedge lessons applied to future customer pilots** — Snapshot underpriced at $500; hybrid execution (Rigby+Claude) needed until S8 fixed; mis-attribution catches are highest-value class
+- **S8 instrumentation live** — next time `pa_deliverables_tool` source rows are missing for a dispatch that expected persistence, grep `celery-pa.log` for `PA_DELIVERABLES_INTENT trace_id=X` vs `PA_TASK_SUMMARY trace_id=X` to classify the failure mode.
+- **A3 classifier live** — every new failed LLMCallLog auto-tags `error_type`. Monitor for `unknown_error` fallbacks (signal to widen the pattern table).
+- **Rigby persistence-gap** — status = mitigated (instrumentation shipped). Next occurrence definitively diagnosable. Do NOT re-log to Tool Gap Ledger unless it fires and instrumentation catches it.
 
-### Elevated from S3036
+### Remaining audit backlog (from S3037 Step 6)
 
-- **T1 Fold future_trigger (typing.Literal[actor])** — still 1st trigger
-- **A2 Fold future_trigger (actor-taxonomy vs frontend-palette drift)** — still 1st trigger
-
-### `did_X` semantics — 2nd trigger status preserved from S3034
-
-- Watch for 3rd `did_X` method to codify as Playbook rule
+- **S7** (~1 session, CRITICAL) — ThinkingAgent 67% async failure. **S3039 first action.**
+- **S9** (~1 session, HIGH) — Wire `was_downgraded` / `was_fallback` / `was_auto_selected` telemetry on LLMCallLog. S2853 shipping claim not empirically visible.
+- **D10** (multi-session, DEFERRABLE) — Historical `LLMCallLog.workspace` backfill for 34,049 NULL rows. Reporting quality, not runtime.
+- **A6 Phase 2** — Root-cause `lane_1_platform_readiness` underlying bug now that PR #3767 surfaces real exception. Trigger-driven; wait for next morning_brief failure.
 
 ### Carried from prior arcs — status preserved
 
+- **T1 Fold future_trigger (typing.Literal[actor])** — 1st trigger (S3036)
+- **A2 Fold future_trigger (actor-taxonomy vs frontend-palette drift)** — 1st trigger (S3036)
+- **`did_X` semantics** — 2nd trigger (S3034); watch for 3rd
 - **S3033 Fold B** — ledger persistence timing (1st trigger discharged; watch for 3rd)
 - **S3030 prod deploy carry** — `backfill_canonical_drift --apply` on Railway prod
 - **S3032 Fold E** — `orm_inspect_tool` allowlist accretion
 - **S3031 Fold B** — spy fragility
-- **S3034 A2 Folds** (subscriber wire-contract fragility + adjacent-axis superseded/experiment as terminal states) — carried
+- **S3034 A2 Folds** — subscriber wire-contract fragility + adjacent-axis superseded/experiment
 
 ---
 
 ## Cross-cutting workflow references
 
-- **Constitutional governance chain:** CLAUDE.md Playbook **v0.11.0** (S3037 audit + fixes are net-new + bug fixes; PLAYBOOK-7.7.5 does not fire; no amendment this session).
+- **Constitutional governance chain:** CLAUDE.md Playbook **v0.11.0** (S3038 is remediation-shipping; PLAYBOOK-7.7.5 does not fire; no amendment this session).
 - **ADR corpus:** ADR-0001 through ADR-0008.
-- **Spec→ship contract:** PLAYBOOK-7.7.1. **2× Flow B spec→ship** (A6 PR #3767, S4 PR #3768). Spec = audit remediation-backlog items.
-- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **N/A** — direct Claude-execute-and-verify shape used per S2988 precedent for ad-hoc bug fixes with unambiguous design.
-- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Applied to every mid-flight decision routing (tier selection, workflow picks, execution mode, Step 5 skip, remediation ordering, close-readiness path).
-- **Recycle discipline (PLAYBOOK-7.4.4):** `make recycle-all` after each merge. Events recorded in `logs/recycle_events.jsonl` sha=690ba8c6af90, sha=ced5b7ea01b6.
-- **Verify-before-build (Cycle 1A):** **22nd consecutive session** — A6 verified S1234 D1 pattern before mirror; S4 verified `_impl_cleanup_stale_agent_executions` pattern before mirror.
+- **Spec→ship contract:** PLAYBOOK-7.7.1. **2× Flow B spec→ship** (S8 PR #3770, A3 PR #3771). Spec = audit remediation-backlog items.
+- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **N/A** — direct Claude-execute-and-verify shape per S2988 precedent for ad-hoc remediation with unambiguous design.
+- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Applied to session-open recommendation, A3 slide-in ask, close-cascade routing.
+- **Recycle discipline (PLAYBOOK-7.4.4):** `make recycle-all` after each merge. Events recorded in `logs/recycle_events.jsonl` sha=a29085b38ba4, sha=80ac6649965a.
+- **Verify-before-build (Cycle 1A):** **23rd consecutive session** — S8 verified handler shape before instrumenting; A3 verified no existing LLMCallLog signal before choosing `save()` override + verified `backfill_*` naming before creating command.
 
 ---
 
 ## Wrapper pin note
 
-Active PA conversation pin at S3037 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
+Active PA conversation pin at S3038 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
 
 ---
 
-**Reminder — the workflow is constitutional.** S3037 is the first arc to fully execute the A1 wedge on ourselves. 3 shipped remediations (A6/S4/A2) + 2 in-audit quick wins (A1/S5) + Rigby Tool Gap Ledger 3rd-trigger logged. The wedge is real; the biggest remaining blocker to selling it is S8 (Rigby persistence-gap instrumentation, 30-45 min).
+**Reminder — the workflow is constitutional.** S3038 shipped 2 remediation PRs from the S3037 audit backlog. 5 of 10 original items now discharged (A1/A2/A6/S4/S5 at S3037; S8/A3 at S3038). 3 remain (S7/S9/D10) plus A6 Phase 2 trigger-driven. S7 is next.
