@@ -108,3 +108,14 @@ Zoom-out folds:
 ## Wrapper pin note
 
 Session-open pin was `pa-1a7f9795187945b5` (minted at S3034 close). Close mints next pin; wrapper diff committed per `feedback_commit_wrapper_pin_bump_at_close`.
+
+## Post-close smoke-test outcome (2026-07-29 morning)
+
+Chris opened the terminal the morning after close and validated the panel live:
+
+- **Location confirmed:** Workspace → System → **Governance** sub-tab. Sidebar label reads "Governance"; internal sub-tab id is `boardroom`; `WorkspacePageNew.tsx:1304` mounts `<BoardroomTab />` on `activePrimary === 'system' && activeSub === 'boardroom'`. Naming legacy, not a mismatch — same component S3035 modified.
+- **Panel rendering:** "Recent Lifecycle Activity" collapsible row visible between the blue "NEW" banner and the Attention Items / Draft Decisions tab switcher, with inline promoted / rejected counters + Activity icon + chevron.
+- **Ring populated:** ring contained events from the previous night's boardroom passes — no fresh promote/reject action needed to see it work.
+- **Chris real-user observation:** most of the last 13 lifecycle events are rejections. This is real signal (recent boardroom passes have skewed reject-heavy), now visible for the first time. **No action needed** — the panel is doing exactly what it was built for: surfacing the S3028/S3034 broadcast stream that was previously invisible.
+
+Manual smoke considered CLOSED; the operator-carry line in `00-START-NEXT-SESSION.md` struck through.
