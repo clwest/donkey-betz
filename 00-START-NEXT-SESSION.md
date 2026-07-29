@@ -2,40 +2,42 @@
 
 ---
 
-## READ THIS FIRST — SESSION 3031 CLOSED. **S3026 → S3031 canonical-promotion drift + idempotency arc FULLY CLOSED (broadcast + mutation + historical heal + race elimination).** PR #3751 (`d7bb28b4f`) made `AgentDecisionSummary.promote_to_canonical` return `bool` (True if this call did the transition, False if row was already canonical) and wrapped `emit_canonical_promotion_broadcast` in `if did_promote:` at all 6 caller sites. Duplicate-broadcast race across 6 promotion paths now closed. 3 new tests + full regression **77/77 pass in 7.166s**. **17-session zero-hallucination Rigby SIGN streak. 16th consecutive Cycle 1A verify-before-build session.**
+## READ THIS FIRST — SESSION 3032 CLOSED. **S3026 → S3032 arc FULLY CLOSED across 5 axes (broadcast + mutation + historical heal + race elimination + Rigby tool-surface coverage).** PR #3753 (`4e8a6a353`) added `AgentDecisionSummary` to the `orm_inspect_tool` allowlist (18 entries now, was 17), closing the Rigby Tool Gap Ledger candidate that surfaced live at S3030 T1. Rigby verified end-to-end post-recycle — the exact drift probe she couldn't run at S3030 now runs cleanly on her tool surface. 5 new tests + full regression **191/191 pass in 9.080s**. **18-session zero-hallucination Rigby SIGN streak. 17th consecutive Cycle 1A verify-before-build session.**
 
-**2 feature PRs shipped this terminal session (S3030 + S3031, both ratified by Chris):**
+**3 feature PRs shipped this terminal session (S3030 + S3031 + S3032, all ratified by Chris — this is the 3rd single-terminal multi-session close):**
 
-- **PR #3749 (`e7fc79282`) — `feat(s3030): backfill_canonical_drift command`.** Heals `AgentDecisionSummary.filter(status='canonical', is_canonical=False)` drift rows created by 5 years of `.update(status='canonical')` bypassing model save. Dry-run default; `--apply` to heal; `--limit N` batching; promoted_at ← pre-heal updated_at proxy; marker `backfill-s3030-tasks-ops-drift`; no broadcast (rows too old). 5 new tests. Rigby explicitly deferred this from PR #3747; S3030 closes it.
-- **PR #3751 (`d7bb28b4f`) — `feat(s3031): did_promote idempotency`.** Model method returns bool + early-exits if already canonical + `save(update_fields=[...])` containment. All 6 caller sites (`ai_decision_promoter`, `decision_promotion_rules`, `td_handlers_agents`, `tasks_ops`, `views_agent_learning` single + bulk) gate broadcast on return value. 3 new tests including end-to-end AI-service spy proving 2 calls = 1 broadcast.
+- **PR #3749 (`e7fc79282`) — `feat(s3030): backfill_canonical_drift`.** Heals 5 years of `.update(status='canonical')` drift rows. Dry-run default; `--apply`; `--limit N`; marker `backfill-s3030-tasks-ops-drift`; no broadcast. 5 tests.
+- **PR #3751 (`d7bb28b4f`) — `feat(s3031): did_promote idempotency`.** Model method returns bool + early-exits; 6 caller sites gate broadcast on return. Closes duplicate-broadcast race. 3 tests including end-to-end AI-service spy proving 2 calls = 1 broadcast.
+- **PR #3753 (`4e8a6a353`) — `feat(s3032): Rigby ORM allowlist entry`.** Added `AgentDecisionSummary` to `orm_inspect_tool` allowlist. Rigby verified live E2E post-recycle. 5 tests.
 
-**Arc close:** S3026 → S3031 canonical-promotion arc now fully closed across all 4 axes:
+**Arc close:** S3026 → S3032 canonical-promotion arc now FULLY closed across all 5 axes:
 - Broadcast side (S3026 → S3028): all 6 paths emit `canonical_decision_promoted`.
 - Mutation side (S3029): all 6 paths delegate to `promote_to_canonical()` model method.
 - Historical drift (S3030): backfill command heals existing broken rows.
 - Race elimination (S3031): duplicate-broadcast race closed via `did_promote` gating.
+- Tool-surface coverage (S3032): Rigby can inspect `AgentDecisionSummary` directly for future SIGN cycles.
 
-**HEAD at close:** docs cascade → `d7bb28b4f` (PR #3751).
+**HEAD at close:** docs cascade → `4e8a6a353` (PR #3753).
 
 Full context:
-- `docs/handoffs/SESSION_3031_DID_PROMOTE_IDEMPOTENCY.md` — current session close.
-- `docs/handoffs/SESSION_3030_BACKFILL_CANONICAL_DRIFT.md` — earlier this terminal session.
+- `docs/handoffs/SESSION_3032_RIGBY_ORM_ALLOWLIST_AGENT_DECISION_SUMMARY.md` — current session close.
+- `docs/handoffs/SESSION_3031_DID_PROMOTE_IDEMPOTENCY.md` — earlier this terminal.
+- `docs/handoffs/SESSION_3030_BACKFILL_CANONICAL_DRIFT.md` — earlier this terminal.
 
 ---
 
-## S3032 primary directive candidates
+## S3033 primary directive candidates
 
-**No in-flight arc.** S3026 → S3031 canonical-promotion arc FULLY closed. Two operator carries open (not sessions of code):
-- Run `python manage.py backfill_canonical_drift --apply` against Railway prod (S3030 carry).
-- Consider re-visiting Fold C 3rd-cycle codification (A2 zoom-out sweep pattern) — 3 cycles of evidence now (1 discovery + 2 clean sweeps). Could codify with "clean-sweep-confirms-closure" framing.
+**No in-flight arc.** S3026 → S3032 canonical-promotion arc FULLY closed. One operator carry still open (not a session of code):
+- Run `python manage.py backfill_canonical_drift --apply` against Railway prod when convenient (S3030 carry).
 
 ### Option A — Continue engineering (bias-engineering rule)
 
-- **Extend broadcast pattern to `bulk_reject_decisions`:** add `canonical_decision_rejected` broadcast for symmetry. ~1 session.
+- **Extend broadcast pattern to `bulk_reject_decisions`:** add `canonical_decision_rejected` broadcast for symmetry. Natural next adjacent play — extends the pattern to the deprecation side of the promotion lifecycle. ~1 session.
 - **S3024 Fold A backend-source default preview API:** removes frontend/backend default-formatter shadowing. Watch-for-2nd-trigger. ~1 session.
 - **S3025 Fold C codification (BulkPromoteModal reducer extraction):** ~30-45 min.
-- **Rigby Tool Gap Ledger substrate slate (S3030 Fold D):** add `AgentDecisionSummary` (and adjacent frequently-inspected S30XX models) to `orm_inspect_tool` allowlist. Enables Rigby to run ORM probes for future SIGN cycles without falling back to Django shell. ~30 min.
-- **Fold C 3rd-cycle codification:** promote the "A2 zoom-out sweep for drift/hardening class" pattern into a Playbook rule. 3 cycles of evidence (S3029 discovery + S3030 + S3031 clean sweeps). ~30 min substrate + spec cycle.
+- **Fold C 3rd-cycle codification (S3031 carry):** promote the "A2 zoom-out sweep for drift/hardening class" pattern into a Playbook rule. 3 cycles of evidence (S3029 discovery + S3030 + S3031 clean sweeps). Not exercised in S3032 (single-file change). ~30 min.
+- **Boolean-return semantics discipline (S3031 Fold A):** if a 2nd `did_X`-style bool-return method surfaces in the next few sessions, codify the "callers must treat False as idempotent no-op success, not error" contract as a Playbook amendment. Watch-for-2nd-trigger.
 
 ### Option B — Design-arc candidates (needs Chris ratification)
 
@@ -56,41 +58,40 @@ Full context:
 
 ### Option E — Chris's own priority (supersedes A-D)
 
-**Joint recommendation at close:** either **`bulk_reject_decisions` symmetry** (~1 session, natural next adjacent play — extends broadcast pattern to the deprecation side of the promotion lifecycle) OR **Fold C 3rd-cycle codification** (~30 min, matures the A2-sweep pattern into a repeatable Playbook rule now that it's proven over 3 cycles). Both are small clean leans; either closes a still-open pattern-evidence loop.
+**Joint recommendation at close:** either **`bulk_reject_decisions` symmetry** (~1 session, adjacent extension — closes the deprecation side of the canonical lifecycle) OR **Fold C 3rd-cycle codification** (~30 min, matures the A2-sweep pattern into a Playbook rule). Both are clean leans. **Fresh-terminal recommendation:** given this terminal shipped 3 sessions + 6 PRs and context is dense, S3033 may benefit from a fresh terminal start for a cleaner cache window.
 
 **Standard opener:**
 1. Run `context-kit orient` (auto-injected).
 2. Absorb this file + MEMORY.md + CLAUDE.md.
-3. Read S3031 handoff (`docs/handoffs/SESSION_3031_DID_PROMOTE_IDEMPOTENCY.md`).
+3. Read S3032 handoff (`docs/handoffs/SESSION_3032_RIGBY_ORM_ALLOWLIST_AGENT_DECISION_SUMMARY.md`).
 4. Optional state probes:
-   - `git log --oneline -8` — should show docs cascade → `d7bb28b4f` (PR #3751).
-   - Full regression bundle (12 files): 77/77 OK.
+   - `git log --oneline -8` — should show docs cascade → `4e8a6a353` (PR #3753).
+   - Full regression bundle (19 files): 191/191 OK.
 
 ---
 
-## S3032 carry-forward seeds
+## S3033 carry-forward seeds
 
-### New from S3031
+### New from S3032
 
-- **Fold A `2nd trigger`** — boolean-return semantics discipline. Watch for 2nd `did_X`-style bool-return method on a similar mutation-with-side-effect shape to codify. `did_promote` mitigates via naming discipline, but the broader contract ("callers must treat False as idempotent no-op success, not error") is worth formalizing.
-- **Fold C `3rd cycle, no discovery`** — A2 zoom-out sweep applied cleanly again in S3031. Codification pressure elevated but not automatic.
+- **Fold E `2nd cycle, non-blocking accretion evidence`** — `orm_inspect_tool` allowlist growth pattern (1 model per Ledger incident): now at 18 entries via 7 accretion PRs since S2866. If N+2 more accretion PRs land in short succession, revisit whether periodic-sweep RFC is warranted.
 
-### Carried from S3030 (STATUS UPDATED)
+### Carried from S3031 (STATUS UPDATED)
 
-- **S3030 Fold A `informational` (Rigby ORM allowlist gap)** — carried unchanged as S3031 Fold D. Ledger candidate for future substrate slate.
-- **S3030 Fold B `informational` (spy fragility)** — carried unchanged as S3031 Fold B.
-- **S3030 Fold C `2nd cycle`** — advanced to `3rd cycle, no-discovery` as S3031 Fold C.
-- **S3030 Fold D `informational` (dup-broadcast race)** — **RESOLVED** by S3031 PR #3751.
+- **S3031 Fold A `2nd trigger` (bool-return semantics)** — carried unchanged.
+- **S3031 Fold B `informational` (spy fragility)** — carried unchanged.
+- **S3031 Fold C `3rd cycle, no-discovery` (A2 zoom-out sweep pattern)** — carried unchanged (not exercised in S3032 single-file scope).
+- **S3031 Fold D `informational` (Rigby ORM allowlist gap)** — **RESOLVED** by S3032 PR #3753.
+
+### Carried from S3030 (STATUS PRESERVED)
+
 - **S3030 prod deploy carry** — still open: run `backfill_canonical_drift --apply` against Railway prod.
 
 ### Carried from S3029 → S3026 (STATUS PRESERVED)
 
 - **S3028 Fold A** — FULLY RESOLVED at S3029.
 - **S3029 PR #3747 deferred item** — RESOLVED by S3030 PR #3749.
-- **S3029 Fold A → S3030 Fold B → S3031 Fold B** — spy fragility (carried).
-- **S3029 Fold B → S3030 Fold D** — RESOLVED by S3031 PR #3751.
-- **S3029 Fold C → S3030 Fold C → S3031 Fold C** — 3rd cycle no-discovery.
-- **S3026 Fold A `1st trigger`** — S3030 + S3031 A2 sweeps = additional supporting evidence. Codification pressure stays at 1st trigger.
+- **S3026 Fold A `1st trigger`** — S3030 + S3031 + S3032 A2 sweeps + live-E2E = additional supporting evidence. Codification pressure stays at 1st trigger.
 - **S3026 Fold B `informational`** — spec-invalidation watch.
 - **S3026 Fold C `informational`** — `learning_reason` bare-string typing.
 - **Design-arc candidate** — KnowledgeTransfer model realignment.
@@ -114,7 +115,7 @@ Full context:
 - **S3023 Fold D `1st trigger`** — U4-H tests ratify current status/lifecycle contract.
 - **Decision lifecycle parity (Rigby A1 zoom-out standing carry)** — HAI vs ADS lifecycle families.
 
-### Carried from S3022 / S3021 / S3020 / S3019 / S3018 / older — all preserved from S3030 close 00-START.
+### Carried from S3022 / S3021 / S3020 / S3019 / S3018 / older — all preserved from S3031 close 00-START.
 
 ---
 
@@ -122,19 +123,19 @@ Full context:
 
 - **Constitutional governance chain:** CLAUDE.md Playbook v0.10.0. No amendments this session.
 - **ADR corpus:** ADR-0001 through ADR-0008.
-- **Spec→ship contract:** PLAYBOOK-7.7.1. **1× Flow B spec→ship** (PR #3751 planned end-to-end from S3030 forward-carry recommendation).
-- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **2× substantive Rigby SIGN cycles this session (5× across S3030 + S3031 terminal). Zero rubber-stamp. 23 sessions continuous.**
-- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Chris directive at S3030 close: "If you have the context can you knock out the did_promote in this terminal session?" — ratified the small clean lean.
-- **Recycle discipline (PLAYBOOK-7.4.4):** `make recycle-all` once post-PR-3751, clean at `sha=d7bb28b4f91f`.
-- **Fold classification (PLAYBOOK-6.10.8):** 4 folds. A 2nd trigger. B/D informational carried. C 3rd cycle no-discovery.
-- **Verify-before-build (Cycle 1A):** **16th consecutive session** — read method + 6 caller sites + grep for missing callers + grep for adjacent silent writes before spec.
+- **Spec→ship contract:** PLAYBOOK-7.7.1. **1× Flow B spec→ship** this session (PR #3753 planned end-to-end from S3030 forward-carry).
+- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **2× substantive Rigby SIGN cycles this session (7× across S3030 + S3031 + S3032 terminal). Zero rubber-stamp. 24 sessions continuous.**
+- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Chris asked at S3031 close whether the Rigby ORM allowlist item was bumped; Claude reported still-open; Chris ratified with "yes let's do it".
+- **Recycle discipline (PLAYBOOK-7.4.4):** `make recycle-all` once post-PR-3753, clean at `sha=4e8a6a353111`.
+- **Fold classification (PLAYBOOK-6.10.8):** 5 folds. A carried 2nd trigger. B/C carried informational + 3rd-cycle no-discovery. D RESOLVED. E new 2nd-cycle accretion-pattern evidence.
+- **Verify-before-build (Cycle 1A):** **17th consecutive session** — read allowlist location + structure + growth history + 17 existing entries before spec.
 
 ---
 
 ## Wrapper pin note
 
-The active PA conversation pin at S3031 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
+The active PA conversation pin at S3032 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
 
 ---
 
-**Reminder — the workflow is constitutional. S3030 + S3031 shipped in the same terminal session (Chris ratified continuation). S3030 healed 5 years of historical drift; S3031 closed the last known race in the canonical-promotion arc via did_promote gating. The S3026 → S3031 arc is now FULLY CLOSED across all 4 axes (broadcast + mutation + historical heal + race elimination). S3032 opens with either `bulk_reject_decisions` symmetry (~1 session, adjacent extension) or Fold C 3rd-cycle codification (~30 min, matures a proven-over-3-cycles workflow pattern) as recommendations; Chris's own priority supersedes.**
+**Reminder — the workflow is constitutional. S3030 + S3031 + S3032 shipped in the same terminal session (Chris ratified continuation twice). S3030 healed 5 years of historical drift; S3031 closed the duplicate-broadcast race; S3032 closed the Rigby tool-surface gap that started the entire cascade at S3030 T1. The S3026 → S3032 arc is now FULLY CLOSED across all 5 axes (broadcast + mutation + historical heal + race elimination + Rigby tool-surface coverage). S3033 opens with either `bulk_reject_decisions` symmetry (~1 session, adjacent extension) or Fold C 3rd-cycle codification (~30 min) as recommendations; Chris's own priority supersedes. Consider fresh terminal for S3033 given this terminal shipped 6 PRs.**
