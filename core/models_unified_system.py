@@ -18196,14 +18196,24 @@ class AgentDecisionSummary(models.Model):
     def __str__(self):
         return f"[{self.decision_type}] {self.topic}"
 
-    def promote_to_canonical(self, promoted_by='human'):
-        """Promote this decision to canonical policy status."""
+    def promote_to_canonical(self, promoted_by='human') -> bool:
+        """Promote this decision to canonical policy status.
+
+        Returns True if this call performed the state transition; False if
+        the row was already canonical (no-op — safe to treat as success).
+        Callers gate downstream side-effects (e.g. broadcasts) on the
+        return value to avoid duplicate emissions when two paths race on
+        the same row.
+        """
         from django.utils import timezone
+        if self.is_canonical:
+            return False
         self.status = 'canonical'
         self.is_canonical = True
         self.promoted_at = timezone.now()
         self.promoted_by = promoted_by
-        self.save()
+        self.save(update_fields=['status', 'is_canonical', 'promoted_at', 'promoted_by', 'updated_at'])
+        return True
 
     def get_source_display(self):
         """Get display name for the source conversation."""
