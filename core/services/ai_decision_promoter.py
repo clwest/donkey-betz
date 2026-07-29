@@ -177,14 +177,18 @@ or
         promotion Redis broadcast so the AI-AutoPromoter path fires the
         same event the boardroom endpoints fire. Broadcast is best-effort
         and never fails promotion — helper returns bool.
+
+        S3029 (Fold A convergence): delegates the field mutation to the
+        `AgentDecisionSummary.promote_to_canonical` model method (same
+        method the view + PA-handler paths use), removing 5 lines of
+        duplicated mutation logic. Atomic wrapper stays HERE (not in the
+        model method) because atomicity is a per-service choice — the
+        rules service intentionally doesn't wrap; don't harmonize
+        without explicit evidence-backed decision.
         """
         try:
             with transaction.atomic():
-                decision.status = 'canonical'
-                decision.is_canonical = True
-                decision.promoted_at = timezone.now()
-                decision.promoted_by = promoter
-                decision.save()
+                decision.promote_to_canonical(promoted_by=promoter)
         except Exception as e:
             logger.error(f"Error promoting decision {decision.id}: {e}")
             return False
