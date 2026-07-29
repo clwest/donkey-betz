@@ -185,17 +185,21 @@ class DecisionPromotionRules:
         harmonize without explicit evidence-backed decision.
         """
         try:
-            decision.promote_to_canonical(promoted_by=promoted_by)
-            self.stats['promoted'] += 1
-            logger.info(f"Auto-promoted decision: {decision.topic[:50]}... -> canonical")
+            # S3031: gate broadcast on did_promote — if a competing path
+            # already canonicalized this row, skip the duplicate broadcast.
+            did_promote = decision.promote_to_canonical(promoted_by=promoted_by)
+            if did_promote:
+                self.stats['promoted'] += 1
+                logger.info(f"Auto-promoted decision: {decision.topic[:50]}... -> canonical")
         except Exception as e:
             logger.error(f"Failed to promote decision {decision.id}: {e}")
             return False
 
-        from core.services.canonical_decision_broadcast import (
-            emit_canonical_promotion_broadcast,
-        )
-        emit_canonical_promotion_broadcast(decision)
+        if did_promote:
+            from core.services.canonical_decision_broadcast import (
+                emit_canonical_promotion_broadcast,
+            )
+            emit_canonical_promotion_broadcast(decision)
         return True
 
     def run_auto_promotion(self, dry_run: bool = False) -> Dict[str, Any]:

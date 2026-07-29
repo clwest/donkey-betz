@@ -6019,15 +6019,18 @@ class AgentHandlersMixin:
                 raise ValueError(f"Draft decision {decision_id} not found")
 
             # Promote to canonical
-            decision.promote_to_canonical(promoted_by=promoted_by)
+            # S3031: gate broadcast on did_promote to avoid duplicate
+            # emits when a competing path already canonicalized this row.
+            did_promote = decision.promote_to_canonical(promoted_by=promoted_by)
 
             # S3028: emit canonical-promotion broadcast so the PA path fires
             # the same event the boardroom UI + Celery auto-promoter fire.
             # Best-effort; never fails the promotion.
-            from core.services.canonical_decision_broadcast import (
-                emit_canonical_promotion_broadcast,
-            )
-            emit_canonical_promotion_broadcast(decision)
+            if did_promote:
+                from core.services.canonical_decision_broadcast import (
+                    emit_canonical_promotion_broadcast,
+                )
+                emit_canonical_promotion_broadcast(decision)
 
             # Session 940: Record for learning
             if user_id:
