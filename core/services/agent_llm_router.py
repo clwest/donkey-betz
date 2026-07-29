@@ -458,6 +458,9 @@ class AgentLLMRouter:
         task_type: Optional[str],
         user: Optional[Any],
         was_fallback: bool,
+        was_downgraded: bool = False,
+        pre_downgrade_model_id: str = "",
+        was_auto_selected: bool = False,
     ):
         """Log an LLM call to the database for tracking"""
         try:
@@ -478,6 +481,11 @@ class AgentLLMRouter:
                     )
 
             # Create log entry
+            # S3039 S9: was_auto_selected + was_downgraded + pre_downgrade_model_id
+            # threaded through from callers instead of hardcoded False. Ships
+            # parity with llm_enforcer._save_cost_tracking so both LLMCallLog
+            # write sites can populate the full flag set. Producers (agent_model
+            # _router.auto_route consumers) will thread True in a follow-up.
             LLMCallLog.objects.create(
                 agent_name=agent_name,
                 user=user,
@@ -485,7 +493,9 @@ class AgentLLMRouter:
                 provider=provider,
                 model_id=model_id,
                 was_fallback=was_fallback,
-                was_auto_selected=False,
+                was_downgraded=was_downgraded,
+                pre_downgrade_model_id=pre_downgrade_model_id,
+                was_auto_selected=was_auto_selected,
                 task_type=task_type or '',
                 prompt_tokens=response.tokens_input,
                 success=response.success,

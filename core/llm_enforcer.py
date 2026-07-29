@@ -149,7 +149,14 @@ class LLMEnforcer:
                        tool_choice: Optional[Dict] = None,
                        input_messages: Optional[List[Dict]] = None,
                        trace_id: str = "",
-                       user: Optional[Any] = None) -> Dict[str, Any]:
+                       user: Optional[Any] = None,
+                       # S3039 S9: fallback + auto-select attribution on LLMCallLog.
+                       # Callers pass these through so the enforcer path (100%
+                       # of prod openai traffic) can record events; producers
+                       # (e.g. agent_model_router.auto_route consumers) will
+                       # thread these in a follow-up per Rigby's zoom-out fold.
+                       was_fallback: bool = False,
+                       was_auto_selected: bool = False) -> Dict[str, Any]:
         """
         ENFORCE real AI usage - this is the ONLY way to get AI responses
 
@@ -439,6 +446,14 @@ class LLMEnforcer:
                 # no downgrade cascade).
                 was_downgraded=response.get('was_downgraded', False),
                 pre_downgrade_model_id=response.get('pre_downgrade_model_id', ''),
+                # S3039 S9: fallback + auto-select attribution.
+                # enforce_real_ai's caller passes these through so the
+                # enforcer path (100% of prod openai traffic) can record
+                # events; producers (agent_model_router.auto_route
+                # consumers, upstream fallback wrappers) thread True when
+                # applicable.
+                was_fallback=was_fallback,
+                was_auto_selected=was_auto_selected,
             )
 
             result = {
@@ -834,6 +849,8 @@ class LLMEnforcer:
         user: Optional[Any] = None,
         was_downgraded: bool = False,
         pre_downgrade_model_id: str = "",
+        was_fallback: bool = False,
+        was_auto_selected: bool = False,
     ) -> None:
         """
         Session 802: Persist LLM usage to both CostTracking and LLMCallLog.
@@ -886,6 +903,9 @@ class LLMEnforcer:
                 # S2856: forced-downgrade attribution
                 was_downgraded=was_downgraded,
                 pre_downgrade_model_id=pre_downgrade_model_id,
+                # S3039 S9: fallback + auto-select attribution
+                was_fallback=was_fallback,
+                was_auto_selected=was_auto_selected,
             )
             logger.debug(f"💾 Saved LLM call log: {provider}/{model} - ${cost:.6f}")
         except Exception as e:
