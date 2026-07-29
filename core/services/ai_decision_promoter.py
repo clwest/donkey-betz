@@ -188,17 +188,21 @@ or
         """
         try:
             with transaction.atomic():
-                decision.promote_to_canonical(promoted_by=promoter)
+                # S3031: gate broadcast on did_promote — if a competing
+                # path already canonicalized this row, the method returns
+                # False and we skip the broadcast (no duplicate emit).
+                did_promote = decision.promote_to_canonical(promoted_by=promoter)
         except Exception as e:
             logger.error(f"Error promoting decision {decision.id}: {e}")
             return False
 
         # Broadcast outside the transaction — Redis-down must not fail
         # (or roll back) promotion. Helper is best-effort.
-        from core.services.canonical_decision_broadcast import (
-            emit_canonical_promotion_broadcast,
-        )
-        emit_canonical_promotion_broadcast(decision)
+        if did_promote:
+            from core.services.canonical_decision_broadcast import (
+                emit_canonical_promotion_broadcast,
+            )
+            emit_canonical_promotion_broadcast(decision)
         return True
 
     def run_batch_promotion(

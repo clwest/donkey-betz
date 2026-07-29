@@ -2167,7 +2167,10 @@ def promote_decision(request, decision_id):
         )
 
         decision = AgentDecisionSummary.objects.get(id=decision_id)
-        decision.promote_to_canonical(promoted_by='human')
+        # S3031: gate broadcast on did_promote so a competing path
+        # (bulk endpoint, Celery auto-approve, AI/Rules services) that
+        # already canonicalized this row doesn't produce a duplicate emit.
+        did_promote = decision.promote_to_canonical(promoted_by='human')
 
         logger.info(f"🏛️ [BOARDROOM] Decision promoted to canonical: {decision.topic}")
 
@@ -2180,10 +2183,11 @@ def promote_decision(request, decision_id):
         learning_created = False
         learning_reason = 'knowledge_transfer_model_mismatch_deferred'
 
-        emit_canonical_promotion_broadcast(
-            decision,
-            request_id=request.META.get('HTTP_X_REQUEST_ID'),
-        )
+        if did_promote:
+            emit_canonical_promotion_broadcast(
+                decision,
+                request_id=request.META.get('HTTP_X_REQUEST_ID'),
+            )
 
         return JsonResponse({
             'success': True,
@@ -2321,10 +2325,18 @@ def bulk_promote_decisions(request):
     broadcasts_failed = 0
     for decision in queryset:
         try:
-            decision.promote_to_canonical(promoted_by='human-bulk')
-            promoted += 1
+            # S3031: gate broadcast on did_promote. In the bulk endpoint,
+            # a row can slip into the queryset that a competing path
+            # already canonicalized between the filter and the loop iter.
+            # Skip both the promoted counter and the broadcast for no-ops.
+            did_promote = decision.promote_to_canonical(promoted_by='human-bulk')
+            if did_promote:
+                promoted += 1
         except Exception as e:
             logger.warning(f"Failed to promote decision {decision.id}: {e}")
+            continue
+
+        if not did_promote:
             continue
 
         if emit_canonical_promotion_broadcast(decision, request_id=request_id):

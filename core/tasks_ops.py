@@ -284,9 +284,17 @@ def _impl_auto_approve_boardroom_items():
                         # Re-fetch inside atomic to get the full instance;
                         # only() above was just for the id list bounding.
                         decision = AgentDecisionSummary.objects.get(id=row.id)
-                        decision.promote_to_canonical(promoted_by='system-auto-approve')
-                        promoted_count += 1
-                        promoted_ids.append(decision.id)
+                        # S3031: gate on did_promote — a competing path
+                        # may have canonicalized this row between our
+                        # candidate collection and the per-row promote.
+                        # If already canonical, skip the broadcast id
+                        # (broadcast loop below only fires for promoted_ids).
+                        did_promote = decision.promote_to_canonical(
+                            promoted_by='system-auto-approve'
+                        )
+                        if did_promote:
+                            promoted_count += 1
+                            promoted_ids.append(decision.id)
             except Exception as e:
                 logger.warning(
                     f"✅ [BOARDROOM-AUTO-APPROVE] {dtype} atomic promote failed: {e}"
