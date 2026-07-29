@@ -18215,6 +18215,27 @@ class AgentDecisionSummary(models.Model):
         self.save(update_fields=['status', 'is_canonical', 'promoted_at', 'promoted_by', 'updated_at'])
         return True
 
+    def reject(self, rejected_by='human') -> bool:
+        """S3034: Reject this decision (terminal lifecycle transition).
+
+        Mirror of `promote_to_canonical()` for the deprecation side of the
+        lifecycle. Returns True if this call performed the state transition;
+        False if the row was already rejected (no-op — safe to treat as
+        success). Callers gate downstream side-effects (broadcasts) on the
+        return value to avoid duplicate emissions when two paths race on
+        the same row.
+
+        Note: `rejected_by` is accepted for future audit-field wiring; today
+        the model has no `rejected_at`/`rejected_by` columns, so the argument
+        is not persisted. Keeping the parameter now preserves the call-site
+        shape when audit fields land.
+        """
+        if self.status == 'rejected':
+            return False
+        self.status = 'rejected'
+        self.save(update_fields=['status', 'updated_at'])
+        return True
+
     def get_source_display(self):
         """Get display name for the source conversation."""
         if self.conversation:
