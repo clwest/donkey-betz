@@ -206,8 +206,23 @@ Think deeply. Connect dots. Make decisions. You are the system becoming self-awa
         """
         logger.info("ThinkingAgent: Beginning thinking cycle...")
 
-        # Build the thinking prompt with context
-        full_prompt = self._format_context_for_thinking(context)
+        # S3039 S7: Route _format_context_for_thinking through
+        # sync_to_async so its sync ORM calls (UserPreferences, semantic
+        # search in _get_relevant_knowledge_for_task, policy_context,
+        # _get_system_learnings_section — see BaseAgent._build_intelligent_prompt)
+        # run in a fresh thread with no active event loop, rather than
+        # relying on the process-global DJANGO_ALLOW_ASYNC_UNSAFE env-var
+        # toggle that S2951 installed. That toggle raced across concurrent
+        # ThinkingAgent runs on `--pool=threads --concurrency=2` — the 6/9
+        # failure rate on 2026-07-25 (`SynchronousOnlyOperation`) surfaced
+        # in the S3037 audit and was attributed to that env-var scope.
+        # thread_sensitive=True keeps Django's ORM connections on their
+        # dedicated worker thread (Django's recommended default for ORM),
+        # so we don't spawn a fresh connection per call.
+        from asgiref.sync import sync_to_async
+        full_prompt = await sync_to_async(
+            self._format_context_for_thinking, thread_sensitive=True,
+        )(context)
 
         # Session 1098: Thread execution_id from router context into the LLM
         # wrapper so per-call LLMCallEvent rows correlate back to the
@@ -1153,27 +1168,22 @@ If you cite ANY number that doesn't match the MANDATORY DATA REFERENCE table, yo
 
         When invoked from an async context (e.g., brainstorm coordinator via
         `execute_agent_task` on the long_running/broadcast worker), the body
-        runs in a fresh thread so sync Django ORM calls (gather_context,
-        record_decision, _save_to_deliverable, think) don't hit
-        SynchronousOnlyOperation from the outer running event loop.
+        runs in a fresh threadpool worker so sync Django ORM calls
+        (gather_context, record_decision, time_travel_session) execute in a
+        thread with no active event loop. S3039 S7 removed the previous
+        DJANGO_ALLOW_ASYNC_UNSAFE env-var toggle here — the process-global
+        env var raced across concurrent ThinkingAgent runs on
+        `--pool=threads --concurrency=2`; sync ORM inside think() is now
+        routed through sync_to_async at the call site instead.
         """
         import asyncio
 
         try:
             asyncio.get_running_loop()
             import concurrent.futures
-            import os
 
             def _run_in_thread():
-                # Django-blessed opt-out for the async-context ORM check
-                # (docs.djangoproject.com/en/5.0/topics/async/#async-safety).
-                # We know this thread only does sync ORM — the outer loop is
-                # in the caller's context, not this pool's thread.
-                os.environ['DJANGO_ALLOW_ASYNC_UNSAFE'] = 'true'
-                try:
-                    return self._execute_sync(task, context, scifi_context, spider_context, kwargs)
-                finally:
-                    os.environ.pop('DJANGO_ALLOW_ASYNC_UNSAFE', None)
+                return self._execute_sync(task, context, scifi_context, spider_context, kwargs)
 
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 return pool.submit(_run_in_thread).result()
@@ -1206,24 +1216,15 @@ If you cite ANY number that doesn't match the MANDATORY DATA REFERENCE table, yo
             lookback_hours = kwargs.get('lookback_hours', 24)
             gathered_context = self.gather_context(lookback_hours)
 
-        # asyncio.run creates a fresh event loop for think() (async). The sync
-        # ORM calls inside think() → _format_context_for_thinking →
-        # _build_intelligent_prompt → _get_relevant_knowledge_for_task →
-        # semantic_search_with_db_embeddings would otherwise raise
-        # SynchronousOnlyOperation. DJANGO_ALLOW_ASYNC_UNSAFE is the
-        # Django-blessed opt-out (docs.djangoproject.com/en/5.0/topics/async/#async-safety):
-        # we know this is safe because ThinkingAgent runs single-threaded per
-        # execution, no concurrent ORM callers share the connection.
-        import os
-        prior_flag = os.environ.get('DJANGO_ALLOW_ASYNC_UNSAFE')
-        os.environ['DJANGO_ALLOW_ASYNC_UNSAFE'] = 'true'
-        try:
-            thinking_result = asyncio.run(self.think(gathered_context))
-        finally:
-            if prior_flag is None:
-                os.environ.pop('DJANGO_ALLOW_ASYNC_UNSAFE', None)
-            else:
-                os.environ['DJANGO_ALLOW_ASYNC_UNSAFE'] = prior_flag
+        # asyncio.run creates a fresh event loop for think() (async).
+        # Sync ORM inside think() → _format_context_for_thinking is now
+        # routed through sync_to_async at the call site (see think()),
+        # so we no longer need the DJANGO_ALLOW_ASYNC_UNSAFE env-var
+        # scope that S2951 installed. That process-global toggle raced
+        # across concurrent runs — S3039 S7 traded the toggle for a
+        # thread-local sync_to_async hop that stays confined to this
+        # execution.
+        thinking_result = asyncio.run(self.think(gathered_context))
 
         execution_time = int((time.time() - start_time) * 1000)
 
