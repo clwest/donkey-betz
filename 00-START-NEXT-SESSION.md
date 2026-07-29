@@ -32,17 +32,17 @@ Full context:
 
 ---
 
-## S3037 CARRY — Chief of Staff Escalation 2026-07-29 (OPEN ASK)
+## S3037 CARRY — Chief of Staff Escalation 2026-07-29 (RESOLVED at S3036 close)
 
-Chris flagged mid-session; unresolved at S3036 close. Deliverable `de861fe2-17ec-4a4a-a1e3-5a4371335812` (workspace Donkey Betz `b4503364-2573-4401-9e28-61a739e0ce50`).
+Deliverable `de861fe2-17ec-4a4a-a1e3-5a4371335812` status flipped `ready → completed` at S3036 close (transition event `57945f01-c5aa-4965-a2e2-31e7f44af5d8`, updated_at 2026-07-29 19:55:51 UTC / 1:55 PM MDT). Resolution note appended.
 
-**What happened:** Morning Brief workflow failed to ship at 07:00 today. Wrap step `step_brief_workflow` reported failure because inner step `lane_1_platform_readiness` failed with "Unknown error" before the brief Deliverable could be persisted. Ops run `e9b471a4-630e-4e35-94c1-0bd7d41118a2`, error_signature `1cfc0fcf97dd26ce`, wall_time 10s. No partial output persisted.
+**Root cause:** Chris was shutting down his laptop around 07:00 to head out for the day. The resulting WiFi/laptop-sleep drop tripped `lane_1_platform_readiness` — the inner step reported "Unknown error" because the local stack was unreachable, not because any actual logic failed. Same class of failure as the S3035 flaky-WiFi banner + the mid-S3036 T1 SIGN "Connection error" hit. Not a code bug.
 
-**Chris's ask (verbatim in deliverable):** approve next action — **retry / investigate / assign Claude Code fix**.
+**Two defensive follow-ups deferred as S3037 candidates (not committed):**
+- **Better error surface** in `lane_1_platform_readiness` — replace "Unknown error" with actual inner exception + fast/slow-fail timing signature (fast-fail = network suspect, slow-fail = logic suspect). ~30 min.
+- **Pre-condition network/stack readiness check** before the workflow starts — detect "local-stack-down / network-flap" and either skip cleanly (log "deferred" outcome) or auto-retry with backoff instead of firing a Chief of Staff Escalation. Cheapest fix, biggest quality-of-life win.
 
-**Recommended path if Chris doesn't specify:** START with **investigate** — the "Unknown error" surface itself IS the bug (diagnostics gap in `lane_1_platform_readiness`). Read the inner step + the ops_run row + the wall-time-10s failure signature. If the root cause is trivially "flaky-WiFi at 07:00 when the workflow fired" (likely — external API 500 while brief-workflow was assembling), the fix is defensive error surfacing at `lane_1_platform_readiness` + workflow-level retry-with-backoff. If it's a real code bug, escalate to Claude Code fix.
-
-**Not blocking S3036 close** — but should be Chris's first-frame decision at S3037 open.
+Both defensive changes are net-new (PLAYBOOK-7.7.5 does not fire); the escalation itself is closed.
 
 ---
 
@@ -50,8 +50,12 @@ Chris flagged mid-session; unresolved at S3036 close. Deliverable `de861fe2-17ec
 
 **No in-flight arc.** S3026→S3036 canonical-lifecycle arc series now closed (11 PRs across 10 sessions). Recommendation: **fresh terminal for S3037**.
 
-### Option A — Chief of Staff Escalation (default if Chris doesn't specify)
-Investigate the 2026-07-29 Morning Brief workflow failure per the carry above. ~30–90 min depending on whether the "Unknown error" surface is a diagnostics gap or a real inner-step bug. **This becomes S3037 primary if Chris D-verdicts "investigate" or "assign Claude Code fix" at open.**
+### Option A — Morning Brief workflow defensive hardening (from resolved Chief of Staff Escalation)
+Two ~30–45 min defensive picks:
+- **A1:** Replace `lane_1_platform_readiness` "Unknown error" surface with actual inner exception + fast/slow-fail timing signature. Makes the next flaky-WiFi false-positive debug-able in 10s.
+- **A2:** Pre-workflow network/stack readiness check (curl to health/ping + redis-cli ping) that fires "deferred" outcome instead of Chief of Staff Escalation if local stack is down. Prevents the false alert entirely.
+
+Both are net-new defensive layers, not fixes to broken behavior. Chris can pick one, both, or neither.
 
 ### Option B — Engineering (bias-engineering rule)
 
@@ -79,15 +83,15 @@ Investigate the 2026-07-29 Morning Brief workflow failure per the carry above. ~
 
 ### Option F — Chris's own priority (supersedes all above)
 
-**Joint recommendation at close:** S3037 should open with **Option A (Chief of Staff Escalation investigate)** by default unless Chris redirects. It's a stated open ask from Chris himself, and closing it (either as "flaky wifi noise, add better error surface + retry" or "real bug, fix") unblocks Chris's morning brief workflow going forward.
+**Joint recommendation at close:** No forced-pick — S3036→S3035 arc series is fully closed on both feature + open-ask sides. Chris picks direction fresh. If unsure, **Option B1 (`typing.Literal[actor]` enforcement, ~30 min)** or **Option A2 (pre-workflow readiness check, ~30 min)** are both cheap defensive wins that leave the platform more resilient without demanding a fresh design conversation.
 
 **Standard opener:**
 1. Run `context-kit orient` (auto-injected).
 2. Absorb this file + MEMORY.md + CLAUDE.md (v0.11.0 constitutional anchor still current — no amendment this session).
 3. Read S3036 handoff (`docs/handoffs/SESSION_3036_ACTOR_THREADING.md`).
-4. Ask Chris: "Retry, investigate, or assign Claude Code fix on the Chief of Staff Escalation?" (per Option A default).
+4. Ask Chris: "What would you like to work on?" (no forced Chief of Staff carry — that's resolved.)
 5. Optional state probes:
-   - `git log --oneline -8` — should show `8080acee5` feat(s3036) + docs cascade on top.
+   - `git log --oneline -8` — should show `c08893da6` chore(wrapper pin bump) + docs cascade + `8080acee5` feat(s3036) on top.
    - Full regression bundle: 50/50 OK.
    - Manual smoke: BoardroomTab → promote/reject → panel row shows colored actor pill within 10s.
 
