@@ -399,6 +399,8 @@ from core.views_agent_learning import (
     bulk_reject_decisions,
     # Session 659: Governance Stats
     get_governance_stats,
+    # S3035: Boardroom Lifecycle Activity — counters + last-20 ring for UI
+    get_lifecycle_activity,
     # Session 660: Celery & Health APIs
     get_celery_stats,
     get_system_health,
@@ -3536,6 +3538,8 @@ urlpatterns = [
     path('api/boardroom/learning-summary/', get_boardroom_learning_summary, name='boardroom-learning-summary'),
     # Session 659: Governance Stats API
     path('api/boardroom/governance-stats/', get_governance_stats, name='governance-stats'),
+    # S3035: Boardroom Lifecycle Activity — counters + last-20 ring for UI
+    path('api/boardroom/lifecycle-activity/', get_lifecycle_activity, name='lifecycle-activity'),
     # Session 660: Celery & System Health APIs
     path('api/celery/stats/', get_celery_stats, name='celery-stats'),
     path('api/icc/health/', get_system_health, name='icc-health'),
