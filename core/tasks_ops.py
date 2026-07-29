@@ -3925,3 +3925,114 @@ def _impl_post_cto_daily_diagnostic(
         metrics=metrics or {},
         structured_payload=structured_payload or {},
     )
+
+
+# ==================== S3037 A4: OPSRUN STALE-RUNNING CLEANUP ====================
+
+
+def _impl_cleanup_stale_ops_runs(self, minutes_threshold: int = 60):
+    """
+    S3037 Reliability Audit v0 Step 6 S4 — sweep stale-running OpsRun rows.
+
+    Mirror of :func:`_impl_cleanup_stale_agent_executions` from
+    ``core/tasks_agents.py`` for the ``OpsRun`` model. Discharges the
+    S3037 Reliability Audit v0 Step 3 finding: 13 sibling cleanup tasks
+    exist for other stateful tables (LLMCallLog, AgentExecution,
+    HaltedExperiments, PAInsights, etc.) but zero targeted OpsRun. Two
+    rows were found stuck in ``status='running'`` for 383 hours (16 days)
+    and 434 hours (18 days) respectively — direct violation of the
+    ``no lost dispatches`` reliability rule.
+
+    Any ``OpsRun`` with ``status='running'`` whose ``started_at`` is older
+    than the threshold gets flipped to ``status='failed'`` with
+    ``finished_at=now`` and gets an ``OpsRunEvent(event_type='cleanup',
+    label='stale_running_swept')`` appended so the recovery is traceable.
+
+    Runs every 10 minutes via beat (see ``core/celery.py``). Default
+    threshold is 60 minutes — well above the longest observed legitimate
+    OpsRun duration (morning_brief typically <60s, longest observed
+    ~40s). Matches the ``AgentExecution`` cleanup default (60 min).
+
+    Args:
+        minutes_threshold: Mark OpsRuns as failed after this many minutes
+            in ``status='running'`` (default 60).
+
+    Returns:
+        Dict with cleanup statistics.
+    """
+    from django.utils import timezone
+    from datetime import timedelta
+    from core.models_ops_runs import OpsRun, OpsRunEvent
+
+    task_id = self.request.id if self.request else 'unknown'
+    logger.info(f"🧹 [OPSRUN-CLEANUP] Task {task_id} STARTED - threshold: {minutes_threshold} minutes")
+
+    try:
+        now = timezone.now()
+        cutoff_time = now - timedelta(minutes=minutes_threshold)
+        logger.info(f"🧹 [OPSRUN-CLEANUP] Current time: {now.isoformat()}, cutoff: {cutoff_time.isoformat()}")
+
+        all_running = OpsRun.objects.filter(status='running').count()
+        logger.info(f"🧹 [OPSRUN-CLEANUP] Total running OpsRuns: {all_running}")
+
+        stale = OpsRun.objects.filter(
+            status='running',
+            started_at__lt=cutoff_time,
+        )
+        count = stale.count()
+        logger.info(f"🧹 [OPSRUN-CLEANUP] Stale OpsRuns (>{minutes_threshold}min in status=running): {count}")
+
+        if count > 0:
+            # Log details + emit cleanup events per row BEFORE the bulk update
+            # so each row gets an audit trail entry pointing at the sweep.
+            stale_rows = list(stale.values('id', 'title', 'run_kind', 'domain', 'started_at'))
+            for row in stale_rows[:20]:  # cap log noise
+                age_min = (now - row['started_at']).total_seconds() / 60
+                logger.info(
+                    f"🧹 [OPSRUN-CLEANUP] Marking stale: kind={row['run_kind']} "
+                    f"domain={row['domain']} title={(row['title'] or '')[:60]!r} "
+                    f"age={age_min:.0f}min - ID: {row['id']}"
+                )
+
+            # Emit OpsRunEvent per stale row (before bulk update) so the
+            # transition is captured with the run still in status='running'.
+            # Uses bulk_create to keep this cheap even if many rows recovered.
+            events = [
+                OpsRunEvent(
+                    run_id=row['id'],
+                    event_type='cleanup',
+                    label='stale_running_swept',
+                    detail={
+                        'reason': (
+                            f"OpsRun in status='running' for "
+                            f"{(now - row['started_at']).total_seconds() / 3600:.1f}h "
+                            f"(threshold {minutes_threshold}min) — swept by "
+                            f"cleanup_stale_ops_runs task"
+                        ),
+                        'run_kind': row['run_kind'],
+                        'domain': row['domain'],
+                        'age_hours_at_cleanup': (now - row['started_at']).total_seconds() / 3600,
+                        'transition': 'running→failed',
+                        'sweeper_task_id': task_id,
+                    },
+                )
+                for row in stale_rows
+            ]
+            OpsRunEvent.objects.bulk_create(events)
+
+            # Perform the cleanup. Sets finished_at=now (mirrors
+            # AgentExecution cleanup pattern that sets completed_at=now).
+            updated = stale.update(
+                status='failed',
+                finished_at=now,
+            )
+            logger.info(f"🧹 [OPSRUN-CLEANUP] SUCCESS - Swept {updated} stale OpsRuns")
+        else:
+            logger.info(f"🧹 [OPSRUN-CLEANUP] No stale OpsRuns found - nothing to clean")
+
+        logger.info(f"🧹 [OPSRUN-CLEANUP] Task {task_id} COMPLETED - cleaned: {count}")
+        return {'cleaned': count, 'total_running': all_running, 'task_id': task_id}
+
+    except Exception as e:
+        logger.error(f"🧹 [OPSRUN-CLEANUP] Task {task_id} FAILED with error: {e}", exc_info=True)
+        raise

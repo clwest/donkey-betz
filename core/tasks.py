@@ -423,6 +423,17 @@ def cleanup_stale_llm_calls(self, minutes_threshold: int = 10):
     ``core/celery.py``. See ``_impl_cleanup_stale_llm_calls`` for details."""
     from core.tasks_agents import _impl_cleanup_stale_llm_calls
     return _impl_cleanup_stale_llm_calls(self, minutes_threshold)
+
+
+@shared_task(bind=True)
+@singleton_task("cleanup-stale-ops-runs", ttl=600)
+def cleanup_stale_ops_runs(self, minutes_threshold: int = 60):
+    """S3037 Reliability Audit v0 Step 6 S4 — sweep stale-running ``OpsRun``
+    rows. Mirror of :func:`cleanup_stale_agent_executions` for the OpsRun
+    model. Beat-scheduled in ``core/celery.py``. See
+    :func:`_impl_cleanup_stale_ops_runs` for details."""
+    from core.tasks_ops import _impl_cleanup_stale_ops_runs
+    return _impl_cleanup_stale_ops_runs(self, minutes_threshold)
 @shared_task(bind=True, ignore_result=True)
 def cleanup_stale_content(
     self,
