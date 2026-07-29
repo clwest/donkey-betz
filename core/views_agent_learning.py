@@ -2137,6 +2137,13 @@ def get_lifecycle_activity(request):
     timestamp, decision_id, topic, decision_type, summary, participants,
     agents_involved (S657 back-compat alias).
 
+    S3036: v2 events also carry `actor` (source-of-transition — one of
+    the values in `CANONICAL_LIFECYCLE_ACTORS`). Old v1 events already in
+    the ring at deploy time lack `actor`; frontend consumers (BoardroomTab
+    lifecycle panel) render missing `actor` as neutral "unknown" pill. The
+    endpoint passes events through unchanged — schema_version + actor
+    tolerance lives in the consumer, not here.
+
     Non-authoritative bounded ring — for audit query AgentDecisionSummary
     directly. Populated by ALL production callers of the emit helpers, not
     just boardroom mutation endpoints (AI-service auto-promotions, ops-task
@@ -2246,6 +2253,7 @@ def promote_decision(request, decision_id):
     try:
         from core.models_unified_system import AgentDecisionSummary
         from core.services.canonical_decision_broadcast import (
+            ACTOR_HUMAN,
             emit_canonical_promotion_broadcast,
         )
 
@@ -2270,6 +2278,7 @@ def promote_decision(request, decision_id):
             emit_canonical_promotion_broadcast(
                 decision,
                 request_id=request.META.get('HTTP_X_REQUEST_ID'),
+                actor=ACTOR_HUMAN,
             )
 
         return JsonResponse({
@@ -2314,6 +2323,7 @@ def reject_decision(request, decision_id):
     try:
         from core.models_unified_system import AgentDecisionSummary
         from core.services.canonical_decision_broadcast import (
+            ACTOR_HUMAN,
             emit_canonical_rejection_broadcast,
         )
 
@@ -2328,6 +2338,7 @@ def reject_decision(request, decision_id):
             emit_canonical_rejection_broadcast(
                 decision,
                 request_id=request.META.get('HTTP_X_REQUEST_ID'),
+                actor=ACTOR_HUMAN,
             )
 
         return JsonResponse({
@@ -2409,6 +2420,7 @@ def bulk_promote_decisions(request):
     # `core/services/canonical_decision_broadcast` so services can call
     # it too (PA handler + AI-AutoPromoter + Session 589 rules service).
     from core.services.canonical_decision_broadcast import (
+        ACTOR_HUMAN_BULK,
         emit_canonical_promotion_broadcast,
     )
 
@@ -2432,7 +2444,7 @@ def bulk_promote_decisions(request):
         if not did_promote:
             continue
 
-        if emit_canonical_promotion_broadcast(decision, request_id=request_id):
+        if emit_canonical_promotion_broadcast(decision, request_id=request_id, actor=ACTOR_HUMAN_BULK):
             broadcasts_succeeded += 1
         else:
             broadcasts_failed += 1
@@ -2508,6 +2520,7 @@ def bulk_reject_decisions(request):
     # per-row audit enrichment. Loses atomic bulk semantics; matches the
     # promotion-side precedent.
     from core.services.canonical_decision_broadcast import (
+        ACTOR_HUMAN_BULK,
         emit_canonical_rejection_broadcast,
     )
 
@@ -2527,7 +2540,7 @@ def bulk_reject_decisions(request):
         if not did_reject:
             continue
 
-        if emit_canonical_rejection_broadcast(decision, request_id=request_id):
+        if emit_canonical_rejection_broadcast(decision, request_id=request_id, actor=ACTOR_HUMAN_BULK):
             broadcasts_succeeded += 1
         else:
             broadcasts_failed += 1
@@ -3914,6 +3927,7 @@ def update_gate_status(request, gate_id):
             # `same_pr_actionable`).
             if gate.decision:
                 from core.services.canonical_decision_broadcast import (
+                    ACTOR_HUMAN_GATE,
                     emit_canonical_rejection_broadcast,
                 )
                 did_reject = gate.decision.reject(rejected_by='gate-decline')
@@ -3922,6 +3936,7 @@ def update_gate_status(request, gate_id):
                     emit_canonical_rejection_broadcast(
                         gate.decision,
                         request_id=request.META.get('HTTP_X_REQUEST_ID'),
+                        actor=ACTOR_HUMAN_GATE,
                     )
             success = True
             message = 'Gate declined and removed from queue'

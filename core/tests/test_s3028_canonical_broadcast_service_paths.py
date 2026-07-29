@@ -83,7 +83,8 @@ def _assert_agent_learning_publish(mock_pub, decision_topic: str) -> None:
     outer = json.loads(payload)
     assert outer["type"] == "canonical_policy_created"
     event = outer["data"]
-    assert event["schema_version"] == 1
+    # S3036: bumped 1→2 to signal presence of `actor` field.
+    assert event["schema_version"] == 2
     assert event["type"] == "canonical_decision_promoted"
     assert event["topic"] == decision_topic
     assert "participants" in event

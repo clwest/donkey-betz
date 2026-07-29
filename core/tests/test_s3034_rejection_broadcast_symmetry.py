@@ -108,7 +108,8 @@ class RejectionBroadcastPayloadShapeTest(TestCase):
         self.assertEqual(envelope['type'], 'canonical_policy_rejected')
         data = envelope['data']
         # Same schema_version + shape as promotion.
-        self.assertEqual(data['schema_version'], 1)
+        # S3036: bumped 1→2 to signal presence of `actor` field.
+        self.assertEqual(data['schema_version'], 2)
         self.assertEqual(data['type'], 'canonical_decision_rejected')
         self.assertEqual(data['decision_id'], str(row.id))
         self.assertEqual(data['topic'], row.topic)

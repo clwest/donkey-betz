@@ -40,6 +40,14 @@ auto_kpi_tracking.py, pa_intelligence_enricher.py,
 experiment_suggestion.py) start seeing the healed rows immediately via
 polling/query paths, which is the correct behavior for backfill.
 
+**S3036 note.** Because this command does not emit lifecycle broadcasts,
+it also does NOT appear in the `CANONICAL_LIFECYCLE_ACTORS` taxonomy in
+`core/services/canonical_decision_broadcast.py`. There is no
+`ACTOR_BACKFILL` — silence in the actor taxonomy is the correct signal
+that a code path is out-of-scope for the lifecycle broadcast (and
+therefore also out-of-scope for the BoardroomTab lifecycle activity
+panel).
+
 Usage:
     python manage.py backfill_canonical_drift              # dry-run (default)
     python manage.py backfill_canonical_drift --apply       # perform heal
