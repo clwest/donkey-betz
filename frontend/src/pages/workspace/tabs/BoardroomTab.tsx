@@ -33,15 +33,48 @@ import { cn } from '@/lib/cn'
 import { humanApi, decisionsApi } from '@/lib/api'
 
 // S3035: Recent canonical-lifecycle event (mirrors backend emit payload)
+// S3036: schema_version 2 events add `actor` (source-of-transition — one of
+// the values in `CANONICAL_LIFECYCLE_ACTORS` in
+// `core/services/canonical_decision_broadcast.py`). Old v1 events already in
+// the ring at deploy time have no `actor` — treated as 'unknown' via
+// `resolveActorStyle` below.
 interface LifecycleEvent {
   schema_version: number
   type: 'canonical_decision_promoted' | 'canonical_decision_rejected'
+  actor?: string
   timestamp: string
   decision_id: string
   topic: string
   decision_type: string
   summary?: string
   participants?: string[]
+}
+
+// S3036: authoritative actor → pill styling map. Adding a new actor requires
+// updating both this map AND `CANONICAL_LIFECYCLE_ACTORS` in the backend
+// module. Any actor string not in this map (typo at a call site, or future
+// backend actor that has not yet shipped its frontend palette entry) falls
+// through to the neutral "unknown" pill — per Rigby S3036 T1 Fold #1
+// (same_pr_mitigatable) — so mystery-string regressions never show up as
+// broken UI.
+const ACTOR_PILL_STYLES: Record<string, { label: string; className: string }> = {
+  'human': { label: 'human', className: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
+  'human-bulk': { label: 'human-bulk', className: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
+  'human-gate': { label: 'human-gate', className: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
+  'pa-tool': { label: 'pa-tool', className: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
+  'ai-promoter': { label: 'ai-promoter', className: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+  'ops-task': { label: 'ops-task', className: 'bg-teal-500/20 text-teal-300 border-teal-500/30' },
+  'rules-service': { label: 'rules-service', className: 'bg-green-500/20 text-green-300 border-green-500/30' },
+}
+
+const UNKNOWN_ACTOR_STYLE = {
+  label: 'unknown',
+  className: 'bg-gray-500/20 text-gray-400 border-gray-500/30',
+}
+
+function resolveActorStyle(actor: string | undefined): { label: string; className: string } {
+  if (!actor) return UNKNOWN_ACTOR_STYLE
+  return ACTOR_PILL_STYLES[actor] ?? UNKNOWN_ACTOR_STYLE
 }
 
 interface LifecycleActivityResponse {
@@ -792,6 +825,7 @@ export function BoardroomTab() {
               <ul className="divide-y divide-dark-border">
                 {lifecycleEvents.map((event, idx) => {
                   const isPromoted = event.type === 'canonical_decision_promoted'
+                  const actorStyle = resolveActorStyle(event.actor)
                   return (
                     <li
                       key={`${event.decision_id}-${idx}`}
@@ -807,6 +841,15 @@ export function BoardroomTab() {
                       >
                         {isPromoted ? <CheckCircle size={10} /> : <XCircle size={10} />}
                         {isPromoted ? 'promoted' : 'rejected'}
+                      </span>
+                      <span
+                        className={cn(
+                          'px-1.5 py-0.5 rounded border shrink-0',
+                          actorStyle.className
+                        )}
+                        title={`Actor: ${actorStyle.label}`}
+                      >
+                        {actorStyle.label}
                       </span>
                       <span className="text-gray-300 truncate flex-1" title={event.topic}>
                         {event.topic}

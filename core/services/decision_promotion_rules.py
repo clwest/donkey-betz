@@ -197,9 +197,10 @@ class DecisionPromotionRules:
 
         if did_promote:
             from core.services.canonical_decision_broadcast import (
+                ACTOR_RULES_SERVICE,
                 emit_canonical_promotion_broadcast,
             )
-            emit_canonical_promotion_broadcast(decision)
+            emit_canonical_promotion_broadcast(decision, actor=ACTOR_RULES_SERVICE)
         return True
 
     def run_auto_promotion(self, dry_run: bool = False) -> Dict[str, Any]:
