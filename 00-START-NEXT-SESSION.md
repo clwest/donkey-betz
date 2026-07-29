@@ -4,7 +4,7 @@
 
 ## READ THIS FIRST — SESSION 3033 CLOSED. **Engineering Playbook v0.11.0 RATIFIED.** 1 new [GR] rule PLAYBOOK-7.7.5 (class-scoped mandatory A2 sweep for drift/hardening intents) codifies the 3-cycle in-wild Fold C pattern that accreted across S3029 DISCOVERY + S3030/S3031 CLEAN cycles. Rule count: 211 → 212. Rigby T1 SIGN all 5 dimensions AGREE with 1 `same_pr_mitigatable` refinement folded same-envelope (shape-signature naming + adjacent-class boundary + "at minimum" prefix + clean-sweep-first-class explicit). Chris D-verdict: **"ship it"**. **19-session zero-hallucination Rigby SIGN streak. 18th consecutive Cycle 1A verify-before-build session. 6th consecutive MINOR Playbook amendment shipped in single-session shape.**
 
-**HEAD at close:** docs cascade → PLACEHOLDER (filled at merge).
+**HEAD at close:** `180bd4e65` (PR #3755 — v0.11.0 amendment bundle) + wrapper pin bump cascade.
 
 Full context:
 - `docs/handoffs/SESSION_3033_PLAYBOOK_V0_11_0_RATIFIED.md` — current session close.
@@ -49,7 +49,7 @@ Full context:
 2. Absorb this file + MEMORY.md + CLAUDE.md (v0.11.0 constitutional anchor now current).
 3. Read S3033 handoff (`docs/handoffs/SESSION_3033_PLAYBOOK_V0_11_0_RATIFIED.md`).
 4. Optional state probes:
-   - `git log --oneline -8` — should show docs cascade → PLACEHOLDER (filled at merge).
+   - `git log --oneline -8` — should show `180bd4e65` feat(s3033) v0.11.0 amendment at top (or wrapper-pin-bump cascade above it if that shipped separately).
    - `grep -c "^\*\*\[GR\] PLAYBOOK-" docs/ENGINEERING_PLAYBOOK.md` — should show 100+ (actual rule count varies with [GR] density; use frontmatter `rule_count: 212` as authoritative).
 
 ---
