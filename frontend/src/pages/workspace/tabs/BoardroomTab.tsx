@@ -27,9 +27,31 @@ import {
   Sparkles,
   History,
   Code,
+  Activity,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { humanApi, decisionsApi } from '@/lib/api'
+
+// S3035: Recent canonical-lifecycle event (mirrors backend emit payload)
+interface LifecycleEvent {
+  schema_version: number
+  type: 'canonical_decision_promoted' | 'canonical_decision_rejected'
+  timestamp: string
+  decision_id: string
+  topic: string
+  decision_type: string
+  summary?: string
+  participants?: string[]
+}
+
+interface LifecycleActivityResponse {
+  success: boolean
+  // S3035 A2 fold: true iff Redis read failed → UI shows "feed temporarily
+  // unavailable" instead of the merits-empty state.
+  degraded?: boolean
+  counters: { promoted_total: number; rejected_total: number }
+  events: LifecycleEvent[]
+}
 
 // Session 956: Extended interface for ML prediction data
 interface SimilarItem {
@@ -94,6 +116,9 @@ export function BoardroomTab() {
   const [selectedAttention, setSelectedAttention] = useState<Set<string>>(new Set())
   const [selectedDecisions, setSelectedDecisions] = useState<Set<string>>(new Set())
 
+  // S3035: Lifecycle Activity panel expand toggle
+  const [lifecycleExpanded, setLifecycleExpanded] = useState(false)
+
   // Session 988: Track last visit for "NEW" badges
   const visitMarked = useRef(false)
 
@@ -124,6 +149,21 @@ export function BoardroomTab() {
     },
     refetchInterval: 30000,
   })
+
+  // S3035: Recent canonical-lifecycle activity (promoted + rejected across
+  // all production emit-helper callers, not just boardroom clicks).
+  const { data: lifecycleData } = useQuery<LifecycleActivityResponse>({
+    queryKey: ['boardroom-lifecycle-activity'],
+    queryFn: async () => {
+      const res = await decisionsApi.lifecycleActivity()
+      return res.data
+    },
+    refetchInterval: 10000,
+  })
+
+  const lifecycleCounters = lifecycleData?.counters ?? { promoted_total: 0, rejected_total: 0 }
+  const lifecycleEvents = lifecycleData?.events ?? []
+  const lifecycleDegraded = lifecycleData?.degraded ?? false
 
   // Attention item actions
   const decideMutation = useMutation({
@@ -711,6 +751,80 @@ export function BoardroomTab() {
           {totalNewCount} new item{totalNewCount !== 1 ? 's' : ''} since your last visit
         </div>
       )}
+
+      {/* S3035: Recent Lifecycle Activity — bounded ring of last 20 canonical
+          promote/reject events across all production paths (boardroom clicks +
+          AI-service auto-promotions + ops-task auto-approvals + PA tool). */}
+      <div className="bg-dark-card border border-dark-border rounded-lg overflow-hidden">
+        <button
+          onClick={() => setLifecycleExpanded(!lifecycleExpanded)}
+          className="w-full flex items-center gap-3 px-3 py-2 hover:bg-dark-border/30 transition-colors"
+        >
+          <Activity size={16} className="text-primary-400" />
+          <span className="text-sm font-medium">Recent Lifecycle Activity</span>
+          <div className="flex items-center gap-3 text-xs">
+            <span className="flex items-center gap-1 text-green-400">
+              <CheckCircle size={12} />
+              {lifecycleCounters.promoted_total} promoted
+            </span>
+            <span className="flex items-center gap-1 text-red-400">
+              <XCircle size={12} />
+              {lifecycleCounters.rejected_total} rejected
+            </span>
+          </div>
+          <div className="flex-1" />
+          <span className="text-xs text-gray-500">last {lifecycleEvents.length}</span>
+          {lifecycleExpanded ? (
+            <ChevronDown size={14} className="text-gray-400" />
+          ) : (
+            <ChevronRight size={14} className="text-gray-400" />
+          )}
+        </button>
+        {lifecycleExpanded && (
+          <div className="border-t border-dark-border max-h-64 overflow-y-auto">
+            {lifecycleEvents.length === 0 ? (
+              <p className="text-xs text-gray-500 text-center py-4">
+                {lifecycleDegraded
+                  ? 'Activity feed temporarily unavailable (Redis read failed). Counters and events will refresh once the backend recovers.'
+                  : 'No recent lifecycle events. Promote or reject a draft decision to populate the feed.'}
+              </p>
+            ) : (
+              <ul className="divide-y divide-dark-border">
+                {lifecycleEvents.map((event, idx) => {
+                  const isPromoted = event.type === 'canonical_decision_promoted'
+                  return (
+                    <li
+                      key={`${event.decision_id}-${idx}`}
+                      className="flex items-center gap-3 px-3 py-2 text-xs"
+                    >
+                      <span
+                        className={cn(
+                          'flex items-center gap-1 px-1.5 py-0.5 rounded border',
+                          isPromoted
+                            ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                            : 'bg-red-500/20 text-red-400 border-red-500/30'
+                        )}
+                      >
+                        {isPromoted ? <CheckCircle size={10} /> : <XCircle size={10} />}
+                        {isPromoted ? 'promoted' : 'rejected'}
+                      </span>
+                      <span className="text-gray-300 truncate flex-1" title={event.topic}>
+                        {event.topic}
+                      </span>
+                      <span className="px-1.5 py-0.5 rounded bg-dark-border text-gray-400 shrink-0">
+                        {event.decision_type}
+                      </span>
+                      <span className="text-gray-500 shrink-0">
+                        {new Date(event.timestamp).toLocaleTimeString()}
+                      </span>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* View Toggle */}
       <div className="flex gap-2 border-b border-dark-border pb-2">

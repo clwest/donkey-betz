@@ -36,6 +36,18 @@ Contract: best-effort, non-fatal. Any exception (Redis unavailable, JSON
 encode error, etc.) is caught, logged with `decision_id` + optional
 `request_id`, and returns False. Never raises to caller — Redis-down
 must not fail promotion or rejection.
+
+S3035 addition: after `r.publish(...)`, both helpers also `LPUSH` the
+same event dict into the bounded ring `canonical_decisions:recent`
+(capped at 20 via `LTRIM 0 19`). This is a **non-authoritative** UI
+activity buffer — for audit or forensics, query `AgentDecisionSummary`
+directly. The ring is populated by ALL production callers of both
+helpers (not just boardroom mutation endpoints), so consumers rendering
+it should frame entries as "recent lifecycle events" rather than
+"boardroom actions" (AI-service auto-promotions, ops-task auto-
+approvals, PA-tool actions all appear alongside human boardroom
+clicks). LPUSH/LTRIM failures are swallowed same as publish — the
+persistence side-effect must not fail promotion or rejection either.
 """
 from __future__ import annotations
 
@@ -85,6 +97,16 @@ def emit_canonical_promotion_broadcast(decision, *, request_id: str | None = Non
             'data': event,
         }))
         r.incr('canonical_decisions:total')
+        # S3035: also record into bounded ring for UI activity feed.
+        # Failures swallowed same as publish — non-authoritative buffer.
+        try:
+            r.lpush('canonical_decisions:recent', json.dumps(event))
+            r.ltrim('canonical_decisions:recent', 0, 19)
+        except Exception as ring_err:
+            logger.warning(
+                "[S3035] Redis ring push failed decision_id=%s request_id=%s: %s",
+                decision.id, request_id, ring_err,
+            )
         logger.info(
             "🧠 [S3028] Broadcast canonical decision decision_id=%s request_id=%s",
             decision.id, request_id,
@@ -134,6 +156,16 @@ def emit_canonical_rejection_broadcast(decision, *, request_id: str | None = Non
             'data': event,
         }))
         r.incr('canonical_decisions:rejected_total')
+        # S3035: also record into bounded ring for UI activity feed.
+        # Failures swallowed same as publish — non-authoritative buffer.
+        try:
+            r.lpush('canonical_decisions:recent', json.dumps(event))
+            r.ltrim('canonical_decisions:recent', 0, 19)
+        except Exception as ring_err:
+            logger.warning(
+                "[S3035] Redis ring push failed decision_id=%s request_id=%s: %s",
+                decision.id, request_id, ring_err,
+            )
         logger.info(
             "🚫 [S3034] Broadcast canonical decision rejection decision_id=%s request_id=%s",
             decision.id, request_id,
