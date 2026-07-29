@@ -2,146 +2,124 @@
 
 ---
 
-## ⚠️ FLAKY WiFi DAY carry (2026-07-29 → next session date)
+## READ THIS — SESSION 3037 CLOSED. **First execution of the A1 Reliability Audit wedge, shipped on ourselves.**
 
-**Chris was working from mobile hotspots + free WiFi around town on 2026-07-29.** If you're a session opening within a day or two of this file's timestamp, assume the same operational context: laptop may have slept, daphne/celery/redis may be down, external APIs (OpenAI) may fail intermittently even when the local stack is up.
+S3037 executed the Reliability Audit v0 methodology (that Rigby scoped for herself at S2951 ~85 sessions ago) against Donkey Betz. **5 audit deliverables, 15 findings, 10-item remediation backlog** — of which **5 items shipped this session** (A1 + A2 + A6 + S4 + S5). Real reliability bugs surfaced, real fixes shipped, wedge proven.
 
-**Session-open discipline — MANDATORY before ANY PA dispatch or feature work:**
-1. `make restart && make celery` (or `make recycle-all` if frontend feels stale) — assume nothing is running.
-2. Verify health endpoint: `curl -sf http://127.0.0.1:8000/health/ping/` should return 200.
-3. Verify Redis: `redis-cli ping` should return PONG.
-4. Only then run `python manage.py session_lifecycle close --label ...` (if wrapper pin needs rotating) or dispatch to Rigby via `bash tools/pa_local.sh`.
-5. If PA dispatch times out or 5xxs, **check network before assuming stack broke** — try `curl -sf https://api.openai.com/v1/models -H "Authorization: Bearer $OPENAI_API_KEY" | head -5`. If that fails, wait for signal to recover before spending cycles.
-6. **S3035 `degraded` flag is your first-line Redis health tell** — open Workspace → System → Governance, expand "Recent Lifecycle Activity". If it says "Activity feed temporarily unavailable (Redis read failed)…", Redis is down; fix that before doing anything else.
+**HEAD at close:** filled at cascade merge (post-`ced5b7ea0`).
 
-Chris hit a real Anthropic/OpenAI connection error mid-S3036 T1 SIGN dispatch (2nd Rigby round returned "[ERROR: Real AI unavailable - Connection error.]"). Retry after network verify worked cleanly. This is expected behavior; do not treat as platform bug.
+### Two code PRs shipped
 
----
+- **PR #3767 (`690ba8c6a`)** — `fix(s3037-a6): AGENT_MAP fallback fail-loud in workflow orchestrator`. Surfaces actual Python exception + agent_name + duration_ms on falsy `router.route` success instead of "Unknown error" fallback. Tomorrow's morning_brief failure will carry a real exception in the escalation deliverable's `error_tail`.
+- **PR #3768 (`ced5b7ea0`)** — `feat(s3037-s4): cleanup_stale_ops_runs Celery beat task`. Mirrors AgentExecution 60-min cleanup pattern for OpsRun. Discharges "no lost dispatches" reliability rule violation. Beat live and scheduled `*/10 * * * *` on broadcast queue.
 
-## READ THIS — SESSION 3036 CLOSED. **Actor field threading through canonical-lifecycle broadcast shipped** — closes the S3035 T1 Fold "who did this?" gap on the BoardroomTab lifecycle activity panel. 7-value actor taxonomy (`human` / `human-bulk` / `human-gate` / `pa-tool` / `ai-promoter` / `ops-task` / `rules-service`) threaded through both emit helpers, all 10 production call sites, the Redis ring, the polling endpoint, and the BoardroomTab panel (colored actor pills). Schema bumped 1→2; v1 events already in ring round-trip cleanly. **22-session zero-hallucination Rigby SIGN streak. 21st consecutive Cycle 1A verify-before-build session.**
+### Three in-session ORM fixes
 
-**PR #3763 (`8080acee5`) — `feat(s3036): actor field threading through canonical-lifecycle broadcast`.** 14 files, +498/-24. NEW `core/tests/test_s3036_actor_threading.py` (12 tests). Full S3026→S3036 canonical-lifecycle regression bundle 50/50 pass. A2 SIGN fold-revision commit folded same-envelope pre-merge (docstring↔test drift correction).
+- **A1** — 2 orphaned OpsRun rows (16d + 18d stuck) manually recovered
+- **S5** — S3036 Chief of Staff Escalation `de861fe2-…` reopened with contradicting evidence (WiFi mis-attribution invalidated)
+- **A2** — Chris `AutonomyConfiguration` row created (id `6d4aef2d-…`) — fills the Step 4 governance-artifact gap
 
-**Rigby SIGN this session:** T1 5/5 AGREE + A2 (2 dispatch rounds) all dimensions AGREE tool-grounded — 8+ + 12+ `repo_tool` runs across both cycles. 5 folds classified: 3 same_pr resolved (T1 wire-contract mitigation, A2 docstring drift, A2 v1 fixture annotation), 2 future_trigger persisted (`typing.Literal[actor]` enforcement + actor-taxonomy-vs-palette-registry drift guard).
+### Rigby Tool Gap Ledger — 3rd trigger appended
 
-**HEAD at close:** `8080acee5` (PR #3763 merged) + docs cascade + wrapper pin bump.
-
-Full context:
-- `docs/handoffs/SESSION_3036_ACTOR_THREADING.md` — current session close.
-- `docs/handoffs/SESSION_3035_BOARDROOM_LIFECYCLE_ACTIVITY.md` — the panel S3036 extends.
+Rigby persistence-gap (dispatches run tool_runs, don't persist deliverable) logged on `5c84e75a-0ce5-4f93-9da5-f6db4e53e7f0`. Discharge path = S8 (30-45 min, WEDGE-BLOCKING).
 
 ---
 
-## S3037 CARRY — Chief of Staff Escalation 2026-07-29 (RESOLVED at S3036 close)
+## Audit artifacts (all in Donkey Betz workspace `b4503364-…`)
 
-Deliverable `de861fe2-17ec-4a4a-a1e3-5a4371335812` status flipped `ready → completed` at S3036 close (transition event `57945f01-c5aa-4965-a2e2-31e7f44af5d8`, updated_at 2026-07-29 19:55:51 UTC / 1:55 PM MDT). Resolution note appended.
-
-**Root cause:** Chris was shutting down his laptop around 07:00 to head out for the day. The resulting WiFi/laptop-sleep drop tripped `lane_1_platform_readiness` — the inner step reported "Unknown error" because the local stack was unreachable, not because any actual logic failed. Same class of failure as the S3035 flaky-WiFi banner + the mid-S3036 T1 SIGN "Connection error" hit. Not a code bug.
-
-**Two defensive follow-ups deferred as S3037 candidates (not committed):**
-- **Better error surface** in `lane_1_platform_readiness` — replace "Unknown error" with actual inner exception + fast/slow-fail timing signature (fast-fail = network suspect, slow-fail = logic suspect). ~30 min.
-- **Pre-condition network/stack readiness check** before the workflow starts — detect "local-stack-down / network-flap" and either skip cleanly (log "deferred" outcome) or auto-retry with backoff instead of firing a Chief of Staff Escalation. Cheapest fix, biggest quality-of-life win.
-
-Both defensive changes are net-new (PLAYBOOK-7.7.5 does not fire); the escalation itself is closed.
+| Deliverable | Content |
+|---|---|
+| `aec0e6da-b2b4-4d28-8cca-b69da920b1f4` | Scope Card (Step 1) |
+| `361e8209-c24c-4401-8a3d-f5387f972dea` | Step 2 — Telemetry Pull & Failure Signature Sweep |
+| `ce9ca37b-c544-4672-be9f-5b29e14aa59d` | Step 3 — Tool Reliability Matrix |
+| `1ac5f0dc-aa09-44da-8353-dea3e3cbdc2e` | Step 4 — Governance Posture |
+| `c3cad098-6d29-447f-b949-456913f7d343` | Step 6 — Remediation Backlog (10 items) |
 
 ---
 
-## S3037 primary directive candidates
+## S3038 primary directive candidates
 
-**No in-flight arc.** S3026→S3036 canonical-lifecycle arc series now closed (11 PRs across 10 sessions). Recommendation: **fresh terminal for S3037**.
+**No forced pick — Chris picks fresh.** 5 remediation-backlog items still open:
 
-### Option A — Morning Brief workflow defensive hardening (from resolved Chief of Staff Escalation)
-Two ~30–45 min defensive picks:
-- **A1:** Replace `lane_1_platform_readiness` "Unknown error" surface with actual inner exception + fast/slow-fail timing signature. Makes the next flaky-WiFi false-positive debug-able in 10s.
-- **A2:** Pre-workflow network/stack readiness check (curl to health/ping + redis-cli ping) that fires "deferred" outcome instead of Chief of Staff Escalation if local stack is down. Prevents the false alert entirely.
+### Highest-leverage remaining (from Step 6 deliverable)
 
-Both are net-new defensive layers, not fixes to broken behavior. Chris can pick one, both, or neither.
+- **S8** (30-45 min, **WEDGE-BLOCKING** cheap win) — Instrument `deliverable_tool.create` to isolate Rigby persistence-gap root cause. This is what blocks selling the wedge to a paying customer. Test with minimum-scope dispatch (single tool call, no exploration allowed) as first probe.
+- **A3** (45-60 min, QUICK WIN) — Backfill `LLMCallLog.error_type` from `error_message` via regex classifier + save() hook. Closes silent-monitoring gap surfaced in Step 4.
+- **A6 Phase 2** — Watch tomorrow's 7:00 AM MDT morning_brief run. If it fails, the escalation deliverable will now carry a real Python exception type (via PR #3767 fix). That's the trigger to root-cause the underlying bug in `lane_1_platform_readiness`. If it passes, note as "intermittent conditions cleared" and monitor.
+- **S7** (~1 session, CRITICAL) — Root-cause ThinkingAgent 67% async failure. Instrument each ORM call site in `.think()`.
+- **S9** (~1 session, HIGH) — Wire downgrade/fallback logic to populate `was_downgraded` / `was_fallback` fields on `LLMCallLog` that S2853 shipping claim implied. Right now 39,971 calls / 30d show zero downgrades.
 
-### Option B — Engineering (bias-engineering rule)
+### Also open (not from audit backlog)
 
-- **`typing.Literal[actor]` type-enforcement on emit helper signature** (S3036 T1 Fold #2 future_trigger) — extends the actor param to `Literal[ACTOR_HUMAN, ACTOR_HUMAN_BULK, ..., ACTOR_UNKNOWN]`. Catches typos at import-time / lint-time rather than test-time. ~30 min. Watch-for-2nd-trigger if the palette-drift future_trigger below also fires.
-- **Actor-taxonomy vs frontend-palette drift guard** (S3036 A2 Fold future_trigger) — currently a new backend actor requires manual palette update in `BoardroomTab.tsx`. Options: (a) shared JSON schema generated on both sides, (b) generate TS constants file from Python constants via management command + CI check, (c) runtime warn-log if palette encounters an actor string not in its map. ~1–2 sessions depending on option.
-- **S3024 Fold A backend-source default preview API** — removes frontend/backend default-formatter shadowing. Watch-for-2nd-trigger. ~1 session.
-- **S3025 Fold C codification (BulkPromoteModal reducer extraction)** — ~30–45 min.
-- **AI-service rejection paths audit** — carried from S3034: no CURRENT production rejection paths in AI services, but if any grows one, PLAYBOOK-7.7.5 requires `.reject()` + gated broadcast. ~30 min defensive-audit + ADR-style note in broadcast helper docstring.
+- **`typing.Literal[actor]` enforcement** on emit helpers (S3036 T1 Fold future_trigger)
+- **Actor-taxonomy vs frontend-palette drift guard** (S3036 A2 Fold future_trigger)
+- **S3033 Fold B** ledger-persistence timing (watch for 3rd trigger)
+- **S3030 prod deploy carry** — `backfill_canonical_drift --apply` on Railway prod
+- **S3031 Fold B** spy fragility
+- **S3032 Fold E** — `orm_inspect_tool` allowlist accretion pattern
+- **S3034 A2 Fold** (subscriber wire-contract fragility) — carry preserved
 
-### Option C — Design-arc candidates (needs Chris ratification)
+### Chris's own priority (supersedes all above)
 
-- **KnowledgeTransfer model realignment for canonical decision persistence** — Multi-session. S3034 A2 fold #2 flagged subscriber wire-contract risk if realignment lands with different rejection payload shape.
-- **Governance unification (Rigby A1 zoom-out standing carry, S3023)** — HAI vs ADS lifecycle families. Multi-session.
-
-### Option D — Audit trajectory
-
-- **S3020 Fold A** — audit script per-hit/per-function suppression refactor. ~30 min.
-
-### Option E — S3016 zoom-out carries (still open)
-
-- Middleware-order snapshot test.
-- DRF ViewSet auth-class parallel audit.
-- WebSocket auth-parity coverage class.
-- `Bearer <token>` helper extension.
-
-### Option F — Chris's own priority (supersedes all above)
-
-**Joint recommendation at close:** No forced-pick — S3036→S3035 arc series is fully closed on both feature + open-ask sides. Chris picks direction fresh. If unsure, **Option B1 (`typing.Literal[actor]` enforcement, ~30 min)** or **Option A2 (pre-workflow readiness check, ~30 min)** are both cheap defensive wins that leave the platform more resilient without demanding a fresh design conversation.
+**Joint recommendation:** if unsure, **S8** is the cheapest strategic win of the audit backlog — 30-45 min instrumentation that unblocks selling the wedge. Alternatively, **A3** if you want another quick governance improvement in the same shape as A2.
 
 **Standard opener:**
-1. Run `context-kit orient` (auto-injected).
-2. Absorb this file + MEMORY.md + CLAUDE.md (v0.11.0 constitutional anchor still current — no amendment this session).
-3. Read S3036 handoff (`docs/handoffs/SESSION_3036_ACTOR_THREADING.md`).
-4. Ask Chris: "What would you like to work on?" (no forced Chief of Staff carry — that's resolved.)
-5. Optional state probes:
-   - `git log --oneline -8` — should show `c08893da6` chore(wrapper pin bump) + docs cascade + `8080acee5` feat(s3036) on top.
-   - Full regression bundle: 50/50 OK.
-   - Manual smoke: BoardroomTab → promote/reject → panel row shows colored actor pill within 10s.
+1. `context-kit orient` (auto-injected)
+2. Absorb this file + MEMORY.md + CLAUDE.md
+3. Read S3037 handoff (`docs/handoffs/SESSION_3037_RELIABILITY_AUDIT_V0_A6_S4_A2.md`)
+4. Read audit remediation backlog (`c3cad098-6d29-447f-b949-456913f7d343` — 10 action items with PLAYBOOK-format ratification for top 3)
+5. Ask Chris: "What would you like to work on?"
+6. Optional state probes:
+   - `git log --oneline -8` — should show `ced5b7ea0` (S4) + `690ba8c6a` (A6) on top of the S3036 cascade
+   - `python manage.py shell -c "from django_celery_beat.models import PeriodicTask; print(PeriodicTask.objects.filter(task='core.tasks.cleanup_stale_ops_runs').first())"` — should show the new task
+   - Check today's morning_brief run (fired at 7:00 AM MDT) — if failed, escalation deliverable now carries real exception in `error_tail`
 
 ---
 
-## S3037 carry-forward seeds
+## S3038 carry-forward seeds
 
-### New from S3036
+### New from S3037
 
-- **T1 Fold `future_trigger` (typing.Literal[actor])** — actor typo enforcement lift. 1st trigger; watch for 2nd instance of "typo caused mystery-unknown pill" before elevating.
-- **A2 Fold `future_trigger` (actor-taxonomy vs frontend-palette drift)** — currently manual, fallback catches gracefully but silently. Consider generating one from the other post-2nd trigger.
+- **S8 (Rigby persistence-gap instrumentation)** — 3rd trigger logged to Tool Gap Ledger; wedge-blocking
+- **A6 Phase 2 watch** — tomorrow's morning_brief failure now surfaces real exception; root-cause when it fires
+- **AutonomyConfiguration** row now exists — monitor for cases where autonomy caps trip (require_approval_above=$25); tune if too tight
+- **Wedge lessons applied to future customer pilots** — Snapshot underpriced at $500; hybrid execution (Rigby+Claude) needed until S8 fixed; mis-attribution catches are highest-value class
 
-### Elevated from S3035
+### Elevated from S3036
 
-- **S3035 T1 Fold `deferred_2nd_trigger_watch` (actor/source field)** — **RESOLVED same-envelope via S3036**. Removed from carry.
+- **T1 Fold future_trigger (typing.Literal[actor])** — still 1st trigger
+- **A2 Fold future_trigger (actor-taxonomy vs frontend-palette drift)** — still 1st trigger
 
-### `did_X` semantics — codification pressure UNCHANGED from S3034
+### `did_X` semantics — 2nd trigger status preserved from S3034
 
-- **S3031 Fold A `did_X` bool-return pattern** — at 2nd trigger from S3034 (`did_promote` + `did_reject`). **S3036 does NOT add a 3rd instance.** Elevated status preserved — watch for a 3rd `did_X` method (candidates: `did_deprecate`, `did_supersede`, `did_archive`) to codify as a Playbook rule.
+- Watch for 3rd `did_X` method to codify as Playbook rule
 
-### Carried from S3034/S3035 (STATUS PRESERVED)
+### Carried from prior arcs — status preserved
 
-- **S3033 Fold B `procedural observation`** — ledger persistence timing (1st trigger discharged; watch for 3rd).
-- **S3030 prod deploy carry** — still open (backfill_canonical_drift --apply on Railway prod when convenient).
-- **S3032 Fold E** — `orm_inspect_tool` allowlist accretion pattern.
-- **S3031 Fold B** — spy fragility.
-- **S3034 A2 Fold (subscriber wire-contract fragility)** — S3036 adds a first consumer (frontend polling endpoint) with tolerant parsing (v1+v2, missing actor → neutral pill). If a NON-frontend consumer appears, revisit whether endpoint should inject default actor.
-- **S3034 A2 Fold (adjacent-axis superseded/experiment as future terminal states)** — carried unchanged.
-
-### Carried from S3032 → S3026 — all preserved from S3035 close 00-START.
+- **S3033 Fold B** — ledger persistence timing (1st trigger discharged; watch for 3rd)
+- **S3030 prod deploy carry** — `backfill_canonical_drift --apply` on Railway prod
+- **S3032 Fold E** — `orm_inspect_tool` allowlist accretion
+- **S3031 Fold B** — spy fragility
+- **S3034 A2 Folds** (subscriber wire-contract fragility + adjacent-axis superseded/experiment as terminal states) — carried
 
 ---
 
 ## Cross-cutting workflow references
 
-- **Constitutional governance chain:** CLAUDE.md Playbook **v0.11.0** (S3036 is net-new schema extension, not drift/hardening; PLAYBOOK-7.7.5 does not fire; no amendment this session).
+- **Constitutional governance chain:** CLAUDE.md Playbook **v0.11.0** (S3037 audit + fixes are net-new + bug fixes; PLAYBOOK-7.7.5 does not fire; no amendment this session).
 - **ADR corpus:** ADR-0001 through ADR-0008.
-- **Spec→ship contract:** PLAYBOOK-7.7.1. **1× Flow B spec→ship** (S3036 planned end-to-end from S3035 00-START Option A candidate #1 with Chris D-verdict on Ratify at Phase 4-5).
-- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **1× substantive T1 SIGN (8+ tool_runs, 5/5 AGREE) + 1× substantive A2 SIGN (2-round dispatch, 12+ tool_runs total). Zero rubber-stamp. 22 sessions continuous.**
-- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Applied on `human-gate` split + BADGE-ONLY UI scope decisions.
-- **Recycle discipline (PLAYBOOK-7.4.4):** `make recycle-all` post-merge (frontend touched); event recorded in `logs/recycle_events.jsonl` sha=8080acee598a.
-- **Fold classification (PLAYBOOK-6.10.8):** 5 folds classified this session (3 same_pr resolved + 2 future_trigger persisted). All persisted BEFORE docs cascade.
-- **Verify-before-build (Cycle 1A):** **21st consecutive session** — T1 verified 10 call sites + adjacent emit_* families + polling endpoint shape pre-spec; A2 verified docstring drift pre-merge, caught by Rigby, corrected same-envelope.
+- **Spec→ship contract:** PLAYBOOK-7.7.1. **2× Flow B spec→ship** (A6 PR #3767, S4 PR #3768). Spec = audit remediation-backlog items.
+- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **N/A** — direct Claude-execute-and-verify shape used per S2988 precedent for ad-hoc bug fixes with unambiguous design.
+- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Applied to every mid-flight decision routing (tier selection, workflow picks, execution mode, Step 5 skip, remediation ordering, close-readiness path).
+- **Recycle discipline (PLAYBOOK-7.4.4):** `make recycle-all` after each merge. Events recorded in `logs/recycle_events.jsonl` sha=690ba8c6af90, sha=ced5b7ea01b6.
+- **Verify-before-build (Cycle 1A):** **22nd consecutive session** — A6 verified S1234 D1 pattern before mirror; S4 verified `_impl_cleanup_stale_agent_executions` pattern before mirror.
 
 ---
 
 ## Wrapper pin note
 
-The active PA conversation pin at S3036 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
+Active PA conversation pin at S3037 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
 
 ---
 
-**Reminder — the workflow is constitutional.** S3036 is the second arc in the canonical-lifecycle series to ship user-visible surface (after S3035 shipped the panel; S3036 shipped its first affordance — actor discrimination). The 7-actor taxonomy + defensive default + badge-only UI scope choices were ratified in-terminal via the "do we lose anything / is it more work later" framing after Rigby T1 SIGN converged with Claude's leans on all 5 scope questions. Fresh terminal recommended for S3037 given 11 PRs across 10 sessions in the S3026→S3036 arc series + open Chief of Staff Escalation carry.
+**Reminder — the workflow is constitutional.** S3037 is the first arc to fully execute the A1 wedge on ourselves. 3 shipped remediations (A6/S4/A2) + 2 in-audit quick wins (A1/S5) + Rigby Tool Gap Ledger 3rd-trigger logged. The wedge is real; the biggest remaining blocker to selling it is S8 (Rigby persistence-gap instrumentation, 30-45 min).
