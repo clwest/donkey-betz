@@ -1,6 +1,6 @@
 # Session 3033 — Engineering Playbook v0.11.0 RATIFIED
 
-**Date:** 2026-07-28 · **HEAD at close:** PLACEHOLDER (filled at merge)
+**Date:** 2026-07-28 · **HEAD at close:** `180bd4e65` (PR #3755 merged) + wrapper pin bump cascade
 
 ## What shipped
 
