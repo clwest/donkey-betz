@@ -6095,9 +6095,15 @@ class AgentHandlersMixin:
             if not decision:
                 raise ValueError(f"Draft decision {decision_id} not found")
 
-            # Reject the decision
-            decision.status = 'rejected'
-            decision.save()
+            # S3034: model method + gated broadcast for lifecycle symmetry
+            # with promote_decision. did_reject gates the emit so racing
+            # paths don't double-broadcast.
+            from core.services.canonical_decision_broadcast import (
+                emit_canonical_rejection_broadcast,
+            )
+            did_reject = decision.reject(rejected_by='pa')
+            if did_reject:
+                emit_canonical_rejection_broadcast(decision)
 
             # Session 940: Record for learning
             if user_id:

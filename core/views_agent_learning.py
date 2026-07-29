@@ -2230,12 +2230,22 @@ def reject_decision(request, decision_id):
 
     try:
         from core.models_unified_system import AgentDecisionSummary
+        from core.services.canonical_decision_broadcast import (
+            emit_canonical_rejection_broadcast,
+        )
 
         decision = AgentDecisionSummary.objects.get(id=decision_id)
-        decision.status = 'rejected'
-        decision.save()
+        # S3034: idempotent no-op if already rejected; broadcast gated on
+        # did_reject to avoid duplicate emissions when two paths race.
+        did_reject = decision.reject(rejected_by='human')
 
         logger.info(f"🏛️ [BOARDROOM] Decision rejected: {decision.topic}")
+
+        if did_reject:
+            emit_canonical_rejection_broadcast(
+                decision,
+                request_id=request.META.get('HTTP_X_REQUEST_ID'),
+            )
 
         return JsonResponse({
             'success': True,
@@ -2400,18 +2410,56 @@ def bulk_reject_decisions(request):
 
     count = queryset.count()
     if count == 0:
-        return JsonResponse({'success': True, 'count': 0, 'message': 'No matching decisions found'})
+        return JsonResponse({
+            'success': True,
+            'count': 0,
+            'broadcasts_succeeded': 0,
+            'broadcasts_failed': 0,
+            'message': 'No matching decisions found',
+        })
 
-    # S3023 U4-H: pass updated_at explicitly. queryset.update() bypasses auto_now
-    # so without this the row would carry a stale updated_at through audit/ordering.
-    queryset.update(status='rejected', updated_at=timezone.now())
+    # S3034: per-row loop mirroring `bulk_promote_decisions` shape (line
+    # ~2326). Replaces the S3023 U4-H `queryset.update(status='rejected',
+    # updated_at=...)` shape so each row can (a) gate broadcast on
+    # `did_reject` (idempotent no-op semantics) and (b) enable future
+    # per-row audit enrichment. Loses atomic bulk semantics; matches the
+    # promotion-side precedent.
+    from core.services.canonical_decision_broadcast import (
+        emit_canonical_rejection_broadcast,
+    )
 
-    logger.info(f"🏛️ [Session 942] Bulk rejected {count} decisions")
+    request_id = request.META.get('HTTP_X_REQUEST_ID')
+    rejected = 0
+    broadcasts_succeeded = 0
+    broadcasts_failed = 0
+    for decision in queryset:
+        try:
+            did_reject = decision.reject(rejected_by='human-bulk')
+            if did_reject:
+                rejected += 1
+        except Exception as e:
+            logger.warning(f"Failed to reject decision {decision.id}: {e}")
+            continue
+
+        if not did_reject:
+            continue
+
+        if emit_canonical_rejection_broadcast(decision, request_id=request_id):
+            broadcasts_succeeded += 1
+        else:
+            broadcasts_failed += 1
+
+    logger.info(
+        f"🚫 [S3034] Bulk rejected {rejected} decisions "
+        f"(broadcasts: {broadcasts_succeeded} ok, {broadcasts_failed} failed)"
+    )
 
     return JsonResponse({
         'success': True,
-        'count': count,
-        'message': f'{count} decisions rejected'
+        'count': rejected,
+        'broadcasts_succeeded': broadcasts_succeeded,
+        'broadcasts_failed': broadcasts_failed,
+        'message': f'{rejected} decisions rejected'
     })
 
 
@@ -3776,11 +3824,22 @@ def update_gate_status(request, gate_id):
             gate.status = 'declined'
             gate.approval_notes = notes or 'Declined by user'
             gate.save()
-            # Also mark the associated decision as rejected
+            # Also mark the associated decision as rejected. S3034: route
+            # through model method + gated broadcast so gate-decline
+            # participates in the same lifecycle event stream as the direct
+            # reject paths (Rigby T1 PLAYBOOK-7.7.5 sweep Pushback #1
+            # `same_pr_actionable`).
             if gate.decision:
-                gate.decision.status = 'rejected'
-                gate.decision.save()
+                from core.services.canonical_decision_broadcast import (
+                    emit_canonical_rejection_broadcast,
+                )
+                did_reject = gate.decision.reject(rejected_by='gate-decline')
                 logger.info(f"🚫 Gate declined: {gate.summary} (decision also rejected)")
+                if did_reject:
+                    emit_canonical_rejection_broadcast(
+                        gate.decision,
+                        request_id=request.META.get('HTTP_X_REQUEST_ID'),
+                    )
             success = True
             message = 'Gate declined and removed from queue'
         else:
