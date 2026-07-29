@@ -17,8 +17,8 @@ proposed_version: v0.11.0
 proposed_git_tag: playbook-v0.11.0
 predecessor_candidacy: three-cycle in-wild corpus surfaced across S3029 (Fold C `1st trigger` — DISCOVERY, tasks_ops 4th silent site caught) + S3030 (Fold C `2nd cycle, no discovery` — clean sweep confirmed drift class closed at source) + S3031 (Fold C `3rd cycle, no discovery` — clean sweep confirmed no ungated broadcast callers + no downstream `updated_at`-dependent consumers). S3031 close explicitly flagged "arguably ready to codify with the 'clean-sweep-confirms-closure' framing." S3033 open recommended Fold C 3rd-cycle codification (~30 min) as Lean 2; Chris ratified Lean 2 at session open.
 head_at_amendment_draft: 9b74cc9059278c3f291499d107b622d484be0632
-head_at_ratification: PLACEHOLDER_FILLED_AT_MERGE
-close_pr: PLACEHOLDER_FILLED_AT_MERGE
+head_at_ratification: 180bd4e6567b
+close_pr: 3755
 cascade_pr: PLACEHOLDER_FILLED_AT_CASCADE
 cascade_pr_merge_sha: PLACEHOLDER_FILLED_AT_CASCADE
 sign_sessions:
