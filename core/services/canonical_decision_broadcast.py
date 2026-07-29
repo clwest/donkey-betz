@@ -81,11 +81,23 @@ logger = logging.getLogger(__name__)
 
 # S3036: authoritative actor taxonomy for the canonical-lifecycle
 # broadcast. Callers import from here rather than pass string literals
-# so a typo at a call site fails the parameterized 10-site test bundle
-# (`core/tests/test_s3036_actor_threading.py`) instead of shipping as
-# a mystery "unknown" pill in the BoardroomTab UI. Adding a new actor
-# = adding a constant here + updating the frontend palette in
-# `frontend/src/pages/workspace/tabs/BoardroomTab.tsx`.
+# so a typo at a call site surfaces at import time (NameError) rather
+# than as a mystery "unknown" pill in the BoardroomTab UI. Adding a
+# new actor = adding a constant here + updating the frontend palette
+# in `frontend/src/pages/workspace/tabs/BoardroomTab.tsx`.
+#
+# Test coverage (`core/tests/test_s3036_actor_threading.py`):
+#   - `ActorTaxonomyTest` (3): pins the frozenset shape + membership.
+#   - `PromotionHelperActorContractTest` + `RejectionHelperActorContractTest`
+#     (4): explicit + default actor in emitted event.
+#   - `CallSiteActorParameterizedTest` (3): direct-invocation tests for
+#     the 3 service-layer call sites (`ai_decision_promoter`,
+#     `decision_promotion_rules`, `tasks_ops`). The 5 `views_agent_learning`
+#     sites + 2 `td_handlers_agents` sites are covered indirectly by the
+#     existing S3026/S3027/S3034/S3035 view/handler test bundles which
+#     assert the emitted event shape (including `actor` post-S3036).
+#   - `LifecycleActivityEndpointActorPassthroughTest` (2): v1/v2
+#     round-trip tolerance at the polling endpoint.
 ACTOR_HUMAN = 'human'                # single boardroom endpoint click (views_agent_learning 2270 + 2328)
 ACTOR_HUMAN_BULK = 'human-bulk'      # bulk boardroom endpoints (views_agent_learning 2435 + 2530)
 ACTOR_HUMAN_GATE = 'human-gate'      # gate-decline path (views_agent_learning 3922 update_gate_status action=='decline')
@@ -123,8 +135,10 @@ def emit_canonical_promotion_broadcast(
     `ACTOR_OPS_TASK`, `ACTOR_RULES_SERVICE`. Default `'unknown'`
     preserves backfill drift-suppression semantics (missing = neutral
     pill in UI, no crash) but every production call site is expected
-    to pass an explicit value — enforced by the parameterized 10-site
-    test bundle at `core/tests/test_s3036_actor_threading.py`.
+    to pass an explicit value. See the module docstring "Test coverage"
+    section above for how the 10 call sites are enforced (3 direct
+    parameterized tests + 7 via the existing S3026/S3027/S3034/S3035
+    view/handler regression bundles).
     """
     import redis
 
