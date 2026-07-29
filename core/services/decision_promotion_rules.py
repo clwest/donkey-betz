@@ -176,14 +176,16 @@ class DecisionPromotionRules:
         promotion Redis broadcast so the Session 589 rules path fires
         the same event the boardroom endpoints + AI-AutoPromoter fire.
         Broadcast is best-effort and never fails promotion.
+
+        S3029 (Fold A convergence): delegates the field mutation to the
+        `AgentDecisionSummary.promote_to_canonical` model method.
+        Intentionally NO `transaction.atomic()` wrapper here — this
+        service is legacy Session 589 best-effort semantics; the AI
+        service wraps because its own contract calls for it. Don't
+        harmonize without explicit evidence-backed decision.
         """
         try:
-            decision.status = 'canonical'
-            decision.is_canonical = True
-            decision.promoted_at = timezone.now()
-            decision.promoted_by = promoted_by
-            decision.save()
-
+            decision.promote_to_canonical(promoted_by=promoted_by)
             self.stats['promoted'] += 1
             logger.info(f"Auto-promoted decision: {decision.topic[:50]}... -> canonical")
         except Exception as e:
