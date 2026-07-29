@@ -263,6 +263,17 @@ app.conf.beat_schedule = {
         'schedule': crontab(minute='*/10'),
         'options': {'queue': 'broadcast', 'expires': 600},
     },
+    # S3037 Reliability Audit v0 Step 6 S4 — sweep stale-running OpsRun
+    # rows. Mirror of cleanup-stuck-agent-executions cadence + queue.
+    # Discharges the "no lost dispatches" reliability rule violation
+    # (2 rows were found stuck 383h + 434h at audit time). Default
+    # threshold 60min — matches AgentExecution sibling cleanup; well
+    # above the longest observed legitimate OpsRun (~40s).
+    'cleanup-stuck-ops-runs': {
+        'task': 'core.tasks.cleanup_stale_ops_runs',
+        'schedule': crontab(minute='*/10'),
+        'options': {'queue': 'broadcast', 'expires': 600},
+    },
     'cleanup-celery-task-events': {
         'task': 'core.tasks.cleanup_celery_task_events',
         # Session 1165 (COO #3): staggered 4:00 → 4:50 to relieve hour=4 :00 cluster
