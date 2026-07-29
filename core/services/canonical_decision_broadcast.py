@@ -48,6 +48,25 @@ it should frame entries as "recent lifecycle events" rather than
 approvals, PA-tool actions all appear alongside human boardroom
 clicks). LPUSH/LTRIM failures are swallowed same as publish — the
 persistence side-effect must not fail promotion or rejection either.
+
+S3036 addition: both helpers accept an optional `actor` field (default
+`'unknown'`) that identifies the source-of-transition for the event.
+The value is passed through into the event dict at the top level so
+UI consumers (BoardroomTab lifecycle panel) can render "who did this?"
+without a follow-up query. `schema_version` is bumped `1 → 2` to mark
+the presence of `actor`. Subscribers coded against v1 should tolerate
+missing `actor` (default to `'unknown'`) and accept `schema_version in
+{1, 2}` — no strict `== 1` gating exists in-repo today (Rigby T1 SIGN
+tool-verified) and old v1 events already in the ring at deploy time
+drain within ~10-20 lifecycle events. Actor value taxonomy is
+authoritative in `CANONICAL_LIFECYCLE_ACTORS` below; callers should
+import the constant rather than pass string literals so typos become
+lint/test failures instead of "unknown" pill regressions in the UI.
+
+Callers that deliberately do NOT emit (e.g., `backfill_canonical_drift`
+management command backfilling historical drift) are OUT of the actor
+taxonomy — there is no `'backfill'` actor. Silence is the correct
+signal that a code path is out-of-scope for the lifecycle broadcast.
 """
 from __future__ import annotations
 
@@ -60,13 +79,52 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-def emit_canonical_promotion_broadcast(decision, *, request_id: str | None = None) -> bool:
+# S3036: authoritative actor taxonomy for the canonical-lifecycle
+# broadcast. Callers import from here rather than pass string literals
+# so a typo at a call site fails the parameterized 10-site test bundle
+# (`core/tests/test_s3036_actor_threading.py`) instead of shipping as
+# a mystery "unknown" pill in the BoardroomTab UI. Adding a new actor
+# = adding a constant here + updating the frontend palette in
+# `frontend/src/pages/workspace/tabs/BoardroomTab.tsx`.
+ACTOR_HUMAN = 'human'                # single boardroom endpoint click (views_agent_learning 2270 + 2328)
+ACTOR_HUMAN_BULK = 'human-bulk'      # bulk boardroom endpoints (views_agent_learning 2435 + 2530)
+ACTOR_HUMAN_GATE = 'human-gate'      # gate-decline path (views_agent_learning 3922 update_gate_status action=='decline')
+ACTOR_PA_TOOL = 'pa-tool'            # Rigby PA tool handler (td_handlers_agents 6057 + 6106)
+ACTOR_AI_PROMOTER = 'ai-promoter'    # AIDecisionPromoterService (ai_decision_promoter 205)
+ACTOR_OPS_TASK = 'ops-task'          # Celery auto-approve boardroom items (tasks_ops 309)
+ACTOR_RULES_SERVICE = 'rules-service'  # S589 automated rules service (decision_promotion_rules 202)
+
+CANONICAL_LIFECYCLE_ACTORS = frozenset({
+    ACTOR_HUMAN,
+    ACTOR_HUMAN_BULK,
+    ACTOR_HUMAN_GATE,
+    ACTOR_PA_TOOL,
+    ACTOR_AI_PROMOTER,
+    ACTOR_OPS_TASK,
+    ACTOR_RULES_SERVICE,
+})
+
+ACTOR_UNKNOWN = 'unknown'  # helper default; not in taxonomy but rendered as neutral pill by UI
+
+
+def emit_canonical_promotion_broadcast(
+    decision, *, request_id: str | None = None, actor: str = ACTOR_UNKNOWN,
+) -> bool:
     """Publish a `canonical_policy_created` event to the `agent_learning`
     Redis channel for a freshly-promoted `AgentDecisionSummary`.
 
     Returns True iff `r.publish(...)` completed without raising. Any
     exception is logged + swallowed → returns False. This is transport,
     not domain logic — Redis-down must not fail promotion.
+
+    `actor` (S3036) identifies the source-of-transition. Callers must
+    import and pass one of `ACTOR_HUMAN`, `ACTOR_HUMAN_BULK`,
+    `ACTOR_HUMAN_GATE`, `ACTOR_PA_TOOL`, `ACTOR_AI_PROMOTER`,
+    `ACTOR_OPS_TASK`, `ACTOR_RULES_SERVICE`. Default `'unknown'`
+    preserves backfill drift-suppression semantics (missing = neutral
+    pill in UI, no crash) but every production call site is expected
+    to pass an explicit value — enforced by the parameterized 10-site
+    test bundle at `core/tests/test_s3036_actor_threading.py`.
     """
     import redis
 
@@ -74,12 +132,13 @@ def emit_canonical_promotion_broadcast(decision, *, request_id: str | None = Non
         r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
         # S3026 A2 REVISE: dual-emit participants (canonical going forward)
         # + agents_involved (S657-source back-compat alias) for one
-        # compatibility window. `schema_version: 1` lets subscribers gate
-        # on shape as it evolves.
+        # compatibility window. `schema_version` lets subscribers gate
+        # on shape as it evolves — bumped 1→2 at S3036 to signal `actor`.
         participants_list = decision.participants or []
         event = {
-            'schema_version': 1,
+            'schema_version': 2,
             'type': 'canonical_decision_promoted',
+            'actor': actor,
             'timestamp': timezone.now().isoformat(),
             'decision_id': str(decision.id),
             'topic': decision.topic[:100],
@@ -120,7 +179,9 @@ def emit_canonical_promotion_broadcast(decision, *, request_id: str | None = Non
         return False
 
 
-def emit_canonical_rejection_broadcast(decision, *, request_id: str | None = None) -> bool:
+def emit_canonical_rejection_broadcast(
+    decision, *, request_id: str | None = None, actor: str = ACTOR_UNKNOWN,
+) -> bool:
     """S3034: Publish a `canonical_policy_rejected` event to the
     `agent_learning` Redis channel for a freshly-rejected
     `AgentDecisionSummary`.
@@ -132,8 +193,10 @@ def emit_canonical_rejection_broadcast(decision, *, request_id: str | None = Non
     rejection.
 
     Payload keys mirror the promotion event so subscribers can branch on
-    `data.type` without divergent shape handling. `schema_version: 1` lets
-    subscribers gate on shape as it evolves.
+    `data.type` without divergent shape handling. `schema_version` lets
+    subscribers gate on shape as it evolves — bumped 1→2 at S3036 to
+    signal presence of `actor`. See promotion helper docstring for the
+    `actor` contract; same taxonomy applies here.
     """
     import redis
 
@@ -141,8 +204,9 @@ def emit_canonical_rejection_broadcast(decision, *, request_id: str | None = Non
         r = redis.Redis.from_url(os.environ.get('REDIS_URL', 'redis://localhost:6379/0'))
         participants_list = decision.participants or []
         event = {
-            'schema_version': 1,
+            'schema_version': 2,
             'type': 'canonical_decision_rejected',
+            'actor': actor,
             'timestamp': timezone.now().isoformat(),
             'decision_id': str(decision.id),
             'topic': decision.topic[:100],

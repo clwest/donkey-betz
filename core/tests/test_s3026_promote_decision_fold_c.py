@@ -157,7 +157,8 @@ class PromoteDecisionFoldCTests(TestCase):
         # on the removed summary field AND that the fallback isn't stance.
         self.assertEqual(event["summary"], "Because we said so")
         # S3026 A2 REVISE: schema_version + agents_involved back-compat.
-        self.assertEqual(event["schema_version"], 1)
+        # S3036: bumped 1→2 to signal presence of `actor` field.
+        self.assertEqual(event["schema_version"], 2)
         # `participants` is the canonical key going forward; `agents_involved`
         # is the S657-source back-compat alias. Both emit the same list for
         # one compatibility window.
