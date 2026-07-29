@@ -907,6 +907,30 @@ class AgentHandlersMixin:
                 'app_label': 'core', 'sensitive': False,
                 'expensive_text_fields': ('text', 'resolution_note'),
             },
+            # S3032 Rigby Tool Gap Ledger — AgentDecisionSummary allowlist
+            # entry. Live trigger at S3030 T1 SIGN: Rigby needed to run the
+            # canonical-drift probe (filter status='canonical' +
+            # is_canonical=False → count) but the model wasn't in the
+            # allowlist, forcing a fallback to Django shell via Claude.
+            # Session 3026 → S3031 arc closed the drift-class at code
+            # level; this closes the tool-surface gap so future S30XX arcs
+            # touching decision lifecycle (drift audits, promotion state
+            # verification, backfill dry-runs) can be verified end-to-end
+            # on Rigby's tool surface without leaving it.
+            # Non-sensitive: content is agent-authored decision text
+            # (recommendations, rationale, feature suggestions), not
+            # credentials or user PII. `recommended_stance` +
+            # `suggested_feature` + `rationale` are TextFields with
+            # potentially long content — blocked from contains lookups.
+            # `topic` is CharField(255), safe for contains. `key_insights`
+            # + `participants` are JSONFields (bullet list + agent name
+            # list), handled by recursive-key-redaction path.
+            'AgentDecisionSummary': {
+                'app_label': 'core', 'sensitive': False,
+                'expensive_text_fields': (
+                    'recommended_stance', 'suggested_feature', 'rationale',
+                ),
+            },
         }
 
         _MAX_LIMIT = 200
