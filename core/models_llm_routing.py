@@ -441,6 +441,21 @@ class LLMCallLog(models.Model):
         status = "✅" if self.success else "❌"
         return f"{status} {self.agent_name} → {self.provider}:{self.model_id}"
 
+    def save(self, *args, **kwargs):
+        # S3038 A3 — auto-classify error_type from error_message pattern when
+        # the write site left it blank. Discharges the S3037 Reliability Audit
+        # Step 4 finding: 305 failed rows in 90d with empty error_type blocked
+        # any error-type-based alerting or trend queries. Fail-open: classifier
+        # failure never blocks a call-log write (audit substrate must never
+        # bounce a write on its own accessory logic).
+        if self.error_message and not self.error_type:
+            try:
+                from core.services.llm_error_classifier import classify_llm_error
+                self.error_type = classify_llm_error(self.error_message)
+            except Exception:
+                pass
+        super().save(*args, **kwargs)
+
 
 # =============================================================================
 # Default Configurations
