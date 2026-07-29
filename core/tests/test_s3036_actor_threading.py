@@ -15,8 +15,13 @@ Contract this suite pins:
    backfill drift-suppression semantics; missing actor renders as
    neutral pill in UI, no crash).
 3. All 10 production call sites pass an explicit actor value from
-   `CANONICAL_LIFECYCLE_ACTORS` — parameterized smoke test asserts the
-   correct constant reaches each helper at each site.
+   `CANONICAL_LIFECYCLE_ACTORS`. Direct parameterized coverage here
+   for the 3 service-layer sites (`ai_decision_promoter`,
+   `decision_promotion_rules`, `tasks_ops`); the 5 `views_agent_learning`
+   view sites + 2 `td_handlers_agents` sites are covered indirectly by
+   the existing S3026/S3027/S3034/S3035 view/handler test bundles
+   (which now assert `actor` presence via schema_version==2 + payload
+   shape). Rigby A2 SIGN 2026-07-29 flagged this split explicitly.
 4. Actor taxonomy centralised: adding a new actor requires importing
    from the module, not passing a string literal at the call site (typo
    catch via constant reference at import time).
@@ -306,7 +311,11 @@ class LifecycleActivityEndpointActorPassthroughTest(TestCase):
     def test_v1_event_without_actor_still_round_trips(self):
         # Pre-deploy v1 event still in ring — endpoint must not crash on
         # missing actor; passes through as-is (frontend renders as
-        # neutral "unknown" pill).
+        # neutral "unknown" pill). schema_version=1 is INTENTIONAL here
+        # — this fixture models a v1 event that survived the S3036
+        # schema bump and is still being read out of the ring. Do not
+        # bump to 2 (that would defeat the test). Rigby A2 SIGN
+        # 2026-07-29 requested this annotation explicitly.
         v1_event = json.dumps({
             'schema_version': 1,
             'type': 'canonical_decision_promoted',
