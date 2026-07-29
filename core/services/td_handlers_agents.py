@@ -2611,6 +2611,31 @@ class AgentHandlersMixin:
         from django.db.models import Count
         import uuid as _uuid_mod
 
+        # S3038-S8 — Structured intent log at handler entry. Paired with
+        # [PA_DELIVERABLES_ENVELOPE] emitted from the create branch's
+        # try/finally. Cross-reference trace_id against Deliverable rows to
+        # isolate the Rigby persistence-gap class:
+        #   - 0 INTENT logs for a dispatch → PA loop never reached the handler
+        #     (LLM never emitted deliverable_tool call — prompt convergence /
+        #     PA_TASK_SUMMARY shows tools=... with no deliverable_tool).
+        #   - INTENT logged, no ENVELOPE for same trace_id → handler raised
+        #     before hitting the create branch's finally (unlikely — action
+        #     dispatch is above the create-specific try/finally).
+        #   - INTENT + ENVELOPE(ok=False) → handler ran, validation/gate
+        #     rejected; error_code names the class.
+        #   - INTENT + ENVELOPE(ok=True) + no Deliverable row → factory silent
+        #     drop despite raise_on_gated=True (contract violation, unlikely).
+        logger.info(
+            "[PA_DELIVERABLES_INTENT] trace_id=%s tool=%s raw_action=%r "
+            "title=%r workspace_id=%s user_id=%s payload_keys=%s",
+            trace_id, tool_name,
+            payload.get('action', 'list'),
+            (payload.get('title') or '')[:80],
+            payload.get('workspace_id') or payload.get('workspace') or 'none',
+            user_id,
+            sorted(payload.keys()),
+        )
+
         # Apr 2026: Sanitize UUID fields — GPT-5.2 sometimes injects its tool
         # call ID (e.g. "tool-1-6a55c355") into UUID fields like id, workspace_id,
         # initiative_id, causing Django ORM validation errors.
@@ -3065,11 +3090,37 @@ class AgentHandlersMixin:
             return {'action': 'unsave', 'id': str(obj.id), 'title': obj.title, 'saved': False}
 
         elif action == 'create':
+            # S3038-S8 — Envelope logging for the create path. `_s8_emit`
+            # emits [PA_DELIVERABLES_ENVELOPE] with the same trace_id used
+            # by [PA_DELIVERABLES_INTENT] and [PA_TASK_SUMMARY], so log
+            # lines cross-reference to Deliverable rows and PA-loop
+            # iterations. Every exit (return or raise) below runs `_s8_emit`
+            # before leaving the branch.
+            import time as _s8_time
+            _s8_start = _s8_time.monotonic()
+
+            def _s8_emit(ok, deliverable_id=None, error_code=None, reason_code=None, exception=None):
+                logger.info(
+                    "[PA_DELIVERABLES_ENVELOPE] trace_id=%s action=create ok=%s "
+                    "id=%s error_code=%s reason_code=%s exception=%s "
+                    "duration_ms=%d title=%r workspace_id=%s",
+                    trace_id,
+                    'true' if ok is True else ('false' if ok is False else 'unknown'),
+                    deliverable_id or 'none',
+                    error_code or 'none',
+                    reason_code or 'none',
+                    exception or 'none',
+                    int((_s8_time.monotonic() - _s8_start) * 1000),
+                    (payload.get('title') or '')[:80],
+                    payload.get('workspace_id') or payload.get('workspace') or 'none',
+                )
+
             # Session 1065: Allow PA to save arbitrary content to Deliverables
             # Session 1077: Accept category, tags, workspace, data_sensitivity, is_pinned
             title = payload.get('title', '').strip()
             content = payload.get('content', '').strip()
             if not title or not content:
+                _s8_emit(ok=False, error_code='title_content_required')
                 raise ValueError("title and content are required for create action")
 
             import uuid as _d_uuid
@@ -3135,6 +3186,7 @@ class AgentHandlersMixin:
             _raw_status = payload.get('status')
             _requested_status = (_raw_status or '').strip().lower() if isinstance(_raw_status, str) else ''
             if _requested_status == 'completed':
+                _s8_emit(ok=False, error_code='status_completed_not_allowed_on_create')
                 return {
                     'action': 'create',
                     'ok': False,
@@ -3211,6 +3263,7 @@ class AgentHandlersMixin:
                     preserve_title=True,
                 )
             except DeliverableGatedError as e:
+                _s8_emit(ok=False, error_code='deliverable_gated', reason_code=e.reason_code)
                 return {
                     'action': 'create',
                     'ok': False,
@@ -3239,6 +3292,7 @@ class AgentHandlersMixin:
             # the assertion-style guard so a future regression in the
             # factory's dedup logic doesn't reintroduce the silent crash.
             if obj is None:  # pragma: no cover
+                _s8_emit(ok=False, error_code='factory_returned_none')
                 raise RuntimeError(
                     "deliverable_factory.create_deliverable returned None "
                     "despite raise_on_gated=True — internal contract violation"
@@ -3301,6 +3355,7 @@ class AgentHandlersMixin:
                         obj.id, type(_detail_err).__name__, _detail_err,
                     )
 
+            _s8_emit(ok=True, deliverable_id=str(obj.id))
             return response
 
         elif action == 'update':
