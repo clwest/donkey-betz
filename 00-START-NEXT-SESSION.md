@@ -2,48 +2,48 @@
 
 ---
 
-## READ THIS FIRST — SESSION 3028 CLOSED. **S3027 broadcast helper de-layered + 3 silent promotion paths wired.** Chris asked for ~30 min slice (extend helper to AI-AutoPromoter); Cycle 1A grep sweep discovered TWO deeper issues (reverse-layering + 3 silent sites not 1). Rigby A1 REVISE required Shape C (de-layer + wire all 3). Helper moved to new `core/services/canonical_decision_broadcast.py`; PA tool handler + AI-AutoPromoter service + Session 589 rules service all now emit the same event as the boardroom endpoints. Byte-identical shape across all 5 promotion paths (regression-tested). 14-session zero-hallucination Rigby SIGN streak. **13th consecutive Cycle 1A verify-before-build session.**
+## READ THIS FIRST — SESSION 3029 CLOSED. **S3028 Fold A mutation-style convergence shipped + 4th silent site discovered & fixed same-session.** PR #3746 converged AI-AutoPromoter + Rules services onto the `promote_to_canonical` model method. Rigby A2 zoom-out sweep discovered a 4th silent site in `core/tasks_ops.py` — a bulk `.update(status='canonical')` in the scheduled boardroom-auto-approve task that was leaving `is_canonical=False`, `promoted_at=NULL`, `promoted_by=NULL` on every auto-promoted row (data integrity breach + silent broadcast, silent since ~S988). PR #3747 fixed it same session with per-row model-method loop + broadcast. 15-session zero-hallucination Rigby SIGN streak. **14th consecutive Cycle 1A verify-before-build session.**
 
-**2 PRs shipped this session.**
+**2 feature PRs shipped this session.**
 
-**PR #3743 (`4c9939484`) — `feat(s3028): de-layer S3027 broadcast helper + wire 3 silent promotion paths`.**
+**PR #3746 (`2b72a973e`) — `feat(s3029): S3028 Fold A — mutation-style convergence`.** Both services now call `decision.promote_to_canonical(promoted_by=...)`. Per-service transaction semantics INTENTIONALLY preserved (AI wraps in atomic; Rules doesn't). 2 spy tests using `patch.object(..., autospec=True, side_effect=lambda self, promoted_by='human': original(...))` to preserve real bound-method behavior while asserting the model method was called.
 
-- NEW `core/services/canonical_decision_broadcast.py` (~90 lines) exports `emit_canonical_promotion_broadcast(decision, *, request_id=None) -> bool`. Renamed from S3027's `_emit_...` (dropped private prefix now that it's a public services API). Same event shape as S3027 (schema_version:1, dual-key participants/agents_involved, rationale/stance accessor cascade, best-effort Redis try/except).
-- 3 silent paths wired: PA tool `_handle_boardroom` action `promote_decision`, `AIDecisionPromoterService.promote_decision`, `DecisionPromotionRules.promote_decision`. AI + rules moved broadcast OUTSIDE their `transaction.atomic()` block so Redis-down never rolls back mutation.
-- View-layer call sites (single + bulk) updated to import from the new services module.
-- NEW `core/tests/test_s3028_canonical_broadcast_service_paths.py` (6 tests, one focused emit + one failure-survival per new call site).
+**PR #3747 (`d0841a0f6`) — `fix(s3029): PR-3746 A2 sweep follow-up — tasks_ops.py 4th silent site + data integrity fix`.** Rigby A2 zoom-out sweep discovery. 4 duplicated `.update(status='canonical')` blocks in `_impl_auto_approve_boardroom_items` consolidated into per-row loop over `_AUTO_PROMOTE_TYPES = ['experiment', 'pipeline', 'research', 'guideline']`. Single atomic per type; broadcast outside atomic. 3 tests including all-4-fields check + Redis-down survival.
 
-**PR #3744 (`28e3fc9fa`) — `fix(s3028): PR-3743 A2 REVISE — drop lingering _emit_canonical_promotion_broadcast reference from test docstring`.** Cosmetic follow-up per Rigby A2 REVISE: S3027 test file docstring still referenced the old private-prefixed function name. Updated + noted rename provenance.
+- **Test result:** New S3029 convergence 2/2 + new S3029 tasks_ops 3/3 pass. Full regression bundle (S3013 + S3014 + S3015 + S3023 + S3024 + S3026 + S3027 + S3028 + S3029 [both]): **69/69 pass in 7.107s**.
+- **Behavior change:** all 6 canonical-promotion paths (was 5; +1 discovered via sweep) now delegate to the model method + fire broadcasts. Downstream `is_canonical=True` queries finally see auto-promoted rows going forward.
 
-- **Test result:** New S3028 suite 6/6 pass in 0.295s. S3026+S3027 (helper-move regression): 10/10 pass in 0.945s (pure relocation). Full regression bundle (S3013 + S3014 + S3015 + S3023 + S3024 + S3026 + S3027 + S3028): **64/64 pass in 6.921s**.
-- **Behavior change:** all 5 promotion paths now emit the `canonical_policy_created` event on the `agent_learning` Redis channel. Downstream subscribers start receiving events for PA-driven, AI-AutoPromoter-driven, and Session 589 rules-driven promotions for the first time.
-
-**HEAD at close:** docs cascade → `28e3fc9fa` (PR #3744).
+**HEAD at close:** docs cascade → `d0841a0f6` (PR #3747).
 
 Full context:
-- `docs/handoffs/SESSION_3028_HELPER_DELAYERED_ALL_5_PROMOTION_PATHS_BROADCAST.md` — full session close.
+- `docs/handoffs/SESSION_3029_MUTATION_CONVERGENCE_AND_4TH_SITE_DISCOVERY.md` — full session close.
 
 ---
 
-## S3029 primary directive candidates
+## S3030 primary directive candidates
 
-**No in-flight arc.** Chris directive-required. All 5 canonical-promotion paths now broadcast; the S3026 → S3028 arc closed a 5-years-old silent-drift class across the whole promotion surface. Remaining backlog is small-cleanup + new-engineering territory.
+**No in-flight arc.** S3026 → S3029 arc closed the entire canonical-promotion drift class across all 6 paths (broadcast side + mutation side). **One known data-integrity residue open:** existing rows with `status='canonical'` but `is_canonical=False` from 5 years of the S3029 PR #3747 bug. Rigby explicitly deferred backfill from PR #3747 to S3030.
 
-### Option A — Fresh engineering (bias-engineering rule)
+### Option A — S3030 primary (joint recommendation): backfill existing drift rows
 
-- **S3028 Fold A codification: converge mutation style across 3 services.** Refactor `AIDecisionPromoterService.promote_decision` + `DecisionPromotionRules.promote_decision` to call `decision.promote_to_canonical(promoted_by=...)` model method instead of duplicating field mutation inline. Preserves transaction semantics per service (AI wraps in atomic; rules doesn't). Small (~30 min). Closes the second drift class the S3026-S3028 arc surfaced.
-- **S3024 Fold A backend-source default preview API:** add `GET /api/platform/signal-cluster/<uuid>/default-initiative-name/` so frontend stops shadowing the backend default formatter. Watch-for-2nd-trigger candidate. ~1 session.
+- **NEW management command `python manage.py backfill_canonical_drift`.** Audit + backfill for `AgentDecisionSummary.objects.filter(status='canonical', is_canonical=False)`. Suggested shape:
+  - Dry-run mode default (report count + sample rows without writing).
+  - `--apply` flag to actually backfill: sets `is_canonical=True`, `promoted_at=created_at` (best-guess since the actual promotion time is lost), `promoted_by='backfill-s3030-from-tasks-ops-drift'`.
+  - Optional: also emit broadcast for backfilled rows (or explicitly document why NOT — these rows are years old; subscribers probably shouldn't receive belated events).
+  - Regression test asserts drift rows are healed + counts match.
+- **Cost:** ~1 session (~100 lines command + tests).
+
+### Option B — Continue engineering (bias-engineering rule)
+
+- **S3029 Fold C codification watch (2nd trigger):** if S3030 or S3031 A2 zoom-out sweep catches another adjacent silent bug, codify "A2 SIGN routinely includes a repo-wide sweep for the drift-class being fixed" as a workflow rule.
+- **S3024 Fold A backend-source default preview API:** removes frontend/backend default-formatter shadowing. Watch-for-2nd-trigger. ~1 session.
 - **Extend broadcast pattern to `bulk_reject_decisions`:** add `canonical_decision_rejected` broadcast for symmetry. ~1 session.
-- **`did_promote` idempotency semantics (S3028 Fold B):** gate broadcast on state-transition (mutation returns True only when row moved from non-canonical → canonical). Prevents double-fire under race. ~30 min.
-- **S3025 Fold C codification (BulkPromoteModal reducer extraction):** Extract chunking + row-status transitions. ~30-45 min.
-
-### Option B — S3026 Fold A codification (2nd-trigger watch)
-
-- **Fold evidence requirement:** "fold claim must be backed by minimal failing test or stacktrace." S3027 + S3028 both clean-executed with well-authored forward-carries → additional counter-evidence. Codification pressure stays at 1st trigger.
+- **`did_promote` idempotency (S3029 Fold B, elevated from S3028 Fold B):** gate broadcast on state-transition. ~30 min.
+- **S3025 Fold C codification (BulkPromoteModal reducer extraction):** ~30-45 min.
 
 ### Option C — Design-arc candidates (needs Chris ratification)
 
-- **KnowledgeTransfer model realignment for canonical decision persistence** — S3026 removed the broken KT write; either add `DecisionPromotionLearningEvent` model or remap KT. Not urgent (5 years silent failure, no user impact). Multi-session.
+- **KnowledgeTransfer model realignment for canonical decision persistence** — Multi-session.
 - **Governance unification (Rigby A1 zoom-out standing carry, S3023):** HAI vs ADS lifecycle families. Multi-session.
 
 ### Option D — Audit trajectory
@@ -60,34 +60,36 @@ Full context:
 
 ### Option F — Chris's own priority (supersedes A-E)
 
-**Joint recommendation at close:** **Option A — S3028 Fold A mutation-style convergence** (~30 min small slice). It closes the last drift axis in the promotion surface (broadcast side is done; mutation side is the last inconsistency). Cycle 1A friendly — reuses the model method already used by 3 of 5 paths. Alt: **`did_promote` idempotency** (~30 min) to close the S3028 Fold B duplicate-broadcast risk before it becomes a real race.
+**Joint recommendation at close:** **Option A — backfill existing drift rows.** It's the direct forward-carry from PR #3747 (Rigby explicitly deferred), it closes the last known residue of the S3026-S3029 arc, and it's genuinely useful (5 years of accumulated drift rows are currently invisible to `is_canonical=True` queries used across `policy_context.py`, `views_project_intelligence.py`, `views_agent_learning.py`, `project_intelligence_consumer.py`). Alt: **`did_promote` idempotency** (~30 min) to close Fold B if a smaller slice is wanted.
 
 **Standard opener:**
 1. Run `context-kit orient` (auto-injected).
 2. Absorb this file + MEMORY.md + CLAUDE.md.
-3. Read S3028 handoff (`docs/handoffs/SESSION_3028_HELPER_DELAYERED_ALL_5_PROMOTION_PATHS_BROADCAST.md`).
+3. Read S3029 handoff (`docs/handoffs/SESSION_3029_MUTATION_CONVERGENCE_AND_4TH_SITE_DISCOVERY.md`).
 4. Optional state probes:
-   - `git log --oneline -8` — should show docs cascade → `28e3fc9fa` (PR #3744).
-   - `python manage.py test core.tests.test_s3028_canonical_broadcast_service_paths --keepdb` — 6/6 OK.
-   - Full regression bundle (8 files): 64/64 OK.
+   - `git log --oneline -8` — should show docs cascade → `d0841a0f6` (PR #3747).
+   - Full regression bundle (10 files): 69/69 OK.
 
 ---
 
-## S3029 carry-forward seeds
+## S3030 carry-forward seeds
 
-### New from S3028
+### New from S3029
 
-- **Fold A `1st trigger`** — mutation-style drift across 3 promotion services (2 duplicate inline, 1 wraps in atomic, 3 use the model method). Codification candidate: converge on model method.
-- **Fold B `informational`** — duplicate-broadcast risk under theoretical concurrent-promotion race. Low today; hardenable via `did_promote` semantics.
+- **Fold A `informational`** — spy `side_effect=lambda` signature fragility (future required kwarg silently forwards wrong args). Codification candidate: swap for `*args, **kwargs` forwarder.
+- **Fold B `informational`** (elevated from S3028 Fold B) — duplicate-broadcast race across 6 promotion paths. Harden via `did_promote` semantics.
+- **Fold C `1st trigger`** — codify A2-zoom-out-sweep-for-drift-class pattern. Watch for 2nd trigger.
+- **PR #3747 deferred item** — backfill migration/command for existing drift rows (S3030 primary candidate).
 
-### Carried from S3027 (STATUS PRESERVED)
+### Carried from S3028 (STATUS UPDATED)
 
-- **No new folds** — S3027 session shipped cleanly.
+- **S3028 Fold A** — **FULLY RESOLVED** across all 6 paths (was 5 known; +1 via S3029 A2 sweep).
+- **S3028 Fold B** — folded into S3029 Fold B (same content).
 
 ### Carried from S3026 (STATUS PRESERVED)
 
-- **S3026 Fold A `1st trigger`** — fold descriptions should be backed by minimal failing test or stacktrace. S3027 + S3028 both clean-executed → additional counter-evidence.
-- **S3026 Fold B `informational`** — 2 spec-invalidations in one session. S3028 didn't spec-invalidate but did scope-expand 2×; distinct signal. Watch signal for 3rd trigger stays open through S3031.
+- **S3026 Fold A `1st trigger`** — fold descriptions backed by evidence. S3029 A2-zoom-out sweep = supporting evidence.
+- **S3026 Fold B `informational`** — spec-invalidation watch.
 - **S3026 Fold C `informational`** — `learning_reason` bare-string typing.
 - **Design-arc candidate** — KnowledgeTransfer model realignment.
 
@@ -110,7 +112,7 @@ Full context:
 - **S3023 Fold D `1st trigger`** — U4-H tests ratify current status/lifecycle contract.
 - **Decision lifecycle parity (Rigby A1 zoom-out standing carry)** — HAI vs ADS lifecycle families.
 
-### Carried from S3022 / S3021 / S3020 / S3019 / S3018 / older — all preserved from S3027 close 00-START.
+### Carried from S3022 / S3021 / S3020 / S3019 / S3018 / older — all preserved from S3028 close 00-START.
 
 ---
 
@@ -118,19 +120,19 @@ Full context:
 
 - **Constitutional governance chain:** CLAUDE.md Playbook v0.10.0. No amendments this session.
 - **ADR corpus:** ADR-0001 through ADR-0008.
-- **Spec→ship contract:** PLAYBOOK-7.7.1. **1× Flow B spec→ship** with A1 REVISE requiring scope expansion (Chris's ~30 min slice → 2× larger deliverable + 3 silent-site fixes). Delivered same-PR + follow-up PR for A2 REVISE.
-- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **3× substantive Rigby SIGN cycles. Zero rubber-stamp. 20 sessions continuous.**
-- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Chris routing: session-open directive "continue on with extending the S3027 helper" ratified S3028 primary. Scope expansion handled Claude+Rigby-side.
-- **Recycle discipline (PLAYBOOK-7.4.4):** `make recycle-all` once post-PR-3743 merge (`sha=4c9939484b23`). PR #3744 was docstring-only.
-- **Fold classification (PLAYBOOK-6.10.8):** 2 new folds. Fold A `1st trigger`, Fold B `informational`.
-- **Verify-before-build (Cycle 1A):** **13th consecutive session** — Cycle 1A grep sweep discovered the 3-silent-sites reality before any code was written.
+- **Spec→ship contract:** PLAYBOOK-7.7.1. **2× Flow B spec→ship** (PR #3746 planned; PR #3747 discovered via A2 zoom-out sweep + shipped same-session).
+- **SIGN evidence discipline:** PLAYBOOK-7.7.2. **3× substantive Rigby SIGN cycles. Zero rubber-stamp. 21 sessions continuous.**
+- **Chris-facing decision framing:** PLAYBOOK-7.7.3. Chris routing: session-open directive "Lets keep going please" continuing the S3026-S3029 arc.
+- **Recycle discipline (PLAYBOOK-7.4.4):** `make recycle-all` twice (once per PR).
+- **Fold classification (PLAYBOOK-6.10.8):** 3 folds. Fold A + B `informational`, Fold C `1st trigger`.
+- **Verify-before-build (Cycle 1A):** **14th consecutive session** — Rigby A2 zoom-out sweep caught adjacent silent bug.
 
 ---
 
 ## Wrapper pin note
 
-The active PA conversation pin at S3028 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
+The active PA conversation pin at S3029 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
 
 ---
 
-**Reminder — the workflow is constitutional. S3028 executed the last major broadcast-side wiring in the S3026 → S3028 arc: canonical-promotion event now fires on all 5 promotion paths (2 view + 3 service) with byte-identical shape. Chris's ~30 min slice became a 2×-larger PR because verify-before-build discovered scope was 3× wider than the directive named — Rigby A1 REVISE approved the expansion because half-fixing would recreate the drift the arc has been closing. S3029 opens with mutation-style convergence (S3028 Fold A) as joint recommendation (~30 min, closes the last drift axis in the promotion surface) or `did_promote` idempotency (~30 min, closes S3028 Fold B).**
+**Reminder — the workflow is constitutional. S3029 executed the S3028 Fold A convergence cleanly, then Rigby's A2 zoom-out sweep discovered a 4th silent site (data-integrity breach in a scheduled Celery task) which shipped as PR #3747 same-session. All 6 canonical-promotion paths now converged on the model method + broadcast. S3030 opens with the backfill migration for existing drift rows as joint recommendation — Rigby explicitly deferred this from PR #3747, and it's the last known residue of the S3026-S3029 arc.**
