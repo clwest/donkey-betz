@@ -106,7 +106,8 @@ class BulkPromoteBroadcastTests(TestCase):
             outer = json.loads(payload)
             self.assertEqual(outer["type"], "canonical_policy_created")
             event = outer["data"]
-            self.assertEqual(event["schema_version"], 1)
+            # S3036: bumped 1→2 to signal presence of `actor` field.
+            self.assertEqual(event["schema_version"], 2)
             self.assertEqual(event["type"], "canonical_decision_promoted")
             self.assertIn("participants", event)
             self.assertIn("agents_involved", event)
@@ -176,9 +177,13 @@ class BulkPromoteBroadcastTests(TestCase):
         # Event key set identical (drift-guard).
         self.assertEqual(set(single_event.keys()), set(bulk_event.keys()))
 
-        # Every field EXCEPT timestamp + decision_id + topic (which vary by
-        # design across rows) matches between single and bulk.
-        stable_fields = set(single_event.keys()) - {"timestamp", "decision_id", "topic"}
+        # Every field EXCEPT timestamp + decision_id + topic + actor (which
+        # vary by design across rows/callers — actor added S3036, differs
+        # by design between single='human' and bulk='human-bulk') matches
+        # between single and bulk.
+        stable_fields = set(single_event.keys()) - {
+            "timestamp", "decision_id", "topic", "actor",
+        }
         for field in stable_fields:
             self.assertEqual(
                 single_event[field],
@@ -186,6 +191,9 @@ class BulkPromoteBroadcastTests(TestCase):
                 f"Field '{field}' drifted between single/bulk broadcast: "
                 f"single={single_event[field]!r} bulk={bulk_event[field]!r}",
             )
+        # S3036: verify actor DOES differentiate by design.
+        self.assertEqual(single_event["actor"], "human")
+        self.assertEqual(bulk_event["actor"], "human-bulk")
 
     def test_bulk_promote_response_includes_broadcast_counts(self) -> None:
         """Response contract: `broadcasts_succeeded` + `broadcasts_failed`

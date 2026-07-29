@@ -71,7 +71,8 @@ class PromotionHelperLpushRingTest(TestCase):
         self.assertEqual(key, 'canonical_decisions:recent')
         event = json.loads(value_str)
         self.assertEqual(event['type'], 'canonical_decision_promoted')
-        self.assertEqual(event['schema_version'], 1)
+        # S3036: bumped 1→2 to signal presence of `actor` field.
+        self.assertEqual(event['schema_version'], 2)
         self.assertEqual(event['decision_id'], str(row.id))
         self.assertEqual(event['topic'], row.topic)
 
@@ -101,7 +102,8 @@ class RejectionHelperLpushRingTest(TestCase):
         self.assertEqual(key, 'canonical_decisions:recent')
         event = json.loads(value_str)
         self.assertEqual(event['type'], 'canonical_decision_rejected')
-        self.assertEqual(event['schema_version'], 1)
+        # S3036: bumped 1→2 to signal presence of `actor` field.
+        self.assertEqual(event['schema_version'], 2)
         self.assertEqual(event['decision_id'], str(row.id))
 
         self.assertEqual(mock_client.ltrim.call_count, 1)

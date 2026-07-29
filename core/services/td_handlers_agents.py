@@ -6052,9 +6052,10 @@ class AgentHandlersMixin:
             # Best-effort; never fails the promotion.
             if did_promote:
                 from core.services.canonical_decision_broadcast import (
+                    ACTOR_PA_TOOL,
                     emit_canonical_promotion_broadcast,
                 )
-                emit_canonical_promotion_broadcast(decision)
+                emit_canonical_promotion_broadcast(decision, actor=ACTOR_PA_TOOL)
 
             # Session 940: Record for learning
             if user_id:
@@ -6099,11 +6100,12 @@ class AgentHandlersMixin:
             # with promote_decision. did_reject gates the emit so racing
             # paths don't double-broadcast.
             from core.services.canonical_decision_broadcast import (
+                ACTOR_PA_TOOL,
                 emit_canonical_rejection_broadcast,
             )
             did_reject = decision.reject(rejected_by='pa')
             if did_reject:
-                emit_canonical_rejection_broadcast(decision)
+                emit_canonical_rejection_broadcast(decision, actor=ACTOR_PA_TOOL)
 
             # Session 940: Record for learning
             if user_id:

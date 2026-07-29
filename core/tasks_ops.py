@@ -255,6 +255,7 @@ def _impl_auto_approve_boardroom_items():
         # decision_type. Broadcast stays OUTSIDE atomic (best-effort).
         from django.db import transaction
         from core.services.canonical_decision_broadcast import (
+            ACTOR_OPS_TASK,
             emit_canonical_promotion_broadcast,
         )
 
@@ -306,7 +307,7 @@ def _impl_auto_approve_boardroom_items():
             for promoted_id in promoted_ids:
                 try:
                     decision = AgentDecisionSummary.objects.get(id=promoted_id)
-                    emit_canonical_promotion_broadcast(decision)
+                    emit_canonical_promotion_broadcast(decision, actor=ACTOR_OPS_TASK)
                 except Exception as e:
                     logger.warning(
                         f"✅ [BOARDROOM-AUTO-APPROVE] {dtype} broadcast lookup failed for {promoted_id}: {e}"

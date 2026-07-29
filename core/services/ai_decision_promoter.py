@@ -200,9 +200,10 @@ or
         # (or roll back) promotion. Helper is best-effort.
         if did_promote:
             from core.services.canonical_decision_broadcast import (
+                ACTOR_AI_PROMOTER,
                 emit_canonical_promotion_broadcast,
             )
-            emit_canonical_promotion_broadcast(decision)
+            emit_canonical_promotion_broadcast(decision, actor=ACTOR_AI_PROMOTER)
         return True
 
     def run_batch_promotion(
