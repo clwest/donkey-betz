@@ -2109,6 +2109,89 @@ def get_system_health(request):
 # best-effort contract.
 
 
+# S3035: Boardroom Lifecycle Activity — bounded ring buffer + counters for UI.
+#
+# Reads the `canonical_decisions:recent` Redis LIST (populated by both emit
+# helpers in `core/services/canonical_decision_broadcast.py`; capped at 20 via
+# LTRIM in the helper). Also surfaces the `canonical_decisions:total` and
+# `canonical_decisions:rejected_total` counters incremented by the same
+# helpers. Redis-down → empty events + 0 counters + success:True (best-effort
+# read matches best-effort write). Non-authoritative — for audit query
+# AgentDecisionSummary directly.
+@require_http_methods(["GET"])
+def get_lifecycle_activity(request):
+    """S3035: Recent canonical-lifecycle activity + counters for BoardroomTab UI.
+
+    GET /api/boardroom/lifecycle-activity/
+
+    Returns:
+    {
+        "success": true,
+        "counters": {"promoted_total": int, "rejected_total": int},
+        "events": [event_dict, ...]  // newest-first, last 20
+    }
+
+    Each event dict mirrors the payload emitted to Redis PubSub
+    'agent_learning' by the promotion/rejection helpers: schema_version,
+    type ('canonical_decision_promoted' or 'canonical_decision_rejected'),
+    timestamp, decision_id, topic, decision_type, summary, participants,
+    agents_involved (S657 back-compat alias).
+
+    Non-authoritative bounded ring — for audit query AgentDecisionSummary
+    directly. Populated by ALL production callers of the emit helpers, not
+    just boardroom mutation endpoints (AI-service auto-promotions, ops-task
+    auto-approvals, PA-tool actions all appear).
+
+    Response includes a `degraded: bool` flag (S3035 A2 fold — Rigby zoom-
+    out ask): True iff the Redis read raised, so the UI can distinguish
+    "no recent activity" (feed empty on the merits) from "Redis down"
+    (feed temporarily unavailable).
+    """
+    err = _require_boardroom_staff(request)
+    if err is not None:
+        return err
+
+    import os
+    import redis
+
+    counters = {'promoted_total': 0, 'rejected_total': 0}
+    events: list = []
+    degraded = False
+
+    try:
+        r = redis.Redis.from_url(
+            os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+        )
+        promoted_raw = r.get('canonical_decisions:total')
+        rejected_raw = r.get('canonical_decisions:rejected_total')
+        counters['promoted_total'] = int(promoted_raw) if promoted_raw else 0
+        counters['rejected_total'] = int(rejected_raw) if rejected_raw else 0
+
+        raw_events = r.lrange('canonical_decisions:recent', 0, 19) or []
+        for raw in raw_events:
+            try:
+                events.append(json.loads(raw))
+            except (ValueError, TypeError) as decode_err:
+                logger.warning(
+                    "[S3035] Skipping malformed ring entry: %s",
+                    decode_err,
+                )
+    except Exception as redis_err:
+        logger.warning(
+            "[S3035] Redis lifecycle-activity read failed: %s",
+            redis_err,
+        )
+        degraded = True
+        # Fall through with empty defaults — best-effort read.
+
+    return JsonResponse({
+        'success': True,
+        'degraded': degraded,
+        'counters': counters,
+        'events': events,
+    })
+
+
 # S2785 Fold 4 decision-approve audit — staff-only helper for /api/boardroom/*
 # endpoints. Preserves the S887 Token auth codepath (session + Token both
 # supported) while adding the S2772 N16 staff-only gate. Returns None when

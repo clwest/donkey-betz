@@ -597,6 +597,8 @@ export const decisionsApi = {
   bulkReject: (decisionIds: string[]) => api.post('/boardroom/decisions/bulk-reject/', { decision_ids: decisionIds }),
   // Session 1067: Governance stats for full-page view
   governanceStats: () => api.get('/boardroom/governance-stats/'),
+  // S3035: recent canonical-lifecycle activity (counters + last 20 events)
+  lifecycleActivity: () => api.get('/boardroom/lifecycle-activity/'),
 }
 
 // Session 710: Body Health Dashboard API
