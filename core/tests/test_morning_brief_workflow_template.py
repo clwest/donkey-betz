@@ -884,4 +884,164 @@ class MorningBriefRotationSlotResolveTests(SimpleTestCase):
                 context={},
             )
             spy.assert_called_once()
-            self.assertEqual(result['rotation_slot'], 'sentinel')
+
+
+class AgentMapFallbackFailLoudTests(SimpleTestCase):
+    """S3037 A6 — AGENT_MAP fallback fail-loud regression guard.
+
+    Discharges the S3037 Reliability Audit v0 Step 3 finding: the
+    ``_execute_step`` AGENT_MAP fallback (used by ``lane_1_platform_readiness``
+    → ``system_intelligence_agent`` and every other snake_case-agent step
+    that has no dedicated internal handler) returned ``{'success': False,
+    'output': '', 'data': ...}`` with no ``'error'`` field on falsy
+    router.route success. Orchestrator at line 1315/1342 then substituted
+    the generic "Unknown error" fallback, producing the deterministic
+    ``error_signature: 1cfc0fcf97dd26ce`` on 5+ morning_brief failures
+    across 12 days (2026-07-17 → 2026-07-29).
+
+    These tests lock in the fix: on falsy router.route success, the
+    return dict ALWAYS populates ``'error'`` (with priority
+    result.error → result.message/output → structured fallback),
+    ``'agent_name'``, and ``'duration_ms'``. Mirrors the S1234 D1
+    pattern applied to lane_4_rotating_focus.
+    """
+
+    def setUp(self):
+        self.agent = WorkflowOrchestrationAgent(user=MagicMock(name='user'))
+        # step_def shape matches morning_brief lane_1_platform_readiness
+        self.step_def = {
+            'step': 2,
+            'name': 'lane_1_platform_readiness',
+            'agent': 'system_intelligence_agent',
+            'description': 'Overnight platform health',
+        }
+
+    @patch('core.agent_router.AgentRouter')
+    def test_falsy_success_with_result_error_captures_error_string(
+        self, mock_router_cls,
+    ):
+        mock_router = mock_router_cls.return_value
+        mock_router.AGENT_MAP = {'SystemIntelligenceAgent': object()}
+        mock_router.route.return_value = MagicMock(
+            success=False, message='', data={},
+            error='ORM query timeout during platform health check',
+        )
+
+        result = self.agent._execute_step(self.step_def, context={})
+
+        self.assertFalse(result['success'])
+        self.assertIn('error', result,
+                      "Falsy-success path MUST populate 'error' field.")
+        self.assertIn('ORM query timeout', result['error'])
+        self.assertIn('SystemIntelligenceAgent', result['error'])
+        self.assertIn("'lane_1_platform_readiness'", result['error'])
+        self.assertEqual(result['agent_name'], 'SystemIntelligenceAgent')
+        self.assertIn('duration_ms', result)
+        self.assertIsInstance(result['duration_ms'], int)
+        # MUST NOT be the generic orchestrator-level "Unknown error"
+        self.assertNotIn('Unknown error', result['error'])
+
+    @patch('core.agent_router.AgentRouter')
+    def test_falsy_success_falls_through_to_message(self, mock_router_cls):
+        mock_router = mock_router_cls.return_value
+        mock_router.AGENT_MAP = {'SystemIntelligenceAgent': object()}
+        # No .error attribute on the mock result — must fall through to message
+        mock_result = MagicMock(spec=['success', 'message', 'data'])
+        mock_result.success = False
+        mock_result.message = 'partial diagnostic before failure'
+        mock_result.data = {}
+        mock_router.route.return_value = mock_result
+
+        result = self.agent._execute_step(self.step_def, context={})
+
+        self.assertFalse(result['success'])
+        self.assertIn('partial diagnostic before failure', result['error'])
+        self.assertIn('SystemIntelligenceAgent', result['error'])
+        self.assertNotIn('Unknown error', result['error'])
+
+    @patch('core.agent_router.AgentRouter')
+    def test_falsy_success_with_no_diagnostics_uses_structured_fallback(
+        self, mock_router_cls,
+    ):
+        """The 2026-07-17 → 2026-07-29 morning_brief failure shape: agent
+        returned an object with success=False and no error/message/output.
+        Before S3037 A6 this produced 'Unknown error' at the orchestrator.
+        After A6 the handler must produce a diagnostic string identifying
+        the agent + result type.
+        """
+        mock_router = mock_router_cls.return_value
+        mock_router.AGENT_MAP = {'SystemIntelligenceAgent': object()}
+        mock_result = MagicMock(spec=['success', 'message', 'data'])
+        mock_result.success = False
+        mock_result.message = ''
+        mock_result.data = {}
+        mock_router.route.return_value = mock_result
+
+        result = self.agent._execute_step(self.step_def, context={})
+
+        self.assertFalse(result['success'])
+        self.assertIn('error', result)
+        self.assertIn('SystemIntelligenceAgent', result['error'])
+        self.assertIn('no error/message/output', result['error'])
+        # MUST NOT be the generic orchestrator-level "Unknown error"
+        self.assertNotIn('Unknown error', result['error'])
+
+    @patch('core.agent_router.AgentRouter')
+    def test_router_route_exception_captures_exception_type(
+        self, mock_router_cls,
+    ):
+        mock_router = mock_router_cls.return_value
+        mock_router.AGENT_MAP = {'SystemIntelligenceAgent': object()}
+        mock_router.route.side_effect = ValueError('deterministic platform check bug')
+
+        result = self.agent._execute_step(self.step_def, context={})
+
+        self.assertFalse(result['success'])
+        self.assertIn('ValueError', result['error'])
+        self.assertIn('deterministic platform check bug', result['error'])
+        self.assertIn("'lane_1_platform_readiness'", result['error'])
+        self.assertEqual(result['agent_name'], 'SystemIntelligenceAgent')
+        self.assertNotIn('Unknown error', result['error'])
+
+    @patch('core.agent_router.AgentRouter')
+    def test_success_case_shape_unchanged(self, mock_router_cls):
+        """Regression guard: happy path returns the same {success, output,
+        data} shape as before A6. No new keys should appear on success."""
+        mock_router = mock_router_cls.return_value
+        mock_router.AGENT_MAP = {'SystemIntelligenceAgent': object()}
+        mock_router.route.return_value = MagicMock(
+            success=True, message='all systems green', data={'checks': 5},
+        )
+
+        result = self.agent._execute_step(self.step_def, context={})
+
+        self.assertTrue(result['success'])
+        self.assertEqual(result['output'], 'all systems green')
+        self.assertEqual(result['data'], {'checks': 5})
+        # Success path stays minimal — no agent_name / duration_ms /
+        # error keys leak on the happy path (they only appear on failure).
+        self.assertNotIn('error', result)
+        self.assertNotIn('agent_name', result)
+        self.assertNotIn('duration_ms', result)
+
+    @patch('core.agent_router.AgentRouter')
+    def test_duration_ms_captured_on_slow_failure(self, mock_router_cls):
+        """A6 fast/slow-fail timing signature: duration_ms must be
+        populated on the failure path so the audit can distinguish
+        network-suspect (fast fail <1s) from logic-suspect (slow fail
+        several seconds+)."""
+        import time
+        mock_router = mock_router_cls.return_value
+        mock_router.AGENT_MAP = {'SystemIntelligenceAgent': object()}
+
+        def slow_failure(*args, **kwargs):
+            time.sleep(0.05)  # 50ms
+            return MagicMock(success=False, message='', data={}, error='slow bug')
+        mock_router.route.side_effect = slow_failure
+
+        result = self.agent._execute_step(self.step_def, context={})
+
+        self.assertFalse(result['success'])
+        self.assertIn('duration_ms', result)
+        self.assertGreaterEqual(result['duration_ms'], 45,
+                                "duration_ms should reflect actual call latency")

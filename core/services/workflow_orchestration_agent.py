@@ -1502,26 +1502,65 @@ class WorkflowOrchestrationAgent(BaseContentAgent):
                 }
             try:
                 step_task = step_def.get('description', '') or step_def.get('name', '')
+                import time as _time
+                _dispatch_start = _time.monotonic()
                 result = router.route(pascal_name, step_task, context or {})
+                duration_ms = int((_time.monotonic() - _dispatch_start) * 1000)
                 # AgentResult → dict shape matching the other handlers
+                success = bool(getattr(result, 'success', False))
+                output = getattr(result, 'message', '') or ''
+                data = getattr(result, 'data', {}) or {}
+                if success:
+                    return {
+                        'success': True,
+                        'output': output,
+                        'data': data,
+                    }
+                # S3037 A6 fail-loud: mirror the S1234 D1 lane_4 fix onto the
+                # AGENT_MAP fallback path. Before this fix, falsy result.success
+                # returned {'success': False, 'output': '', 'data': ...} with no
+                # 'error' field — orchestrator at line 1315/1342 then substituted
+                # the generic "Unknown error" fallback. That produced the
+                # deterministic error_signature 1cfc0fcf97dd26ce on 5+ morning_brief
+                # failures across 12 days (see S3037 Reliability Audit v0 Step 3,
+                # deliverable ce9ca37b-c544-4672-be9f-5b29e14aa59d).
+                # Priority for error text: explicit .error → .message/output →
+                # structured fallback identifying agent + result type.
+                error_detail = (
+                    getattr(result, 'error', None)
+                    or (output if output else None)
+                    or (
+                        f"agent {pascal_name!r} returned success=False with no "
+                        f"error/message/output (result type={type(result).__name__})"
+                    )
+                )
                 return {
-                    'success': bool(getattr(result, 'success', False)),
-                    'output': getattr(result, 'message', '') or '',
-                    'data': getattr(result, 'data', {}) or {},
+                    'success': False,
+                    'output': output,
+                    'data': data,
+                    'error': (
+                        f"AGENT_MAP dispatch: {pascal_name} reported failure "
+                        f"for step {step_name!r} (duration_ms={duration_ms}): "
+                        f"{error_detail}"
+                    ),
+                    'agent_name': pascal_name,
+                    'duration_ms': duration_ms,
                 }
             except Exception as e:
                 logger.error(
                     "AGENT_MAP fallback dispatch failed for workflow step "
                     "agent='%s' → '%s': %s",
                     agent_name, pascal_name, e,
+                    exc_info=True,
                 )
                 return {
                     'success': False,
                     'error': (
                         f"AGENT_MAP fallback dispatch failed for "
-                        f"'{agent_name}' (→ '{pascal_name}'): "
-                        f"{type(e).__name__}: {e}"
+                        f"'{agent_name}' (→ '{pascal_name}') on step "
+                        f"{step_name!r}: {type(e).__name__}: {e}"
                     ),
+                    'agent_name': pascal_name,
                 }
 
     def _execute_web_search_step(self, context: Dict) -> Dict[str, Any]:
