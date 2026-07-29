@@ -240,29 +240,69 @@ def _impl_auto_approve_boardroom_items():
         )
         stats['stale_catchall_resolved'] = stale_any.update(status='auto_resolved', decided_at=now)
 
-        # 5. Auto-promote experiment decisions
-        stats['experiments_promoted'] = AgentDecisionSummary.objects.filter(
-            status='draft',
-            decision_type='experiment'
-        ).update(status='canonical')
+        # S3029 (PR #3747, S3028 Fold A follow-up): auto-promote decisions
+        # now uses the model method + per-row broadcast, matching the other
+        # 5 promotion paths (single view, bulk view, PA handler, AI service,
+        # Rules service). The prior `.update(status='canonical')` bulk-QuerySet
+        # calls bypassed model save/signals, leaving is_canonical=False,
+        # promoted_at=NULL, promoted_by=NULL — a data-integrity breach in
+        # addition to the silent broadcast. Backfill for existing drift rows
+        # is deferred to S3030.
+        #
+        # Per Rigby A1 REVISE: per-row loop (don't reintroduce mutation drift
+        # via a bulk-update-4-fields shortcut). Tight filter EXCLUDES rows
+        # already canonicalized correctly to bound N. Single atomic per
+        # decision_type. Broadcast stays OUTSIDE atomic (best-effort).
+        from django.db import transaction
+        from core.services.canonical_decision_broadcast import (
+            emit_canonical_promotion_broadcast,
+        )
 
-        # 6. Auto-promote pipeline decisions
-        stats['pipelines_promoted'] = AgentDecisionSummary.objects.filter(
-            status='draft',
-            decision_type='pipeline'
-        ).update(status='canonical')
+        _AUTO_PROMOTE_TYPES = ['experiment', 'pipeline', 'research', 'guideline']
+        _STATS_KEY = {
+            'experiment': 'experiments_promoted',
+            'pipeline': 'pipelines_promoted',
+            'research': 'research_promoted',
+            'guideline': 'guidelines_promoted',
+        }
 
-        # 7. Session 977: Auto-promote research decisions (informational)
-        stats['research_promoted'] = AgentDecisionSummary.objects.filter(
-            status='draft',
-            decision_type='research'
-        ).update(status='canonical')
+        for dtype in _AUTO_PROMOTE_TYPES:
+            # Tight filter (Rigby A1 REVISE): only draft rows of this type.
+            # Bounded queryset; caller task runs on a schedule so N per run
+            # is naturally small.
+            candidates = list(
+                AgentDecisionSummary.objects.filter(
+                    status='draft',
+                    decision_type=dtype,
+                ).only('id')
+            )
+            promoted_count = 0
+            promoted_ids = []
+            try:
+                with transaction.atomic():
+                    for row in candidates:
+                        # Re-fetch inside atomic to get the full instance;
+                        # only() above was just for the id list bounding.
+                        decision = AgentDecisionSummary.objects.get(id=row.id)
+                        decision.promote_to_canonical(promoted_by='system-auto-approve')
+                        promoted_count += 1
+                        promoted_ids.append(decision.id)
+            except Exception as e:
+                logger.warning(
+                    f"✅ [BOARDROOM-AUTO-APPROVE] {dtype} atomic promote failed: {e}"
+                )
+            stats[_STATS_KEY[dtype]] = promoted_count
 
-        # 8. Session 977: Auto-promote guideline decisions (advisory)
-        stats['guidelines_promoted'] = AgentDecisionSummary.objects.filter(
-            status='draft',
-            decision_type='guideline'
-        ).update(status='canonical')
+            # Broadcast per row OUTSIDE the atomic block — Redis-down must
+            # not roll back promotions. Best-effort; helper logs failures.
+            for promoted_id in promoted_ids:
+                try:
+                    decision = AgentDecisionSummary.objects.get(id=promoted_id)
+                    emit_canonical_promotion_broadcast(decision)
+                except Exception as e:
+                    logger.warning(
+                        f"✅ [BOARDROOM-AUTO-APPROVE] {dtype} broadcast lookup failed for {promoted_id}: {e}"
+                    )
 
         total = sum(stats.values())
         logger.info(f"✅ [BOARDROOM-AUTO-APPROVE] Complete - processed {total} items "
