@@ -1,13 +1,13 @@
 ---
 title: "Donkey Betz Engineering Playbook"
-version: "0.10.0"
+version: "0.11.0"
 version_status: ratified
 scope: platform
-parent_version: "0.9.0"
+parent_version: "0.10.0"
 supersedes: []
-compatible_with: ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.4.1", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0"]
+compatible_with: ["0.1.0", "0.2.0", "0.3.0", "0.4.0", "0.4.1", "0.5.0", "0.6.0", "0.7.0", "0.8.0", "0.9.0", "0.10.0"]
 ratifier: chris
-ratified_date: 2026-07-26
+ratified_date: 2026-07-28
 ratification_record:
   workspace_id: a9a16593-e0a4-44dc-8256-efc65d524b3c
   deliverable_id: PLACEHOLDER_FILLED_AT_RATIFICATION
@@ -16,16 +16,16 @@ repository_path: docs/ENGINEERING_PLAYBOOK.md
 branch_authored: playbook/v0.10.0-workflow-shape-codification
 commit_sha: PLACEHOLDER_FILLED_AT_MERGE
 content_hash: PLACEHOLDER_FILLED_AT_MERGE
-git_tag: playbook-v0.10.0
+git_tag: playbook-v0.11.0
 schema_version: 1
 prior_ratification:
-  version: "0.9.0"
-  ratified_date: 2026-07-22
+  version: "0.10.0"
+  ratified_date: 2026-07-26
   deliverable_id: PLACEHOLDER_FILLED_AT_RATIFICATION
   commit_sha: PLACEHOLDER_FILLED_AT_MERGE
   content_hash: PLACEHOLDER_FILLED_AT_MERGE
-  git_tag: playbook-v0.9.0
-authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740, 2742, 2752, 2753, 2766, 2778, 2786, 2889, 2981]
+  git_tag: playbook-v0.10.0
+authoring_sessions: [2716, 2718, 2719, 2720, 2721, 2736, 2738, 2740, 2742, 2752, 2753, 2766, 2778, 2786, 2889, 2981, 3033]
 correction_sessions: [2723, 2725, 2727]
 audit_sessions: [2722, 2724, 2725, 2727, 2738, 2740, 2742, 2752]
 ratification_package_session: 2726
@@ -51,7 +51,9 @@ v0_9_0_authoring_session: 2889
 v0_9_0_ratification_session: 2889
 v0_10_0_authoring_session: 2981
 v0_10_0_ratification_session: 2981
-rule_count: 211
+v0_11_0_authoring_session: 3033
+v0_11_0_ratification_session: 3033
+rule_count: 212
 rules_added_v0_2_0: [PLAYBOOK-5.2.2, PLAYBOOK-2.2.2, PLAYBOOK-3.2.2]
 rules_added_v0_3_0: [PLAYBOOK-6.6.14, PLAYBOOK-6.10.5]
 rules_added_v0_4_0: [PLAYBOOK-6.10.6]
@@ -61,10 +63,11 @@ rules_added_v0_7_0: [PLAYBOOK-6.10.7, PLAYBOOK-6.10.8]
 rules_added_v0_8_0: [PLAYBOOK-6.10.9]
 rules_added_v0_9_0: [PLAYBOOK-3.2.3, PLAYBOOK-3.2.4]
 rules_added_v0_10_0: [PLAYBOOK-7.7.1, PLAYBOOK-7.7.2, PLAYBOOK-7.7.3, PLAYBOOK-7.7.4]
+rules_added_v0_11_0: [PLAYBOOK-7.7.5]
 evidence_manifest: docs/research/platform/engineering_playbook_evidence_manifest.md
 ---
 
-# Donkey Betz Engineering Playbook v0.10.0
+# Donkey Betz Engineering Playbook v0.11.0
 
 # Chapter 0 — Preamble and How to Read This Playbook
 
@@ -969,12 +972,12 @@ The following extension points are informative. They identify where a future MIN
 **Chapter ID:** PLAYBOOK-CH-7
 **Purpose:** Establish constitutional scope for session-open and session-close discipline as it applies to Playbook authoring sessions.
 **Scope:** Every Playbook-authoring session; session-open orientation; session-close handoff production; cascade sequencing at session boundaries.
-**Status:** STUB (v0.1). Partial activation at v0.5.0 (§7.4/§7.5/§7.6 authored); §7.4 extended at v0.6.0 with PLAYBOOK-7.4.4; §7.7 authored at v0.10.0 (spec→ship workflow shape codification); remainder deferred to future MINOR amendments.
+**Status:** STUB (v0.1). Partial activation at v0.5.0 (§7.4/§7.5/§7.6 authored); §7.4 extended at v0.6.0 with PLAYBOOK-7.4.4; §7.7 authored at v0.10.0 (spec→ship workflow shape codification); §7.7 extended at v0.11.0 with PLAYBOOK-7.7.5 (class-scoped mandatory A2 sweep for drift/hardening intents); remainder deferred to future MINOR amendments.
 **Introduced in:** v0.1.0
-**Last substantive change:** v0.10.0
+**Last substantive change:** v0.11.0
 **Evidence anchor:** `docs/research/platform/engineering_playbook_evidence_manifest.md`
 **Statement classes present:** [EP], [GR]
-**Rule ID range:** PLAYBOOK-7.1.1 through PLAYBOOK-7.7.4
+**Rule ID range:** PLAYBOOK-7.1.1 through PLAYBOOK-7.7.5
 
 ---
 
@@ -1028,6 +1031,8 @@ SIGN methodology is inherited from the Research Operating System per PLAYBOOK-6.
 
 **[GR] PLAYBOOK-7.7.4** When the spec→ship contract is applied to a repository other than `unified-donkey-betz`, Phase 0 MUST detect the target repo's context-kit substrate: run `context-kit orient` and confirm `.context-kit/verify.yaml` exists at repo root. If either check fails, the first Phase-0 action MUST be `context-kit adopt` (dry-run default → review → `--write`). Verification in the target repo is layered: Layer 1 (context-kit primitives — `verify.yaml` + `context-kit verify` + `context-kit inventory --check` + `context-kit orient` + `context-kit inspect`) is the authoritative surface for documentation and inventory drift and MUST be treated as ground truth when doc claims disagree with runtime-derived facts. Layer 2 (repo-local unit tests, `http_smoke_test`, ops-tool checks, ORM shell probes, browser smokes) is the authoritative surface for runtime behavior verification and MUST NOT be substituted by Layer 1; Layer 1 does not verify runtime behavior. Every finding cited in a T1 or A2 SIGN routing MUST tag its verification surface as one of Layer 1, Layer 2, or Claude-local-shell (the last reserved for verifier-tool-inaccessible surfaces such as local CLI binaries). [E5: workspace deliverable `e8429049-300f-4725-8d02-a79c285ed720` §"Repo repointing — context-kit adapter contract (scalability) [REPLACEMENT]" (ratified 2026-07-26 S2981); E5: `.context-kit/verify.yaml` (canonical-docs contract file at repo root, 353 bytes, canonical_docs = 5); E5: `context-kit` CLI at `/Users/donkeyking/.local/bin/context-kit` (Claude-local-shell verified at S2981 — subcommands `orient`, `verify`, `inventory --write|--check|--json`, `adopt` (dry-run default; `--write` to apply), `inspect`, `doctor`)]
 
+**[GR] PLAYBOOK-7.7.5** When a spec→ship contract's T1 plan (per PLAYBOOK-7.7.1 Phase 2) declares its Substantive Intent as either (a) *drift-class closure* — restoring an invariant that a bug, race, or pattern has been silently violating — or (b) *hardening-class* — tightening a contract to eliminate a race, missing gate, or edge-case violation of an invariant — the Phase 2 plan MUST name the *shape signature* being closed: an exact query predicate, ORM filter, function name, decorator, or field invariant sufficient for a mechanical repo-wide sweep. The Phase 7 A2 SIGN routing MUST include a repo-wide zoom-out sweep enumerating, at minimum: (i) other production sites of the same shape signature (via grep/AST/ORM query for the exact shape named in the Phase 2 plan); (ii) adjacent classes with structurally similar risk, bounded to *same table/model OR same workflow stage OR same consumer boundary* — the reviewer MUST state inline which axis applies; (iii) downstream consumers of the changed invariant that would silently miss or misinterpret rows if the sweep leaves any site unclosed; (iv) tests that lock in the old behavior and would fail-in-reverse if the invariant is genuinely restored. The (i)–(iv) enumeration is a MINIMUM floor; additional sweep dimensions warranted by the specific class MAY be added. The sweep MUST be executed via `tool_runs` per PLAYBOOK-7.7.2 and its enumeration MUST appear inline in the A2 SIGN attestation. A "clean" sweep — zero findings across (i)–(iv) plus any added dimensions — satisfies the rule as tool-grounded evidence of class closure; a clean sweep is a first-class outcome, not a null result. A sweep that finds ≥1 previously-unknown site MUST fold back to Phase 6 for either same-PR incorporation (when the finding is within the current PR's scope per PLAYBOOK-6.10.8 `same_pr_actionable` / `same_pr_mitigatable`) OR forward-carry with a named trigger condition (`future_trigger`). This rule EXTENDS PLAYBOOK-7.7.2 (SIGN evidence discipline) with a class-scoped mandatory-sweep contract for the specific T1-declared intents of drift closure and hardening; it EXTENDS PLAYBOOK-6.10.7 (joint SIGN zoom-out ask) by promoting the zoom-out from open-ended prompt to enumerated-dimension sweep when the class-triggering conditions are met. [E4: commit `d0841a0f6` (S3029 PR #3747 — 1st trigger DISCOVERY: A2 zoom-out sweep of `.update(status='canonical')` discovered the 4th silent site in `core/tasks_ops.py:_impl_auto_approve_boardroom_items` that PR #3746 missed); E4: commit `e7fc79282` (S3030 PR #3749 — 2nd cycle CLEAN: 7 `repo_tool` searches confirmed drift class closed at source, no adjacent-class hits, no filter-collision); E4: commit `d7bb28b4f` (S3031 PR #3751 — 3rd cycle CLEAN: 8 `repo_tool` searches confirmed no other callers of `promote_to_canonical`, no ungated broadcast callers, no downstream `updated_at`-dependent consumers); E6: `docs/handoffs/SESSION_3029_MUTATION_CONVERGENCE_AND_4TH_SITE_DISCOVERY.md` §Fold C (1st-trigger record); E6: `docs/handoffs/SESSION_3030_BACKFILL_CANONICAL_DRIFT.md` §Fold C (2nd-cycle no-discovery record); E6: `docs/handoffs/SESSION_3031_DID_PROMOTE_IDEMPOTENCY.md` §Fold C (3rd-cycle no-discovery record + ready-to-codify pressure elevated)]
+
 ## 7.8 Cross-references (informative)
 
 - `CLAUDE.md` — session-open contract at repository root.
@@ -1037,8 +1042,10 @@ SIGN methodology is inherited from the Research Operating System per PLAYBOOK-6.
 - Chapter Provenance and Evidence §6.10 (verification protocol) — PLAYBOOK-6.10.3 is the parent contract that §7.6.1 extends for the close-cycle scope.
 - Chapter Provenance and Evidence §6.10 — PLAYBOOK-6.10.9 is the parent contract that §7.7.2 extends for the SIGN-cycle verification scope.
 - Chapter PA / Rigby Collaboration §5.2 — PLAYBOOK-5.2.2 is the parent contract that §7.7.3 extends for the Chris-facing decision framing scope.
+- Chapter Provenance and Evidence §6.10 — PLAYBOOK-6.10.7 is the joint-SIGN zoom-out ask contract that §7.7.5 promotes to an enumerated-dimension sweep for drift/hardening intents; PLAYBOOK-6.10.8 supplies the fold classification/persistence mechanism that §7.7.5 fold-back invokes.
 - `docs/research/process/RESEARCH_OPERATING_SYSTEM.md` §2.7.1 — the ROS Rigby SIGN v2 fold that PLAYBOOK-6.10.3 inherits and §7.6.1 specializes.
 - Workspace deliverable `e8429049-300f-4725-8d02-a79c285ed720` — the S2980 workflow-shape source deliverable that §7.7 codifies.
+- Handoffs `docs/handoffs/SESSION_3029_*.md`, `SESSION_3030_*.md`, `SESSION_3031_*.md` §Fold C — the three-cycle in-wild corroboration corpus that §7.7.5 codifies.
 
 ## 7.9 Extension points (informative)
 
