@@ -245,6 +245,37 @@ class Command(BaseCommand):
                 "audit. Mutually exclusive with mirror-ID flags."
             ),
         )
+        # S3041 meta-fix — ledger reconciliation enforcement.
+        close_p.add_argument(
+            "--handoff",
+            default=None,
+            help=(
+                "Path to the session handoff to reconciliation-check. If "
+                "provided, any `Ledger #N` reference in the handoff must "
+                "have a matching `Ledger #N status flip` block in the "
+                "Rigby Tool Gap Ledger deliverable — otherwise close "
+                "refuses (unless --allow-ledger-drift is passed)."
+            ),
+        )
+        close_p.add_argument(
+            "--ledger-deliverable-id",
+            default=None,
+            help=(
+                "S3041 meta-fix: override the ledger deliverable UUID "
+                "checked by --handoff. Defaults to the Rigby Tool Gap "
+                "Ledger."
+            ),
+        )
+        close_p.add_argument(
+            "--allow-ledger-drift",
+            action="store_true",
+            help=(
+                "S3041 meta-fix escape hatch: report ledger drift but "
+                "allow close to proceed. Logged for audit. Use for "
+                "legitimate legacy-reference cases where the referenced "
+                "row is narrative context, not this-session work."
+            ),
+        )
 
     def handle(self, *args, **options):
         subcommand = options["subcommand"]
@@ -278,6 +309,9 @@ class Command(BaseCommand):
                 content_mirror_id=options.get("content_mirror_id"),
                 ratification_envelope_id=options.get("ratification_envelope_id"),
                 allow_no_mirror=bool(options.get("allow_no_mirror")),
+                handoff_path=options.get("handoff"),
+                ledger_deliverable_id=options.get("ledger_deliverable_id"),
+                allow_ledger_drift=bool(options.get("allow_ledger_drift")),
             )
 
     # ─────────────────────────── helpers ───────────────────────────── #
@@ -590,6 +624,9 @@ class Command(BaseCommand):
         content_mirror_id: Optional[str] = None,
         ratification_envelope_id: Optional[str] = None,
         allow_no_mirror: bool = False,
+        handoff_path: Optional[str] = None,
+        ledger_deliverable_id: Optional[str] = None,
+        allow_ledger_drift: bool = False,
     ):
         wrapper_text = self._read_wrapper(wrapper_path)
         current_pin = self._extract_current_pin(wrapper_text, wrapper_path)
@@ -616,6 +653,25 @@ class Command(BaseCommand):
                     allow_no_mirror=allow_no_mirror,
                 )
             except TwinMirrorEnforcementError as exc:
+                raise CommandError(str(exc)) from exc
+
+        # S3041 meta-fix: ledger reconciliation enforcement. Same pre-
+        # transaction placement as twin-mirror for clean rollback. Skipped
+        # for retire_only (no ratification). Silent no-op when --handoff
+        # is not provided so legacy close invocations remain green.
+        ledger_result = None
+        if not retire_only and handoff_path:
+            from core.services.ledger_reconciliation import (
+                LedgerReconciliationError,
+                check_ledger_reconciliation_at_close,
+            )
+            try:
+                ledger_result = check_ledger_reconciliation_at_close(
+                    handoff_path=handoff_path,
+                    ledger_deliverable_id=ledger_deliverable_id,
+                    allow_ledger_drift=allow_ledger_drift,
+                )
+            except LedgerReconciliationError as exc:
                 raise CommandError(str(exc)) from exc
 
         derived_source = "explicit" if carry_forward is not None else "auto"
@@ -710,6 +766,26 @@ class Command(BaseCommand):
                 self.stdout.write(
                     "  [TWIN-MIRROR ALLOW_NO_MIRROR] close proceeded without "
                     "twin-mirror verification (--allow-no-mirror)."
+                )
+
+        # S3041 meta-fix: stdout audit line for the ledger reconciliation decision.
+        if ledger_result is not None:
+            refs = ", ".join(f"#{n}" for n in ledger_result.referenced_entries) or "(none)"
+            flipped = ", ".join(f"#{n}" for n in ledger_result.flipped_entries) or "(none)"
+            if ledger_result.mode == "clean":
+                self.stdout.write(
+                    f"  [LEDGER-RECON CLEAN] referenced={refs}; flipped={flipped}"
+                )
+            elif ledger_result.mode == "allowed_drift":
+                drift = ", ".join(f"#{n}" for n in ledger_result.drift_entries)
+                self.stdout.write(
+                    f"  [LEDGER-RECON ALLOWED_DRIFT] referenced={refs}; "
+                    f"flipped={flipped}; drift={drift} (--allow-ledger-drift)"
+                )
+            elif ledger_result.mode == "no_handoff":
+                self.stdout.write(
+                    "  [LEDGER-RECON NO_HANDOFF] handoff path not found — "
+                    "nothing to check."
                 )
 
 
