@@ -6,7 +6,7 @@
 
 S3045 discharged Chris-ratified Option D ("substrate + reframed goal — extend `pa_tools_gap_map.classify_tool` to recognize agent-via-run_agent tools with validation docs as `agent_via_run_agent_validated` category, then validate all 45"). Single wall-clock session (~2h 43min); 4 PRs shipped + merged; entire 45-tool `agent_via_run_agent` bucket now at `agent_via_run_agent_validated` classification. 4 PRs: #3794 (substrate + Batch 1, 10 tools) → #3795 (Batch 2, 10 tools) → #3796 (Batch 3, 10 tools + 3 new finding classes) → #3797 (Batch 4 FINAL, 15 tools + arc close). 31st consecutive Cycle 1A verify-before-build session.
 
-**HEAD at close:** `_TBD_close_` (post-docs-cascade + wrapper pin bump PRs).
+**HEAD at close:** `d030672cf` (docs cascade PR #3798). Wrapper pin bump commit follows.
 
 ### Final gap map state (S3045 arc closed)
 
