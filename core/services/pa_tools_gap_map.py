@@ -37,6 +37,12 @@ five-session sweep.
   * ``meta_no_handler`` — ``run_agent`` and other by-design meta-tools.
   * ``agent_via_run_agent`` — handler exists but no schema; reachable
     via ``run_agent(agent_name=…)`` (44 agents today, by design).
+  * ``agent_via_run_agent_validated`` — S3045: agent-via-run_agent tool
+    with a per-tool validation doc authored from RaaS dispatch evidence.
+    Distinct from ``validated_full`` because these tools have no schema
+    (no Covered actions coverage possible); the audit metric surfaces
+    them via a ``RaaS-validated`` rollup rather than folding into
+    ``validated_full``.
   * ``handler_only_dead`` — handler exists, no schema, not reachable via
     ``run_agent`` — dead registration.
 
@@ -526,7 +532,21 @@ def classify_tool(
     if has_schema and not has_handler:
         return 'orphan_schema'
     if has_handler and not has_schema:
-        return 'agent_via_run_agent' if is_agent_via_run_agent else 'handler_only_dead'
+        if is_agent_via_run_agent:
+            # S3045: agent-via-run_agent tools have no dedicated PA tool
+            # schema (they're reached via `run_agent(agent_name=...)`),
+            # so they never enter the schema+handler validation-coverage
+            # path below. But they CAN have per-tool validation docs
+            # authored from runtime dispatch evidence. When such a doc
+            # exists, classify as ``agent_via_run_agent_validated`` so
+            # the audit metric reflects RaaS validation without
+            # inflating ``validated_full`` (which still requires
+            # schema+handler + Covered actions coverage).
+            per_tool = docs_index.get('per_tool_stems', {})
+            if find_matching_doc_stem(tool_name, per_tool) is not None:
+                return 'agent_via_run_agent_validated'
+            return 'agent_via_run_agent'
+        return 'handler_only_dead'
 
     # Both schema + handler present: assess validation coverage.
     per_tool = docs_index.get('per_tool_stems', {})
@@ -867,6 +887,7 @@ CATEGORY_LABEL: Dict[str, str] = {
     'orphan_schema': 'orphan schema',
     'meta_no_handler': 'meta (no handler by design)',
     'agent_via_run_agent': 'agent (via run_agent)',
+    'agent_via_run_agent_validated': 'agent via run_agent (validated)',
     'handler_only_dead': 'dead handler',
 }
 
@@ -908,9 +929,23 @@ def render_gap_map_markdown(
     headline = summary['headline']
     lines.append(f"- **Total tool names:** {headline['total_rows']}")
     lines.append('- **Per-category breakdown:**')
-    for cat, n in sorted(headline['per_category'].items(), key=lambda kv: -kv[1]):
+    per_cat = headline['per_category']
+    for cat, n in sorted(per_cat.items(), key=lambda kv: -kv[1]):
         label = CATEGORY_LABEL.get(cat, cat)
         lines.append(f'  - `{cat}` ({label}): **{n}**')
+    # S3045 RaaS-validated rollup: sum of ``validated_full`` +
+    # ``agent_via_run_agent_validated``. Categories stay distinct so the
+    # architectural difference (schema+handler vs run_agent-dispatched)
+    # remains visible; the rollup is a decision-velocity aid, not a
+    # metric redefinition.
+    raas_validated = (
+        per_cat.get('validated_full', 0)
+        + per_cat.get('agent_via_run_agent_validated', 0)
+    )
+    lines.append(
+        f'- **RaaS-validated** (`validated_full` + '
+        f'`agent_via_run_agent_validated`): **{raas_validated}**'
+    )
     lines.append('')
 
     lines.append('## Validation-doc corpus')
