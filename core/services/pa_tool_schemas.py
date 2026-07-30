@@ -5816,6 +5816,8 @@ PA_TOOL_SCHEMAS = [
         },
     },
     # ── S2951: agent_job_status — poll dispatched agent tasks ───────────
+    # S3046: extended with lineage + fanout fields (parent_execution_id,
+    # root_execution_id, child_count, subtree_count, children, fanout_available).
     {
         "type": "function",
         "name": "agent_job_status",
@@ -5827,7 +5829,15 @@ PA_TOOL_SCHEMAS = [
             "Use to poll long-running dispatches when you don't want to wait for the "
             "follow-up banner. Returns: status (queued|in_progress|completed|failed), "
             "agent_name, duration_ms, error_message, output_preview (first 800 chars of "
-            "output_data.message)."
+            "output_data.message). Also returns lineage + fanout: parent_execution_id, "
+            "root_execution_id, child_count (direct children dispatched by this run), "
+            "subtree_count (all descendants under the same root, excluding self), "
+            "children (list capped at 20 with execution_id/agent_name/status/timestamps), "
+            "children_truncated (bool: true if child_count > 20), and fanout_available "
+            "(bool: false on pending/unknown/missing-lookup branches where no AgentExecution "
+            "row exists yet). Fanout counts reflect recorded lineage only — legacy rows and "
+            "coordinator dispatch paths that don't thread parent_execution_id at dispatch "
+            "time may undercount."
         ),
         "parameters": {
             "type": "object",
