@@ -10,37 +10,37 @@
 
 - **Total tool names:** 164
 - **Per-category breakdown:**
-  - `validated_full` (validated (full)): **108**
+  - `validated_full` (validated (full)): **113**
   - `agent_via_run_agent` (agent (via run_agent)): **45**
-  - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **6**
-  - `validated_partial` (validated (partial)): **4**
+  - `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **3**
+  - `validated_partial` (validated (partial)): **2**
   - `meta_no_handler` (meta (no handler by design)): **1**
 
 ## Validation-doc corpus
 
-- **Total `*_validation.md` files:** 129
+- **Total `*_validation.md` files:** 130
 - **Substrate (cross-cutting) docs:** 10 — reduce risk platform-wide but do NOT validate per-tool invariants (S2795 F2 rename).
-- **Per-tool docs:** 119 — of which 112 have an explicit 'Covered actions' section (F1 checklist).
-- **Per-tool docs with `Template version` marker:** 97 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
+- **Per-tool docs:** 120 — of which 115 have an explicit 'Covered actions' section (F1 checklist).
+- **Per-tool docs with `Template version` marker:** 98 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
 
 ## Template compliance (T1b)
 
 Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without `Template version:` marker); `pass` = v1-conformant; `fail` = v1 marker present but mandatory section/frontmatter missing.
 
-- `pass`: **98**
-- `warn`: **66**
+- `pass`: **99**
+- `warn`: **65**
 
 ## Two-metric scoreboard (S2942 Ledger #41)
 
 Opt-in per-tool frontmatter classification. Missing fields land as `unknown` (no silent default per plan §2.1 acceptance).
 
-- **Metric A — `Execution mode:` opt-ins:** 6 of 119 per-tool docs.
-  - `unknown`: **158** tools
-  - `analyzed`: **3** tools
+- **Metric A — `Execution mode:` opt-ins:** 7 of 120 per-tool docs.
+  - `unknown`: **157** tools
+  - `analyzed`: **4** tools
   - `live`: **3** tools
-- **Metric B — `Mutation safety:` opt-ins:** 6 of 119 per-tool docs.
-  - `unknown`: **158** tools
-  - `dry_run_supported`: **5** tools
+- **Metric B — `Mutation safety:` opt-ins:** 7 of 120 per-tool docs.
+  - `unknown`: **157** tools
+  - `dry_run_supported`: **6** tools
   - `unsafe_no_dry_run`: **1** tools
 
 ## Schema quality lints (F5 advisory column)
@@ -62,7 +62,7 @@ _No untested-tool groups met the threshold._
 | `active_repo_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_core.py` |
 | `agent_capability_drift_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `agent_control_tool` | ✓✓ | validated (full) | warn | — | `core/services/td_handlers_ops.py` |
-| `agent_introspection_tool` | ✓✓ | validated (doc, unknown coverage) | warn | — | `core/services/td_handlers_ops.py` |
+| `agent_introspection_tool` | ✓✓ | validated (full) | warn | — | `core/services/td_handlers_ops.py` |
 | `agent_job_status` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_agents.py` |
 | `agent_memory_tool` | ✓✓ | validated (full) | warn | — | `core/services/td_handlers_ops.py` |
 | `ai_series_workflow_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
@@ -71,7 +71,7 @@ _No untested-tool groups met the threshold._
 | `audio_generation_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `audit_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `autonomous_content_studio_coordinator` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
-| `autopilot_tool` | ✓✓ | validated (partial) | warn | actions_not_mentioned_in_description | `core/services/td_handlers_ops.py` |
+| `autopilot_tool` | ✓✓ | validated (full) | warn | actions_not_mentioned_in_description | `core/services/td_handlers_ops.py` |
 | `bear_case_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `blockchain_audit_coordinator` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `blog_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_content.py` |
@@ -130,7 +130,7 @@ _No untested-tool groups met the threshold._
 | `image_generation_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `infra_health_tool` | ✓✓ | validated (full) | warn | actions_not_mentioned_in_description | `core/services/td_handlers_ops.py` |
 | `intelligence_tool` | ✓✓ | validated (partial) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_core.py` |
-| `kb_tool` | ✓✓ | validated (doc, unknown coverage) | warn | — | `core/services/td_handlers_ops.py` |
+| `kb_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_ops.py` |
 | `learning_patterns_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_content.py` |
 | `learning_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_core.py` |
 | `legal_doc_drafter_agent` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
@@ -152,7 +152,7 @@ _No untested-tool groups met the threshold._
 | `opportunity_pipeline_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `opportunity_scoring_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `ops_digest_tool` | ✓✓ | validated (full) | warn | — | `core/services/td_handlers_ops.py` |
-| `ops_tool` | ✓✓ | validated (partial) | warn | actions_not_mentioned_in_description | `core/services/td_handlers_ops.py` |
+| `ops_tool` | ✓✓ | validated (full) | warn | actions_not_mentioned_in_description | `core/services/td_handlers_ops.py` |
 | `orm_inspect_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `paid_interest_status` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_core.py` |
 | `performance_analyst_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
@@ -181,7 +181,7 @@ _No untested-tool groups met the threshold._
 | `run_agent` | schema | meta (no handler by design) | warn | — | `—` |
 | `schedule_followup` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_agents.py` |
 | `scheduled_tasks_tool` | ✓✓ | validated (full) | warn | no_required | `core/services/td_handlers_ops.py` |
-| `search_docs` | ✓✓ | validated (doc, unknown coverage) | warn | — | `core/services/td_handlers_ops.py` |
+| `search_docs` | ✓✓ | validated (full) | warn | — | `core/services/td_handlers_ops.py` |
 | `security_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `self_awareness_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `seo_optimizer_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |

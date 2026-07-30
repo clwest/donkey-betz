@@ -30,6 +30,16 @@
 - **`agent_introspection_tool`** — describe the platform's agent surface: list registered agents, view capabilities, aggregate stats, list all PA tool schemas.
 - **`run_agent`** — meta-tool for delegating a task to a specialized agent. Rigby's primary route for dispatching any of the 58 enumerated agents across 10 domains.
 
+## Covered actions
+
+Coverage for `agent_introspection_tool` (5 actions in schema enum). `run_agent` is meta-tool (no `action` enum; dispatched via `agent_name` rewrite at PA entrypoint) — see §3.2 for its call shape.
+
+- `list` — read — enumerates registered agents from `AGENT_MAP`. Returns `{agents, total_count, filters_applied}`.
+- `stats` — read — aggregate agent counts + status breakdown across AGENT_MAP + Agent DB rows.
+- `details` — read — full detail for one agent (name required). Returns capability listing + provenance + recent-execution stats.
+- `capabilities` — read — enumerates capability tags across the agent registry.
+- `tools` — read — enumerates all PA tool schemas registered in `PA_TOOL_SCHEMAS`. Used by Rigby to introspect her own tool surface.
+
 ## 2. Rigby's belief (per MEMORY + prior conversations)
 
 Rigby's load-bearing beliefs from MEMORY:
