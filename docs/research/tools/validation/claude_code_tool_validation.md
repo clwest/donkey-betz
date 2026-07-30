@@ -19,6 +19,12 @@
 
 *"Spawn an autonomous Claude Code engineering session that can read files, write code, create branches, and open PRs. Use when you need code changes, bug fixes, new features, or technical investigation that requires reading/modifying the codebase. Use request_mode='answer' for readonly Q&A about the codebase (no PR created); 'change' for code modifications; default 'auto' picks based on task verbs."*
 
+## Covered actions
+
+`claude_code_tool` has no `action` enum — single-entrypoint dispatcher. Coverage applies to the single call shape.
+
+- `claude_code_tool` — dispatch — Celery `apply_async` to `claude_code_engineer_task` on `code_jobs` queue. Required: `task` (string). Optional: `conversation_id`, `workspace_id`, `request_mode` (auto/answer/change). Returns `{task_id, workspace_id_resolved, resolved_from}` envelope. Async — poll via `agent_job_status` or subscribe via `schedule_followup`.
+
 ## 2. Rigby's belief (per schema + MEMORY)
 
 Rigby's load-bearing belief about this tool, from MEMORY rules:

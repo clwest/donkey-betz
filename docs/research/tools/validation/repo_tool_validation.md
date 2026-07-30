@@ -17,6 +17,16 @@
 
 *"Read-only codebase introspection: browse file tree, read file contents, search/grep across code, and check git status/log. Use this when you need to answer questions about what code exists, how features are implemented, file structure, or recent commits. Cannot modify files — read-only access only."*
 
+## Covered actions
+
+All 5 schema actions covered. Read-only — no mutation surface.
+
+- `tree` — read — recursive file-tree walk under `path` (default project root). Optional `depth` (default 2, max 4). Applies `BLOCKED_DIRS` filter. Capped entry count.
+- `read_file` — read — file content read. Required: `path`. Optional: `start_line`, `max_lines` (default 200, max 500). Applies `BLOCKED_FILES` filter (env / credentials / git objects).
+- `search` — read — ripgrep-style grep across code via `subprocess.run`. Required: `query`. Optional: `file_type` (extension filter). Results capped at hard-max (per-file + total).
+- `git_info` — read — `git log` / `git status` / `git diff` snapshot via `subprocess.run`.
+- `list_repos` — read — enumerates repos under workspace root (added post-S2728).
+
 ## 2. Rigby's belief (per schema)
 
 Rigby uses `repo_tool` to answer factual "what does this codebase contain / where is X implemented / what's in the git log" questions. Absent MEMORY rule specifically citing repo_tool — no crystallized failures on record. Adjacent MEMORY rule `feedback_verify_before_deleting_dead_code` implicitly relies on `search` action to grep for callers before proposing deletions.

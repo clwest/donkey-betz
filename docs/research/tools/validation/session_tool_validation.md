@@ -17,6 +17,18 @@
 
 *"Manage conversation sessions: check conversation health/freshness, create a fresh conversation, or list recent conversations. Use when asked about session health, context drift, whether to start fresh, creating a new conversation, or listing past conversations. Also use proactively when you notice the conversation is getting long or drifting."*
 
+## Covered actions
+
+All 7 schema actions covered.
+
+- `health_check` — read — returns session-health payload from `get_session_health` service (drift metrics, message count, freshness verdict).
+- `list_recent` — read — enumerates recent conversation pins with optional limit/window filters.
+- `whoami` — read — returns `{username, conversation_id, conversation_owner_match, is_active}`. Ownership check per MEMORY `feedback_pa_local_verify_ownership`.
+- `create_fresh` — mutation — mints a fresh conversation pin. Used for SIGN-isolation dispatches + long-context rotation.
+- `retire` — mutation — retires an active pin (canonical pin-cleanup path per `feedback_session_tool_retire_works`).
+- `set_active` — mutation — flips `is_active` on a pin (used for pin activation post-mint).
+- `seed` — mutation — seeds conversation context (historical shape; less used).
+
 ## 2. Rigby's belief (per schema + MEMORY rules + prior conversations)
 
 Rigby believes she has 7 actions across `session_tool`. Two MEMORY rules crystallize load-bearing beliefs:
