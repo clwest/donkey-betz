@@ -42,6 +42,8 @@ All 20 schema-declared actions enumerated as a flat list for the S2795 gap-map c
 - `zombie_thread_rate` — runtime-not-executed. Per-agent per-hour wall-clock-timeout spawns.
 - `tenant_boundary_violations` — runtime-not-executed. I-0303 REPORT-ONLY substrate query.
 - `staleness_warnings` — runtime-not-executed. S2759 staleness_warning envelope query.
+- `recent_bridge_calls` — runtime-not-executed. Recent bridge-call activity (read).
+- `bridge_activity_digest` — runtime-not-executed. Aggregated bridge activity summary (read).
 
 ## 3. Schema notes
 
