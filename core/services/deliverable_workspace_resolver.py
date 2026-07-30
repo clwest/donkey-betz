@@ -142,16 +142,32 @@ def resolve_workspace_context(
                 "(%s: %s)", type(e).__name__, e,
             )
 
-    # Priority 6: Global active workspace fallback (for system operations without user)
+    # Priority 6: Primary workspace fallback (for system operations without user)
+    # S3043 T1 v2: migrated from `ProjectWorkspace.objects.filter(is_active=True)…`
+    # silent-default resolver to platform_config.get_primary_workspace() per
+    # Spine Contract v1 §3. `PrimaryWorkspaceUnavailable` (config resolves to a
+    # workspace id but the row can't be fetched) is caught here to preserve the
+    # resolver's fail-open contract; the source tag becomes 'global_active' on
+    # success. The `_last_operation_at`-first ordering the old branch used is
+    # no longer needed — get_primary_workspace() returns the configured/detected
+    # primary, which is the intended semantics of the "global active" fallback.
     if not workspace and fallback_to_active:
         try:
-            from core.models_skin_layer import ProjectWorkspace
-            workspace = ProjectWorkspace.objects.filter(is_active=True).order_by('-total_operations', '-created_at').first()
+            from core.services.platform_config import (
+                get_primary_workspace,
+                PrimaryWorkspaceUnavailable,
+            )
+            workspace = get_primary_workspace()
             if workspace:
                 source = 'global_active'
+        except PrimaryWorkspaceUnavailable as exc:
+            logger.warning(
+                "[workspace-resolver] primary workspace configured but "
+                "unavailable (%s) — resolver will return unscoped", exc,
+            )
         except Exception as e:
             logger.warning(
-                "[workspace-resolver] global active workspace lookup failed "
+                "[workspace-resolver] primary workspace lookup failed "
                 "(%s: %s)", type(e).__name__, e,
             )
 

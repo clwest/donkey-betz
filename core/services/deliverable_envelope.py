@@ -238,22 +238,41 @@ class DeliverableEnvelopeService:
                         ws_id, type(e).__name__, e,
                     )
             if not active_workspace:
+                # S3043 T1 v2: migrate silent-default resolver to
+                # platform_config.get_primary_workspace() per Spine Contract
+                # v1 §3. On PrimaryWorkspaceUnavailable (config resolves to
+                # a workspace id but the row can't be fetched) we preserve
+                # the existing "UNSCOPED orphan" degradation with an
+                # explicit misconfiguration log.
                 try:
-                    from core.models_skin_layer import ProjectWorkspace
-                    active_workspace = ProjectWorkspace.objects.filter(is_active=True).first()
+                    from core.services.platform_config import (
+                        get_primary_workspace,
+                        PrimaryWorkspaceUnavailable,
+                    )
+                    active_workspace = get_primary_workspace()
                     if not active_workspace:
                         logger.error(
-                            "deliverable_envelope: no is_active ProjectWorkspace "
-                            "exists — deliverable will be created UNSCOPED "
-                            "(orphan). Check ProjectWorkspace.is_active state."
+                            "deliverable_envelope: no primary workspace "
+                            "configured — deliverable will be created UNSCOPED "
+                            "(orphan). Set PRIMARY_WORKSPACE_NAME or ensure "
+                            "the platform config resolves a workspace."
                         )
+                except PrimaryWorkspaceUnavailable as exc:
+                    logger.error(
+                        "deliverable_envelope: primary workspace configured "
+                        "but unavailable (%s) — deliverable will be created "
+                        "UNSCOPED (orphan)",
+                        exc,
+                    )
+                    active_workspace = None
                 except Exception as e:
                     logger.error(
-                        "deliverable_envelope: active workspace lookup "
+                        "deliverable_envelope: primary workspace lookup "
                         "failed (%s: %s) — deliverable will be created "
                         "UNSCOPED (orphan)",
                         type(e).__name__, e,
                     )
+                    active_workspace = None
 
             # Create the deliverable
             from core.services.deliverable_factory import create_deliverable
