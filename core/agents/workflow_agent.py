@@ -448,6 +448,13 @@ You orchestrate. You don't create content directly."""
                         if context.get('workspace_id') and 'workspace_id' not in subtask_context:
                             subtask_context['workspace_id'] = context['workspace_id']
 
+                        # S3048: thread the parent AgentExecution.id into the
+                        # child dispatch context so router._create_execution_record
+                        # sets parent_execution_id + root_execution_id on the child.
+                        _parent_exec_id = (getattr(self, '_execution_context', None) or {}).get('execution_id')
+                        if _parent_exec_id:
+                            subtask_context.setdefault('execution_id', _parent_exec_id)
+
                         self.record_decision(
                             decision_type="delegation",
                             action=f"Delegating to {agent_name}",

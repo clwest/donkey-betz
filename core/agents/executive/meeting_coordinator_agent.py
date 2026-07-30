@@ -467,11 +467,19 @@ Include:
 Be concrete and specific - no placeholder text."""
 
             # Session 895: Add timeout protection to prevent coordinator hangs
+            # S3048: thread the parent AgentExecution.id into the child
+            # dispatch context so router._create_execution_record sets
+            # parent_execution_id + root_execution_id on the child row.
+            _child_context = {'meeting_topic': topic, 'meeting_type': meeting_type}
+            _parent_exec_id = (getattr(self, '_execution_context', None) or {}).get('execution_id')
+            if _parent_exec_id:
+                _child_context['execution_id'] = _parent_exec_id
+
             def route_to_agent():
                 return router.route(
                     agent_name=agent_name,
                     task=perspective_task,
-                    context={'meeting_topic': topic, 'meeting_type': meeting_type}
+                    context=_child_context,
                 )
 
             with ThreadPoolExecutor(max_workers=1) as executor:

@@ -944,6 +944,16 @@ class BaseAgent(ABC, TimeTravelMixin):
                 '_inherited_scifi_context': delegation_context.get('scifi_context', {}),
             }
 
+            # S3048: thread the parent AgentExecution.id into the child
+            # dispatch context so agent_router._create_execution_record can
+            # set parent_execution_id + root_execution_id on the child row.
+            # Without this, every delegated child was created as a root and
+            # the S3047 Agent Runs drawer Lineage & Fanout section showed
+            # empty for all production runs (0/2917 rows had parent lineage).
+            _parent_exec_id = (getattr(self, '_execution_context', None) or {}).get('execution_id')
+            if _parent_exec_id:
+                delegation_ctx.setdefault('execution_id', _parent_exec_id)
+
             # Route to the specialist
             result = self.agent_router.route(
                 specialist_agent,
