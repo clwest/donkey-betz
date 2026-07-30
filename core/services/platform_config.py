@@ -34,6 +34,27 @@ logger = logging.getLogger(__name__)
 _CACHE_TIMEOUT = 300  # 5 minutes
 
 
+class PrimaryWorkspaceUnavailable(Exception):
+    """Raised when the primary workspace is configured but cannot be resolved.
+
+    Distinct from "no primary workspace configured" — that case still returns
+    ``None`` from :func:`get_primary_workspace`. This exception fires only when
+    a workspace id is present in the cache but the underlying row cannot be
+    fetched (invalid id, DB error, workspace deleted out from under us).
+
+    Callers who want graceful degradation should wrap in::
+
+        try:
+            workspace = get_primary_workspace()
+        except PrimaryWorkspaceUnavailable:
+            workspace = None  # degrade / fall through per site semantics
+
+    Callers who want the platform to fail loudly on misconfiguration should
+    let it propagate. Per S3042/T1 v1 §5 (Spine Contract v1 §3 Corollary),
+    silent-None on config error was the DEFECT this contract closes.
+    """
+
+
 def _get_config_value(setting_name: str, env_name: str, default: str) -> str:
     """
     Get a configuration value from settings or environment.
@@ -174,7 +195,16 @@ def get_primary_workspace() -> Optional['ProjectWorkspace']:
     All components should call this instead of hardcoding workspace names.
 
     Returns:
-        ProjectWorkspace instance, or None if not found
+        ProjectWorkspace instance, or None when no primary workspace is
+        configured (no PRIMARY_WORKSPACE_NAME / env override / auto-detected
+        candidate). This is the "unconfigured" case and is not an error.
+
+    Raises:
+        PrimaryWorkspaceUnavailable: when a workspace id resolves from
+        configuration but the underlying row cannot be fetched — invalid id,
+        DB error, workspace deleted. This is a MISCONFIGURATION signal and
+        callers should either fail loudly or wrap in
+        ``try/except PrimaryWorkspaceUnavailable`` for graceful degradation.
     """
     workspace_id = _cached_primary_workspace_id()
     if not workspace_id:
@@ -184,8 +214,15 @@ def get_primary_workspace() -> Optional['ProjectWorkspace']:
         from core.models_skin_layer import ProjectWorkspace
         return ProjectWorkspace.objects.get(id=workspace_id)
     except Exception as e:
-        logger.error(f"[Platform Config] Error fetching workspace: {e}")
-        return None
+        logger.error(
+            "[Platform Config] Primary workspace id=%s configured but "
+            "cannot be resolved: %s: %s",
+            workspace_id, type(e).__name__, e,
+        )
+        raise PrimaryWorkspaceUnavailable(
+            f"Primary workspace id={workspace_id} configured but cannot be "
+            f"resolved: {type(e).__name__}: {e}"
+        ) from e
 
 
 def get_primary_user():

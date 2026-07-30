@@ -145,7 +145,24 @@ def _record_op_sync(
                 )
 
         if not ws:
-            ws = ProjectWorkspace.objects.filter(is_active=True).first()
+            # S3043 T1 v2: migrate silent-default resolver to
+            # platform_config.get_primary_workspace() per Spine Contract v1
+            # §3. `PrimaryWorkspaceUnavailable` (from misconfigured id) is
+            # caught here to preserve the fire-and-forget contract; the op
+            # is dropped with a warning rather than propagating.
+            try:
+                from core.services.platform_config import (
+                    get_primary_workspace,
+                    PrimaryWorkspaceUnavailable,
+                )
+                ws = get_primary_workspace()
+            except PrimaryWorkspaceUnavailable as exc:
+                logger.warning(
+                    "[record_op] Primary workspace configured but "
+                    "unavailable (%s) — op %s dropped",
+                    exc, op_type,
+                )
+                ws = None
 
         if not ws:
             # No workspace available — upgrade from debug to warning
