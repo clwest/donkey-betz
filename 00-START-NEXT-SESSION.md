@@ -2,86 +2,94 @@
 
 ---
 
-## READ THIS — SESSION 3048 CLOSED. **Two PRs same-envelope discharged S3046 substrate ledger row `d1182b61-…` end-to-end.**
+## READ THIS — SESSION 3049 CLOSED. **Phase 1 of RaaS UI overhaul arc DONE — 8-row gap map + 5-PR Phase 2 slice ratified in deliverable `edf69671-…`.**
 
-S3048 shipped the AgentExecution lineage threading fix that makes S3047's Agent Runs drawer Lineage & Fanout section actually useful for production runs. Baseline pre-S3048: **0/2917** rows had `parent_execution_id` set (100% NULL). Post-S3048: threading works end-to-end at both the delegation-site layer AND the router layer.
+S3049 shipped the pre-ratified RaaS UI overhaul arc **Phase 1** — a Rigby-authored, Claude-verified, Rigby-A2-tightened gap map living at deliverable `edf69671-2a87-49f1-a8ac-d07086f851d5` (Donkey Betz workspace `b4503364-…`, `engineering_backlog` / `product`, 30,367 chars). Zero code shipped; Phase 1 IS the ship — Phase 2 opens next session.
 
-**HEAD at close:** `8785ee275` (PR #3810). Wrapper pin bump commit follows.
+**HEAD at close:** `ba7ec4ae4` (S3048 wrapper pin bump). Docs-cascade PR for handoff + 00-START + wrapper pin bump follows.
 
 ### What shipped
 
-- **PR #3809** — 4 delegation-site fixes in `core/agents/**/*.py` (BaseAgent / WorkflowAgent / AISeriesWorkflowAgent / MeetingCoordinatorAgent) — each threads `self._execution_context['execution_id']` into the child dispatch context.
-- **PR #3810** (addendum) — router-side raw-context lineage read + None-safe guard. D1 empirical dig revealed `agent_router.py:2849` was silently dropping the threaded id via a `context = context_summary or {}` rebind before the lineage lookup at line 2872. Fix rebinds to `_ctx_for_tracing` (only used for `resolve_trace_id/project_id`) and adds `_raw_ctx` None-safe guard. 3 new router e2e tests.
-- **3 Rigby SIGN cycles** with real `tool_runs` — T1 SIGN + A2 SIGN v1 + A2 SIGN v2. All AGREE on final pass.
-- **33 tests green** across lineage + fanout + cancel-ancestor-propagation suites (was 30 pre-addendum).
-- **34th consecutive Cycle 1A verify-before-build session.** 27th consecutive zero-hallucination Rigby SIGN streak.
+- **Deliverable `edf69671-…` — RaaS UI Gap Map (Phase 1 CLOSE)** — 6 sections, all populated with tool_run citations:
+  - **§0** — Command Center operator-shaped signal + post-authoring verification note (Rigby A2 + Claude ORM)
+  - **§1** — 62 App.tsx routes classified, WorkspacePageNew 5-tab shape, DeliverablesTab filter surface
+  - **§2** — 3 MVP capabilities as given/when/then acceptance criteria with explicit out-of-scope
+  - **§3** — 8 numbered delta rows (7 blocking + 1 non-blocking), 3× S + 5× M
+  - **§4** — 163 RaaS tools categorized into 3 exposure buckets (customer-safe / operator-only / gated) + handler-file concentration map
+  - **§5** — 5-PR dependency-ordered Phase 2 slice (2× S + 2× M + 1× S–M), single-session with 2-session fallback
+- **Two big Phase 2 effort reductions** (both eliminate schema work):
+  1. `Deliverable.user` FK already exists → Gap 7 wins
+  2. `User.platform_role` + `customer_role` + `subscription_tier` + `tenant` all exist → PR 4 wins
+- **Rigby A2 verification** caught 3 real concerns during Claude's §4/§5 short-circuit — all incorporated as §0 addendum + §4.1/§4.3/§4.4/§5 amendments
+- **35th consecutive Cycle 1A verify-before-build session.** **28th consecutive zero-hallucination Rigby SIGN streak.**
 
-### D1 empirical evidence
+### Phase 1 evidence (from deliverable + ORM checks)
 
-Direct Python-shell `router.route()` dispatch post-addendum:
-
-```
-parent_row.id = cba6595c-b1fa-4a87-b1f3-afbe95efa826
-route result: success=True
-CHILDREN COUNT: 1
-  child_id=3f382d37 agent=S3048TestChild parent=cba6595c root=cba6595c
-```
-
-Rigby A2 v2 `orm_inspect_tool` + `agent_job_status` independently confirmed → Agent Runs drawer will render fanout trees for real dispatches.
+- 62 App.tsx routes: 5 public + ~5 customer-reachable + ~38 operator-only + 14 cockpit redirects
+- `deliverablesApi.list()` params: `type/category/agent/saved/template/source/search/page/per_page/workspace` — no `owner`/`user`/`created_by`
+- `Deliverable.user` = ForeignKey (Rigby `orm_inspect_tool.describe_model`)
+- `User` fields include: `platform_role`, `customer_role`, `subscription_tier`, `tenant`, `api_key`, `subscription_tier` (Claude Django-shell)
+- `WORKSPACE_AWARE_AGENTS` at `core/epa_handlers_tools.py:3877` (definition) + `:3913` (allowlist check)
+- Cycle 1A verify: RaaS-validated=163 unchanged from S3048 close state ✅
 
 ### Substrate ledger changes
 
-**Zero new rows.** Discharge of existing S3046 row `d1182b61-…` — status flipped `ready` → `completed` with resolution note appended.
+**Zero new rows.** S3049 was scoping/discovery — no substrate defects surfaced.
 
 ### PLAYBOOK folds
 
-**1 fold classified `same_pr_mitigatable`** per PLAYBOOK-6.10.8 (D1 blocker — router-side bug found via Claude's empirical dig, discharged in-envelope via PR #3810 addendum). Zero open future_triggers from S3048 arc.
+**Zero folds** — no spec→ship shape this session.
+
+### Rigby Tool Gap Ledger observation (candidate, 1st trigger)
+
+Rigby exhausted runway on §4/§5 large-synthesis dispatch — enumerating 163 tools across 3 buckets + authoring 5-PR slice in one dispatch is too much. Two consecutive dispatches ran exploratory reads without landing `deliverable_tool.update`. Claude short-circuited (author + ORM splice + Rigby FYI-verify) — correct workaround but underlying gap is real. Not filing until 2nd trigger per convention.
 
 ---
 
-## S3049 first-action — RATIFIED JOINT RECOMMENDATION (Chris yes/no's at open)
+## S3050 first-action — RATIFIED PICK (Chris yes/no's at open)
 
-### Pick: **Open the RaaS UI overhaul arc (pre-ratified per `project_s3049_raas_ui_arc_pre_ratified`)**
+### Pick: **Open Phase 2 of RaaS UI overhaul arc — 5-PR slice, PR 1 first**
 
-**Provenance:** S3047 close pre-ratified S3049 = Rigby-as-auditor RaaS UI gap-doc + MVP customer-facing shell (chat entry + deliverable inbox + auth), contingent on S3048 shipping. S3048 shipped and discharged the linkage. S3049 is now unblocked.
+**Provenance:** S3049 close ratified the 5-PR slice as S3050 first-action.
 
-**Scope (per pre-ratification):**
-- **Phase 1 — Rigby-as-auditor gap-doc**: dispatch Rigby to systematically audit the current RaaS-facing UI surface (Command Center chat + Workspace tabs + deliverable inbox pattern). Output = deliverable in Donkey Betz workspace `b4503364` documenting gaps between current state and MVP customer-facing shell requirements.
-- **Phase 2 — MVP shell**: chat entry point + deliverable inbox (per user, filtered by ownership) + auth flow gate. Aesthetic layer decisions per Chris.
+**5-PR slice (dependency order):**
+1. **PR 1 (S)** — Backend `owner=me` filter on `/deliverables/` list endpoint (discharges Gaps 2 backend / 4 / 7; wires existing `Deliverable.user` FK; no schema change)
+2. **PR 2 (S)** — Frontend `deliverablesApi.list()` typed `owner` param at `frontend/src/lib/api.ts:4260` (discharges Gap 2 frontend)
+3. **PR 3 (M)** — `/my` route + `<CustomerLayout>` variant mounting PA chat without operator sidebar/tabs (discharges Gaps 1 + 5)
+4. **PR 4 (S–M)** — Role guard: extend `ProtectedRoute` + `CustomerRoute` variant + server-side `IsOperatorRole` DRF permission (discharges Gap 6; wires existing `User.platform_role`; no schema change)
+5. **PR 5 (M)** — `CUSTOMER_ALLOWED_TOOLS` set at `core/services/tool_dispatcher.py` + tool-schema filter for customer-mode PA chat + argument auto-inject for gated tools
 
-**Full arc estimate:** 5-10 sessions (Rigby specs capability exposure; Claude specs aesthetic layer).
+**Predicted:** single-session S3050 with 2-session fallback (S3050 + S3051) if PR 3 layout variant balloons.
 
-**Why this is toward users:**
-- Directly follows-through on S3048 (lineage now visible → RaaS chain is complete → time to expose it to users).
-- First real customer-facing surface — up until now, all UI has been operator-facing (Workspace tabs, Command Center for Chris).
-- Rigby's tool surface IS the SaaS product surface (per `feedback_rigby_tool_gap_ledger`) — this arc formalizes that.
+**Explicit deferrals (Phase 3+):** Gap 3 (workspace DeliverablesTab stays operator-only), Gap 8 (cockpit redirects), role management UI, per-tool permission matrices, ACL editor, fine-grained ABAC middleware.
 
-### Rejected candidates (documented for provenance)
-
-- **Continue net-new engineering slice** — reasonable but S3049 was pre-ratified at S3047 close pending S3048 completion.
-- **`/docs/` restructuring arc** — still deferred (Chris directive S2800).
-- **New spider** — deferred (domain-pick uncertainty).
-- **Provenance test suite 3 errors + 1 fail** — surfaced during S3048 A2 verify; unrelated to S3048 (test files + `deliverable_factory.py` + `conversation_deliverable_extractor.py` unchanged in last 10 commits). Deferred to standalone test-suite maintenance arc if it becomes blocking.
-
-### Concrete opening move
+### Concrete opening move (S3050)
 
 1. `context-kit orient` (auto-injected)
 2. Absorb this file + `MEMORY.md` + `CLAUDE.md`
-3. Read S3048 handoff (`docs/handoffs/SESSION_3048_LINEAGE_THREADING_SHIPPED.md`)
-4. Cycle 1A verify-before-build FIRST — run `build_pa_tool_audit --gap-only --check` + verify `RaaS-validated=163` + confirm gap map matches S3048 close state. This makes it the **35th consecutive Cycle 1A session** — the streak is load-bearing.
-5. Dispatch Rigby with the Phase 1 audit prompt (RaaS UI gap-doc scope defined per `project_s3049_raas_ui_arc_pre_ratified`).
-6. Chris ratifies gap-doc scope + gates whether Phase 2 (MVP shell) opens in same session or subsequent.
+3. Read S3049 handoff (`docs/handoffs/SESSION_3049_S3049_PHASE_1_RAAS_UI_GAP_MAP_CLOSED.md`)
+4. Cycle 1A verify-before-build FIRST — re-run `build_pa_tool_audit --gap-only --check` to confirm RaaS-validated=163; ORM-verify `Deliverable.user`, `User.platform_role`/`customer_role`/`subscription_tier`/`tenant` still present. **36th consecutive Cycle 1A session.**
+5. Read `edf69671-…` §5 in full via `deliverable_tool.get` (or ORM).
+6. Open PR 1 (backend `owner=me` filter) — smallest S PR, unblocks PR 2 immediately. Full T1 SIGN + A2 SIGN + tests per PLAYBOOK-7.7.1/7.7.2. **PLAYBOOK-7.7.5 fires** — Gap 4 is drift-closure class → mandatory A2 sweep for other list endpoints without ownership enforcement (name the shape signature: `.filter(user=...)` predicate + adjacent endpoints under `/api/v1/*`).
+7. If PR 1 lands early, cascade into PR 2 (frontend param — S).
+8. Chris ratifies scope at each PR envelope, not just at session open.
+
+### Rejected candidates (documented for provenance)
+
+- **Pivot away from Phase 2** — reasonable but S3049 pre-ratified Phase 2 as the next step; only pivot if new information changes the picture.
+- **PR 5 first** (tool allowlist before ownership) — rejected; PR 1's `owner=me` filter is the load-bearing MVP capability without which customer inbox is unusable regardless of tool exposure.
+- **`/docs/` restructuring arc** — still deferred (Chris directive S2800).
+- **Provenance test suite 4 failures** — still deferred (unrelated to S3049 scope).
 
 ---
 
-## S3049 carry-forward seeds
+## S3050 carry-forward seeds
 
-### New from S3048
+### New from S3049
 
-- **`core/services/agent_fanout.py`** — S3047 helper — no S3048 changes.
-- **`core/agent_router.py` `_create_execution_record`** — `_ctx_for_tracing` and `_raw_ctx` local variable names now carry semantic meaning. If a future refactor consolidates the two, the rename comment explains WHY.
-- **`core/tests/test_agent_lineage_threading.py`** — 9 tests covering all 4 delegation sites + router e2e. Source-guard tests exist for sites where instantiation is unwieldy (BaseAgent abstract; MeetingCoordinator's fresh AgentRouter closure).
-- **Ledger row `d1182b61-…`** = COMPLETED. Reflected in Rigby Tool Gap Ledger workspace filter.
+- **Deliverable `edf69671-…`** = Phase 1 gap map (source-of-truth for Phase 2 PR authoring)
+- **Phase 2 5-PR slice** (Chris re-ratifies at open per shape convention)
+- **Rigby Tool Gap Ledger observation** — large-synthesis-dispatch runway gap (candidate row, 1st trigger; file at 2nd trigger)
 
 ### Carried from prior arcs — status preserved
 
@@ -101,27 +109,26 @@ Rigby A2 v2 `orm_inspect_tool` + `agent_job_status` independently confirmed → 
 - **Stem-matcher warn-only lint (Option B)** — S3044 row 1; 3-trigger threshold reached; deferred per Rigby T0 SIGN Q5.
 - **`/docs/` restructuring arc** — queued (Chris directive S2800).
 - **T2 spec for `agent_router.py:2131-2132` silent fallback** — deferred.
-- **Provenance test suite 4 failures** — surfaced during S3048 A2 verify (3 errors + 1 fail in `test_provenance_*.py`); unrelated to S3048 change scope. Deferred to standalone test-suite maintenance arc.
+- **Provenance test suite 4 failures** — surfaced S3048; still deferred.
+- **S3049 Phase 3+ deferrals** (per §5 of `edf69671-…`) — Gap 3, Gap 8, full role UI, permission matrices, ACL editor, fine-grained ABAC.
 
 ---
 
 ## Cross-cutting workflow references
 
 - **Constitutional governance chain:** CLAUDE.md Playbook **v0.11.0**. No amendments this session.
-- **ADR corpus:** ADR-0001 through ADR-0008 (unchanged).
-- **Spec→ship contract (PLAYBOOK-7.7.1):** 2 PRs same-envelope for a single arc — initial fix (#3809) + D1-informed addendum (#3810). Full T1/A2 SIGN cycles both times.
-- **SIGN evidence discipline (PLAYBOOK-7.7.2):** 3 substantive SIGN cycles this session, all with real `tool_runs`. Rigby's A2 v2 `orm_inspect_tool` + `agent_job_status` on the exact parent execution id from Claude's D1 dig was the discriminating evidence.
-- **Chris-facing decision framing (PLAYBOOK-7.7.3):** 1 Chris decision (ratify S3048 first-action A). Close cascade routed after joint Claude+Rigby AGREE.
-- **Class-scoped mandatory A2 sweep (PLAYBOOK-7.7.5):** FIRED — this is drift-closure class. Rigby A2 v1 enumerated 4 sweep dimensions with real `tool_runs`.
-- **Recycle discipline (PLAYBOOK-7.4.4):** `make celery-recycle` after each backend-only PR merge (2 runs). No frontend touched → `make recycle-all` not required per S2978 refinement.
-- **Verify-before-build (Cycle 1A):** **34th consecutive session.**
+- **Cycle 1A verify-before-build:** **35th consecutive session.**
+- **Claude directs, Rigby executes, Claude verifies:** followed cleanly for §0/§1/§2/§3. Short-circuited §4/§5 after 2 Rigby runway exhaustions per `feedback_loop_rigby_in_when_short_circuiting`; Rigby A2 caught 3 concerns all incorporated.
+- **SIGN evidence discipline (PLAYBOOK-7.7.2):** Rigby A2 verification was tool-grounded (`deliverable_tool.detail` chunked reads to inspect authored content).
+- **Recycle discipline (PLAYBOOK-7.4.4):** No code shipped → no recycle needed.
+- **Local truth (`feedback_local_truth_no_production`):** local ORM verification is the truth.
 
 ---
 
 ## Wrapper pin note
 
-Active PA conversation pin at S3048 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
+Active PA conversation pin at S3049 close is `pa-15cb9f33d7ad4034`. `session_lifecycle close` at close time will atomically retire it + mint next-session pin + rewrite `tools/pa_local.sh`. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
 
 ---
 
-**Reminder — the workflow is constitutional.** S3048 shipped a 2-PR same-envelope arc — the initial delegation-site fix (#3809) passed T1 SIGN + A2 SIGN v1's D3+D4, but D1 empirical dig revealed a router-side bug that was silently dropping the threaded id. Rather than closing D1 as `future_trigger`, Claude's empirical shell test found the router-side root cause and shipped PR #3810 addendum in-envelope. Rigby A2 SIGN v2 independently confirmed via `orm_inspect_tool` + `agent_job_status`. S3046 ledger row `d1182b61-…` = fully discharged. S3049 first-action is the pre-ratified RaaS UI overhaul arc — Chris ratifies yes/no at open, or pivots.
+**Reminder — the workflow is constitutional.** S3049 was pure scoping/discovery — the deliverable IS the ship. Phase 2 opens next session with the 5-PR slice as the ratified starting point. If S3050 first-action pivots, Phase 2 stays parked as pre-ratified until re-picked. Rigby's A2 verification of the short-circuit is the shape that makes short-circuit safe — always loop her in with an ask after, never after-the-fact narration only.
