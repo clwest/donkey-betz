@@ -2,70 +2,87 @@
 
 ---
 
-## READ THIS — SESSION 3039 CLOSED. **4-PR arc: S7 + S9 + D10 Phase 1 + D10-follow all shipped.**
+## READ THIS — SESSION 3040 CLOSED. **Docs-only cadence pivot: odds api degraded + W/D/I archaeology seeded.**
 
-S3039 opened with S7 (Chris's ratified pick from S3038 close) and ran a 4-PR closeout of the S3037 Reliability Audit backlog. Every PR landed with grounded Rigby SIGN (AGREE / `same_pr_mitigatable`) and immediate post-merge live verify. The D10 audit shipped as PR #3775 immediately surfaced its own follow-up code bug (50.7% PA workspace attribution loss) — root-caused + fixed same session as PR #3776.
+S3040 opened with the 7am MDT trigger verify + Chris raising the workspace/deliverable/initiative concept-drift concern. Two operational carry-forwards shipped as PR #3778 (docs-only): Odds API marked degraded (2 periodic tasks disabled), W/D/I archaeology preserved as workspace deliverable for the future re-coherence arc. Zero code changes; zero recycle needed.
 
-**HEAD at close:** `b5dbb89b6` (post-D10-follow merge, post-recycle).
+**HEAD at close:** `02dfbf0b4` (post-PR #3778 merge, docs-only).
 
-### Four code PRs shipped this session
+### One PR shipped this session
 
-- **PR #3773 (`8f2e72570`)** — `feat(s3039-s7): route ThinkingAgent ORM through sync_to_async — drop env-var race`. Root-caused 67% ThinkingAgent async failure to a process-global `DJANGO_ALLOW_ASYNC_UNSAFE` env-var race across concurrent worker threads. Fix routes ORM through `sync_to_async(thread_sensitive=True)` off the event-loop thread and removes both env-var toggles. 4 concurrent Brainstorm dispatches post-recycle all succeeded.
-- **PR #3774 (`dec58f1a1`)** — `feat(s3039-s9): wire was_fallback + was_auto_selected end-to-end through LLMCallLog`. `enforce_real_ai` + `_save_cost_tracking` + `agent_llm_router._log_call` all now accept + persist the 3 telemetry flags. S2856 shipped `was_downgraded`; this fills the two missing flags. Producer threading deferred (~30 auto_route call sites need to thread `was_auto_selected=True`).
-- **PR #3775 (`ce39df4e4`)** — `feat(s3039-d10): audit_llmcalllog_workspace_gaps command + PA loss finding`. Read-only `manage.py audit_llmcalllog_workspace_gaps [--window-days N] [--json]` classifies the 34,289 NULL-workspace LLMCallLog rows into 4 buckets (`system_embedding` / `system_test` / `pa_workspace_lost` / `unclassified`). Live run: 0 unclassified, HIGH-severity `pa_workspace_attribution_loss` flag at 50.7%.
-- **PR #3776 (`b5dbb89b6`)** — `fix(s3039-d10-follow): thread user through PA direct enforce_real_ai calls`. Root-caused the audit-flagged 50.7% loss to 4 direct `self.llm_enforcer.enforce_real_ai` call sites in `unified_pa_entrypoint.py` bypassing `_pa_wrapped_enforce_real_ai`'s user auto-injection. All 4 sites now inject `user=getattr(self, 'user', None)`. Grep-based lint test prevents future direct callers from missing `user=`. Post-recycle live verify: fresh PA dispatch landed workspace-populated LLMCallLog row.
+- **PR #3778 (`02dfbf0b4`)** — `docs(s3040): seed carry-forward — odds api degraded + w/d/i archaeology`. Two operational carry-forwards + archaeology deliverable pointer + routine docs/INDEX.md autoregen. No code changes.
 
-### S3037 backlog: 9/10 discharged after this session
+### Signals gathered
 
-- **S3037 (5):** A1, A2, A6, S4, S5 ✓
-- **S3038 (2):** S8, A3 ✓
-- **S3039 (3):** S7, S9, D10 Phase 1 ✓
-- **S3039 D10-follow:** PA workspace-resolver bug (surfaced + fixed same session) ✓
-
-**Remaining:**
-- **A6 Phase 2** (trigger-driven, ~1 session) — root-cause `lane_1_platform_readiness` bug once next `morning_brief` failure fires with the surfaced exception. WAIT-STATE, not actionable this session.
-- **S9 producer-threading follow-up** (~1 session) — thread `was_auto_selected=True` from `agent_model_router.auto_route` consumers (~30 call sites per Rigby's tool_run inventory). Same shape as S9 itself.
-- **D10 Phase 2** (conditional) — actual historical workspace backfill IF post-fix windows don't show the `pa_workspace_lost` bucket evaporating. Watch trend before committing.
+- **7am MDT trigger fired clean.** Morning brief `certified`, 0.95 confidence, deliverable `54f63f7b…`. All 4 lanes clean, no A6 lane_1 exception → A6 Phase 2 stays WAIT-STATE.
+- **Sports betting silent-failure surfaced + triaged.** `generate_daily_betting_brief` returned `status='success'` while nothing landed (Odds API auth dead + NULL constraint on `predictions`). Resolved by disabling the 2 auto-firing periodic tasks.
+- **Chris cash-flow signal.** New prioritization: cash flow > sports betting until Odds API key renewed. "Focus on what we have been" = keep the Rigby-substrate + engineering rhythm.
+- **W/D/I archaeology.** Deferred formal re-coherence arc per Chris; artifact preserved as deliverable `7c5bc04d-6976-4f70-9c25-de373613023b` so we don't re-do the research when the arc opens.
 
 ---
 
-## S3040 primary directive (Chris to ratify)
+## S3041 primary directive — today's sequenced work arc
 
-**No auto-first-action.** Chris picks between:
+**Chris ratified at S3040 close: today's arc = PA tools sweep → Rigby Tool Gap → UI Workspace, in that order.** Not three parallel options — a sequence. Each step gates the next.
 
-**(a) S9 producer follow-up** — thread `was_auto_selected=True` from all `agent_model_router.auto_route` consumers so the S9-shipped flag emits True in prod. Light-touch across ~30 files. Same-shape as S9. ~1 session.
-- **Lose anything?** No. Additive.
-- **More work later?** No — this IS the work to complete the S9 arc.
+### Step 1 — PA tools sweep (starts S3041, ~3–6 sessions)
 
-**(b) Net-new engineering** — pivot away from audit-remediation (5 audit ships in a row: S8/A3 last session, S7/S9/D10/D10-follow this session). Chris to name the axis (new spider, PA tool, dashboard, capability). Would break the streak and satisfy `feedback_engineering_bias_over_audit`.
-- **Lose anything?** Some through-line momentum.
-- **More work later?** Depends on what.
+Resume at **Slice 6 = `td_handlers_content.py`** (6 untested tools) per `project_s2935_resume_pa_tools_sweep`. Then Slice 7 for the 7-tool singleton bucket.
 
-**(c) Wait for A6 Phase 2 trigger** — non-actionable; morning_brief hasn't failed since PR #3767 shipped. Chris can just skip this one.
+Constraints:
+- `project_s2908_batch_4_shape_break_commitment` — batches after S2907 must break from uniform READ_ONLY (mixed-tool-scoped READ_ONLY subset OR gated-write dry_run-only). Slice 6 batches inherit this unless tool shape drives otherwise.
+- Slice-doc template + prior slice examples in `docs/audits/pa_tools/`. Last sweep was S2907.
 
-**Standard opener:**
+### Step 2 — Rigby Tool Gap ledger review (opens when Slice 6+7 close)
+
+Review the Rigby Tool Gap Ledger in Donkey Betz workspace (`b4503364-2573-4401-9e28-61a739e0ce50`, `deliverable_type='engineering_backlog'`) per `feedback_rigby_tool_gap_ledger`. Pick 1–2 highest-leverage gaps for a fix slate.
+
+Rationale: sweep surfaces new gaps; ledger accumulates known ones. Close the loop before moving on.
+
+### Step 3 — UI Workspace re-coherence arc (opens when tool-gap slate ships)
+
+Open the deferred Workspace/Deliverable/Initiative re-coherence arc using the archaeology deliverable `7c5bc04d-6976-4f70-9c25-de373613023b` as the substrate. Do not re-do the archaeology — the 3 coupled questions are already named:
+
+1. Is Workspace a filesystem boundary or a scoping lens?
+2. Are Initiatives autonomous or manual?
+3. Are Deliverables initiative outputs or standalone publish-control units?
+
+The arc has both a **model side** (answer the 3 questions → decide shape) and a **UI side** (redo the Workspace UI per Chris directive). Sequence: model decisions first, then UI redo lands on top.
+
+### Why this sequence
+
+- **"Focus on what we have been"** (Chris S3040) — Rigby-substrate work is the current rhythm; Slice 6 is the ratified continuation
+- **"Cash flow priority"** (Chris S3040) — Rigby's tool surface = A1 SaaS + A4 consulting substrate; every verified tool is a customer path derisked
+- **Tool gap review naturally follows sweep** — sweep surfaces gaps, ledger captures them, then triage
+- **UI Workspace waits for tool-side confidence** — you don't redo the container until you know what belongs in it; the sweep + gap work sharpens that
+- **Archaeology already done** — the Workspace arc can open without a research prelude
+
+### Standard opener for S3041
+
 1. `context-kit orient` (auto-injected)
 2. Absorb this file + `MEMORY.md` + `CLAUDE.md`
-3. Read S3039 handoff (`docs/handoffs/SESSION_3039_S7_S9_D10_ARC_CLOSE.md`) for full detail on the 4-PR arc
-4. `git log --oneline -8` — should show docs cascade + `b5dbb89b6` + `ce39df4e4` + `dec58f1a1` + `8f2e72570` at top
-5. Optional: `python manage.py audit_llmcalllog_workspace_gaps` — check whether PA loss_pct has started trending down (may take a few days of real traffic)
+3. Read S3040 handoff (`docs/handoffs/SESSION_3040_ODDS_DEGRADED_WDI_ARCHAEOLOGY_SEED.md`)
+4. `git log --oneline -6` — should show S3040 close cascade + `02dfbf0b4` + S3039 4-PR arc at top
+5. Read `project_s2935_resume_pa_tools_sweep` + `project_s2908_batch_4_shape_break_commitment` memories
+6. Review `docs/audits/pa_tools/` for sweep-doc template and prior slice examples (S2907 was last one)
+7. Open Slice 6 sweep: `td_handlers_content.py` (6 untested tools)
 
 ---
 
-## S3040 carry-forward seeds
+## S3041 carry-forward seeds
 
-### New from S3039
+### New from S3040
 
-- **D10 audit is live** — `python manage.py audit_llmcalllog_workspace_gaps [--window-days N] [--json]` runs against 30d LLMCallLog by default. Rerun at start of any session touching PA / workspace attribution to confirm the fix is holding.
-- **S9 telemetry plumbing is live but empty** — `was_auto_selected` field can now be populated but no producer threads True yet. Watch `LLMCallLog.objects.filter(was_auto_selected=True).count()` — will stay 0 until the S9 producer follow-up ships.
-- **S7 fix is live** — brainstorm panel dispatches on long_running should no longer fail with `SynchronousOnlyOperation`. Regression test `test_thinking_agent_async_boundary.py::test_concurrent_executes_with_widened_race_window_do_not_raise` will catch regressions.
-- **PA workspace fix is live** — 4 fallback paths in `unified_pa_entrypoint.py` now inject user. Fresh LLMCallLog rows from those paths should populate `workspace`. Full 30d loss_pct drop will take a few days of real traffic.
+- **Odds API operationally degraded** — 2 periodic tasks (`collect-sports-odds-intelligence`, `generate-daily-betting-brief`) `enabled=False` in DB. Ad-hoc callers unaffected (circuit breaker). Reason preserved in `PeriodicTask.description`. **To re-enable:** `PeriodicTask.objects.filter(name__in=['collect-sports-odds-intelligence','generate-daily-betting-brief']).update(enabled=True)`.
+- **Silent-success bug in `_impl_generate_daily_betting_brief`** — noted, not fixed (task disabled, no cost). Re-open if re-enabling betting brief.
+- **W/D/I archaeology deliverable** — `7c5bc04d-6976-4f70-9c25-de373613023b` in Donkey Betz workspace (`b4503364…`). Read BEFORE opening the deferred workspace-cleanup arc (see `project_donkey_betz_workspace_cleanup_and_ui_redo_deferred`). Do not re-do the archaeology.
 
-### New from S3040 (pre-arc)
+### Parked / conditional
 
-- **Workspace/Deliverable/Initiative archaeology deliverable** — `7c5bc04d-6976-4f70-9c25-de373613023b` in Donkey Betz workspace (`b4503364…`). Traces original intent for all three concepts (S695 Workspaces / S847 Initiatives / S862 Deliverables), documents the drift, and names the 3 coupled questions the eventual re-coherence arc must answer. Read this BEFORE opening the deferred workspace-cleanup arc (see `project_donkey_betz_workspace_cleanup_and_ui_redo_deferred`). Do not re-do the archaeology.
-
-- **Odds API marked degraded — 2 periodic tasks disabled** — `collect-sports-odds-intelligence` (every 30 min) + `generate-daily-betting-brief` (7am daily) both `enabled=False` in DB. Chris directive S3040: Odds API key auth failed, cash flow priority beats sports-betting focus. Reason preserved in `PeriodicTask.description` field with `[DEGRADED 2026-07-30 S3040 …]` marker. `cleanup-old-predictions` (weekly cleanup) stays enabled — harmless. **To re-enable when cash flows or key is renewed:** `PeriodicTask.objects.filter(name__in=['collect-sports-odds-intelligence','generate-daily-betting-brief']).update(enabled=True)`. Ad-hoc callers of `TheOddsSpider` (financial signals, market agents) still work — their circuit breaker handles auth failures gracefully. **Silent-degradation bug in `_impl_generate_daily_betting_brief` NOT fixed** — returns `status='success'` even when Odds API dies + DB persist fails on NOT NULL `predictions`. Left in place because task is now disabled; re-open if re-enabling.
+- **S9 producer follow-up** (~30 files, thread `was_auto_selected=True` through auto_route consumers) — parked behind today's 3-step arc; available anytime to close the S9 arc completely.
+- **A6 Phase 2** — WAIT-STATE, no trigger this cycle. Root-cause `lane_1_platform_readiness` bug once next `morning_brief` failure surfaces with a live exception.
+- **D10 Phase 2** (conditional) — actual historical workspace backfill IF post-fix windows don't show the `pa_workspace_lost` bucket evaporating. Watch trend before committing.
+- **UI Workspace re-coherence** — no longer deferred; sequenced as Step 3 of today's arc (see primary directive above).
 
 ### Carried from prior arcs — status preserved
 
@@ -82,20 +99,20 @@ S3039 opened with S7 (Chris's ratified pick from S3038 close) and ran a 4-PR clo
 
 ## Cross-cutting workflow references
 
-- **Constitutional governance chain:** CLAUDE.md Playbook **v0.11.0**. S3039 was pure remediation-shipping across 4 PRs — no drift closure or amendment triggers. PLAYBOOK-7.7.5 did not fire.
+- **Constitutional governance chain:** CLAUDE.md Playbook **v0.11.0**. S3040 was docs-only + operational triage. No spec→ship arcs, no [GR] rule firings, no amendment triggers. PLAYBOOK-7.7.5 did not fire.
 - **ADR corpus:** ADR-0001 through ADR-0008 (unchanged).
-- **Spec→ship contract (PLAYBOOK-7.7.1):** **4× Flow B spec→ship** (S7, S9, D10 Phase 1, D10-follow).
-- **SIGN evidence discipline (PLAYBOOK-7.7.2):** **4× joint SIGN** (all AGREE / `same_pr_mitigatable`), every one grounded in ≥4 real tool_runs. Zero rubber-stamps.
-- **Chris-facing decision framing (PLAYBOOK-7.7.3):** Applied to D10 reframing (Option A vs Option 2 pivot after Phase 0 probe) and each session-mid continuation prompt.
-- **Recycle discipline (PLAYBOOK-7.4.4):** `make recycle-all` after each of the 4 merges. Events recorded in `logs/recycle_events.jsonl` (SHAs `8f2e7257`, `dec58f1a`, `ce39df4e`, `b5dbb89b`).
-- **Verify-before-build (Cycle 1A):** **24th consecutive session.** Every PR started with an ORM probe / repo grep to verify current state.
+- **Spec→ship contract (PLAYBOOK-7.7.1):** No spec→ship cycles this session.
+- **SIGN evidence discipline (PLAYBOOK-7.7.2):** No SIGN cycles this session (no substantive drift/hardening intent).
+- **Chris-facing decision framing (PLAYBOOK-7.7.3):** Applied to Odds API degradation scope + S3041 first-action pick.
+- **Recycle discipline (PLAYBOOK-7.4.4):** N/A (docs-only + DB flag flip; beat re-reads automatically).
+- **Verify-before-build (Cycle 1A):** **25th consecutive session.** Verified Odds API caller scope before disabling.
 
 ---
 
 ## Wrapper pin note
 
-Active PA conversation pin at S3039 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
+Active PA conversation pin at S3040 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
 
 ---
 
-**Reminder — the workflow is constitutional.** S3039 closed with 9/10 S3037 backlog items discharged + the audit-surfaced PA workspace-resolver regression. S3040 has no urgent P0 — Chris to pick S9 producer follow-up, net-new engineering, or defer to trigger-driven work.
+**Reminder — the workflow is constitutional.** S3040 closed as a docs-only cadence pivot with no spec→ship arcs. Two operational carry-forwards + archaeology preserved. S3041 first-action = resume PA tools sweep Slice 6 (Chris ratified at close).
