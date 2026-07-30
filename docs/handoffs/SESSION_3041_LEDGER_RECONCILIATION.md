@@ -1,14 +1,18 @@
 # Session 3041 — Ledger reconciliation + meta-fix Option B shipped
 
 **Closed:** 2026-07-30
-**HEAD at close:** _(filled at close cascade)_
+**HEAD at close:** `653396d64` (post-PR #3781 wrapper bump; primary code at `4004b1910` / PR #3780)
 **Session shape:** Docs-only reconciliation + one substrate spec→ship arc. Verify-before-build caught S3041 planning a T1 spec for a fix that already shipped (Ledger #5 at S2938 PR #3512). Downstream sweep of all 7 open Rigby Tool Gap Ledger entries produced 2 definitive stale-status flips (#5 + #16). Meta-fix pattern hit 4 triggers same-session; Chris ratified ship-now (Option B) instead of park. Substrate shipped: `core/services/ledger_reconciliation.py` + standalone command + `session_lifecycle close` integration + 26 tests.
 
 ---
 
 ## What shipped
 
-### PR #_TBD_ (`_TBD_`) — `feat(s3041): ledger reconciliation meta-fix — flip #5 + #16, ship Option B substrate`
+### PR #3780 (`4004b1910`) — `feat(s3041): ledger reconciliation meta-fix — flip #5 + #16, ship Option B substrate`
+
+Followed by **PR #3781 (`653396d64`) — `chore(s3041): wrapper pin bump — pa-d4f23d53dc2f4c61 -> pa-821e6cb40f88470e (post-close)`** (routine post-close wrapper bump per `feedback_commit_wrapper_pin_bump_at_close`).
+
+Primary PR body:
 
 Docs + code + tests. One workspace deliverable updated (S3041 reconciliation block); one substrate module + command + integration + tests; one session handoff (this); 00-START refreshed; MEMORY.md updated.
 
