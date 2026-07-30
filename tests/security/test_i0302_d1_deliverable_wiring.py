@@ -134,6 +134,109 @@ class TestDeliverableListWiring:
 
 
 # ==========================================================================
+# OWNER FILTER — /api/deliverables/?owner=me | ?owner=<id>
+# S3050 PR 1 (RaaS UI arc Phase 2, Gap 4 / Gap 2 backend / Gap 7)
+# ==========================================================================
+
+
+class TestDeliverableListOwnerFilter:
+    """Exercises the S3050 PR 1 owner= query param.
+
+    Contract:
+    - owner=me → filter to request.user's rows
+    - owner=<user_id> as staff/superuser → filter to that user's rows
+    - owner=<user_id> as non-staff → coerced to self (defense before PR 4)
+    - No owner param → unchanged (backwards-compat with predicate scoping)
+    """
+
+    @pytest.fixture
+    def staff_with_workspace(self, db):
+        staff = User.objects.create_user(
+            username=f"staff-owner-{uuid.uuid4().hex[:6]}",
+            email=f"so-{uuid.uuid4().hex[:6]}@example.com",
+            password="pw",
+            is_staff=True,
+            is_superuser=False,
+        )
+        ws = ProjectWorkspace.objects.create(
+            user=staff, name=f"ws-staff-{uuid.uuid4().hex[:6]}"
+        )
+        return staff, ws
+
+    def _ids(self, resp) -> set[str]:
+        body = resp.json()
+        deliverables = body.get("deliverables") or body.get("results") or []
+        return {d.get("id") for d in deliverables if isinstance(d, dict)}
+
+    def test_owner_me_filters_to_self(
+        self, client, user_a, deliverable_a, deliverable_b
+    ):
+        client.force_login(user_a)
+        resp = client.get("/api/deliverables/?owner=me")
+        assert resp.status_code == 200
+        ids = self._ids(resp)
+        assert str(deliverable_a.id) in ids
+        assert str(deliverable_b.id) not in ids
+
+    def test_non_staff_arbitrary_owner_coerced_to_self(
+        self, client, user_a, user_b, deliverable_a, deliverable_b
+    ):
+        # user_a passes owner=<user_b.id> — coercion forces to self.
+        # user_a must never see deliverable_b via this branch.
+        client.force_login(user_a)
+        resp = client.get(f"/api/deliverables/?owner={user_b.id}")
+        assert resp.status_code == 200
+        ids = self._ids(resp)
+        assert str(deliverable_b.id) not in ids, (
+            "Non-staff must not reach other user's rows via owner param"
+        )
+        assert str(deliverable_a.id) in ids
+
+    def test_staff_can_query_other_owner_within_own_scope(
+        self, client, staff_with_workspace, user_b
+    ):
+        # Staff creates a Deliverable owned by user_b but attached to
+        # staff's workspace — mirrors the shape where staff cleans up
+        # rows on behalf of other users. Staff's `scope_queryset_deliverable`
+        # already includes staff's workspaces + workspace-null rows; the
+        # owner=<user_b.id> filter narrows to just user_b's within that scope.
+        staff, ws = staff_with_workspace
+        cross = Deliverable.objects.create(
+            user=user_b,
+            workspace=ws,
+            title=f"cross-{uuid.uuid4().hex[:6]}",
+            deliverable_type="text",
+            content="cross-user row inside staff workspace",
+        )
+        # Also create a staff-owned row to prove filter narrows.
+        own = Deliverable.objects.create(
+            user=staff,
+            workspace=ws,
+            title=f"own-{uuid.uuid4().hex[:6]}",
+            deliverable_type="text",
+            content="staff own row",
+        )
+        client.force_login(staff)
+        resp = client.get(f"/api/deliverables/?owner={user_b.id}")
+        assert resp.status_code == 200
+        ids = self._ids(resp)
+        assert str(cross.id) in ids, "Staff owner=<user_b> must include cross"
+        assert str(own.id) not in ids, "owner=<user_b> must exclude staff's own"
+
+    def test_no_owner_param_preserves_existing_scope(
+        self, client, user_a, deliverable_a, deliverable_b
+    ):
+        # Backwards-compat: without owner=, list matches pre-PR-1 behavior
+        # (workspace-scoped predicate output).
+        client.force_login(user_a)
+        resp = client.get("/api/deliverables/")
+        assert resp.status_code == 200
+        ids = self._ids(resp)
+        assert str(deliverable_a.id) in ids
+        assert str(deliverable_b.id) not in ids
+
+
+# ==========================================================================
 # CLONE source-fetch scoping — POST /api/deliverables/<id>/clone/
 # ==========================================================================
 
