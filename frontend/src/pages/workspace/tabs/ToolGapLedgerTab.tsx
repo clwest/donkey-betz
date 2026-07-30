@@ -47,10 +47,11 @@ interface LedgerRow {
 }
 
 interface LedgerListResponse {
-  results?: LedgerRow[]
-  items?: LedgerRow[]
+  success?: boolean
+  deliverables?: LedgerRow[]
   count?: number
   total?: number
+  pagination?: { total?: number; count?: number; page?: number }
 }
 
 interface LedgerDetailRow extends LedgerRow {
@@ -59,8 +60,8 @@ interface LedgerDetailRow extends LedgerRow {
 }
 
 interface LedgerDetailResponse {
-  results?: LedgerDetailRow
-  data?: LedgerDetailRow
+  success?: boolean
+  deliverable?: LedgerDetailRow
   [k: string]: unknown
 }
 
@@ -123,7 +124,7 @@ function DetailDrawer({ id, onClose }: { id: string; onClose: () => void }) {
     },
   })
 
-  const row: LedgerDetailRow | undefined = (data?.results as LedgerDetailRow | undefined) || (data?.data as LedgerDetailRow | undefined)
+  const row: LedgerDetailRow | undefined = data?.deliverable
 
   return (
     <aside className="flex h-full w-full max-w-2xl flex-col border-l border-slate-800 bg-slate-900/95">
@@ -216,8 +217,8 @@ export function ToolGapLedgerTab() {
     refetchInterval: 30000,
   })
 
-  const rows: LedgerRow[] = data?.results || data?.items || []
-  const totalCount = data?.total ?? data?.count ?? rows.length
+  const rows: LedgerRow[] = data?.deliverables || []
+  const totalCount = data?.pagination?.total ?? data?.total ?? data?.count ?? rows.length
 
   const grouped = useMemo(() => {
     const buckets: Record<string, LedgerRow[]> = {}
