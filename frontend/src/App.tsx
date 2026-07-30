@@ -2,6 +2,8 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { usePAStore } from '@/stores/paStore'
 import Layout from '@/components/layout/Layout'
+import CustomerLayout from '@/components/layout/CustomerLayout'  // S3051 PR 3: minimal customer-facing shell
+import MyPage from '@/pages/MyPage'  // S3051 PR 3: customer chat entry route
 import LoginPage from '@/pages/LoginPage'
 import LandingPage from '@/pages/LandingPage'  // S2797: public unauth landing page at /welcome
 import InboxPage from '@/pages/InboxPage'
@@ -133,6 +135,21 @@ function App() {
         <Route path="media" element={<MediaPage />} />
         <Route path="how-it-works" element={<HowItWorksPage />} />
         <Route path="executor" element={<ExecutorPage />} />
+      </Route>
+
+      {/* S3051 PR 3 — Customer-facing shell (RaaS UI Phase 2, discharges Gap 1 + Gap 5).
+          Parallel route tree to the operator <Layout>. No sidebar / no operator
+          telemetry / no GlobalPADock. Role-based redirect (customers → /my on
+          login, operators blocked from /my if scoped later) deferred to PR 4. */}
+      <Route
+        path="/my"
+        element={
+          <ProtectedRoute>
+            <CustomerLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<MyPage />} />
       </Route>
 
       {/* Focus Cockpit — hidden (Phase 1 of UI consolidation).
