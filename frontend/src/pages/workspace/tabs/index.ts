@@ -88,3 +88,6 @@ export { ThemeSignalsTab } from './theme-signals/ThemeSignalsTab'
 
 // S2989 Phase B: Audit Findings — docs/research/ finding registry with mark + send-to-rigby
 export { FindingsTab } from './FindingsTab'
+
+// S3047 slice 2: Rigby Tool Gap Ledger — engineering_backlog deliverable dashboard
+export { ToolGapLedgerTab } from './ToolGapLedgerTab'
