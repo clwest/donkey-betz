@@ -172,3 +172,78 @@ class ExecutionDetailViewFanoutTests(TestCase):
         self.assertEqual(execution['child_count'], CHILDREN_CAP + 3)
         self.assertEqual(len(execution['children']), CHILDREN_CAP)
         self.assertTrue(execution['children_truncated'])
+
+
+class ComputeFanoutScopedQuerysetTests(TestCase):
+    """S3047 A2 fold discharge: cross-user child rows must be filtered when a
+    ``scoped_queryset`` is passed to ``compute_fanout``.
+
+    Rigby A2 SIGN Q4 flagged the leak: ``execution_detail`` scopes the parent
+    via ``scope_queryset_agent_execution`` but the S3046 fanout helper queried
+    children with raw ``AgentExecution.objects``. A bug-written cross-user
+    ``parent_execution_id`` could surface child rows to a user who could see
+    the parent but not the descendants. These tests pin the scoping contract.
+    """
+
+    def setUp(self):
+        from core.security.object_authz import scope_queryset_agent_execution
+
+        self.scope = scope_queryset_agent_execution
+        self.user_a = User.objects.create_user(
+            username='s3047_scope_user_a', email='a@test.local', password='x',
+        )
+        self.user_b = User.objects.create_user(
+            username='s3047_scope_user_b', email='b@test.local', password='x',
+        )
+        self.parent_agent, _ = Agent.objects.get_or_create(
+            name='S3047ScopeParent', defaults={'description': 't', 'specialization': 't'},
+        )
+        self.child_agent, _ = Agent.objects.get_or_create(
+            name='S3047ScopeChild', defaults={'description': 't', 'specialization': 't'},
+        )
+
+        # Parent owned by user_a; two normal children owned by user_a; one
+        # cross-user child owned by user_b but with parent_execution_id
+        # pointing at user_a's parent (simulates the bug-write scenario Rigby
+        # flagged in the A2 SIGN fold).
+        self.parent = AgentExecution.objects.create(
+            agent=self.parent_agent, user=self.user_a, task='p', status='completed',
+        )
+        AgentExecution.objects.filter(id=self.parent.id).update(
+            root_execution_id=self.parent.id,
+        )
+        self.parent.refresh_from_db()
+        for i in range(2):
+            AgentExecution.objects.create(
+                agent=self.child_agent, user=self.user_a,
+                task=f'a_child_{i}', status='completed',
+                parent_execution_id=self.parent.id,
+                root_execution_id=self.parent.id,
+            )
+        self.cross_user_child = AgentExecution.objects.create(
+            agent=self.child_agent, user=self.user_b,
+            task='b_leak_child', status='completed',
+            parent_execution_id=self.parent.id,
+            root_execution_id=self.parent.id,
+        )
+
+    def test_unscoped_default_returns_cross_user_child(self):
+        """Backward-compat: no scoped_queryset = matches S3046 behavior;
+        all children visible including the cross-user leak row."""
+        result = compute_fanout(self.parent)
+        self.assertEqual(result['child_count'], 3)
+        self.assertEqual(result['subtree_count'], 3)
+        child_agent_ids = {c['execution_id'] for c in result['children']}
+        self.assertIn(str(self.cross_user_child.id), child_agent_ids)
+
+    def test_scoped_queryset_filters_cross_user_child_row(self):
+        """A2 fold discharge: user_a's scope hides user_b's child even though
+        parent_execution_id points at user_a's parent."""
+        scoped = self.scope(self.user_a, AgentExecution.objects.all())
+        result = compute_fanout(self.parent, scoped_queryset=scoped)
+
+        self.assertEqual(result['child_count'], 2)
+        self.assertEqual(result['subtree_count'], 2)
+        self.assertEqual(len(result['children']), 2)
+        child_ids = {c['execution_id'] for c in result['children']}
+        self.assertNotIn(str(self.cross_user_child.id), child_ids)

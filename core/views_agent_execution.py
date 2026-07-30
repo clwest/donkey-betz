@@ -520,7 +520,18 @@ def execution_detail(request, execution_id):
         # S3047: surface S3046 lineage + fanout fields on the REST detail payload
         # via shared helper (core/services/agent_fanout.compute_fanout) so the PA
         # tool + REST endpoint cannot drift on child/subtree semantics.
+        # S3047 follow-up: pass a scoped queryset into the helper so child/subtree
+        # queries filter cross-user rows — discharges the A2 SIGN Q4 future_trigger
+        # child-row auth-leak fold. Parent execution is already scoped above via
+        # scope_queryset_agent_execution.get(); the helper scope-applies to the
+        # descendant queries so a bug-written cross-user parent_execution_id
+        # cannot leak child rows into the response.
         from core.services.agent_fanout import compute_fanout
+
+        scoped_qs = scope_queryset_agent_execution(
+            request.user,
+            AgentExecution.objects.all(),
+        )
 
         return Response({
             'success': True,
@@ -540,7 +551,7 @@ def execution_detail(request, execution_id):
                     'created_at': execution.created_at.isoformat(),
                     'completed_at': execution.completed_at.isoformat() if execution.completed_at else None,
                     'last_heartbeat_at': execution.last_heartbeat_at.isoformat() if getattr(execution, 'last_heartbeat_at', None) else None,
-                    **compute_fanout(execution),
+                    **compute_fanout(execution, scoped_queryset=scoped_qs),
                 },
                 'related_memory': related_memory
             }
