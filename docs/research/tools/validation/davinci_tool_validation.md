@@ -29,6 +29,7 @@ Use `health` when the caller needs to know if the resolve_node service is reacha
 - `result` — **in scope this ship** — verified live via T1a harness error path (requires `job_id`). Same fail-loud pattern as `status`.
 - `jobs` — **in scope this ship** — verified live via T1a harness. Returns `{action, jobs, ...}` with `ResolveNodeClient.list_jobs()` payload. Same classification-drift pattern as `health` when node unreachable.
 - `grades` — **in scope this ship** — verified live via T1a harness. Returns `{action, count, grades}` — enumerates `COLOR_GRADE_PRESETS` constant from `resolve_node.color_grades`. Pure in-memory constant read, dispatched independently of node reachability.
+- `render` — **mutation — deferred to bridge-live batch** — see §5a. Bridge-dependent (requires reachable resolve_node); classified `MUTATION` + `external_bridge` in `TOOL_ACTION_METADATA`; harness reports `expected_outcome=skipped_mutation` (or `skipped_bridge_unreachable` when node offline per S2909 T2). Submits a render job to the resolve_node bridge.
 
 ## 3. Schema notes
 
