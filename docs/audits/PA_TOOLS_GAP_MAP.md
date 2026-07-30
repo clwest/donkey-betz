@@ -11,27 +11,29 @@
 - **Total tool names:** 164
 - **Per-category breakdown:**
   - `validated_full` (validated (full)): **118**
-  - `agent_via_run_agent` (agent (via run_agent)): **25**
-  - `agent_via_run_agent_validated` (agent via run_agent (validated)): **20**
+  - `agent_via_run_agent_validated` (agent via run_agent (validated)): **30**
+  - `agent_via_run_agent` (agent (via run_agent)): **15**
   - `meta_no_handler` (meta (no handler by design)): **1**
-- **RaaS-validated** (`validated_full` + `agent_via_run_agent_validated`): **138**
+- **RaaS-validated** (`validated_full` + `agent_via_run_agent_validated`): **148**
 
 ## Validation-doc corpus
 
-- **Total `*_validation.md` files:** 150
+- **Total `*_validation.md` files:** 160
 - **Substrate (cross-cutting) docs:** 10 — reduce risk platform-wide but do NOT validate per-tool invariants (S2795 F2 rename).
-- **Per-tool docs:** 140 — of which 138 have an explicit 'Covered actions' section (F1 checklist).
-- **Per-tool docs with `Template version` marker:** 118 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
+- **Per-tool docs:** 150 — of which 148 have an explicit 'Covered actions' section (F1 checklist).
+- **Per-tool docs with `Template version` marker:** 128 (T1b S2904 opt-in ratchet — legacy docs without the marker stay `warn` advisory).
 
 ## Template compliance (T1b)
 
 Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without `Template version:` marker); `pass` = v1-conformant; `fail` = v1 marker present but mandatory section/frontmatter missing.
 
 - `pass`: **98**
-- `warn`: **46**
-- `fail`: **20**
+- `warn`: **36**
+- `fail`: **30**
 
 **Failing docs (T1b blocking):**
+- `bear_case_agent` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
+- `blockchain_audit_coordinator` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `brand_identity_agent` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `code_review_agent` — template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `content_audit_agent` — template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
@@ -41,41 +43,49 @@ Ratchet-and-warn per T1b ship-shape §3. `warn` is advisory (legacy docs without
 - `creative_director_agent` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `cto_agent` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `editor_agent` — template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
+- `game_predictor` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
+- `line_movement_analyzer` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `market_intelligence_agent` — template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
+- `market_intelligence_coordinator` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `memory_isolation_agent` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `performance_analyst_agent` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `platform_audit_agent` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
+- `prediction_market_analyst` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `research_agent` — template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `security_agent` — template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `seo_optimizer_agent` — template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
+- `sharp_action_detector` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
+- `stock_analyst_agent` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
+- `stock_audit_coordinator` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `thinking_agent` — template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `topic_miner_agent` — template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `trend_analysis_agent` — template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 - `voice_critic_agent` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
+- `whale_watcher_agent` — template_v1_missing_frontmatter_register_site, template_v1_missing_frontmatter_head, template_v1_missing_schema_notes, template_v1_missing_golden_path, template_v1_missing_failure, template_v1_missing_evidence
 
 ## Two-metric scoreboard (S2942 Ledger #41)
 
 Opt-in per-tool frontmatter classification. Missing fields land as `unknown` (no silent default per plan §2.1 acceptance).
 
-- **Metric A — `Execution mode:` opt-ins:** 27 of 140 per-tool docs.
-  - `unknown`: **137** tools
-  - `live`: **23** tools
+- **Metric A — `Execution mode:` opt-ins:** 37 of 150 per-tool docs.
+  - `unknown`: **127** tools
+  - `live`: **33** tools
   - `analyzed`: **4** tools
-- **Metric B — `Mutation safety:` opt-ins:** 7 of 140 per-tool docs.
+- **Metric B — `Mutation safety:` opt-ins:** 7 of 150 per-tool docs.
   - `unknown`: **157** tools
   - `dry_run_supported`: **6** tools
   - `unsafe_no_dry_run`: **1** tools
 
 ## Schema quality lints (F5 advisory column)
 
+- `template_v1_missing_schema_notes`: **30** tools
+- `template_v1_missing_golden_path`: **30** tools
+- `template_v1_missing_failure`: **30** tools
+- `template_v1_missing_evidence`: **30** tools
 - `actions_not_mentioned_in_description`: **22** tools
-- `template_v1_missing_schema_notes`: **20** tools
-- `template_v1_missing_golden_path`: **20** tools
-- `template_v1_missing_failure`: **20** tools
-- `template_v1_missing_evidence`: **20** tools
+- `template_v1_missing_frontmatter_register_site`: **20** tools
+- `template_v1_missing_frontmatter_head`: **20** tools
 - `no_required`: **16** tools
-- `template_v1_missing_frontmatter_register_site`: **10** tools
-- `template_v1_missing_frontmatter_head`: **10** tools
 - `no_properties`: **1** tools
 - `handler_drift_action_count`: **1** tools
 - `handler_drift_negative_claim_dispatch`: **1** tools
@@ -101,8 +111,8 @@ _No untested-tool groups met the threshold._
 | `audit_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `autonomous_content_studio_coordinator` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `autopilot_tool` | ✓✓ | validated (full) | warn | actions_not_mentioned_in_description | `core/services/td_handlers_ops.py` |
-| `bear_case_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
-| `blockchain_audit_coordinator` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
+| `bear_case_agent` | handler | agent via run_agent (validated) | ✗ | — | `core/services/tool_dispatcher.py` |
+| `blockchain_audit_coordinator` | handler | agent via run_agent (validated) | ✗ | — | `core/services/tool_dispatcher.py` |
 | `blog_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_content.py` |
 | `bpaas_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `brainstorm_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
@@ -147,7 +157,7 @@ _No untested-tool groups met the threshold._
 | `experiment_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `feedback_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_content.py` |
 | `fleet_health` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_core.py` |
-| `game_predictor` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
+| `game_predictor` | handler | agent via run_agent (validated) | ✗ | — | `core/services/tool_dispatcher.py` |
 | `gates_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `get_body_vitals` | ✓✓ | validated (full) | ✓ | no_properties, no_required | `core/services/td_handlers_agents.py` |
 | `get_system_alerts` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_agents.py` |
@@ -163,9 +173,9 @@ _No untested-tool groups met the threshold._
 | `learning_patterns_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_content.py` |
 | `learning_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_core.py` |
 | `legal_doc_drafter_agent` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
-| `line_movement_analyzer` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
+| `line_movement_analyzer` | handler | agent via run_agent (validated) | ✗ | — | `core/services/tool_dispatcher.py` |
 | `market_intelligence_agent` | handler | agent via run_agent (validated) | ✗ | — | `core/services/tool_dispatcher.py` |
-| `market_intelligence_coordinator` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
+| `market_intelligence_coordinator` | handler | agent via run_agent (validated) | ✗ | — | `core/services/tool_dispatcher.py` |
 | `marketing_strategy_agent` | ✓✓ | validated (full) | ✓ | — | `core/services/tool_dispatcher.py` |
 | `media_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `meeting_coordinator_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
@@ -193,7 +203,7 @@ _No untested-tool groups met the threshold._
 | `platform_config_tool` | ✓✓ | validated (full) | ✓ | no_required, actions_not_mentioned_in_description | `core/services/td_handlers_core.py` |
 | `podcast_coordinator_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `podcast_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
-| `prediction_market_analyst` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
+| `prediction_market_analyst` | handler | agent via run_agent (validated) | ✗ | — | `core/services/tool_dispatcher.py` |
 | `proactive_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `profile_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `railway_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_railway.py` |
@@ -215,14 +225,14 @@ _No untested-tool groups met the threshold._
 | `self_awareness_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_gateway.py` |
 | `seo_optimizer_agent` | handler | agent via run_agent (validated) | ✗ | — | `core/services/tool_dispatcher.py` |
 | `session_tool` | ✓✓ | validated (full) | warn | actions_not_mentioned_in_description | `core/services/td_handlers_core.py` |
-| `sharp_action_detector` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
+| `sharp_action_detector` | handler | agent via run_agent (validated) | ✗ | — | `core/services/tool_dispatcher.py` |
 | `signal_studio_judge_stats` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_core.py` |
 | `social_media_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
 | `spider_data_aggregation_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/spider_data_aggregation_tool.py` |
 | `spider_status_tool` | ✓✓ | validated (full) | warn | — | `core/services/td_handlers_ops.py` |
 | `status_snapshot_tool` | ✓✓ | validated (full) | warn | no_required | `core/services/td_handlers_ops.py` |
-| `stock_analyst_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
-| `stock_audit_coordinator` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
+| `stock_analyst_agent` | handler | agent via run_agent (validated) | ✗ | — | `core/services/tool_dispatcher.py` |
+| `stock_audit_coordinator` | handler | agent via run_agent (validated) | ✗ | — | `core/services/tool_dispatcher.py` |
 | `strategic_review` | ✓✓ | validated (full) | ✓ | — | `core/services/tool_dispatcher.py` |
 | `studio_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_core.py` |
 | `surgical_moves_status_tool` | ✓✓ | validated (full) | ✓ | no_required | `core/services/td_handlers_content.py` |
@@ -244,7 +254,7 @@ _No untested-tool groups met the threshold._
 | `voice_critic_agent` | handler | agent via run_agent (validated) | ✗ | — | `core/services/tool_dispatcher.py` |
 | `web_fetch_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
 | `web_search` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_agents.py` |
-| `whale_watcher_agent` | handler | agent (via run_agent) | warn | — | `core/services/tool_dispatcher.py` |
+| `whale_watcher_agent` | handler | agent via run_agent (validated) | ✗ | — | `core/services/tool_dispatcher.py` |
 | `work_tool` | ✓✓ | validated (full) | ✓ | actions_not_mentioned_in_description | `core/services/td_handlers_core.py` |
 | `workflow_orchestration_agent` | ✓✓ | validated (full) | ✓ | — | `core/services/tool_dispatcher.py` |
 | `workflow_run_tool` | ✓✓ | validated (full) | ✓ | — | `core/services/td_handlers_core.py` |
