@@ -96,6 +96,120 @@ class MeetingCoordinatorSourceGuardTests(TestCase):
         )
 
 
+class RouterEndToEndLineageTests(TestCase):
+    """S3048 addendum coverage: verifies the router's
+    ``_create_execution_record`` actually READS ``execution_id`` from
+    the raw caller context (not the ``context_summary`` blob).
+
+    Pre-addendum, ``agent_router.py:2849`` rebound
+    ``context = context_summary or {}`` before the lineage read at
+    line 2872-2882, silently dropping every ``execution_id`` threaded
+    by the delegation-site fix. D1 empirical verify (2026-07-30):
+    child row created with ``parent=cba6595c root=cba6595c`` matching
+    the expected parent id — end-to-end wire confirmed."""
+
+    def setUp(self):
+        from django.contrib.auth import get_user_model
+        from core.models_unified_system import Agent, AgentExecution
+
+        User = get_user_model()
+        self.user = User.objects.create_user(
+            username='router-lineage-e2e',
+            email='router-e2e@example.com',
+            password='x',
+        )
+        # Parent execution (simulates the caller's own AgentExecution row)
+        self.parent_agent, _ = Agent.objects.get_or_create(
+            name='S3048RouterE2EParent', defaults={'agent_type': 'routable'},
+        )
+        self.parent_row = AgentExecution.objects.create(
+            agent=self.parent_agent,
+            user=self.user,
+            task='S3048 router e2e verify',
+            status='in_progress',
+        )
+        # Stub child agent for fast dispatch
+        Agent.objects.get_or_create(
+            name='S3048RouterE2EChild', defaults={'agent_type': 'routable'},
+        )
+
+    def test_router_threads_execution_id_from_raw_context(self):
+        from core.agent_router import AgentRouter
+        from core.agents.base_agent import BaseAgent, AgentResult
+        from core.models_unified_system import AgentExecution
+
+        class _StubChild(BaseAgent):
+            def execute(self, task, context=None, **kw):
+                return AgentResult(
+                    success=True,
+                    message='stub',
+                    data={},
+                    agent_name='S3048RouterE2EChild',
+                )
+
+        router = AgentRouter(user=self.user)
+        router.AGENT_MAP['S3048RouterE2EChild'] = _StubChild
+
+        result = router.route(
+            'S3048RouterE2EChild',
+            'S3048 router-side threading e2e verify',
+            context={'execution_id': str(self.parent_row.id)},
+        )
+        self.assertTrue(result.success)
+
+        # The child row must have parent_execution_id = parent.id and
+        # root_execution_id resolved (falls back to parent_id when
+        # parent has no recorded root yet).
+        children = AgentExecution.objects.filter(
+            parent_execution_id=self.parent_row.id,
+        )
+        self.assertEqual(
+            children.count(), 1,
+            'router must create exactly one child with parent_execution_id set',
+        )
+        child = children.first()
+        self.assertEqual(str(child.parent_execution_id), str(self.parent_row.id))
+        self.assertEqual(str(child.root_execution_id), str(self.parent_row.id))
+
+    def test_router_uses_parent_execution_id_kwarg_when_provided(self):
+        """Router's ``parent_execution_id`` kwarg still wins over
+        context inheritance — back-compat safeguard."""
+        from core.agent_router import AgentRouter
+        from core.agents.base_agent import BaseAgent, AgentResult
+        from core.models_unified_system import AgentExecution
+
+        class _StubChild(BaseAgent):
+            def execute(self, task, context=None, **kw):
+                return AgentResult(
+                    success=True, message='stub', data={},
+                    agent_name='S3048RouterE2EChild',
+                )
+
+        router = AgentRouter(user=self.user)
+        router.AGENT_MAP['S3048RouterE2EChild'] = _StubChild
+        # Direct-invoke the private method with parent_execution_id kwarg
+        rec = router._create_execution_record(
+            agent_name='S3048RouterE2EChild',
+            task='direct kwarg verify',
+            parent_execution_id=str(self.parent_row.id),
+            context={},
+        )
+        self.assertIsNotNone(rec)
+        rec.refresh_from_db()
+        self.assertEqual(str(rec.parent_execution_id), str(self.parent_row.id))
+
+    def test_router_addendum_none_context_guard_in_source(self):
+        """Post-addendum: raw context can be None (kwarg default);
+        lineage resolution must not crash. Source-guard the None-safe
+        rebind that protects lineage lookup from crashing."""
+        src = Path('core/agent_router.py').read_text()
+        self.assertIn(
+            "_raw_ctx = context if isinstance(context, dict) else {}",
+            src,
+            'S3048 addendum None-context guard removed from agent_router.py',
+        )
+
+
 class AISeriesWorkflowAgentRoutingLineageTests(TestCase):
     """Behavior test — AISeriesWorkflowAgent._route_with_timeout threads
     execution_id from ``self._execution_context`` into the context dict

@@ -2846,9 +2846,16 @@ class AgentRouter:
                     logger.debug(f"Could not resolve experiment {experiment_id}: {e}")
 
             # Session 843: Resolve trace_id and project_id
-            context = context_summary or {}
-            trace_id = TraceAttachmentService.resolve_trace_id(context)
-            project_id = TraceAttachmentService.resolve_project_id(context, user=self.user)
+            # S3048 addendum: use a separate name for the summary blob so
+            # the raw caller ``context`` kwarg stays accessible below for
+            # lineage resolution (line 2872-2875). Pre-fix, this line
+            # rebound ``context = context_summary or {}`` which silently
+            # dropped the raw context's ``execution_id`` / ``parent_execution_id``
+            # keys threaded by delegation sites — making S3048's
+            # delegation-site fix a no-op end-to-end.
+            _ctx_for_tracing = context_summary or {}
+            trace_id = TraceAttachmentService.resolve_trace_id(_ctx_for_tracing)
+            project_id = TraceAttachmentService.resolve_project_id(_ctx_for_tracing, user=self.user)
 
             # Session 642: User field is now nullable - always create execution record
             # Create execution record (user can be None for Celery/API tasks)
@@ -2869,9 +2876,13 @@ class AgentRouter:
             # default to parent_execution_id if parent has no parent).
             # Root defaults to self.id after create (set below) for
             # root-of-tree executions.
+            # S3048 addendum: raw ``context`` may be None (kwarg default);
+            # guard so lineage resolution never crashes when a caller
+            # dispatches without a context dict (e.g. bare route()).
+            _raw_ctx = context if isinstance(context, dict) else {}
             resolved_parent_id = parent_execution_id or (
-                context.get('parent_execution_id')
-                or context.get('execution_id')  # inherit running exec context
+                _raw_ctx.get('parent_execution_id')
+                or _raw_ctx.get('execution_id')  # inherit running exec context
             )
             resolved_root_id = None
             if resolved_parent_id:
