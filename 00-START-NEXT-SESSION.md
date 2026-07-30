@@ -6,11 +6,13 @@
 
 S3041 opened planning a T1 spec for Ledger #5 fix; verify-before-build caught that the fix already shipped at S2938 (PR #3512). Downstream 7-entry sweep found #16 also stale (shipped at S2941 PR #3517). Both flipped in the ledger deliverable. Meta-fix (Option B) then shipped same-session per Chris directive ("if we can fix it now, let's address it while you have context"): new `core/services/ledger_reconciliation.py` substrate + standalone command + `session_lifecycle close` integration + 26 tests all pass. Rigby A2 SIGN AGREE 4/4 dimensions per PLAYBOOK-7.7.5.
 
-**HEAD at close:** _(filled by close cascade)_
+**HEAD at close:** `653396d64` (post-PR #3781 wrapper bump; primary code at `4004b1910` / PR #3780).
 
 ### PRs shipped this session
 
-- **PR #_TBD_ (`_TBD_`)** — `feat(s3041): ledger reconciliation meta-fix — flip #5 + #16, ship Option B substrate`. Ledger deliverable status flips + new substrate module + command + close integration + 26 tests.
+- **PR #3780 (`4004b1910`)** — `feat(s3041): ledger reconciliation meta-fix — flip #5 + #16, ship Option B substrate`. Ledger deliverable status flips + new substrate module + command + close integration + 26 tests.
+- **PR #3781 (`653396d64`)** — `chore(s3041): wrapper pin bump — pa-d4f23d53dc2f4c61 -> pa-821e6cb40f88470e (post-close)`. Routine post-close wrapper bump.
+- **PR #_TBD_close_ (this cascade)** — `docs(s3041): close cascade — HEAD backfill + INDEX autoregen`. Fills the primary PR's `_TBD_` HEAD placeholders + regenerates `docs/INDEX.md` for the 2 new files.
 
 ### Signals gathered
 
