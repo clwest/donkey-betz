@@ -27,6 +27,7 @@ Use `list` when the caller needs a recent-media view across all three models (or
 - `list` — **in scope this ship** — verified live via T1a harness. Returns `{action, count, items}` — cross-model iteration through `ImageHistory / VideoHistory / AudioHistory`, user-scoped by `user_id`, sorted by `created_at` desc, limit-capped at 50 (default 10).
 - `detail` — **in scope this ship** — verified live via T1a harness error path (requires `id`). Returns `{action, id, media_type, created_at, ...extra_fields}` for the matching asset across all 3 models. Raises `ValueError` when `id` missing.
 - `stats` — **in scope this ship** — verified live via T1a harness. Returns `{action, images, videos, audio, total}` — user-scoped aggregate counts per media type.
+- `delete` — **mutation — deferred to Slice 2 write batch** — see §5a. Classified `IRREVERSIBLE` in `TOOL_ACTION_METADATA`; harness reports `expected_outcome=skipped_mutation`. Hard-deletes the matching `ImageHistory` / `VideoHistory` / `AudioHistory` row + associated Cloudinary asset (irreversible).
 
 ## 3. Schema notes
 
