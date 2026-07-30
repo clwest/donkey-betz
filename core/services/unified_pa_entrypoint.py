@@ -2062,6 +2062,14 @@ class UnifiedPAEntrypoint:
                             agent_name='PersonalAssistant',
                             trace_id=trace_id,
                             use_claude=True,
+                            # S3039 D10-follow: this direct enforce_real_ai
+                            # bypasses _pa_wrapped_enforce_real_ai (which
+                            # auto-injects user at line ~886), so we must
+                            # pass user explicitly or LLMCallLog.workspace
+                            # lands NULL — the 50.7% PA attribution loss
+                            # surfaced by audit_llmcalllog_workspace_gaps.
+                            # getattr for parity with the wrapper's pattern.
+                            user=getattr(self, "user", None),
                         )
                         fallback_text = fallback_result.get('response', '') or ''
                         if (
@@ -5363,7 +5371,12 @@ Only describe features and capabilities that actually exist. Never fabricate con
                         task_type="conversation",
                         # Session 1000C: Reduced from 4000 to 800 — prompt says
                         # 2-4 sentences, 800 tokens (~600 words) is plenty.
-                        max_tokens=800
+                        max_tokens=800,
+                        # S3039 D10-follow: direct enforce_real_ai bypasses
+                        # the PA wrapper's user auto-injection; pass user
+                        # explicitly so LLMCallLog.workspace populates.
+                        # getattr for parity with the wrapper's pattern.
+                        user=getattr(self, "user", None),
                     ),
                     timeout=60.0
                 )
@@ -5410,7 +5423,12 @@ Address the user by name occasionally."""
                         agent_name=PA_IDENTITY,
                         task_type="conversation",
                         # Session 977: Reduced from 4000 to 2000 to keep PA responses fast
-                        max_tokens=2000
+                        max_tokens=2000,
+                        # S3039 D10-follow: direct enforce_real_ai bypasses
+                        # the PA wrapper's user auto-injection; pass user
+                        # explicitly so LLMCallLog.workspace populates.
+                        # getattr for parity with the wrapper's pattern.
+                        user=getattr(self, "user", None),
                     ),
                     timeout=60.0
                 )
@@ -8192,7 +8210,12 @@ Be concise, conversational, and personalized. Address the user by name."""
                 context=system_prompt,
                 agent_name=PA_IDENTITY,
                 task_type="conversation",
-                max_tokens=2000
+                max_tokens=2000,
+                # S3039 D10-follow: direct enforce_real_ai bypasses the
+                # PA wrapper's user auto-injection; pass user explicitly
+                # so LLMCallLog.workspace populates. getattr for parity
+                # with the wrapper's pattern.
+                user=getattr(self, "user", None),
             )
 
             if result.get('success'):
