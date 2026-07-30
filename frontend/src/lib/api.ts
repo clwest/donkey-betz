@@ -4257,8 +4257,12 @@ export const executorApi = {
 }
 
 // Session 1009: Deliverables Library API
+// S3050 PR 2 (RaaS UI arc Phase 2, Gap 2 frontend): expose typed `owner` filter.
+// 'me' maps to request.user server-side; string ids are staff/superuser-only
+// (non-staff arbitrary ids are coerced to self at the backend). PR 4 lands the
+// operator-vs-customer role guard.
 export const deliverablesApi = {
-  list: (params?: { type?: string; category?: string; agent?: string; saved?: boolean; template?: boolean; source?: string; search?: string; page?: number; per_page?: number; workspace?: string }) =>
+  list: (params?: { type?: string; category?: string; agent?: string; saved?: boolean; template?: boolean; source?: string; owner?: 'me' | string; search?: string; page?: number; per_page?: number; workspace?: string }) =>
     api.get('/deliverables/', { params }),
   detail: (id: string) => api.get(`/deliverables/${id}/`),
   stats: (params?: Record<string, string>) => api.get('/deliverables/stats/', { params }),
