@@ -36,40 +36,45 @@ S3044 discharged Chris-ratified Option B ("close all 18 non-agent_via_run_agent 
 
 ---
 
-## S3045 first-action candidates
+## S3045 mandatory first-action — `agent_via_run_agent` bucket audit (RaaS framing)
 
-**No mandatory first-action.** Path B systematic sweep is DONE. Chris picks direction:
+**Chris directive S3044 close 2026-07-30:** open the 45-tool `agent_via_run_agent` bucket audit next. RaaS framing — "I would like to be able to verify that everything that Rigby should have access to being a user facing service is working, and her needing to be able to call agents is a part of that service."
 
-### Option A — Path B successor arcs (all separately-scoped, unblocked)
+See `project_s3045_agent_via_run_agent_bucket_next.md` for full context.
 
-- **Mutation coverage batches** — ~50+ mutation actions across 6+ tools defer to future write-shaped batches. Requires dry_run scaffolding work. Open when Chris wants mutation coverage.
-- **Bridge-live validation batches** — davinci / obs / media bridge-dependent mutations. Requires bridge-reachable environment.
-- **`agent_via_run_agent` bucket audit (45 tools)** — separate class shape (agent-dispatch via `_handle_agent_tool`), separate arc scoping needed.
-- **Stem-matcher warn-only lint (Option B in ledger row)** — open if 3rd wrong-stem-match trigger surfaces.
-- **NEXT_HEADING_RE regex refinement (Option B in ledger row)** — advisory; bold-labels convention is current mitigation.
+### Depth D-verdict REQUIRED before first batch
 
-### Option B — Continue S3042 UI Workspace re-coherence arc
+Present Chris a plain-English decision on validation depth. Do NOT default to S3044's doc-only shape — RaaS bar may require live-dispatch verification.
 
-- **Q3** — Spine Contract v1 §1 "deliverable = standalone publish-control unit": frontend event instrumentation (workspace_home_opened / deliverables_list_opened / initiative_list_opened), deliverable authoring UI, `publish_intent` enum audit
-- **Q4** — Spine Contract v1 §§1+3 "Deliverables home spine + workspace-first default": Workspace UI redo (Arc C)
+- **Doc-only (S3044 shape reuse):** 6-9 sessions estimated at 5-8 tools/batch. Fast; verifies mapping + envelope contract per Slice 5 CLOSE artifact. Won't catch runtime dispatch failures.
+- **Doc + live-dispatch verification:** heavier. Each tool actually dispatched; completion envelope captured. Catches "mapping right but Celery task explodes" bugs. But 45 real agent runs (some LLM-costed, some bridge-dependent).
+- **Hybrid:** doc-only for internal / low-frequency agents; live-dispatch for customer-critical / high-frequency Rigby agents (brainstorm / content_writer / workflow_orchestration / research_agent).
 
-### Option C — Other queued work
+### Substrate to consult BEFORE opening
 
-- **`chris-personal` cleanup pass** — archive 30 orphan initiatives + set `target_workspace` on 3 NULL initiatives (Spine Contract v1 §4)
-- **/docs/ restructuring arc** — per `project_docs_restructuring_arc_queued`
-- **T2 spec for `agent_router.py:2131-2132` silent fallback** — REQUIRES 2nd trigger first
+- `docs/audits/pa_tools/substrate/slice_5_close_artifact.md` — 14 agent-forwarding tools already validated (S2925-S2928). Shared handler contract (`_handle_agent_tool` at `tool_dispatcher.py:1196`), shared mapping (`_tool_to_agent_name` at `td_handlers_agents.py:83-163`), deep-extraction contract for `AgentExecution.output_data`.
+- Path B CLOSE artifact (`docs/audits/pa_tools/substrate/S3044_path_b_close_stub.md`) — post-close forward-carry list includes this bucket.
+- `feedback_wait_for_agent_completions_before_close_cascade` — if live-dispatch shape chosen.
+- `feedback_local_truth_no_production` — local pass = shipped.
 
-### Option D — Chris directive
+### Deferred to later sessions (do NOT open in S3045 unless Chris re-scopes)
 
-Something else Chris wants (net-new engineering candidate per `feedback_engineering_bias_over_audit`).
+- Mutation coverage batches (Path B successor)
+- Bridge-live validation batches (Path B successor)
+- Stem-matcher warn-only lint (Option B in ledger; open if 3rd trigger)
+- NEXT_HEADING_RE regex refinement (Option B in ledger; advisory)
+- S3042 UI Workspace re-coherence Q3/Q4
+- `chris-personal` orphan-initiative cleanup pass
+- `/docs/` restructuring arc
+- T2 spec for `agent_router.py:2131-2132` silent fallback
 
-### Concrete opening move (regardless of option)
+### Concrete opening move
 
 1. `context-kit orient` (auto-injected)
 2. Absorb this file + `MEMORY.md` + `CLAUDE.md`
 3. Read S3044 handoff (`docs/handoffs/SESSION_3044_PATH_B_PA_TOOLS_SWEEP_CLOSED.md`)
-4. Confirm with Chris: which option, and any scope constraints
-5. If option requires a fresh substrate audit, do Cycle 1A verify-before-build FIRST (29+ consecutive sessions of this catch has been load-bearing)
+4. Cycle 1A verify-before-build FIRST — run `build_pa_tool_audit --gap-only --check` + read Slice 5 CLOSE artifact + list the 45 agent_via_run_agent tools with their AGENT_MAP entries (30th consecutive session — this catch has been load-bearing).
+5. Present Chris the depth D-verdict (doc-only vs live-dispatch vs hybrid) BEFORE authoring any first batch.
 
 ---
 
