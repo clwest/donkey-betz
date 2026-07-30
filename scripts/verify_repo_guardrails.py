@@ -77,6 +77,38 @@ AUDIT_AUTOGEN_FILES: list[tuple[Path, str]] = [
 AUDIT_AUTOGEN_PATTERN = re.compile(r"<!--\s*DOC-AUTOGEN", re.IGNORECASE)
 
 
+# S3043 T1 v2 — silent-default workspace resolver guardrail (drift class
+# closure per Spine Contract v1 §3 Corollary). The shape signature
+# `ProjectWorkspace.objects.filter(is_active=True)` used to be the silent
+# default for "which workspace do I write to?" across ~10 sites; we migrated
+# the 3 real resolvers to `platform_config.get_primary_workspace()` and the
+# other sites are correct for their intended semantics (metrics, iterators,
+# per-user, bulk writes, or explicit safety-net fallbacks).
+#
+# This guardrail catches drift: any NEW occurrence of the shape signature in
+# `core/**/*.py` outside the allowlist below fails strict mode. To add a new
+# allowlist entry, the caller must annotate WHY the site is not a silent
+# default resolver (a comment on the line or nearby) and document the
+# exception in `docs/handoffs/` so future audits can validate it.
+SILENT_DEFAULT_RESOLVER_PATTERN = re.compile(
+    r"ProjectWorkspace\.objects\.filter\(is_active=True\)"
+)
+SILENT_DEFAULT_RESOLVER_SCOPE = REPO_ROOT / "core"
+SILENT_DEFAULT_RESOLVER_ALLOWLIST: dict[str, str] = {
+    # file:line → reason (documented in S3043 handoff)
+    "core/services/heart.py:383": "observability metric (.count() only)",
+    "core/services/skin.py:93": "observability metric (.count() only)",
+    "core/management/commands/backfill_media_workspaces.py:50": "per-user backfill iterator",
+    "core/tasks.py:12560": "rescan_active_workspaces beat task iterates ALL active workspaces",
+    "core/services/td_handlers_codejobs.py:481": "per-user workspace resolver (filtered by user_id)",
+    "core/services/workspace_manager.py:1938": "bulk deactivate write during set_active_workspace",
+    "core/agent_router.py:2132": "explicit safety-net fallback after get_primary_workspace() fails",
+    # Note: agent_router.py:2131 uses a different shape
+    # `filter(is_active=True, total_operations__gt=0)` and does not match the
+    # strict signature — it does not need an allowlist entry.
+}
+
+
 @dataclass
 class CommandResult:
     label: str
@@ -444,6 +476,78 @@ def check_platform_inventory_freshness() -> tuple[bool, str]:
     )
 
 
+def check_silent_default_workspace_resolvers() -> tuple[bool, list[str]]:
+    """Scan ``core/**/*.py`` for the silent-default resolver shape signature.
+
+    Returns ``(ok, messages)``. ``ok`` is ``False`` when the scan finds a
+    hit that is not in ``SILENT_DEFAULT_RESOLVER_ALLOWLIST``. Every scan
+    result — hit or clean — is reflected in ``messages`` so the CI report
+    shows which sites are allowlisted and why. S3043 T1 v2 (Spine Contract
+    v1 §3 Corollary).
+    """
+    if not SILENT_DEFAULT_RESOLVER_SCOPE.exists():
+        return True, [
+            f"scope missing: {SILENT_DEFAULT_RESOLVER_SCOPE} — check skipped"
+        ]
+
+    hits: list[tuple[str, int, str]] = []
+    for py_file in SILENT_DEFAULT_RESOLVER_SCOPE.rglob("*.py"):
+        try:
+            for lineno, line in enumerate(
+                py_file.read_text(encoding="utf-8").splitlines(), start=1
+            ):
+                # Skip lines whose code portion (before any inline `#`) does
+                # not contain the shape — this excludes comments that embed
+                # the pattern literally for documentation purposes (e.g.
+                # migration notes explaining "migrated from …").
+                code_only = line.split("#", 1)[0]
+                if SILENT_DEFAULT_RESOLVER_PATTERN.search(code_only):
+                    rel = py_file.relative_to(REPO_ROOT).as_posix()
+                    hits.append((rel, lineno, line.strip()))
+        except (OSError, UnicodeDecodeError):
+            continue
+
+    messages: list[str] = []
+    unexpected: list[str] = []
+    seen_allowlist_keys: set[str] = set()
+
+    for rel, lineno, line in hits:
+        key = f"{rel}:{lineno}"
+        if key in SILENT_DEFAULT_RESOLVER_ALLOWLIST:
+            reason = SILENT_DEFAULT_RESOLVER_ALLOWLIST[key]
+            messages.append(f"allowlisted: {key} — {reason}")
+            seen_allowlist_keys.add(key)
+        else:
+            unexpected.append(f"UNEXPECTED HIT: {key} — {line}")
+
+    missing = set(SILENT_DEFAULT_RESOLVER_ALLOWLIST) - seen_allowlist_keys
+    for key in sorted(missing):
+        messages.append(
+            f"NOTE: allowlist entry {key} no longer matches a scan hit "
+            f"— safe to remove from allowlist"
+        )
+
+    if unexpected:
+        messages.extend(unexpected)
+        messages.append(
+            "FAIL: new silent-default workspace resolver detected. "
+            "Migrate the site to `platform_config.get_primary_workspace()` "
+            "or add it to SILENT_DEFAULT_RESOLVER_ALLOWLIST with a reason."
+        )
+        return False, messages
+
+    if not hits:
+        messages.append(
+            "no ProjectWorkspace.objects.filter(is_active=True) hits found "
+            "(scope: core/**/*.py)"
+        )
+    messages.append(
+        f"OK: {len(hits)} allowlisted hits, 0 unexpected. "
+        f"Silent-default resolver drift class closed per S3043 T1 v2."
+    )
+    return True, messages
+
+
 def classify_failures(
     *,
     strict: bool,
@@ -454,6 +558,7 @@ def classify_failures(
     conflict_blocking: bool,
     audit_autogen_blocking: bool = False,
     procfile_tag_blocking: bool = False,
+    silent_default_blocking: bool = False,
 ) -> list[str]:
     """Return the strict-mode failure list given the per-check booleans.
 
@@ -486,6 +591,11 @@ def classify_failures(
         failures.append(
             "one or more Procfile entries are missing "
             "PG_APPLICATION_NAME=dbz:<role>"
+        )
+    if strict and silent_default_blocking:
+        failures.append(
+            "one or more silent-default ProjectWorkspace resolvers were "
+            "found outside the allowlist (S3043 T1 v2)"
         )
     return failures
 
@@ -577,6 +687,12 @@ def main() -> int:
         "\n".join(makefile_tag_messages),
     )
 
+    silent_default_ok, silent_default_messages = check_silent_default_workspace_resolvers()
+    print_block(
+        "silent-default workspace resolver guardrail (S3043 T1 v2)",
+        "\n".join(silent_default_messages),
+    )
+
     tracked_blocking = bool(tracked)
     if tracked:
         print("WARNING: tracked generated paths were found.")
@@ -640,6 +756,19 @@ def main() -> int:
             "PG_APPLICATION_NAME (advisory check)."
         )
 
+    silent_default_blocking = not silent_default_ok
+    if not silent_default_ok:
+        print(
+            "WARNING: silent-default workspace resolver guardrail found "
+            "hits outside the allowlist (see the "
+            "'silent-default workspace resolver guardrail' block above)."
+        )
+    else:
+        print(
+            "OK: silent-default workspace resolver drift class closed "
+            "(all hits allowlisted with reason)."
+        )
+
     failures = classify_failures(
         strict=args.strict,
         inventory_advisory=args.inventory_advisory,
@@ -649,6 +778,7 @@ def main() -> int:
         audit_autogen_blocking=audit_autogen_blocking,
         conflict_blocking=conflict_blocking,
         procfile_tag_blocking=procfile_tag_blocking,
+        silent_default_blocking=silent_default_blocking,
     )
 
     pass_fail = "FAIL" if failures else "PASS"
@@ -677,6 +807,7 @@ def main() -> int:
         f"- Makefile PG_APPLICATION_NAME coverage (advisory): "
         f"{makefile_tag_ok}"
     )
+    print(f"- silent-default workspace resolver drift closed: {silent_default_ok}")
     print(f"- strict mode: {'on' if args.strict else 'off'}")
     print("- Phase 4B keeps strict mode on by default and leaves DOC_ONLY/inspect/large-file checks advisory.")
     return 1 if failures else 0
