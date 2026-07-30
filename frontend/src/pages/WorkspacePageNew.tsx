@@ -105,6 +105,7 @@ import {
   AgentRunsTab,
   SignalDispatchesTab,
   FindingsTab,
+  ToolGapLedgerTab,
 } from './workspace/tabs'
 import { ZoomOutLedgerSection } from './workspace/tabs/ZoomOutLedgerSection'
 import { TenantBoundaryHealthSection } from './workspace/tabs/TenantBoundaryHealthSection'
@@ -193,6 +194,7 @@ const primaryTabs: PrimaryTab[] = [
       { id: 'autopilot', label: 'Autopilot', icon: Bot },
       { id: 'agent-runs', label: 'Agent Runs', icon: Bot },
       { id: 'signal-dispatches', label: 'Signal Dispatches', icon: Radio },
+      { id: 'tool-gap-ledger', label: 'Tool Gap Ledger', icon: ClipboardList },
       { id: 'cost', label: 'Cost', icon: DollarSign },
       { id: 'queues', label: 'Queues', icon: Layers },
       { id: 'config', label: 'Config', icon: Settings },
@@ -1360,6 +1362,9 @@ export default function WorkspacePage() {
           )}
           {activePrimary === 'system' && activeSub === 'signal-dispatches' && (
             <SignalDispatchesTab />
+          )}
+          {activePrimary === 'system' && activeSub === 'tool-gap-ledger' && (
+            <ToolGapLedgerTab />
           )}
         </>
       )}
