@@ -517,6 +517,11 @@ def execution_detail(request, execution_id):
                     'importance_score': memory.importance_score,
                 }
 
+        # S3047: surface S3046 lineage + fanout fields on the REST detail payload
+        # via shared helper (core/services/agent_fanout.compute_fanout) so the PA
+        # tool + REST endpoint cannot drift on child/subtree semantics.
+        from core.services.agent_fanout import compute_fanout
+
         return Response({
             'success': True,
             'data': {
@@ -535,6 +540,7 @@ def execution_detail(request, execution_id):
                     'created_at': execution.created_at.isoformat(),
                     'completed_at': execution.completed_at.isoformat() if execution.completed_at else None,
                     'last_heartbeat_at': execution.last_heartbeat_at.isoformat() if getattr(execution, 'last_heartbeat_at', None) else None,
+                    **compute_fanout(execution),
                 },
                 'related_memory': related_memory
             }

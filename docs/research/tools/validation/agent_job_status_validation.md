@@ -139,6 +139,10 @@ agent_job_status  execution_id=<parent-uuid>
 - **Cap = 20 children.** `children_truncated=true` signals overflow; caller can fall back to `execution_history_tool` for exhaustive enumeration.
 - **Performance.** Both count queries hit indexed columns (`parent_execution_id` + `root_execution_id` are `db_index=True` per migration 0336). Children list uses `.values('id', 'agent__name', 'status', 'created_at', 'completed_at', 'execution_time_ms')` so no JSONB blobs are pulled into memory.
 
+### 7.4 Shared helper (S3047)
+
+The fanout ORM block was factored into `core/services/agent_fanout.py::compute_fanout(execution)` in S3047 (PR shipping the REST-view Lineage & Fanout drawer in `frontend/src/pages/workspace/tabs/AgentRunsTab.tsx`). Both this PA tool handler AND the REST `execution_detail` view at `core/views_agent_execution.py:478` call the same helper — any change to child/subtree semantics happens in one place and both surfaces stay locked. Behavior preserved 1:1 from S3046 (7 handler tests remained green after the refactor; see `core/tests/test_agent_job_status_fanout.py` + new `core/tests/test_agent_fanout.py`).
+
 ## Related
 
 - **Sibling tool (subscription):** `schedule_followup_validation.md` — same lookup shape, subscribes to completion notification instead of returning inline status.
