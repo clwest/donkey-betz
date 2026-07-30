@@ -91,6 +91,54 @@ Shared module: `td_handlers_agents.py` — 30+ agent-family tools live here. Sib
 
 **Zero-action classifier note:** `pa_tools_gap_map.classify_tool` at `core/services/pa_tools_gap_map.py:540-543` — "Non-action-multiplexed tool with covered_actions heading; any coverage counts as `validated_full` (no unmapped actions)." This doc's `## Covered actions` heading + any bulleted content satisfies the classifier.
 
+## 7. Fanout visibility (S3046)
+
+**S3046 extension** — discharges S3045 substrate ledger row `3f77850d-…` (coordinator-provenance-fanout Option B trigger).
+
+The response now includes lineage + fanout fields computed from `AgentExecution.parent_execution_id` + `root_execution_id` (shipped in migration 0336). No schema change; pure PA tool-surface expansion.
+
+### 7.1 New response fields
+
+Added to every branch with a resolved `AgentExecution` row:
+
+- `parent_execution_id` (str UUID or None) — the execution that dispatched this run. NULL for root dispatches and legacy pre-migration-0336 rows.
+- `root_execution_id` (str UUID or None) — top-of-chain ancestor. NULL for legacy rows.
+- `child_count` (int) — direct children where `parent_execution_id == this.id`.
+- `subtree_count` (int) — all descendants sharing the same `root_execution_id` (falls back to `self.id` when this execution's own `root_execution_id` is NULL), excluding self.
+- `children` (list, cap = 20) — direct children ordered by `created_at` ASC. Each item: `{execution_id, agent_name, status, created_at, completed_at, duration_ms}`. Uses `.values()` projection to avoid loading heavy `input_data` / `output_data` JSONB blobs (D2 same_pr_mitigation from T1 SIGN).
+- `children_truncated` (bool) — `true` when `child_count > 20`.
+- `fanout_available` (bool) — always present. `false` on the four branches where no `AgentExecution` row could be resolved: missing-lookup-keys error, unknown-task_id error, pending-Celery-task branch, and any other early-return path. `true` when the response describes a real `AgentExecution` row (D5 same_pr_mitigation from T1 SIGN).
+
+### 7.2 Example — parent with 3 direct children
+
+```
+agent_job_status  execution_id=<parent-uuid>
+# →
+# {
+#   ok: true, execution_id: "<parent>", status: "in_progress",
+#   agent_name: "AiSeriesWorkflowAgent",
+#   parent_execution_id: null,
+#   root_execution_id: "<parent>",
+#   child_count: 3,
+#   subtree_count: 3,
+#   children: [
+#     {execution_id: "<c1>", agent_name: "ResearchAgent", status: "completed", ...},
+#     {execution_id: "<c2>", agent_name: "TrendAnalysisAgent", status: "in_progress", ...},
+#     {execution_id: "<c3>", agent_name: "ContentWriterAgent", status: "queued", ...}
+#   ],
+#   children_truncated: false,
+#   fanout_available: true,
+#   ...
+# }
+```
+
+### 7.3 Semantics + caveats
+
+- **Recorded-lineage only.** Counts reflect what was threaded via `parent_execution_id` at dispatch time. Coordinator paths that don't pass `parent_execution_id` through the router will not populate the field on their children, and those children will not show up in `child_count` / `subtree_count`. This is a known-shape S3045 substrate concern being tracked separately in the Rigby Tool Gap Ledger.
+- **Legacy rows.** Pre-migration-0336 (Session 1098 PR #4) executions have `parent_execution_id = NULL` + `root_execution_id = NULL`. For a legacy execution polled today, `subtree_count` falls back to `filter(root_execution_id=self.id)` — which is 0 unless newer dispatches recorded this legacy row as their root. Acceptable best-effort.
+- **Cap = 20 children.** `children_truncated=true` signals overflow; caller can fall back to `execution_history_tool` for exhaustive enumeration.
+- **Performance.** Both count queries hit indexed columns (`parent_execution_id` + `root_execution_id` are `db_index=True` per migration 0336). Children list uses `.values('id', 'agent__name', 'status', 'created_at', 'completed_at', 'execution_time_ms')` so no JSONB blobs are pulled into memory.
+
 ## Related
 
 - **Sibling tool (subscription):** `schedule_followup_validation.md` — same lookup shape, subscribes to completion notification instead of returning inline status.
@@ -98,3 +146,6 @@ Shared module: `td_handlers_agents.py` — 30+ agent-family tools live here. Sib
 - **Shared handler module:** `td_handlers_agents.py`.
 - **Path B FINISH plan:** `docs/audits/pa_tools/substrate/S3044_path_b_finish_plan.md` (this session's batch shape).
 - **S3044 Rigby A1 SIGN cycle:** 11 tool_runs; AGREE on Q1-Q4 with tweaks; Q5 zoom-out flagged registration-count false positive + pre-authored Path B CLOSE stub (adopted).
+- **S3046 T1 SIGN cycle:** AGREE overall (D1/D3/D4) + 2 `same_pr_mitigatable` folds (D2 `.values()` projection for children query; D5 explicit `fanout_available: false` on pending/missing branches). Both mitigations shipped in this diff.
+- **S3045 substrate ledger:** row `3f77850d-…` (coordinator-provenance-fanout Option B trigger) — this extension is Option B's discharge.
+- **Migration:** `core/migrations/0336_agentexecution_parent_root_lineage.py` (Session 1098 PR #4) — schema substrate reused unchanged.
