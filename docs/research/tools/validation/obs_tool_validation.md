@@ -27,6 +27,9 @@ Use `health` when the caller needs to know if the OBS bridge is reachable. Use `
 - `health` — **in scope this ship** — verified live via T1a harness. GET `/health` on the OBS bridge. Returns `{ok, action, bridgeReachable, latency_ms, result}` on success; `{ok: false, action, error, error_code}` when bridge unreachable (see §5).
 - `status` — **in scope this ship** — verified live via T1a harness. GET `/v1/recording/status` on the OBS bridge. Same envelope shape as `health`.
 - `last` — **in scope this ship** — verified live via T1a harness. GET `/v1/recording/last` on the OBS bridge. Same envelope shape as `health`.
+- `start` — **mutation — deferred to bridge-live batch** — see §5a. Bridge-dependent (requires reachable OBS bridge); classified `MUTATION` + `external_bridge` in `TOOL_ACTION_METADATA`; harness reports `expected_outcome=skipped_mutation` (or `skipped_bridge_unreachable` when bridge offline per S2909 T2). POST to bridge start-recording endpoint.
+- `stop` — **mutation — deferred to bridge-live batch** — see §5a. Bridge-dependent + `MUTATION` + `external_bridge`; same skip pattern as `start`. POST to bridge stop-recording endpoint.
+- `upload_last` — **mutation — deferred to bridge-live batch** — see §5a. Bridge-dependent + `MUTATION` + `external_bridge`; same skip pattern. POST to bridge upload endpoint; forwards `stopIfRecording` / `title` / `tags` payload.
 
 ## 3. Schema notes
 

@@ -6,199 +6,187 @@
 
 ## Headline
 
-- **Unique tool names across both sides:** 161
-- **Schemas (LLM sees):** 117
-- **Handlers (runtime registered):** 160
-- **Wired on both sides (schema ↔ handler):** 116 (72% of unique tool names)
-- **Action-based tools:** 86 of 117 schemas (use an `action` enum to multiplex verbs into a single tool)
+- **Unique tool names across both sides:** 164
+- **Schemas (LLM sees):** 119
+- **Handlers (runtime registered):** 163
+- **Wired on both sides (schema ↔ handler):** 118 (72% of unique tool names)
+- **Action-based tools:** 87 of 119 schemas (use an `action` enum to multiplex verbs into a single tool)
 
 > The Rigby (PA) function-calling pipeline lives in `core.services.unified_pa_entrypoint`. The LLM sees these schemas, decides which tool(s) to call, the dispatcher routes the call to its handler.
 
 ## Findings
 
-- Handler-only entries that the LLM reaches via the `run_agent(agent_name=…)` meta-tool (by design, not a bug): 44 agents — these are the agent-routing bypass paths sharing `_handle_agent_tool`.
-- Heavily-shared handlers (≥5 tool names route to the same function — usually a gateway / meta-tool by design): `ToolDispatcher._handle_agent_tool` (58).
-
-## Validation coverage (S2795)
-
-- `validated_full` (validated (full)): **98**
-- `agent_via_run_agent` (agent (via run_agent)): **44**
-- `validated_partial` (validated (partial)): **11**
-- `validated_doc_exists_unknown` (validated (doc, unknown coverage)): **7**
-- `meta_no_handler` (meta (no handler by design)): **1**
-
-**Schema quality lints:**
-- `actions_not_mentioned_in_description`: **22** tools
-- `no_required`: **14** tools
-- `no_properties`: **1** tools
-- `handler_drift_action_count`: **1** tools
-- `handler_drift_negative_claim_dispatch`: **1** tools
+- Handler-only entries that the LLM reaches via the `run_agent(agent_name=…)` meta-tool (by design, not a bug): 45 agents — these are the agent-routing bypass paths sharing `_handle_agent_tool`.
+- Heavily-shared handlers (≥5 tool names route to the same function — usually a gateway / meta-tool by design): `ToolDispatcher._handle_agent_tool` (59).
 
 ## Tool overview
 
-| Tool | Wiring | Actions | Required | Category | Lint | Summary |
-|---|:-:|:-:|:-:|---|---|---|
-| `active_priority_tool` | ✓ ✓ | 6 | 1 | validated_full | — | Manage Rigby's active priorities for priority-aware routing |
-| `active_repo_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Persist or read the 'currently working in repo X' pointer for the user, so multi-repo workflows don't need … |
-| `agent_control_tool` | ✓ ✓ | 4 | 1 | validated_full | — | Manage blocked/enabled agents |
-| `agent_introspection_tool` | ✓ ✓ | 5 | 1 | validated_doc_exists_unknown | — | Introspect agents: list registered agents, view capabilities, check which agents are available |
-| `agent_memory_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Browse agent memories and knowledge sources |
-| `ai_series_workflow_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `analytics_tool` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Query behavioral analytics: DeliverableEvent counts, ATR-24h metrics, event breakdowns by type/role/time |
-| `ats_tool` | ✓ ✓ | 4 | 1 | validated_full | — | View ATS keyword mappings, resume optimization logs, persona templates, and stats |
-| `audio_generation_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `audit_tool` | ✓ ✓ | 4 | 1 | validated_full | — | View audit findings, wiring defects, citation violations, and P0 summary |
-| `autonomous_content_studio_coordinator` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `autopilot_tool` | ✓ ✓ | 95 | 1 | validated_partial | actions_not_mentioned_in_description | Monitor and configure the Ops Autopilot — automated incident response with governance guardrails |
-| `bear_case_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `blockchain_audit_coordinator` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `blog_tool` | ✓ ✓ | 8 | 1 | validated_full | — | Manage the blog/content pipeline — stats, list, approve, reject, generate |
-| `bpaas_tool` | ✓ ✓ | 4 | 1 | validated_partial | — | Build Packet as a Service — create client projects from structured build packets |
-| `brainstorm_tool` | ✓ ✓ | 7 | 1 | validated_partial | — | Search and list brainstorm sessions: discussion panels, multi-agent debates, and collaborative insights |
-| `brand_identity_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `brand_strategy_agent` | ✓ ✓ | — | 1 | validated_full | — | Develop brand strategy: positioning, messaging, voice, identity, brand architecture, differentiation |
-| `calendar_tool` | ✓ ✓ | 4 | 1 | validated_full | — | View content channels, episodes, and upcoming schedule |
-| `campaign_orchestrator_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `campaign_tool` | ✓ ✓ | 3 | 1 | validated_full | — | View campaigns, campaign deliverables, and stats |
-| `character_training_agent` | ✓ ✓ | — | 1 | validated_full | — | Train a custom character model from reference images for consistent character generation |
-| `check_resource_budget` | ✓ ✓ | — | — | validated_full | no_required | Check resource budgets: API costs, token usage, compute limits |
-| `claude_code_tool` | ✓ ✓ | — | 1 | validated_doc_exists_unknown | — | Spawn an autonomous Claude Code engineering session that can read files, write code, create branches, and o… |
-| `cockpit_tool` | ✓ ✓ | 8 | 1 | validated_full | actions_not_mentioned_in_description | System operations cockpit for Celery infrastructure |
-| `code_job_tool` | ✓ ✓ | 7 | 1 | validated_full | — | Submit, monitor, and manage remote code jobs |
-| `code_review_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `competitor_analysis_agent` | ✓ ✓ | — | 1 | validated_full | — | Analyze competitors: market positioning, strengths, weaknesses, product comparison, pricing analysis, marke… |
-| `competitor_comparison_tool` | ✓ ✓ | 8 | 1 | validated_full | — | Generate, check status, list, view, delete, or regenerate competitor comparisons |
-| `conceptforge_tool` | ✓ ✓ | 3 | 1 | validated_full | — | View ConceptForge pipeline runs, stages, artifacts, and stats |
-| `content_audit_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `content_diversity_orchestrator` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `content_strategy_agent` | ✓ ✓ | — | 1 | validated_full | — | Develop content strategy: editorial calendar, content pillars, distribution plan, SEO strategy, content audit |
-| `content_tool` | ✓ ✓ | 26 | 1 | validated_partial | — | Unified content gateway — blogs, deliverables, publishing, and editorial |
-| `content_writer_agent` | ✓ ✓ | — | 1 | validated_full | — | Write content: blog posts, articles, marketing copy, social media posts, email newsletters, product descrip… |
-| `contrarian_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `conversation_tool` | ✓ ✓ | 5 | 1 | validated_full | — | Search and retrieve past PA conversations |
-| `coo_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `cost_telemetry_tool` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Get real API cost and spend data from LLM call logs |
-| `create_brand_video` | ✓ ✓ | — | 1 | validated_full | — | Create a brand video by orchestrating multiple agents: script writing, image generation, video generation, … |
-| `create_project_from_research` | ✓ ✓ | — | 1 | validated_full | — | Create a full project from research: web research, analysis, project planning, deliverable creation |
-| `creative_director_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `cto_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `customer_research_agent` | ✓ ✓ | — | 1 | validated_full | — | Research target customers: demographics, pain points, buying behavior, user personas, customer journey mapp… |
-| `davinci_tool` | ✓ ✓ | 6 | 1 | validated_partial | — | Direct control surface for DaVinci Resolve rendering and color grading |
-| `db_health_tool` | ✓ ✓ | 7 | — | validated_full | no_required | Check database health: migration status, table row counts, PostgreSQL connection info, pgvector extension s… |
-| `deliverable_tool` | ✓ ✓ | 18 | 1 | validated_doc_exists_unknown | — | Manage the deliverables library — create, read, update, search, save, export, and archive deliverables |
-| `diagnostics_tool` | ✓ ✓ | 7 | 1 | validated_full | actions_not_mentioned_in_description | Audit/inventory telemetry for subsystem health checks (Session 1202 §A.2) |
-| `discord_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Inspect the Discord bot: list registered commands, check slot usage, view cog structure, and verify bot con… |
-| `distribution_tool` | ✓ ✓ | 4 | 1 | validated_full | — | View content distribution platforms, listings, revenue, and stats |
-| `dream_tool` | ✓ ✓ | 6 | 1 | validated_full | — | Browse and act on agent dreams: list top-scored dreams, view details, approve or dismiss |
-| `editor_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `employee_tool` | ✓ ✓ | 4 | 2 | validated_full | — | Inspect or dispatch jobs on the AI Employee registry |
-| `execution_history_tool` | ✓ ✓ | 5 | 1 | validated_full | — | View agent execution history: recent runs, success/failure rates, execution details, and full output data |
-| `experiment_tool` | ✓ ✓ | 3 | 1 | validated_full | — | View A/B tests, experiment results, and stats |
-| `feedback_tool` | ✓ ✓ | 4 | 1 | validated_full | — | Submit or view feedback on agent outputs, content quality, or platform features |
-| `fleet_health` | ✓ ✓ | — | — | validated_full | no_required | Read-only rollup of every Dockerized fleet app's /api/health endpoint |
-| `game_predictor` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `gates_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Access quality gates: list gates, check gate status, view pass/fail history |
-| `get_body_vitals` | ✓ ✓ | — | — | validated_full | no_properties, no_required | Get body system vitals: HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN health s… |
-| `get_system_alerts` | ✓ ✓ | — | — | validated_full | no_required | Get active system alerts and warnings |
-| `governance_tool` | ✓ ✓ | 17 | 1 | validated_full | actions_not_mentioned_in_description | Unified governance inbox — attention items, decisions, and triage |
-| `governor_tool` | ✓ ✓ | 4 | 1 | validated_full | — | Beat Task Governor — controls which autonomous agent dispatches are allowed to run based on mission alignme… |
-| `heartbeat_history_tool` | ✓ ✓ | 2 | 1 | validated_full | — | View heartbeat history and trends |
-| `http_smoke_test` | ✓ ✓ | — | — | validated_full | no_required | Run HTTP smoke tests against platform API endpoints |
-| `image_editing_agent` | ✓ ✓ | — | 1 | validated_full | — | Edit an existing image: upscale, remove background, apply filters, crop, resize, add text overlay, style tr… |
-| `image_generation_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `infra_health_tool` | ✓ ✓ | 4 | 1 | validated_full | actions_not_mentioned_in_description | Deep infrastructure health checks — Redis, PostgreSQL, dependencies, and runtime metrics |
-| `intelligence_tool` | ✓ ✓ | 19 | 1 | validated_partial | actions_not_mentioned_in_description | Unified intelligence desk — stocks, sports betting, legislation, search, and KB |
-| `kb_tool` | ✓ ✓ | 5 | 1 | validated_doc_exists_unknown | — | Browse the knowledge base — documents, embedding collections, chunk counts, and text search across all embe… |
-| `learning_patterns_tool` | ✓ ✓ | 3 | 1 | validated_full | — | View mined LearningPattern telemetry (tool reliability, agent tool effectiveness, spider data value, etc.) |
-| `learning_tool` | ✓ ✓ | 6 | 1 | validated_full | — | Manage the PA's learned tool-usage insights |
-| `legal_doc_drafter_agent` | ✓ ✓ | — | 1 | validated_full | — | Draft legal documents: contracts, agreements, legal letters, compliance documents |
-| `line_movement_analyzer` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `market_intelligence_coordinator` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `marketing_strategy_agent` | ✓ ✓ | — | 1 | validated_full | — | Develop marketing strategy: campaign planning, channel strategy, go-to-market plan, growth strategy, market… |
-| `media_tool` | ✓ ✓ | 4 | 1 | validated_partial | — | Browse the user's media library: AI-generated images, videos, and audio files |
-| `meeting_coordinator_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `memory_isolation_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `messaging_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Read-only access to in-app messaging threads |
-| `mission_verdict` | ✓ ✓ | 3 | 2 | validated_full | — | Rigby-only: certify, reject, or defer a MissionRun |
-| `ml_analysis` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Run ML analysis on platform data: prediction models, feature importance, model accuracy |
-| `mobile_tool` | ✓ ✓ | 4 | 1 | validated_full | — | Inspect the React Native / Expo mobile app: project config, implemented screens, API modules, dependencies |
-| `narrative_tool` | ✓ ✓ | 5 | 1 | validated_full | — | Access narrative drift analysis, trend break detection, and cultural impact assessments |
-| `newsletter_tool` | ✓ ✓ | 7 | 1 | validated_full | — | Newsletter publishing pipeline — prepare issues for Substack/Beehiiv, generate outlines, validate against T… |
-| `obs_tool` | ✓ ✓ | 6 | 1 | validated_partial | — | Control OBS Studio recording via the local bridge |
-| `opportunity_manager_tool` | ✓ ✓ | 6 | 1 | validated_full | — | Manage opportunities: list, view details, get stats, create, or update status |
-| `opportunity_pipeline_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `opportunity_scoring_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `ops_digest_tool` | ✓ ✓ | 2 | 1 | validated_full | — | Generate or post an autonomous ops digest summarizing system health, autopilot status, blocked agents, and … |
-| `ops_tool` | ✓ ✓ | 22 | 1 | validated_partial | actions_not_mentioned_in_description | Production operations surface: check deployment version/build info, monitor SLO compliance (task success ra… |
-| `orm_inspect_tool` | ✓ ✓ | 5 | 1 | validated_full | — | Read-only, allowlisted Django ORM row inspection |
-| `paid_interest_status` | ✓ ✓ | — | — | validated_full | no_required | Return the Decision 13 demand-gate trigger state for a fleet app's paid-interest signal |
-| `performance_analyst_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `persona_tool` | ✓ ✓ | 2 | 1 | validated_full | — | Access 139 specialized AI persona agents across 14 categories: income generation, career development, job s… |
-| `pilots_tool` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Access experiments and pilots: A/B tests, feature experiments, pilot results |
-| `pipeline_orchestrator_tool` | ✓ ✓ | 1 | 1 | validated_full | — | Get pipeline orchestration status and initiative stage breakdown |
-| `platform_audit_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `platform_awareness_tool` | ✓ ✓ | 7 | 1 | validated_full | actions_not_mentioned_in_description | Enumerate platform capabilities: UI routes, studios, feature flags, and deploy verification |
-| `platform_config_tool` | ✓ ✓ | 5 | — | validated_full | no_required, actions_not_mentioned_in_description | Inspect runtime platform configuration: active LLM providers, environment variables (secrets masked), Djang… |
-| `podcast_coordinator_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `podcast_tool` | ✓ ✓ | 4 | 1 | validated_full | — | View podcast shows, episodes, scripts, and stats |
-| `prediction_market_analyst` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `proactive_tool` | ✓ ✓ | 8 | 1 | validated_full | — | View proactive alerts, notifications, smart suggestions, and automated actions generated by the system |
-| `profile_tool` | ✓ ✓ | 6 | 1 | validated_full | — | View extended user profile, tracked skills, and learning summary |
-| `railway_tool` | ✓ ✓ | 7 | 1 | validated_full | — | Railway platform infrastructure management |
-| `reasoning_engine_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Query or trigger the ThinkingAgent reasoning engine |
-| `recent_activity_tool` | ✓ ✓ | 2 | — | validated_full | no_required | View recent platform activity across 6 subsystems in one call: Celery tasks, spider data, HiveMind conversa… |
-| `remember_tool` | ✓ ✓ | 4 | 1 | validated_full | — | Save something to persistent memory so you remember it across sessions |
-| `repo_tool` | ✓ ✓ | 5 | 1 | validated_doc_exists_unknown | — | Read-only codebase introspection: browse file tree, read file contents, search/grep across code, and check … |
-| `research_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `research_and_create_tool` | ✓ ✓ | — | 2 | validated_full | — | Research a topic via web search and create content (blog post, comparison, script, analysis) |
-| `resolve_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `revenue_tracker_tool` | ✓ ✓ | 3 | 1 | validated_full | actions_not_mentioned_in_description | Track revenue metrics, income progress, and record new revenue |
-| `rigby_shift_brief_tool` | ✓ ✓ | 1 | 1 | validated_full | actions_not_mentioned_in_description | Rigby's operator shift brief — a one-minute pulse for Chris at the start of a session |
-| `rigby_work_item` | ✓ ✓ | 5 | 1 | validated_full | actions_not_mentioned_in_description, handler_drift_action_count, handler_drift_negative_claim_dispatch | Rigby's internal operational work queue |
-| `run_agent` | schema only | — | 2 | meta_no_handler | — | Delegate a task to a specialized agent |
-| `schedule_followup` | ✓ ✓ | — | — | validated_full | no_required | Subscribe THIS conversation to a completion notification for a previously dispatched async agent task |
-| `scheduled_tasks_tool` | ✓ ✓ | 3 | — | validated_full | no_required | View and manage scheduled Celery tasks: list beat entries, enable/disable schedules |
-| `search_docs` | ✓ ✓ | — | 1 | validated_doc_exists_unknown | — | Search the /docs/ corpus and return ranked chunks with inline citations |
-| `security_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `self_awareness_tool` | ✓ ✓ | 5 | 1 | validated_full | — | View system self-awareness metrics, analysis reports, and evolution history |
-| `seo_optimizer_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `session_tool` | ✓ ✓ | 7 | 1 | validated_doc_exists_unknown | actions_not_mentioned_in_description | Manage conversation sessions: check conversation health/freshness, create a fresh conversation, or list rec… |
-| `sharp_action_detector` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `signal_studio_judge_stats` | ✓ ✓ | — | — | validated_full | no_required | Return signal-studio's LLM auto-summarizer judge stats over the last N days: counts of clusters accepted (s… |
-| `social_media_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `spider_data_aggregation_tool` | ✓ ✓ | 1 | 1 | validated_full | actions_not_mentioned_in_description | Group-by counts of SpiderData rows by data_type over a windowed time range, with optional spider_name + dat… |
-| `spider_status_tool` | ✓ ✓ | 4 | 1 | validated_full | — | View individual spider health and activity |
-| `status_snapshot_tool` | ✓ ✓ | — | — | validated_full | no_required | Get a broad system overview snapshot: agents, spiders, initiatives, health scores, recent activity |
-| `stock_analyst_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `stock_audit_coordinator` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `strategic_review` | ✓ ✓ | — | 1 | validated_full | — | Conduct a strategic review: evaluate strategy, assess market position, review business model, SWOT analysis… |
-| `studio_tool` | ✓ ✓ | 6 | 1 | validated_full | actions_not_mentioned_in_description | Unified creative studio: generate images, videos, and audio |
-| `surgical_moves_status_tool` | ✓ ✓ | 2 | — | validated_full | no_required | Check status of the DeliberationSession pipeline (multi-agent surgical-moves debates that decide publish/re… |
-| `system_intelligence_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `talking_character_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `task_breakdown_tool` | ✓ ✓ | 2 | 1 | validated_full | actions_not_mentioned_in_description | Celery task volume breakdown and load analysis |
-| `task_manager_tool` | ✓ ✓ | 6 | 1 | validated_full | — | Manage tasks linked to opportunities: list tasks, view stats |
-| `thinking_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `three_d_generation_agent` | ✓ ✓ | — | 1 | validated_full | — | Generate 3D models from text descriptions or images |
-| `topic_miner_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `trained_creation_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `trend_analysis_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `universal_agent_tool` | ✓ ✓ | — | 1 | validated_full | — | Route a task to a specific agent or auto-route to the best-fit agent |
-| `video_editing_agent` | ✓ ✓ | — | 1 | validated_full | — | Edit an existing video: trim, cut, speed change, add effects, concatenate clips, add text overlay, transiti… |
-| `video_generation_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `video_history_tool` | ✓ ✓ | 7 | 1 | validated_full | — | Search, browse, and process the user's videos (VideoHistory model) |
-| `vip_invite_tool` | ✓ ✓ | 3 | 1 | validated_full | — | Manage VIP magic-link invites for demo viewers |
-| `voice_clone_tool` | ✓ ✓ | 5 | 1 | validated_full | — | Manage voice cloning and the voice marketplace |
-| `voice_critic_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `web_fetch_tool` | ✓ ✓ | — | 1 | validated_full | — | Raw HTTP GET/POST to a URL, returning status_code, headers, and body (parsed JSON when content-type is appl… |
-| `web_search` | ✓ ✓ | — | 1 | validated_full | — | Search the web for current information |
-| `whale_watcher_agent` | handler only | — | — | agent_via_run_agent | — | _(no description)_ |
-| `work_tool` | ✓ ✓ | 16 | 1 | validated_partial | actions_not_mentioned_in_description | Work execution gateway: manage initiatives and action items |
-| `workflow_orchestration_agent` | ✓ ✓ | — | 1 | validated_full | — | Orchestrate multi-step workflows that chain multiple agents together |
-| `workflow_run_tool` | ✓ ✓ | 5 | 1 | validated_full | — | Start, poll, list, detail, or cancel multi-step workflow runs |
-| `workspace_budget_tool` | ✓ ✓ | 11 | 1 | validated_full | — | Manage per-workspace LLM spend caps, downgrade state, and freeze state (A1 W1 Phase 3 + W1.5 + W2 #2a) |
-| `workspace_tool` | ✓ ✓ | 13 | 1 | validated_partial | — | Manage workspaces and workspace-scoped operations |
-| `zoom_out_tool` | ✓ ✓ | 1 | 1 | validated_full | actions_not_mentioned_in_description | Read the Rigby SIGN zoom-out concern ledger — logs/zoom_out_classifications.jsonl |
+| Tool | Wiring | Actions | Required | Summary |
+|---|:-:|:-:|:-:|---|
+| `active_priority_tool` | ✓ ✓ | 6 | 1 | Manage Rigby's active priorities for priority-aware routing |
+| `active_repo_tool` | ✓ ✓ | 3 | 1 | Persist or read the 'currently working in repo X' pointer for the user, so multi-repo workflows don't need … |
+| `agent_capability_drift_tool` | ✓ ✓ | 2 | 1 | Run the agent capability drift scanner (read-only) |
+| `agent_control_tool` | ✓ ✓ | 4 | 1 | Manage blocked/enabled agents |
+| `agent_introspection_tool` | ✓ ✓ | 5 | 1 | Introspect agents: list registered agents, view capabilities, check which agents are available |
+| `agent_job_status` | ✓ ✓ | — | — | Poll status + output preview for an agent job dispatched via run_agent (or any tool that returns a Celery t… |
+| `agent_memory_tool` | ✓ ✓ | 3 | 1 | Browse agent memories and knowledge sources |
+| `ai_series_workflow_agent` | handler only | — | — | _(no description)_ |
+| `analytics_tool` | ✓ ✓ | 3 | 1 | Query behavioral analytics: DeliverableEvent counts, ATR-24h metrics, event breakdowns by type/role/time |
+| `ats_tool` | ✓ ✓ | 4 | 1 | View ATS keyword mappings, resume optimization logs, persona templates, and stats |
+| `audio_generation_agent` | handler only | — | — | _(no description)_ |
+| `audit_tool` | ✓ ✓ | 4 | 1 | View audit findings, wiring defects, citation violations, and P0 summary |
+| `autonomous_content_studio_coordinator` | handler only | — | — | _(no description)_ |
+| `autopilot_tool` | ✓ ✓ | 95 | 1 | Monitor and configure the Ops Autopilot — automated incident response with governance guardrails |
+| `bear_case_agent` | handler only | — | — | _(no description)_ |
+| `blockchain_audit_coordinator` | handler only | — | — | _(no description)_ |
+| `blog_tool` | ✓ ✓ | 8 | 1 | Manage the blog/content pipeline — stats, list, approve, reject, generate |
+| `bpaas_tool` | ✓ ✓ | 4 | 1 | Build Packet as a Service — create client projects from structured build packets |
+| `brainstorm_tool` | ✓ ✓ | 7 | 1 | Search historical brainstorm/panel/discussion conversations, OR dispatch a single-agent async reasoning pas… |
+| `brand_identity_agent` | handler only | — | — | _(no description)_ |
+| `brand_strategy_agent` | ✓ ✓ | — | 1 | Develop brand strategy: positioning, messaging, voice, identity, brand architecture, differentiation |
+| `calendar_tool` | ✓ ✓ | 4 | 1 | View content channels, episodes, and upcoming schedule |
+| `campaign_orchestrator_agent` | handler only | — | — | _(no description)_ |
+| `campaign_tool` | ✓ ✓ | 3 | 1 | View campaigns, campaign deliverables, and stats |
+| `character_training_agent` | ✓ ✓ | — | 1 | Train a custom character model from reference images for consistent character generation |
+| `check_resource_budget` | ✓ ✓ | — | — | Check resource budgets: API costs, token usage, compute limits |
+| `claude_code_tool` | ✓ ✓ | — | — | Spawn an autonomous Claude Code engineering session that can read files, write code, create branches, and o… |
+| `cockpit_tool` | ✓ ✓ | 8 | 1 | System operations cockpit for Celery infrastructure |
+| `code_job_tool` | ✓ ✓ | 7 | 1 | Submit, monitor, and manage remote code jobs |
+| `code_review_agent` | handler only | — | — | _(no description)_ |
+| `competitor_analysis_agent` | ✓ ✓ | — | 1 | Analyze competitors: market positioning, strengths, weaknesses, product comparison, pricing analysis, marke… |
+| `competitor_comparison_tool` | ✓ ✓ | 8 | 1 | Generate, check status, list, view, delete, or regenerate competitor comparisons |
+| `conceptforge_tool` | ✓ ✓ | 3 | 1 | View ConceptForge pipeline runs, stages, artifacts, and stats |
+| `content_audit_agent` | handler only | — | — | _(no description)_ |
+| `content_diversity_orchestrator` | handler only | — | — | _(no description)_ |
+| `content_strategy_agent` | ✓ ✓ | — | 1 | Develop content strategy: editorial calendar, content pillars, distribution plan, SEO strategy, content audit |
+| `content_tool` | ✓ ✓ | 26 | 1 | Unified content gateway — blogs, deliverables, publishing, and editorial |
+| `content_writer_agent` | ✓ ✓ | — | 1 | Write content: blog posts, articles, marketing copy, social media posts, email newsletters, product descrip… |
+| `contrarian_agent` | handler only | — | — | _(no description)_ |
+| `conversation_tool` | ✓ ✓ | 5 | 1 | Search and retrieve past PA conversations |
+| `coo_agent` | handler only | — | — | _(no description)_ |
+| `cost_telemetry_tool` | ✓ ✓ | 3 | 1 | Get real API cost and spend data from LLM call logs |
+| `create_brand_video` | ✓ ✓ | — | 1 | Create a brand video by orchestrating multiple agents: script writing, image generation, video generation, … |
+| `create_project_from_research` | ✓ ✓ | — | 1 | Create a full project from research: web research, analysis, project planning, deliverable creation |
+| `creative_director_agent` | handler only | — | — | _(no description)_ |
+| `cto_agent` | handler only | — | — | _(no description)_ |
+| `customer_research_agent` | ✓ ✓ | — | 1 | Research target customers: demographics, pain points, buying behavior, user personas, customer journey mapp… |
+| `davinci_tool` | ✓ ✓ | 6 | 1 | Direct control surface for DaVinci Resolve rendering and color grading |
+| `db_health_tool` | ✓ ✓ | 7 | — | Check database health: migration status, table row counts, PostgreSQL connection info, pgvector extension s… |
+| `deliverable_tool` | ✓ ✓ | 18 | 1 | Manage the deliverables library — create, read, update, search, save, export, and archive deliverables |
+| `diagnostics_tool` | ✓ ✓ | 7 | 1 | Audit/inventory telemetry for subsystem health checks (Session 1202 §A.2) |
+| `discord_tool` | ✓ ✓ | 3 | 1 | Inspect the Discord bot: list registered commands, check slot usage, view cog structure, and verify bot con… |
+| `distribution_tool` | ✓ ✓ | 4 | 1 | View content distribution platforms, listings, revenue, and stats |
+| `dream_tool` | ✓ ✓ | 6 | 1 | Browse and act on agent dreams: list top-scored dreams, view details, approve or dismiss |
+| `editor_agent` | handler only | — | — | _(no description)_ |
+| `employee_tool` | ✓ ✓ | 4 | 2 | Inspect or dispatch jobs on the AI Employee registry |
+| `execution_history_tool` | ✓ ✓ | 5 | 1 | View agent execution history: recent runs, success/failure rates, execution details, and full output data |
+| `experiment_tool` | ✓ ✓ | 3 | 1 | View A/B tests, experiment results, and stats |
+| `feedback_tool` | ✓ ✓ | 4 | 1 | Submit or view feedback on agent outputs, content quality, or platform features |
+| `fleet_health` | ✓ ✓ | — | — | Read-only rollup of every Dockerized fleet app's /api/health endpoint |
+| `game_predictor` | handler only | — | — | _(no description)_ |
+| `gates_tool` | ✓ ✓ | 3 | 1 | Access quality gates: list gates, check gate status, view pass/fail history |
+| `get_body_vitals` | ✓ ✓ | — | — | Get body system vitals: HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN health s… |
+| `get_system_alerts` | ✓ ✓ | — | — | Get active system alerts and warnings |
+| `governance_tool` | ✓ ✓ | 17 | 1 | Unified governance inbox — attention items, decisions, and triage |
+| `governor_tool` | ✓ ✓ | 4 | 1 | Beat Task Governor — controls which autonomous agent dispatches are allowed to run based on mission alignme… |
+| `heartbeat_history_tool` | ✓ ✓ | 2 | 1 | View heartbeat history and trends |
+| `http_smoke_test` | ✓ ✓ | — | — | Run HTTP smoke tests against platform API endpoints |
+| `image_editing_agent` | ✓ ✓ | — | 1 | Edit an existing image: upscale, remove background, apply filters, crop, resize, add text overlay, style tr… |
+| `image_generation_agent` | handler only | — | — | _(no description)_ |
+| `infra_health_tool` | ✓ ✓ | 4 | 1 | Deep infrastructure health checks — Redis, PostgreSQL, dependencies, and runtime metrics |
+| `intelligence_tool` | ✓ ✓ | 19 | 1 | Unified intelligence desk — stocks, sports betting, legislation, search, and KB |
+| `kb_tool` | ✓ ✓ | 5 | 1 | Browse the knowledge base — documents, embedding collections, chunk counts, and text search across all embe… |
+| `learning_patterns_tool` | ✓ ✓ | 3 | 1 | View mined LearningPattern telemetry (tool reliability, agent tool effectiveness, spider data value, etc.) |
+| `learning_tool` | ✓ ✓ | 6 | 1 | Manage the PA's learned tool-usage insights |
+| `legal_doc_drafter_agent` | ✓ ✓ | — | 1 | Draft legal documents: contracts, agreements, legal letters, compliance documents |
+| `line_movement_analyzer` | handler only | — | — | _(no description)_ |
+| `market_intelligence_agent` | handler only | — | — | _(no description)_ |
+| `market_intelligence_coordinator` | handler only | — | — | _(no description)_ |
+| `marketing_strategy_agent` | ✓ ✓ | — | 1 | Develop marketing strategy: campaign planning, channel strategy, go-to-market plan, growth strategy, market… |
+| `media_tool` | ✓ ✓ | 4 | 1 | Browse the user's media library: AI-generated images, videos, and audio files |
+| `meeting_coordinator_agent` | handler only | — | — | _(no description)_ |
+| `memory_isolation_agent` | handler only | — | — | _(no description)_ |
+| `messaging_tool` | ✓ ✓ | 3 | 1 | Read-only access to in-app messaging threads |
+| `mission_verdict` | ✓ ✓ | 3 | 2 | Rigby-only: certify, reject, or defer a MissionRun |
+| `ml_analysis` | ✓ ✓ | 3 | 1 | Run ML analysis on platform data: prediction models, feature importance, model accuracy |
+| `mobile_tool` | ✓ ✓ | 4 | 1 | Inspect the React Native / Expo mobile app: project config, implemented screens, API modules, dependencies |
+| `narrative_tool` | ✓ ✓ | 5 | 1 | Access narrative drift analysis, trend break detection, and cultural impact assessments |
+| `newsletter_tool` | ✓ ✓ | 7 | 1 | Newsletter publishing pipeline — prepare issues for Substack/Beehiiv, generate outlines, validate against T… |
+| `obs_tool` | ✓ ✓ | 6 | 1 | Control OBS Studio recording via the local bridge |
+| `opportunity_manager_tool` | ✓ ✓ | 6 | 1 | Manage opportunities: list, view details, get stats, create, or update status |
+| `opportunity_pipeline_agent` | handler only | — | — | _(no description)_ |
+| `opportunity_scoring_agent` | handler only | — | — | _(no description)_ |
+| `ops_digest_tool` | ✓ ✓ | 2 | 1 | Generate or post an autonomous ops digest summarizing system health, autopilot status, blocked agents, and … |
+| `ops_tool` | ✓ ✓ | 22 | 1 | Production operations surface: check deployment version/build info, monitor SLO compliance (task success ra… |
+| `orm_inspect_tool` | ✓ ✓ | 5 | 1 | Read-only, allowlisted Django ORM row inspection |
+| `paid_interest_status` | ✓ ✓ | — | — | Return the Decision 13 demand-gate trigger state for a fleet app's paid-interest signal |
+| `performance_analyst_agent` | handler only | — | — | _(no description)_ |
+| `persona_tool` | ✓ ✓ | 2 | 1 | Access 139 specialized AI persona agents across 14 categories: income generation, career development, job s… |
+| `pilots_tool` | ✓ ✓ | 3 | 1 | Access experiments and pilots: A/B tests, feature experiments, pilot results |
+| `pipeline_orchestrator_tool` | ✓ ✓ | 1 | 1 | Get pipeline orchestration status and initiative stage breakdown |
+| `platform_audit_agent` | handler only | — | — | _(no description)_ |
+| `platform_awareness_tool` | ✓ ✓ | 7 | 1 | Enumerate platform capabilities: UI routes, studios, feature flags, and deploy verification |
+| `platform_config_tool` | ✓ ✓ | 5 | — | Inspect runtime platform configuration: active LLM providers, environment variables (secrets masked), Djang… |
+| `podcast_coordinator_agent` | handler only | — | — | _(no description)_ |
+| `podcast_tool` | ✓ ✓ | 4 | 1 | View podcast shows, episodes, scripts, and stats |
+| `prediction_market_analyst` | handler only | — | — | _(no description)_ |
+| `proactive_tool` | ✓ ✓ | 8 | 1 | View proactive alerts, notifications, smart suggestions, and automated actions generated by the system |
+| `profile_tool` | ✓ ✓ | 6 | 1 | View extended user profile, tracked skills, and learning summary |
+| `railway_tool` | ✓ ✓ | 7 | 1 | Railway platform infrastructure management |
+| `reasoning_engine_tool` | ✓ ✓ | 3 | 1 | Query or trigger the ThinkingAgent reasoning engine |
+| `recent_activity_tool` | ✓ ✓ | 2 | — | View recent platform activity across 6 subsystems in one call: Celery tasks, spider data, HiveMind conversa… |
+| `remember_tool` | ✓ ✓ | 4 | 1 | Save something to persistent memory so you remember it across sessions |
+| `repo_tool` | ✓ ✓ | 5 | 1 | Read-only codebase introspection: browse file tree, read file contents, search/grep across code, and check … |
+| `research_agent` | handler only | — | — | _(no description)_ |
+| `research_and_create_tool` | ✓ ✓ | — | 2 | Research a topic via web search and create content (blog post, comparison, script, analysis) |
+| `resolve_agent` | handler only | — | — | _(no description)_ |
+| `revenue_tracker_tool` | ✓ ✓ | 3 | 1 | Track revenue metrics, income progress, and record new revenue |
+| `rigby_shift_brief_tool` | ✓ ✓ | 1 | 1 | Rigby's operator shift brief — a one-minute pulse for Chris at the start of a session |
+| `rigby_work_item` | ✓ ✓ | 5 | 1 | Rigby's internal operational work queue |
+| `run_agent` | schema only | — | 2 | Delegate a task to a specialized agent |
+| `schedule_followup` | ✓ ✓ | — | — | Subscribe THIS conversation to a completion notification for a previously dispatched async agent task |
+| `scheduled_tasks_tool` | ✓ ✓ | 3 | — | View and manage scheduled Celery tasks: list beat entries, enable/disable schedules |
+| `search_docs` | ✓ ✓ | — | 1 | Search the /docs/ corpus and return ranked chunks with inline citations |
+| `security_agent` | handler only | — | — | _(no description)_ |
+| `self_awareness_tool` | ✓ ✓ | 5 | 1 | View system self-awareness metrics, analysis reports, and evolution history |
+| `seo_optimizer_agent` | handler only | — | — | _(no description)_ |
+| `session_tool` | ✓ ✓ | 7 | 1 | Manage conversation sessions: check conversation health/freshness, create a fresh conversation, or list rec… |
+| `sharp_action_detector` | handler only | — | — | _(no description)_ |
+| `signal_studio_judge_stats` | ✓ ✓ | — | — | Return signal-studio's LLM auto-summarizer judge stats over the last N days: counts of clusters accepted (s… |
+| `social_media_agent` | handler only | — | — | _(no description)_ |
+| `spider_data_aggregation_tool` | ✓ ✓ | 1 | 1 | Group-by counts of SpiderData rows by data_type over a windowed time range, with optional spider_name + dat… |
+| `spider_status_tool` | ✓ ✓ | 4 | 1 | View individual spider health and activity |
+| `status_snapshot_tool` | ✓ ✓ | — | — | Get a broad system overview snapshot: agents, spiders, initiatives, health scores, recent activity |
+| `stock_analyst_agent` | handler only | — | — | _(no description)_ |
+| `stock_audit_coordinator` | handler only | — | — | _(no description)_ |
+| `strategic_review` | ✓ ✓ | — | 1 | Conduct a strategic review: evaluate strategy, assess market position, review business model, SWOT analysis… |
+| `studio_tool` | ✓ ✓ | 6 | 1 | Unified creative studio: generate images, videos, and audio |
+| `surgical_moves_status_tool` | ✓ ✓ | 2 | — | Check status of the DeliberationSession pipeline (multi-agent surgical-moves debates that decide publish/re… |
+| `system_intelligence_agent` | handler only | — | — | _(no description)_ |
+| `talking_character_agent` | handler only | — | — | _(no description)_ |
+| `task_breakdown_tool` | ✓ ✓ | 2 | 1 | Celery task volume breakdown and load analysis |
+| `task_manager_tool` | ✓ ✓ | 6 | 1 | Manage tasks linked to opportunities: list tasks, view stats |
+| `thinking_agent` | handler only | — | — | _(no description)_ |
+| `three_d_generation_agent` | ✓ ✓ | — | 1 | Generate 3D models from text descriptions or images |
+| `topic_miner_agent` | handler only | — | — | _(no description)_ |
+| `trained_creation_agent` | handler only | — | — | _(no description)_ |
+| `trend_analysis_agent` | handler only | — | — | _(no description)_ |
+| `universal_agent_tool` | ✓ ✓ | — | 1 | Route a task to a specific agent or auto-route to the best-fit agent |
+| `video_editing_agent` | ✓ ✓ | — | 1 | Edit an existing video: trim, cut, speed change, add effects, concatenate clips, add text overlay, transiti… |
+| `video_generation_agent` | handler only | — | — | _(no description)_ |
+| `video_history_tool` | ✓ ✓ | 7 | 1 | Search, browse, and process the user's videos (VideoHistory model) |
+| `vip_invite_tool` | ✓ ✓ | 3 | 1 | Manage VIP magic-link invites for demo viewers |
+| `voice_clone_tool` | ✓ ✓ | 5 | 1 | Manage voice cloning and the voice marketplace |
+| `voice_critic_agent` | handler only | — | — | _(no description)_ |
+| `web_fetch_tool` | ✓ ✓ | — | 1 | Raw HTTP GET/POST to a URL, returning status_code, headers, and body (parsed JSON when content-type is appl… |
+| `web_search` | ✓ ✓ | — | 1 | Search the web for current information |
+| `whale_watcher_agent` | handler only | — | — | _(no description)_ |
+| `work_tool` | ✓ ✓ | 16 | 1 | Work execution gateway: manage initiatives and action items |
+| `workflow_orchestration_agent` | ✓ ✓ | — | 1 | Orchestrate multi-step workflows that chain multiple agents together |
+| `workflow_run_tool` | ✓ ✓ | 5 | 1 | Start, poll, list, detail, or cancel multi-step workflow runs |
+| `workspace_budget_tool` | ✓ ✓ | 11 | 1 | Manage per-workspace LLM spend caps, downgrade state, and freeze state (A1 W1 Phase 3 + W1.5 + W2 #2a) |
+| `workspace_tool` | ✓ ✓ | 14 | 1 | Manage workspaces and workspace-scoped operations |
+| `zoom_out_tool` | ✓ ✓ | 1 | 1 | Read the Rigby SIGN zoom-out concern ledger — logs/zoom_out_classifications.jsonl |
 
 ## Detail appendix
 
@@ -235,6 +223,19 @@ Persist or read the 'currently working in repo X' pointer for the user, so multi
 
 **Required parameters:** `action`
 
+### `agent_capability_drift_tool`
+
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_agent_capability_drift` in `core/services/td_handlers_agents.py:6977`
+
+Run the agent capability drift scanner (read-only). Checks four invariants: (1) every AGENT_MAP entry has a matching Agent DB row; (2) every non-internal agent has enum + mapping + dispatcher-handler coverage; (3) every 'supported'-tier agent has ≥1 successful execution in the recent window (default 30 days). Exceptions allowlist (capabilities_exceptions.yaml) can suppress findings per tier: internal-only / legacy / rerouted / experimental. Same codepath as the `scan_agent_capability_drift` management command — one source of truth. Use to answer 'do we know what agents we have and whether they still work?' before answering a customer question.
+
+**Actions:**
+
+- `scan`
+- `summary`
+
+**Required parameters:** `action`
+
 ### `agent_control_tool`
 
 **Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_agent_control` in `core/services/td_handlers_ops.py:1981`
@@ -266,6 +267,12 @@ Introspect agents: list registered agents, view capabilities, check which agents
 
 **Required parameters:** `action`
 
+### `agent_job_status`
+
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_agent_job_status` in `core/services/td_handlers_agents.py:6895`
+
+Poll status + output preview for an agent job dispatched via run_agent (or any tool that returns a Celery task_id). Sibling to schedule_followup — same lookup shape (task_id OR execution_id) — but returns an immediate status snapshot instead of subscribing to a completion notification. Use to poll long-running dispatches when you don't want to wait for the follow-up banner. Returns: status (queued|in_progress|completed|failed), agent_name, duration_ms, error_message, output_preview (first 800 chars of output_data.message).
+
 ### `agent_memory_tool`
 
 **Wiring:** schema in `pa_tool_schemas.py` · handler `OpsHandlersMixin._handle_agent_memory` in `core/services/td_handlers_ops.py:7080`
@@ -282,7 +289,7 @@ Browse agent memories and knowledge sources. Use when the user asks about what a
 
 ### `ai_series_workflow_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -317,7 +324,7 @@ View ATS keyword mappings, resume optimization logs, persona templates, and stat
 
 ### `audio_generation_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -338,7 +345,7 @@ View audit findings, wiring defects, citation violations, and P0 summary. Use wh
 
 ### `autonomous_content_studio_coordinator`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -450,13 +457,13 @@ Monitor and configure the Ops Autopilot — automated incident response with gov
 
 ### `bear_case_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `blockchain_audit_coordinator`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -481,7 +488,7 @@ Manage the blog/content pipeline — stats, list, approve, reject, generate. Use
 
 ### `bpaas_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_bpaas` in `core/services/td_handlers_agents.py:6289`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_bpaas` in `core/services/td_handlers_agents.py:6585`
 
 Build Packet as a Service — create client projects from structured build packets. Actions: create_project (creates workspace project + repos + preview env + magic link from a build packet), generate_close_pack (generates SOW + delivery checklist + proposal from a build packet), get_schema (returns the build packet JSON schema), get_example (returns the Norman Handyman MVP example packet).
 
@@ -496,9 +503,9 @@ Build Packet as a Service — create client projects from structured build packe
 
 ### `brainstorm_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_brainstorm` in `core/services/td_handlers_agents.py:6157`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_brainstorm` in `core/services/td_handlers_agents.py:6453`
 
-Search and list brainstorm sessions: discussion panels, multi-agent debates, and collaborative insights. Use 'list' for bulk paginated export, 'search' for keyword search, 'details' for a single session, 'stats' for activity stats.
+Search historical brainstorm/panel/discussion conversations, OR dispatch a single-agent async reasoning pass on a topic. READ actions (list/search/recent/details/by_category/stats): query the archive of past brainstorming — this archive may include historical multi-agent panels and discussions from earlier system versions. CREATE action: dispatches ONE ThinkingAgent asynchronously on the given topic and returns a task_id — this is NOT a live multi-participant panel/debate. Poll progress with agent_job_status. Multi-agent panel dispatch is not yet implemented; a distinct create_panel action is on the roadmap when needed.
 
 **Actions:**
 
@@ -514,13 +521,13 @@ Search and list brainstorm sessions: discussion panels, multi-agent debates, and
 
 ### `brand_identity_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `brand_strategy_agent`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 Develop brand strategy: positioning, messaging, voice, identity, brand architecture, differentiation. Use when the user asks about branding, brand positioning, brand identity, messaging strategy, or brand differentiation.
 
@@ -543,7 +550,7 @@ View content channels, episodes, and upcoming schedule. Use when the user asks a
 
 ### `campaign_orchestrator_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -563,7 +570,7 @@ View campaigns, campaign deliverables, and stats. Use when the user asks about c
 
 ### `character_training_agent`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 Train a custom character model from reference images for consistent character generation. Use when the user wants to create a character, train a character model, upload character reference images, or create a consistent character identity.
 
@@ -571,7 +578,7 @@ Train a custom character model from reference images for consistent character ge
 
 ### `check_resource_budget`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_check_budget` in `core/services/td_handlers_agents.py:4813`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_check_budget` in `core/services/td_handlers_agents.py:5090`
 
 Check resource budgets: API costs, token usage, compute limits. Use when the user asks about costs, budget, API spending, or resource usage.
 
@@ -580,8 +587,6 @@ Check resource budgets: API costs, token usage, compute limits. Use when the use
 **Wiring:** schema in `pa_tool_schemas.py` · handler `CodeJobHandlersMixin._handle_claude_code` in `core/services/td_handlers_codejobs.py:330`
 
 Spawn an autonomous Claude Code engineering session that can read files, write code, create branches, and open PRs. Use when you need code changes, bug fixes, new features, or technical investigation that requires reading/modifying the codebase. Use request_mode='answer' for readonly Q&A about the codebase (no PR created); 'change' for code modifications; default 'auto' picks based on task verbs.
-
-**Required parameters:** `task`
 
 ### `cockpit_tool`
 
@@ -622,13 +627,13 @@ Submit, monitor, and manage remote code jobs. A code job clones a repo, implemen
 
 ### `code_review_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `competitor_analysis_agent`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 Analyze competitors: market positioning, strengths, weaknesses, product comparison, pricing analysis, market share. Use when the user asks about competitors, competitive landscape, market analysis, or wants to compare products/services against rivals.
 
@@ -636,7 +641,7 @@ Analyze competitors: market positioning, strengths, weaknesses, product comparis
 
 ### `competitor_comparison_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `CoreHandlersMixin._handle_competitor_comparison` in `core/services/td_handlers_core.py:2745`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `CoreHandlersMixin._handle_competitor_comparison` in `core/services/td_handlers_core.py:2760`
 
 Generate, check status, list, view, delete, or regenerate competitor comparisons. Produces a structured side-by-side analysis between a competitor and Donkey Betz using RAG evidence from ingested documents. Use when the user asks to compare competitors, do competitive analysis, or review a competitor's platform.
 
@@ -669,19 +674,19 @@ View ConceptForge pipeline runs, stages, artifacts, and stats. Use when the user
 
 ### `content_audit_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `content_diversity_orchestrator`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `content_strategy_agent`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 Develop content strategy: editorial calendar, content pillars, distribution plan, SEO strategy, content audit. Use when the user asks about content planning, editorial strategy, content calendar, content distribution, or content optimization.
 
@@ -689,7 +694,7 @@ Develop content strategy: editorial calendar, content pillars, distribution plan
 
 ### `content_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ContentHandlersMixin._handle_content` in `core/services/td_handlers_content.py:4445`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ContentHandlersMixin._handle_content` in `core/services/td_handlers_content.py:4581`
 
 Unified content gateway — blogs, deliverables, publishing, and editorial. Replaces content_review_tool, generate_blog_tool, and deliverables_tool. Use content_stats for a full content pipeline overview. Use content_list/content_search/content_detail to browse blogs and deliverables. Use content_approve/content_reject/content_complete to publish, archive, or mark-completed content. Use generate_blog to create a new blog via the deliberation pipeline. Use deliverable_* actions for the deliverables library (documents, scripts, plans).
 
@@ -726,7 +731,7 @@ Unified content gateway — blogs, deliverables, publishing, and editorial. Repl
 
 ### `content_writer_agent`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 Write content: blog posts, articles, marketing copy, social media posts, email newsletters, product descriptions, whitepapers, case studies. Use when the user asks to write, draft, or create any written content. Saves output to Deliverables library.
 
@@ -734,7 +739,7 @@ Write content: blog posts, articles, marketing copy, social media posts, email n
 
 ### `contrarian_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -756,13 +761,13 @@ Search and retrieve past PA conversations. Use to recall previous discussions, f
 
 ### `coo_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `cost_telemetry_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_cost_telemetry` in `core/services/td_handlers_agents.py:4909`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_cost_telemetry` in `core/services/td_handlers_agents.py:5186`
 
 Get real API cost and spend data from LLM call logs. Use when the user asks about actual costs, spending, most expensive agents, cost trends, cost breakdown, or wants a ranked list of agents by spend. This returns real dollar amounts, not budget gates.
 
@@ -776,7 +781,7 @@ Get real API cost and spend data from LLM call logs. Use when the user asks abou
 
 ### `create_brand_video`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 Create a brand video by orchestrating multiple agents: script writing, image generation, video generation, and editing. Use when the user wants to create a complete brand video, promotional video, or marketing video from scratch.
 
@@ -784,7 +789,7 @@ Create a brand video by orchestrating multiple agents: script writing, image gen
 
 ### `create_project_from_research`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 Create a full project from research: web research, analysis, project planning, deliverable creation. Use when the user wants to research a topic and create a complete project or initiative from the findings.
 
@@ -792,19 +797,19 @@ Create a full project from research: web research, analysis, project planning, d
 
 ### `creative_director_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `cto_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `customer_research_agent`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 Research target customers: demographics, pain points, buying behavior, user personas, customer journey mapping, needs analysis. Use when the user asks about target audience, customer segments, user research, or wants to understand their customers better.
 
@@ -812,7 +817,7 @@ Research target customers: demographics, pain points, buying behavior, user pers
 
 ### `davinci_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_davinci` in `core/services/td_handlers_agents.py:4452`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_davinci` in `core/services/td_handlers_agents.py:4729`
 
 Direct control surface for DaVinci Resolve rendering and color grading. Supported actions: health, render, status, result, jobs, grades. Use 'health' to check if the render node is online. Use 'render' to start a professional render job (requires clip_paths). Use 'status' to check render job progress (requires job_id). Use 'result' to get the download URL for a completed render (requires job_id). Use 'jobs' to list all render jobs. Use 'grades' to get available color grade presets matching current trends.
 
@@ -938,7 +943,7 @@ Browse and act on agent dreams: list top-scored dreams, view details, approve or
 
 ### `editor_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -959,7 +964,7 @@ Inspect or dispatch jobs on the AI Employee registry. Actions in v0: (1) describ
 
 ### `execution_history_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ContentHandlersMixin._handle_execution_history` in `core/services/td_handlers_content.py:3176`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ContentHandlersMixin._handle_execution_history` in `core/services/td_handlers_content.py:3275`
 
 View agent execution history: recent runs, success/failure rates, execution details, and full output data. Use when the user asks about what agents have done, execution logs, agent activity, run history, or wants to see the full output/report/result from a specific agent run. Use action=detail with id or agent_name to get full output_data. The detail response also includes a `deliverables` field listing up to 25 deliverables produced by the execution (reverse-link pivot to deliverable_tool.detail provenance).
 
@@ -989,7 +994,7 @@ View A/B tests, experiment results, and stats. Use when the user asks about expe
 
 ### `feedback_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ContentHandlersMixin._handle_feedback` in `core/services/td_handlers_content.py:3587`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ContentHandlersMixin._handle_feedback` in `core/services/td_handlers_content.py:3686`
 
 Submit or view feedback on agent outputs, content quality, or platform features. Use when the user wants to give feedback, rate something, or view past feedback.
 
@@ -1010,13 +1015,13 @@ Read-only rollup of every Dockerized fleet app's /api/health endpoint. Use this 
 
 ### `game_predictor`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `gates_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_gates` in `core/services/td_handlers_agents.py:5114`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_gates` in `core/services/td_handlers_agents.py:5391`
 
 Access quality gates: list gates, check gate status, view pass/fail history. Use when the user asks about gates, quality checks, or publish gates.
 
@@ -1030,19 +1035,19 @@ Access quality gates: list gates, check gate status, view pass/fail history. Use
 
 ### `get_body_vitals`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_body_vitals` in `core/services/td_handlers_agents.py:4783`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_body_vitals` in `core/services/td_handlers_agents.py:5060`
 
 Get body system vitals: HEART, LUNGS, CIRCULATORY, SPINE, IMMUNE, DIGESTIVE, MUSCULAR, BRAIN, SKIN health scores. Use when the user asks about body systems, vitals, organism health, or body status.
 
 ### `get_system_alerts`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_system_alerts` in `core/services/td_handlers_agents.py:4853`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_system_alerts` in `core/services/td_handlers_agents.py:5130`
 
 Get active system alerts and warnings. Use when the user asks about alerts, warnings, or system notifications.
 
 ### `governance_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `CoreHandlersMixin._handle_governance` in `core/services/td_handlers_core.py:3702`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `CoreHandlersMixin._handle_governance` in `core/services/td_handlers_core.py:3717`
 
 Unified governance inbox — attention items, decisions, and triage. Replaces boardroom_tool and human_decisions_tool. Use 'inbox' for a combined overview of pending attention items and draft decisions. Use attention_* actions to list/approve/ignore items. Use decision_* actions to list/create/decide/promote/reject decisions. Use triage_batch to get items for batch processing.
 
@@ -1104,7 +1109,7 @@ Run HTTP smoke tests against platform API endpoints. Verifies endpoints return c
 
 ### `image_editing_agent`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 Edit an existing image: upscale, remove background, apply filters, crop, resize, add text overlay, style transfer, inpainting, outpainting. Use when the user wants to modify, enhance, or transform an existing image.
 
@@ -1112,7 +1117,7 @@ Edit an existing image: upscale, remove background, apply filters, crop, resize,
 
 ### `image_generation_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -1133,7 +1138,7 @@ Deep infrastructure health checks — Redis, PostgreSQL, dependencies, and runti
 
 ### `intelligence_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `CoreHandlersMixin._handle_intelligence` in `core/services/td_handlers_core.py:3304`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `CoreHandlersMixin._handle_intelligence` in `core/services/td_handlers_core.py:3319`
 
 Unified intelligence desk — stocks, sports betting, legislation, search, and KB. Replaces stock_intelligence_tool, sports_betting_tool, legislation_tool, rag_query_tool, spider_data_tool, and web_search for intelligence queries. Use 'overview' for a combined dashboard across all desks. Use 'briefs' with desk param for desk-specific briefings. Use 'search' with source=kb/spider/web for unified search.
 
@@ -1179,7 +1184,7 @@ Browse the knowledge base — documents, embedding collections, chunk counts, an
 
 ### `learning_patterns_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ContentHandlersMixin._handle_learning_patterns` in `core/services/td_handlers_content.py:3465`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ContentHandlersMixin._handle_learning_patterns` in `core/services/td_handlers_content.py:3564`
 
 View mined LearningPattern telemetry (tool reliability, agent tool effectiveness, spider data value, etc.). Use when the user asks about what patterns the system has learned, best-performing tools, or improvement trends. action=list returns active patterns above min_confidence; action=by_type filters by pattern_type (or returns available types if omitted); action=stats returns aggregate counts + top patterns.
 
@@ -1210,7 +1215,7 @@ Manage the PA's learned tool-usage insights. Use when the user asks about what t
 
 ### `legal_doc_drafter_agent`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_legal_agent` in `core/services/td_handlers_agents.py:298`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_legal_agent` in `core/services/td_handlers_agents.py:311`
 
 Draft legal documents: contracts, agreements, legal letters, compliance documents. Use when the user asks about legal documents, contracts, legal drafting, or compliance.
 
@@ -1218,19 +1223,25 @@ Draft legal documents: contracts, agreements, legal letters, compliance document
 
 ### `line_movement_analyzer`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
+
+_(no schema description)_
+
+### `market_intelligence_agent`
+
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `market_intelligence_coordinator`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `marketing_strategy_agent`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 Develop marketing strategy: campaign planning, channel strategy, go-to-market plan, growth strategy, marketing funnel optimization. Use when the user asks about marketing plans, campaigns, growth strategies, go-to-market, or marketing channels.
 
@@ -1238,7 +1249,7 @@ Develop marketing strategy: campaign planning, channel strategy, go-to-market pl
 
 ### `media_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_media` in `core/services/td_handlers_agents.py:4178`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_media` in `core/services/td_handlers_agents.py:4455`
 
 Browse the user's media library: AI-generated images, videos, and audio files. Supported actions: list, detail, stats, delete. Use 'list' to browse media (filter by media_type, content_type, limit). Use 'detail' to get full metadata for one asset. Use 'stats' for aggregate counts by type. Use 'delete' to remove a media asset.
 
@@ -1253,19 +1264,19 @@ Browse the user's media library: AI-generated images, videos, and audio files. S
 
 ### `meeting_coordinator_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `memory_isolation_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `messaging_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `CoreHandlersMixin._handle_messaging` in `core/services/td_handlers_core.py:3834`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `CoreHandlersMixin._handle_messaging` in `core/services/td_handlers_core.py:3849`
 
 Read-only access to in-app messaging threads. Use when a user asks 'check my messages', 'any new messages?', or 'show thread X'. Actions: list_threads (list the user's message threads), get_thread (read messages in a thread), unread_count (total unread). Outbound message sending is not exposed via this tool surface in v0 — Rigby posts shift reports programmatically from her job tasks.
 
@@ -1293,7 +1304,7 @@ Rigby-only: certify, reject, or defer a MissionRun. Writes one OpsRunEvent (labe
 
 ### `ml_analysis`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_ml_analysis` in `core/services/td_handlers_agents.py:1728`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_ml_analysis` in `core/services/td_handlers_agents.py:1864`
 
 Run ML analysis on platform data: prediction models, feature importance, model accuracy. Use when the user asks about machine learning, model performance, predictions accuracy, or data analysis.
 
@@ -1356,7 +1367,7 @@ Newsletter publishing pipeline — prepare issues for Substack/Beehiiv, generate
 
 ### `obs_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_obs` in `core/services/td_handlers_agents.py:4511`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_obs` in `core/services/td_handlers_agents.py:4788`
 
 Control OBS Studio recording via the local bridge. Actions: health (check bridge), status (recording state + timecode), start (begin recording), stop (stop recording), last (newest recording file info), upload_last (upload latest recording to platform). For upload_last, set stopIfRecording=true to auto-stop before uploading.
 
@@ -1373,7 +1384,7 @@ Control OBS Studio recording via the local bridge. Actions: health (check bridge
 
 ### `opportunity_manager_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_opportunity_manager` in `core/services/td_handlers_agents.py:1195`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_opportunity_manager` in `core/services/td_handlers_agents.py:1331`
 
 Manage opportunities: list, view details, get stats, create, or update status. Use when the user asks about opportunities, job listings, income opportunities, or wants to track/update an opportunity. SCOPE: Results are filtered to the calling user's opportunities when a user is authenticated (the 'your pipeline' view, typically ~tens of rows). The platform-wide spider-ingested lead pool (~thousands of unattributed Opportunity rows owned by the system user) is visible only via autopilot_tool.dry_run_report → revenue_pipeline.total_active. Session 1222 P4 (audit C1) clarified this distinction.
 
@@ -1390,13 +1401,13 @@ Manage opportunities: list, view details, get stats, create, or update status. U
 
 ### `opportunity_pipeline_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `opportunity_scoring_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -1448,7 +1459,7 @@ Production operations surface: check deployment version/build info, monitor SLO 
 
 ### `orm_inspect_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_orm_inspect` in `core/services/td_handlers_agents.py:595`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_orm_inspect` in `core/services/td_handlers_agents.py:636`
 
 Read-only, allowlisted Django ORM row inspection. Use this when you need to verify what's actually persisted in the database — e.g., 'do rows with source_breakdown.huggingface exist?', 'what status is Deliverable X in?', 'how many AutopilotAction rows fired today?'. Complements web_fetch_tool (external endpoint verify → this = internal DB verify). Closes the S2845-class false-negative gap where a tool surface reports 'no data' but the rows are actually there under a different filter path. NOT a write surface — no create/update/delete. NOT a general Django-shell tool — only allowlisted models. Sensitive field names (password/secret/token/authorization/etc.) always redacted; JSONField values for high-sensitivity models excluded by default.
 
@@ -1470,7 +1481,7 @@ Return the Decision 13 demand-gate trigger state for a fleet app's paid-interest
 
 ### `performance_analyst_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -1489,7 +1500,7 @@ Access 139 specialized AI persona agents across 14 categories: income generation
 
 ### `pilots_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_pilots` in `core/services/td_handlers_agents.py:5186`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_pilots` in `core/services/td_handlers_agents.py:5463`
 
 Access experiments and pilots: A/B tests, feature experiments, pilot results. Use when the user asks about experiments, pilots, A/B tests, or experimental features.
 
@@ -1503,7 +1514,7 @@ Access experiments and pilots: A/B tests, feature experiments, pilot results. Us
 
 ### `pipeline_orchestrator_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_pipeline_orchestrator` in `core/services/td_handlers_agents.py:1575`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_pipeline_orchestrator` in `core/services/td_handlers_agents.py:1711`
 
 Get pipeline orchestration status and initiative stage breakdown. Use when the user asks about pipeline status or orchestration.
 
@@ -1515,7 +1526,7 @@ Get pipeline orchestration status and initiative stage breakdown. Use when the u
 
 ### `platform_audit_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -1553,7 +1564,7 @@ Inspect runtime platform configuration: active LLM providers, environment variab
 
 ### `podcast_coordinator_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -1574,7 +1585,7 @@ View podcast shows, episodes, scripts, and stats. Use when the user asks about p
 
 ### `prediction_market_analyst`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -1634,7 +1645,7 @@ Railway platform infrastructure management. List services and their deployment s
 
 ### `reasoning_engine_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_reasoning_engine` in `core/services/td_handlers_agents.py:5381`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_reasoning_engine` in `core/services/td_handlers_agents.py:5658`
 
 Query or trigger the ThinkingAgent reasoning engine. Actions: status (engine health), thoughts (recent AgentExecution rows for ThinkingAgent), trigger (invoke a new thinking cycle — MUTATION, runs a real LLM-backed reflection over recent system activity).
 
@@ -1648,7 +1659,7 @@ Query or trigger the ThinkingAgent reasoning engine. Actions: status (engine hea
 
 ### `recent_activity_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ContentHandlersMixin._handle_recent_activity` in `core/services/td_handlers_content.py:3710`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ContentHandlersMixin._handle_recent_activity` in `core/services/td_handlers_content.py:3846`
 
 View recent platform activity across 6 subsystems in one call: Celery tasks, spider data, HiveMind conversations, blogs, initiatives, and signal clusters. Use when the user asks about what is happening, what just ran, recent activity, or what is going on. action=summary returns compact per-section rollups (5 items each); action=detailed returns the same shape with 15 items per section.
 
@@ -1690,7 +1701,7 @@ Read-only codebase introspection: browse file tree, read file contents, search/g
 
 ### `research_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -1704,13 +1715,13 @@ Research a topic via web search and create content (blog post, comparison, scrip
 
 ### `resolve_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `revenue_tracker_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_revenue_tracker` in `core/services/td_handlers_agents.py:1622`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_revenue_tracker` in `core/services/td_handlers_agents.py:1758`
 
 Track revenue metrics, income progress, and record new revenue. Use when the user asks about revenue, earnings, income, financial progress, or wants to record a new revenue event.
 
@@ -1760,7 +1771,7 @@ Delegate a task to a specialized agent. Use when the user asks to Run any of 58 
 
 ### `schedule_followup`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_schedule_followup` in `core/services/td_handlers_agents.py:6410`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_schedule_followup` in `core/services/td_handlers_agents.py:6706`
 
 Subscribe THIS conversation to a completion notification for a previously dispatched async agent task. Call this RIGHT AFTER you dispatch a long-running agent (run_agent / workflow_orchestration_agent / etc.) so the user gets an automatic 'agent finished' message in this same conversation when the task completes — instead of you going silent until the user manually asks. Pass `execution_id` (UUID returned by execution_history_tool) when you have it, or `task_id` (Celery task_id returned by the dispatch tool) as a convenience lookup. after_seconds is a TTL — if the agent hasn't finished in that window, the subscription quietly expires. Cap 600s. If the agent is already done at subscribe time, the notification fires immediately. Safe to call multiple times with the same IDs — a unique constraint dedupes per (execution, conversation).
 
@@ -1786,7 +1797,7 @@ Search the /docs/ corpus and return ranked chunks with inline citations. Use whe
 
 ### `security_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -1808,13 +1819,13 @@ View system self-awareness metrics, analysis reports, and evolution history. Use
 
 ### `seo_optimizer_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `session_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `CoreHandlersMixin._handle_session` in `core/services/td_handlers_core.py:4026`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `CoreHandlersMixin._handle_session` in `core/services/td_handlers_core.py:4041`
 
 Manage conversation sessions: check conversation health/freshness, create a fresh conversation, or list recent conversations. Use when asked about session health, context drift, whether to start fresh, creating a new conversation, or listing past conversations. Also use proactively when you notice the conversation is getting long or drifting.
 
@@ -1832,7 +1843,7 @@ Manage conversation sessions: check conversation health/freshness, create a fres
 
 ### `sharp_action_detector`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -1844,7 +1855,7 @@ Return signal-studio's LLM auto-summarizer judge stats over the last N days: cou
 
 ### `social_media_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -1883,19 +1894,19 @@ Get a broad system overview snapshot: agents, spiders, initiatives, health score
 
 ### `stock_analyst_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `stock_audit_coordinator`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `strategic_review`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 Conduct a strategic review: evaluate strategy, assess market position, review business model, SWOT analysis, strategic recommendations. Use when the user asks for a strategic review, strategy evaluation, SWOT analysis, or strategic assessment.
 
@@ -1920,7 +1931,7 @@ Unified creative studio: generate images, videos, and audio. Use when the user a
 
 ### `surgical_moves_status_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ContentHandlersMixin._handle_surgical_moves_status` in `core/services/td_handlers_content.py:3875`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ContentHandlersMixin._handle_surgical_moves_status` in `core/services/td_handlers_content.py:4011`
 
 Check status of the DeliberationSession pipeline (multi-agent surgical-moves debates that decide publish/revise/kill on content). Returns per-session status, turn counts, contract counts, evidence stats, and decision verdicts. Use when the user asks about surgical moves status, deliberations, or whether the deliberator finished. action=summary returns up to 5 sessions; action=detailed returns up to 20. Pass session_id to inspect a specific session (bypasses time window).
 
@@ -1931,13 +1942,13 @@ Check status of the DeliberationSession pipeline (multi-agent surgical-moves deb
 
 ### `system_intelligence_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `talking_character_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
@@ -1956,7 +1967,7 @@ Celery task volume breakdown and load analysis. Use when the user asks about tas
 
 ### `task_manager_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_task_manager` in `core/services/td_handlers_agents.py:1401`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_task_manager` in `core/services/td_handlers_agents.py:1537`
 
 Manage tasks linked to opportunities: list tasks, view stats. Use when the user asks about tasks, to-do items, or work items related to opportunities. HIDDEN MUTATION: `create` without `opportunity_id` implicitly creates a standalone Opportunity row to satisfy the required FK (handler creates opportunity_type='task', source='pa', potential_revenue=0). To avoid silent parent-row accretion, pass `opportunity_id` explicitly when linking to an existing opportunity.
 
@@ -1973,13 +1984,13 @@ Manage tasks linked to opportunities: list tasks, view stats. Use when the user 
 
 ### `thinking_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `three_d_generation_agent`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 Generate 3D models from text descriptions or images. Use when the user asks to create a 3D model, 3D object, 3D scene, or convert an image to 3D.
 
@@ -1987,25 +1998,25 @@ Generate 3D models from text descriptions or images. Use when the user asks to c
 
 ### `topic_miner_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `trained_creation_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `trend_analysis_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `universal_agent_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_universal_agent` in `core/services/td_handlers_agents.py:1788`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_universal_agent` in `core/services/td_handlers_agents.py:1924`
 
 Route a task to a specific agent or auto-route to the best-fit agent. Use when the user wants a specific agent to run, or when no other specialized tool fits the request.
 
@@ -2013,7 +2024,7 @@ Route a task to a specific agent or auto-route to the best-fit agent. Use when t
 
 ### `video_editing_agent`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 Edit an existing video: trim, cut, speed change, add effects, concatenate clips, add text overlay, transitions, reverse. Use when the user wants to modify, trim, speed up, slow down, or combine existing video clips. Uses ffmpeg.
 
@@ -2021,13 +2032,13 @@ Edit an existing video: trim, cut, speed change, add effects, concatenate clips,
 
 ### `video_generation_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `video_history_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_video_history` in `core/services/td_handlers_agents.py:4568`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_video_history` in `core/services/td_handlers_agents.py:4845`
 
 Search, browse, and process the user's videos (VideoHistory model). Actions: list (recent videos, filterable by type/status), search (find videos by title/filename substring), detail (full metadata for one video by UUID or sequential number), resolve (normalize any video reference to full metadata), transcribe (kick off Whisper transcription — async, returns transcript_id), transcript_status (check transcription progress and get text when done), content_pack (generate titles/summary/chapters/YT description from transcript — async, returns task_id).
 
@@ -2059,7 +2070,7 @@ Manage VIP magic-link invites for demo viewers. Create invite links, list existi
 
 ### `voice_clone_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_voice_clone` in `core/services/td_handlers_agents.py:4329`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_voice_clone` in `core/services/td_handlers_agents.py:4606`
 
 Manage voice cloning and the voice marketplace. Actions: list (user's cloned voices), detail (voice info by id), clone_requests (clone request history), marketplace (browse public voices), stats (voice counts and revenue). Voice cloning from audio files is done via the web UI at /workspace > Voice Marketplace > Clone Voice. Discord users can clone via /voice clone command.
 
@@ -2075,13 +2086,13 @@ Manage voice cloning and the voice marketplace. Actions: list (user's cloned voi
 
 ### `voice_critic_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `web_fetch_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_web_fetch` in `core/services/td_handlers_agents.py:429`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_web_fetch` in `core/services/td_handlers_agents.py:442`
 
 Raw HTTP GET/POST to a URL, returning status_code, headers, and body (parsed JSON when content-type is application/json). Use this when you need to verify what an API actually returns — e.g., inspecting a JSON endpoint, checking a local /api/... response, or confirming a service is reachable. Not a browser: no JS execution, no cookies, no bot-protection bypass. Response body capped at 500KB by default (max 2MB). Timeout capped at 60s. Only http:// and https:// URLs allowed.
 
@@ -2089,7 +2100,7 @@ Raw HTTP GET/POST to a URL, returning status_code, headers, and body (parsed JSO
 
 ### `web_search`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_web_search` in `core/services/td_handlers_agents.py:387`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_web_search` in `core/services/td_handlers_agents.py:400`
 
 Search the web for current information. Use when the user asks about current events, recent news, or information you don't have.
 
@@ -2097,13 +2108,13 @@ Search the web for current information. Use when the user asks about current eve
 
 ### `whale_watcher_agent`
 
-**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 _(no schema description)_
 
 ### `work_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `CoreHandlersMixin._handle_work` in `core/services/td_handlers_core.py:2368`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `CoreHandlersMixin._handle_work` in `core/services/td_handlers_core.py:2383`
 
 Work execution gateway: manage initiatives and action items. List, detail, create, and promote initiatives; list, start, complete, and clean up action items. Use this instead of initiative_tool for all initiative and action item operations.
 
@@ -2130,7 +2141,7 @@ Work execution gateway: manage initiatives and action items. List, detail, creat
 
 ### `workflow_orchestration_agent`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1196`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `ToolDispatcher._handle_agent_tool` in `core/services/tool_dispatcher.py:1200`
 
 Orchestrate multi-step workflows that chain multiple agents together. Use when the user wants a complex workflow: research then write, analyze then create, or any multi-agent pipeline that requires coordinating several agents in sequence.
 
@@ -2138,7 +2149,7 @@ Orchestrate multi-step workflows that chain multiple agents together. Use when t
 
 ### `workflow_run_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `CoreHandlersMixin._handle_workflow_run` in `core/services/td_handlers_core.py:3141`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `CoreHandlersMixin._handle_workflow_run` in `core/services/td_handlers_core.py:3156`
 
 Start, poll, list, detail, or cancel multi-step workflow runs. Currently supports 'source_pack_comparison': auto-collect competitor sources from web search + spiders, ingest as Documents, embed, generate RAG-powered comparison, and export as Deliverable. Use when the user asks for a full source-pack comparison workflow.
 
@@ -2176,7 +2187,7 @@ Manage per-workspace LLM spend caps, downgrade state, and freeze state (A1 W1 Ph
 
 ### `workspace_tool`
 
-**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_workspace` in `core/services/td_handlers_agents.py:1965`
+**Wiring:** schema in `pa_tool_schemas.py` · handler `AgentHandlersMixin._handle_workspace` in `core/services/td_handlers_agents.py:2101`
 
 Manage workspaces and workspace-scoped operations. Use it to list, look up, activate, create, or delete workspaces, and to scan, read, write, inspect git status, create branches/commits, review operations, and roll back changes. Workspace file actions are always scoped to the active workspace or an explicit workspace_id.
 
@@ -2186,6 +2197,7 @@ Manage workspaces and workspace-scoped operations. Use it to list, look up, acti
 - `get`
 - `status`
 - `create`
+- `update`
 - `delete`
 - `scan`
 - `read`

@@ -30,6 +30,7 @@ Distinct from `deliverable_tool` (which surfaces finalized workspace artifacts) 
 - `search` — **in scope this ship** — verified live via T1a harness error path (`expected_outcome=error_captured`, requires `query`). Raises `ValueError('query is required for search action')` at handler line 6163.
 - `details` — **in scope this ship** — verified live via T1a harness error path (`error_captured`, requires `conversation_id` | `id`). Raises `ValueError` at handler line 6190.
 - `by_category` — **in scope this ship** — verified live via T1a harness error path (`error_captured`, requires `category`). Raises `ValueError` at handler line 6203.
+- `create` — **mutation — deferred to Slice 2 write batch** — see §5a. Classified `MUTATION` in `TOOL_ACTION_METADATA`; harness reports `expected_outcome=skipped_mutation`. Dispatches a fresh ThinkingAgent brainstorm via Celery `long_running`.
 
 ## 3. Schema notes
 
