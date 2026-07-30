@@ -26,6 +26,8 @@ Use `get_schema` when a caller needs the current build-packet JSON schema defini
 
 - `get_schema` — **in scope this ship** — verified live via T1a harness. Returns `{success, action, schema}` with `schema` = `BUILD_PACKET_SCHEMA` constant from `core.services.bpaas.build_packet_schema`. Pure in-memory constant read.
 - `get_example` — **in scope this ship** — verified live via T1a harness. Returns `{success, action, example}` with `example` = `NORMAN_HANDYMAN_EXAMPLE` constant. Pure in-memory constant read.
+- `create_project` — **mutation — deferred to Slice 2 write batch** — see §5a. Classified `MUTATION` in `TOOL_ACTION_METADATA`; harness reports `expected_outcome=skipped_mutation`. Requires workspace + packet lifecycle scaffolding.
+- `generate_close_pack` — **mutation — deferred to Slice 2 write batch** — see §5a. Classified `MUTATION` in `TOOL_ACTION_METADATA`; harness reports `expected_outcome=skipped_mutation`. Requires packet fixture.
 
 ## 3. Schema notes
 
