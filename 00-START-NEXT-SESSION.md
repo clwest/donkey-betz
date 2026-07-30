@@ -2,67 +2,76 @@
 
 ---
 
-## READ THIS — SESSION 3044 CLOSED. **Path B PA tools systematic sweep DONE. All 18 remaining gaps closed in one session across 3 PRs.**
+## READ THIS — SESSION 3045 CLOSED. **`agent_via_run_agent` bucket audit DONE at 45/45. RaaS bar verified for entire bucket in one session.**
 
-S3044 discharged Chris-ratified Option B ("close all 18 non-agent_via_run_agent gaps") across 3 batches in one wall-clock session. Path B systematic sweep (opened S2892, ratified S2900 substrate arc) is CLOSED per Rigby ratification. 3 PRs shipped + merged: #3788 (Batch 1, 8 tools + workspace_tool rescue) → #3789 (Batch 2, 5 tools + kb_tool rescue + ledger row #1) → #3790 (Batch 3, 5 tools + NEXT_HEADING_RE fix + Path B CLOSE artifact). Rigby A1 SIGN + 3 T0 SIGNs (22+ tool_runs total), all AGREE, zero rubber-stamp. PLAYBOOK-7.7.2 + PLAYBOOK-7.7.5 invariants held. 29th consecutive Cycle 1A verify-before-build session.
+S3045 discharged Chris-ratified Option D ("substrate + reframed goal — extend `pa_tools_gap_map.classify_tool` to recognize agent-via-run_agent tools with validation docs as `agent_via_run_agent_validated` category, then validate all 45"). Single wall-clock session (~2h 43min); 4 PRs shipped + merged; entire 45-tool `agent_via_run_agent` bucket now at `agent_via_run_agent_validated` classification. 4 PRs: #3794 (substrate + Batch 1, 10 tools) → #3795 (Batch 2, 10 tools) → #3796 (Batch 3, 10 tools + 3 new finding classes) → #3797 (Batch 4 FINAL, 15 tools + arc close). 31st consecutive Cycle 1A verify-before-build session.
 
 **HEAD at close:** `_TBD_close_` (post-docs-cascade + wrapper pin bump PRs).
 
-### Final gap map state
+### Final gap map state (S3045 arc closed)
 
-| Category | S3043 close | S3044 close | Delta |
+| Category | S3044 close | S3045 close | Delta |
 |---|---|---|---|
-| `validated_full` | 100 | **118** | **+18** |
-| `validated_partial` | 10 | **0** | −10 (eliminated) |
-| `validated_doc_exists_unknown` | 6 | **0** | −6 (eliminated) |
-| `untested` | 2 | **0** | −2 (eliminated, first time) |
-| `agent_via_run_agent` | 45 | 45 | 0 (deferred per S2900 Fold Q1) |
-| `meta_no_handler` | 1 | 1 | 0 (`run_agent`, by design) |
+| `validated_full` | 118 | 118 | 0 |
+| `agent_via_run_agent` | 45 | **0** | **−45** |
+| `agent_via_run_agent_validated` | 0 | **45** | **+45** |
+| `meta_no_handler` | 1 | 1 | 0 |
 | **Total** | 164 | 164 | 0 ✓ |
+| **RaaS-validated (rollup)** | 118 | **163** | **+45** |
 
-### Substrate additions during S3044
+### S3045 arc verdict roll-up (45 tools)
 
-- **2 Rigby Tool Gap Ledger rows** appended (both with 3 mitigation options each):
-  - `[S3044] PA tools gap-map find_matching_doc_stem strategy-3 loose-containment false-positive` (wrong-stem-match class)
-  - `[S3044] PA tools gap-map NEXT_HEADING_RE parser-cut on ###-subheading in ## Covered actions` (parser-cut class)
-- **1 new feedback memory:** `feedback_loop_rigby_in_when_short_circuiting.md`
+- 27 clean PASS
+- 7 PASS-w/-finding (alias mismatch + workspace-side-effects + coordinator provenance fanout + prompt-shape mismatch + true fanout)
+- 3 RaaS-PASS + smoke-FAIL (input-contract class: code_review, voice_critic, opportunity_pipeline)
+- 3 Runtime-failure PASS-with-mitigation (Odds-API-blocked: game_predictor, line_movement_analyzer, sharp_action_detector)
+- 5 doc-only skiplist (media/audio: resolve, video_gen, audio_gen, image_gen, talking_character)
 
-### Signals gathered
+**All 45 cleared the RaaS bar (wiring/mapping/envelope PASS).** No wiring failures observed across 30 live dispatches.
 
-- **29th consecutive Cycle 1A verify-before-build catch** — S3044 opened against stale memory + 00-START framing; live `build_pa_tool_audit --gap-only` caught it within minutes.
-- **4 substantive Rigby SIGN cycles**, 22+ tool_runs, zero rubber-stamp. PLAYBOOK-7.7.2 invariant held throughout.
-- **3 PLAYBOOK-7.7.5 A2 class-scoped sweeps discharged** (coverage-closure / wrong-stem-match / Path B CLOSE class).
-- **Wall-clock efficiency exceeded S2900 estimate.** Substrate arc predicted ~10-15 sessions for remaining 76 tools; S3044 discharged final 18 in ONE session.
+### Substrate additions (5 ledger rows in Rigby Tool Gap Ledger workspace `b4503364-2573-4401-9e28-61a739e0ce50`)
+
+- `6981cd08-…` **Alias mismatch** (security→memory_isolation) — 2 instances bi-directional. Option A doc-note.
+- `0988dcc4-…` **Input-contract failure** — 3 instances. **Option B trigger REACHED** (per-tool tailored smoke prompt harness).
+- `e2d0c1a1-…` **Infra-runtime failure** (Odds API) — 3 instances. Chris directive: back burner.
+- `bacd97ee-…` **Workspace-side-effect** — 4 instances. **Option A CONFIRMED INSUFFICIENT** (tightened prompt Batch 4 didn't hold on system_intel). Escalate B/C.
+- `3f77850d-…` **Coordinator-provenance-fanout** — 4 instances (Batch 3 cached-read + Batch 4 first HARD-evidence TRUE fanout). **Option B trigger REACHED** (child-task trace instrumentation).
 
 ---
 
-## S3045 mandatory first-action — `agent_via_run_agent` bucket audit (RaaS framing)
+## S3046 candidate first-actions (Chris ratifies)
 
-**Chris directive S3044 close 2026-07-30:** open the 45-tool `agent_via_run_agent` bucket audit next. RaaS framing — "I would like to be able to verify that everything that Rigby should have access to being a user facing service is working, and her needing to be able to call agents is a part of that service."
+Three high-leverage candidates emerged from S3045 close, ordered by directness of use:
 
-See `project_s3045_agent_via_run_agent_bucket_next.md` for full context.
+### Candidate A — Substrate-hardening arc (3 escalation-ready classes)
 
-### Depth D-verdict REQUIRED before first batch
+Ledger rows 2 + 4 + 5 all reached Option B trigger this session. All three represent smoke-discipline gaps that will resurface in any future validation batch:
 
-Present Chris a plain-English decision on validation depth. Do NOT default to S3044's doc-only shape — RaaS bar may require live-dispatch verification.
+- **Input-contract Option B:** per-tool tailored smoke prompt harness for `code_review_agent`, `voice_critic_agent`, `opportunity_pipeline_agent` (and future tools that surface the same shape).
+- **Workspace-side-effect Option B or C:** either (B) per-agent `smoke_mode=true` context flag inspected in agent code, OR (C) ephemeral smoke workspace routing.
+- **Coordinator-provenance-fanout Option B:** instrument child-task trace surface — extend `AgentExecution` to record parent/child dispatches; extend `agent_job_status` PA tool to return child dispatch counts.
 
-- **Doc-only (S3044 shape reuse):** 6-9 sessions estimated at 5-8 tools/batch. Fast; verifies mapping + envelope contract per Slice 5 CLOSE artifact. Won't catch runtime dispatch failures.
-- **Doc + live-dispatch verification:** heavier. Each tool actually dispatched; completion envelope captured. Catches "mapping right but Celery task explodes" bugs. But 45 real agent runs (some LLM-costed, some bridge-dependent).
-- **Hybrid:** doc-only for internal / low-frequency agents; live-dispatch for customer-critical / high-frequency Rigby agents (brainstorm / content_writer / workflow_orchestration / research_agent).
+Coherent scope; probably 2-3 sessions if tackled sequentially. Would unblock re-validation of the 3 input-contract tools + establish rigorous fanout evidence for future audits.
 
-### Substrate to consult BEFORE opening
+### Candidate B — Odds API restoration (S3040 + S3045 infra-runtime carry)
 
-- `docs/audits/pa_tools/substrate/slice_5_close_artifact.md` — 14 agent-forwarding tools already validated (S2925-S2928). Shared handler contract (`_handle_agent_tool` at `tool_dispatcher.py:1196`), shared mapping (`_tool_to_agent_name` at `td_handlers_agents.py:83-163`), deep-extraction contract for `AgentExecution.output_data`.
-- Path B CLOSE artifact (`docs/audits/pa_tools/substrate/S3044_path_b_close_stub.md`) — post-close forward-carry list includes this bucket.
-- `feedback_wait_for_agent_completions_before_close_cascade` — if live-dispatch shape chosen.
-- `feedback_local_truth_no_production` — local pass = shipped.
+3 tools (game_predictor, line_movement_analyzer, sharp_action_detector) waiting on Odds API key restoration. When Chris restores the key, ~1 session to re-dispatch + flip validation docs from Runtime-failure to clean PASS. Trivial if key available.
 
-### Deferred to later sessions (do NOT open in S3045 unless Chris re-scopes)
+### Candidate C — Bias engineering / net-new build (per `feedback_engineering_bias_over_audit`)
 
-- Mutation coverage batches (Path B successor)
-- Bridge-live validation batches (Path B successor)
-- Stem-matcher warn-only lint (Option B in ledger; open if 3rd trigger)
-- NEXT_HEADING_RE regex refinement (Option B in ledger; advisory)
+S3044 + S3045 have both been audit-of-what-exists shape. Per Chris directive S2745, propose 1-3 net-new engineering candidates at session open:
+
+- **New spider:** e.g. GitHub trending / X (Twitter) signal / RSS aggregator
+- **New UI page:** e.g. Workspace tab surfacing `RaaS-validated` rollup + 5 ledger row escalations (visibility on smoke-discipline gaps)
+- **New agent capability:** e.g. `smoke_dispatcher_agent` that runs the S3045 pattern on-demand for any tool bucket
+- **New pipeline:** e.g. auto-refresh gap-map on merge (currently regenerated ad-hoc via `build_pa_tool_audit`)
+
+### Deferred to later sessions (do NOT open in S3046 unless Chris re-scopes)
+
+- Skiplist re-validation batches (5 media/audio tools; requires dedicated media-batch scope)
+- Path A predecessor: mutation coverage batches / bridge-live batches (Path B systematic sweep successor arcs; unblocked but non-urgent)
+- Stem-matcher warn-only lint (S3044 Option B; 3rd trigger reached this session via research_agent rescue)
+- NEXT_HEADING_RE regex refinement
 - S3042 UI Workspace re-coherence Q3/Q4
 - `chris-personal` orphan-initiative cleanup pass
 - `/docs/` restructuring arc
@@ -72,27 +81,21 @@ Present Chris a plain-English decision on validation depth. Do NOT default to S3
 
 1. `context-kit orient` (auto-injected)
 2. Absorb this file + `MEMORY.md` + `CLAUDE.md`
-3. Read S3044 handoff (`docs/handoffs/SESSION_3044_PATH_B_PA_TOOLS_SWEEP_CLOSED.md`)
-4. Cycle 1A verify-before-build FIRST — run `build_pa_tool_audit --gap-only --check` + read Slice 5 CLOSE artifact + list the 45 agent_via_run_agent tools with their AGENT_MAP entries (30th consecutive session — this catch has been load-bearing).
-5. Present Chris the depth D-verdict (doc-only vs live-dispatch vs hybrid) BEFORE authoring any first batch.
+3. Read S3045 handoff (`docs/handoffs/SESSION_3045_AGENT_VIA_RUN_AGENT_BUCKET_CLOSED.md`)
+4. Cycle 1A verify-before-build FIRST — run `build_pa_tool_audit --gap-only --check` + verify `RaaS-validated=163` + confirm `agent_via_run_agent=0` (32nd consecutive session — this catch remains load-bearing).
+5. Present Chris the 3 first-action candidates (A/B/C) BEFORE authoring any implementation.
 
 ---
 
-## S3045 carry-forward seeds
+## S3046 carry-forward seeds
 
-### New from S3044
+### New from S3045
 
-- **Wrong-stem-match class ledger row** — 1st substrate row of the S3044 arc. 2 concrete triggers (workspace_tool, kb_tool). Mitigation options recorded; open Option B lint if 3rd trigger surfaces.
-- **NEXT_HEADING_RE parser-cut class ledger row** — 2nd substrate row. 2 concrete triggers (intelligence_tool, work_tool). Bold-labels convention is current mitigation.
-- **`feedback_loop_rigby_in_when_short_circuiting`** — new collaboration norm feedback memory. Applied throughout Batches 2+3.
-
-### Path B successor arcs (all unblocked)
-
-- Mutation coverage batches (deferred; requires dry_run scaffolding)
-- Bridge-live batches (deferred; requires bridge env)
-- `agent_via_run_agent` bucket audit (45 tools; separate arc)
-- Stem-matcher warn-only lint (Option B in ledger)
-- NEXT_HEADING_RE regex refinement (Option B in ledger)
+- **5 substrate ledger rows** (see above) with escalation state annotated.
+- **3 escalation triggers REACHED** (input-contract Option B, workspace-side-effect Option B/C, coordinator-provenance-fanout Option B).
+- **Chris directive:** Odds API on back burner; no API key. Skip Odds-dependent work.
+- **First HARD-evidence TRUE fanout** captured (ai_series_workflow_agent → suspected ResearchAgent delegate).
+- **Substrate:** `pa_tools_gap_map.classify_tool` + `CATEGORY_LABEL` + `render_gap_map_markdown` extended with new `agent_via_run_agent_validated` category + RaaS-validated rollup.
 
 ### Carried from prior arcs — status preserved
 
@@ -106,8 +109,9 @@ Present Chris a plain-English decision on validation depth. Do NOT default to S3
 - **S3031 Fold B** — spy fragility
 - **S3034 A2 Folds** — subscriber wire-contract fragility + adjacent-axis superseded/experiment
 - **S3042 arc Q3/Q4** — Spine Contract v1 §§1+3 (frontend event instrumentation + Workspace UI redo Arc C)
-- **Odds API operationally degraded** — 2 periodic tasks `enabled=False` (S3040)
+- **Odds API operationally degraded** — 2 periodic tasks `enabled=False` (S3040) + Chris directive S3045: no active API key
 - **`chris-personal` orphan-initiative cleanup pass** — Spine Contract v1 §4
+- **Stem-matcher warn-only lint (Option B)** — S3044 row 1; 3-trigger threshold reached (workspace_tool + kb_tool + research_agent Batch 1); deferred per Rigby T0 SIGN Q5
 
 ---
 
@@ -115,19 +119,19 @@ Present Chris a plain-English decision on validation depth. Do NOT default to S3
 
 - **Constitutional governance chain:** CLAUDE.md Playbook **v0.11.0**. No amendments this session.
 - **ADR corpus:** ADR-0001 through ADR-0008 (unchanged).
-- **Spec→ship contract (PLAYBOOK-7.7.1):** 3 spec→ship batches this session + Path B CLOSE ratification.
-- **SIGN evidence discipline (PLAYBOOK-7.7.2):** 4 cycles, all substantive tool_runs, zero rubber-stamp.
+- **Spec→ship contract (PLAYBOOK-7.7.1):** 4 spec→ship batches + arc close ratification.
+- **SIGN evidence discipline (PLAYBOOK-7.7.2):** all SIGN cycles substantive tool_runs, zero rubber-stamp.
 - **Chris-facing decision framing (PLAYBOOK-7.7.3):** 3 mid-flight applications.
-- **Class-scoped mandatory A2 sweep (PLAYBOOK-7.7.5):** 3 A2 sweeps discharged.
-- **Recycle discipline (PLAYBOOK-7.4.4):** `make recycle-all` post each batch merge.
-- **Verify-before-build (Cycle 1A):** **29th consecutive session.**
+- **Class-scoped mandatory A2 sweep (PLAYBOOK-7.7.5):** 4 A2 sweeps discharged (one per batch, all 6 dimensions PASS).
+- **Recycle discipline (PLAYBOOK-7.4.4):** Batch 1 recycled; Batches 2-4 docs-only.
+- **Verify-before-build (Cycle 1A):** **31st consecutive session.**
 
 ---
 
 ## Wrapper pin note
 
-Active PA conversation pin at S3044 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
+Active PA conversation pin at S3045 close is minted by `session_lifecycle close` at close time. Commit wrapper diff per `feedback_commit_wrapper_pin_bump_at_close`.
 
 ---
 
-**Reminder — the workflow is constitutional.** S3044 discharged Path B systematic sweep in 3 PRs + one close cascade. S3045 first-action is Chris's choice among Path B successor arcs, S3042 arc continuation, or other queued work.
+**Reminder — the workflow is constitutional.** S3045 closed the entire agent_via_run_agent bucket in one wall-clock session across 4 PRs + arc close. S3046 first-action is Chris's choice among substrate-hardening arc (3 escalation-ready classes), Odds API restoration, or net-new engineering per `feedback_engineering_bias_over_audit`.
