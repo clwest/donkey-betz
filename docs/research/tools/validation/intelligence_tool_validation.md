@@ -24,7 +24,7 @@ Distinct from `dream_tool` (creative-idea intake — pre-work), `governance_tool
 
 **19 total actions.** Batch 4 in-scope: **6 direct pure-ORM READ_ONLY** (validated via harness + direct handler read). 10 additional READ_ONLY actions transitively dispatched via composite/delegate paths (documented-but-not-verified — the delegate handlers themselves have not been read this batch). 3 MUTATION actions correctly gated (`search` network + `kb_ingest` write + `sports_record_wager` write).
 
-### READ_ONLY — in scope this ship (direct pure-ORM, verified)
+**READ_ONLY — in scope this ship (direct pure-ORM, verified):**
 
 - `stock_briefs` — **in scope this ship** — verified live via T1a harness at HEAD `396abccc8` (`success`, 5ms). Direct ORM read of `MarketIntelligenceBrief` ordered by `-brief_date`. Session 1100 read-only surface.
 - `ml_predictions` — **in scope this ship** — verified live via T1a harness (`success`, 8ms). Direct ORM read of `sports.MLPrediction` with select_related game + predicted_winner. Session 1100 read-only surface.
@@ -33,7 +33,7 @@ Distinct from `dream_tool` (creative-idea intake — pre-work), `governance_tool
 - `congress_members` — **in scope this ship** — verified live via T1a harness (`success`, 4ms). Direct ORM read of `CongressMember` with `in_office=True` + optional state/chamber/party/query filters (STATE_ABBREV resolution). Gap 6 read-only surface.
 - `legislation_tracked` — **in scope this ship** — verified live via T1a harness (`success`, 5ms). Direct ORM read of `Bill` with optional status/chamber/query filters ordered by `-updated_at`. Gap 7 read-only surface.
 
-### READ_ONLY — documented, transitively dispatched, delegate NOT verified this batch
+**READ_ONLY — documented, transitively dispatched, delegate NOT verified this batch:**
 
 Per Rigby T0 SIGN Q3 corrective ("codify explicit allowlists — not read-only in spirit"), these actions dispatched successfully via T1a harness but their delegated handlers have not been read this batch to verify no hidden network/LLM/write paths. Excluded from batch 4 in-scope allowlist; documented-not-verified:
 
@@ -48,7 +48,7 @@ Per Rigby T0 SIGN Q3 corrective ("codify explicit allowlists — not read-only i
 - `legislation_search` — **out of scope this ship** — delegates to `legislation_tool.search`. Harness dispatch: soft_error (required-arg-missing path), 4ms.
 - `legislation_summary` — **out of scope this ship** — delegates to `legislation_tool.summary`. Harness dispatch: soft_error, 3ms.
 
-### MUTATION — documented, gated by harness (NOT exercised)
+**MUTATION — documented, gated by harness (NOT exercised):**
 
 - `search` — **out of scope this ship** — **RECLASSIFIED as MUTATION** per Rigby T0 SIGN catch. `source='web'` routes to `_handle_web_search` at `td_handlers_agents.py:384` (network I/O); `source='kb'` routes through `_handle_rag_query.search` (embedding lookup — LLM cost); `source='spider'` routes through `_handle_spider_data.search`. All three source-branches carry transitive network/LLM cost. Correctly skipped by harness via `skipped_mutation`.
 - `kb_ingest` — **out of scope this ship** — write path: dispatches to `rag_query_tool.ingest` (KB write). Requires `url`. Correctly skipped by harness.

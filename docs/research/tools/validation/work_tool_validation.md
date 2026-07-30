@@ -24,7 +24,7 @@ Distinct from `governance_tool` (human decision inbox + boardroom attention item
 
 **16 total actions.** Batch 4 in-scope: **7 READ_ONLY** (all pure-ORM, no network, no LLM, no Celery). 9 MUTATION actions documented and correctly gated by harness dispatch (skipped_mutation per PLAYBOOK-6.5 dry_run pattern).
 
-### READ_ONLY actions (in scope this ship)
+**READ_ONLY actions (in scope this ship):**
 
 - `initiative_list` — **in scope this ship** — verified live via T1a harness at HEAD `396abccc8` (`success`, 42ms). Delegates to `_handle_initiative(action='list')`; ORM read of Initiative queryset with optional status/owner/stage filters.
 - `initiative_detail` — **in scope this ship** — verified live via T1a harness (`error_captured`, 8ms — required-arg-missing path). Delegates to `_handle_initiative(action='details')`; lookup by id/human_id/seq_id/name.
@@ -34,7 +34,7 @@ Distinct from `governance_tool` (human decision inbox + boardroom attention item
 - `workflows` — **in scope this ship** — verified live via T1a harness (`success`, 17ms). Direct ORM read of `AgentExecution` filtered by `agent__name__in` workflow-related agents.
 - `stats` — **in scope this ship** — verified live via T1a harness (`success`, 6ms). Aggregate ORM reads across Initiative + InitiativeActionItem + AgentExecution + AgentConversation (Count by status).
 
-### MUTATION actions (documented, gated by harness — NOT exercised this ship)
+**MUTATION actions (documented, gated by harness — NOT exercised this ship):**
 
 - `initiative_create` — **out of scope this ship** — Delegates to `_handle_initiative(action='create')`; writes new Initiative row. Requires `name`.
 - `initiative_promote` — **out of scope this ship** — Delegates to `_handle_initiative(action='promote')`; status transition TRIAGE/ON_HOLD → ACTIVE.
