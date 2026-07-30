@@ -42,6 +42,19 @@ Complements `workspace_budget_tool` (per-workspace spend + per-workspace enforce
 - **SECURITY (4):** `security_permission_drift`, `security_abuse_queue`, `security_containment_plan` (dry_run=true default — S1228 PR-A gate), `security_secrets_scan`
 - **COMPLIANCE (4):** `compliance_pii_scan`, `compliance_retention_report`, `compliance_access_audit`, `compliance_report`
 - **INTEGRITY (4):** `integrity_quality_report`, `integrity_null_spike_scan`, `integrity_duplicate_report`, `integrity_reliability_scores`
+- **BACKFILL READS (2):** `backfill_impacts`, `backfill_failure_reasons` — runtime-not-executed this ship; classified as reads pending §5a review.
+
+**MUTATION actions (23 — all deferred to Slice 1.5b, see §5a for blast-radius classification):**
+
+- `run` — **mutation — deferred to Slice 1.5b** — see §5a. Primary autopilot cycle executor.
+- `outreach_approve`, `outreach_reject`, `outreach_generate` — **mutation — deferred to Slice 1.5b** — see §5a. Outreach lifecycle mutations.
+- `close_pack_generate`, `close_pack_approve` — **mutation — deferred to Slice 1.5b** — see §5a. Close-pack lifecycle mutations.
+- `engagement_classify`, `engagement_draft_reply`, `engagement_approve_reply`, `engagement_disqualify` — **mutation — deferred to Slice 1.5b** — see §5a. Engagement-flow mutations.
+- `experiment_create`, `experiment_start` — **mutation — deferred to Slice 1.5b** — see §5a. Experiment lifecycle mutations.
+- `meeting_create`, `meeting_brief`, `meeting_recap` — **mutation — deferred to Slice 1.5b** — see §5a. Meeting artifact mutations.
+- `governance_set_mode`, `governance_kill_switch`, `governance_deactivate_switch` — **mutation — deferred to Slice 1.5b** — see §5a. Governance-lever mutations (owner-or-staff gated + `ttl_hours` capped).
+- `release_freeze`, `release_unfreeze` — **mutation — deferred to Slice 1.5b** — see §5a. Release-gate mutations.
+- `goal_set_weights` — **mutation — deferred to Slice 1.5b** — see §5a. Goal-weight config mutation.
 
 **Total exercised:** 76 unique read-only actions across 82 dispatches (a few actions ran with multiple variants). Every response returned in ≤600ms; 90%+ under 100ms.
 
