@@ -416,6 +416,12 @@ Available agents to delegate to:
         Prevents any single downstream call from zombieing the workflow.
         """
         timeout = self._AGENT_TIMEOUT.get(agent_name, self._DEFAULT_AGENT_TIMEOUT)
+        # S3048: thread the parent AgentExecution.id into the child dispatch
+        # context so router._create_execution_record sets parent_execution_id
+        # + root_execution_id on the child row.
+        _parent_exec_id = (getattr(self, '_execution_context', None) or {}).get('execution_id')
+        if _parent_exec_id and isinstance(context, dict):
+            context.setdefault('execution_id', _parent_exec_id)
         with ThreadPoolExecutor(max_workers=1) as executor:
             future = executor.submit(
                 self.router.route,
