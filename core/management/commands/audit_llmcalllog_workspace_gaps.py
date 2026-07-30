@@ -196,11 +196,16 @@ class Command(BaseCommand):
                     'signals a code path dropping the context. '
                     'Grep unified_pa_entrypoint.py + workspace_resolver.py '
                     'for missing user threading. '
-                    # Rigby SIGN ask #3: prevent the audit from
-                    # normalizing the gap by making it explicit that
-                    # this ships without fixing the underlying bug.
-                    '(AUDIT ONLY: underlying PA workspace-resolver bug '
-                    'remains unresolved — follow-up ticket required.)'
+                    # S3039 D10-follow: user-threading fix shipped for 4
+                    # direct `self.llm_enforcer.enforce_real_ai` sites in
+                    # unified_pa_entrypoint.py. Historical windows still
+                    # contain pre-fix rows; expect loss_pct to trend to 0
+                    # for windows entirely after the D10-follow ship.
+                    # If loss_pct stays high on a post-ship window, a new
+                    # regression opened — grep for direct enforce_real_ai
+                    # calls missing user= per the S3039 lint test.
+                    '(D10-follow fix shipped; pre-fix rows persist in '
+                    'historical windows.)'
                 ),
             })
 
