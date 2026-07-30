@@ -61,6 +61,11 @@ def list_deliverables(request):
         - saved: Filter by is_saved (true/false)
         - template: Filter by is_template (true/false)
         - source: Filter by source (user/system)
+        - owner: 'me' → filter to request.user's rows; '<user_id>' → filter to
+          that user (staff/superuser only — non-staff passing a non-self id is
+          coerced to self). Wires the existing Deliverable.user FK. PR 4 of
+          the RaaS UI arc will formalize the operator-vs-customer role guard
+          around the arbitrary-user-id branch.
         - search: Search in title and content
         - page: Page number (default: 1)
         - per_page: Items per page (default: 20, max: 100)
@@ -85,6 +90,20 @@ def list_deliverables(request):
         workspace_id = request.GET.get('workspace')
         if workspace_id:
             queryset = queryset.filter(workspace_id=workspace_id)
+
+        # S3050 PR 1 (RaaS UI arc Phase 2, Gap 4 / Gap 2 backend / Gap 7):
+        # per-user ownership filter layered ON TOP of workspace-scoping.
+        # Coercion rule: non-staff callers passing an arbitrary user id are
+        # coerced to self (defense against a customer-role user hand-crafting
+        # `owner=<other-id>` before PR 4 lands the DRF role guard).
+        owner = request.GET.get('owner')
+        if owner and getattr(request.user, 'is_authenticated', False):
+            if owner == 'me':
+                queryset = queryset.filter(user=request.user)
+            elif getattr(request.user, 'is_staff', False) or getattr(request.user, 'is_superuser', False):
+                queryset = queryset.filter(user_id=owner)
+            else:
+                queryset = queryset.filter(user=request.user)
 
         # Apply filters
         deliverable_type = request.GET.get('type')
