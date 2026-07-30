@@ -25,6 +25,24 @@
 
 The two tools are complements: `search_docs` is fast token-overlap over the local RAG corpus JSONL; `kb_tool.semantic_search` is native vector similarity over the DB. Rigby relies on both for reasoning about the repo — wrong results from either propagate to every downstream turn.
 
+## Covered actions
+
+Composite doc covers `search_docs` (0-action, single entrypoint) + `kb_tool` (5 actions). Note: `kb_tool` also has a dedicated `kb_tool_validation.md` authored in S3044 Batch 2 to rescue a wrong-stem-match classification (the gap-map stem matcher iterates alphabetically and hit `kb_ingest_validation.md` first for `kb_tool` — that doc is for the `kb_ingest` action within `intelligence_tool`, not for `kb_tool`).
+
+**Canonical classifier doc for `kb_tool` is `kb_tool_validation.md` (dedicated); this composite doc is contextual.** Do not delete `kb_tool_validation.md` in a "reduce redundancy" pass — that would reintroduce the wrong-stem-match bug. Guardrail per Rigby S3044 Batch 2 T0 SIGN Q5 recommendation.
+
+**`search_docs`** (0 actions — single-entrypoint tool):
+
+- `search_docs` — read — token-overlap scorer over `.rag/corpus.jsonl`. Required: `query`. Returns ranked chunks with `[docs/path#chunk_id]` citations.
+
+**`kb_tool`** (5 actions):
+
+- `stats` — read — aggregate counts across `Document` + `DocumentEmbedding` + `UnifiedEmbedding`.
+- `documents` — read — list Documents with D9/D10 enrichment filters (pinned, superseded, authority_weighted, min_session).
+- `chunks` — read — per-document chunk listing.
+- `search_embeddings` — read — legacy text search over `UnifiedEmbedding`.
+- `semantic_search` — read — native pgvector cosine similarity over `DocumentEmbedding` (~16K chunks, S1234 D13).
+
 ## 2. Rigby's belief (per MEMORY + prior conversations)
 
 Rigby's load-bearing beliefs about these tools, from MEMORY rules:
