@@ -6970,37 +6970,10 @@ class AgentHandlersMixin:
             msg = execution.output_data.get('message') or execution.output_data.get('content') or ''
             output_preview = msg[:800] if msg else None
 
-        # S3046: fanout visibility via existing parent_execution_id / root_execution_id
-        # (migration 0336). Root fallback: legacy rows have root=NULL — treat self.id
-        # as the root for subtree queries. Children list uses .values() projection to
-        # avoid loading heavy input_data / output_data JSONB blobs.
-        root_id_for_subtree = execution.root_execution_id or execution.id
-        child_count = AgentExecution.objects.filter(
-            parent_execution_id=execution.id,
-        ).count()
-        subtree_count = AgentExecution.objects.filter(
-            root_execution_id=root_id_for_subtree,
-        ).exclude(id=execution.id).count()
-        CHILDREN_CAP = 20
-        children_rows = list(
-            AgentExecution.objects.filter(parent_execution_id=execution.id)
-            .order_by('created_at')
-            .values(
-                'id', 'agent__name', 'status',
-                'created_at', 'completed_at', 'execution_time_ms',
-            )[:CHILDREN_CAP]
-        )
-        children = [
-            {
-                'execution_id': str(row['id']),
-                'agent_name': row['agent__name'],
-                'status': row['status'],
-                'created_at': row['created_at'].isoformat() if row['created_at'] else None,
-                'completed_at': row['completed_at'].isoformat() if row['completed_at'] else None,
-                'duration_ms': row['execution_time_ms'],
-            }
-            for row in children_rows
-        ]
+        # S3047: fanout ORM factored into core/services/agent_fanout.compute_fanout
+        # so the PA tool + REST execution_detail view cannot drift on lineage
+        # semantics. Behavior preserved 1:1 from S3046 inline block.
+        from core.services.agent_fanout import compute_fanout
 
         return {
             'ok': True,
@@ -7013,17 +6986,7 @@ class AgentHandlersMixin:
             'duration_ms': execution.execution_time_ms,
             'error_message': (execution.error_message or '')[:500] or None,
             'output_preview': output_preview,
-            'parent_execution_id': (
-                str(execution.parent_execution_id) if execution.parent_execution_id else None
-            ),
-            'root_execution_id': (
-                str(execution.root_execution_id) if execution.root_execution_id else None
-            ),
-            'child_count': child_count,
-            'subtree_count': subtree_count,
-            'children': children,
-            'children_truncated': child_count > CHILDREN_CAP,
-            'fanout_available': True,
+            **compute_fanout(execution),
         }
 
     def _handle_agent_capability_drift(

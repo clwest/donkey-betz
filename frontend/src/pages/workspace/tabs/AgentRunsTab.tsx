@@ -18,6 +18,8 @@ import {
   Clock,
   PauseCircle,
   DollarSign,
+  Copy,
+  GitBranch,
 } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { agentsApi } from '@/lib/api'
@@ -50,12 +52,28 @@ interface AgentRunsResponse {
   }
 }
 
+interface AgentRunChild {
+  execution_id: string
+  agent_name: string | null
+  status: string
+  created_at: string | null
+  completed_at: string | null
+  duration_ms: number | null
+}
+
 interface AgentRunDetailResponse {
   success: boolean
   data: {
     execution: AgentRunSummary & {
       agent_display_name: string | null
       input_data: unknown
+      parent_execution_id: string | null
+      root_execution_id: string | null
+      child_count: number
+      subtree_count: number
+      children: AgentRunChild[]
+      children_truncated: boolean
+      fanout_available: boolean
     }
     related_memory: {
       id: string
@@ -124,6 +142,47 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
+function shortId(id: string): string {
+  return id.length > 14 ? `${id.slice(0, 8)}…${id.slice(-4)}` : id
+}
+
+function IdChip({
+  id,
+  onSelect,
+  clickable = true,
+}: {
+  id: string
+  onSelect: (id: string) => void
+  clickable?: boolean
+}) {
+  return (
+    <span className="inline-flex items-center gap-1 font-mono text-xs">
+      {clickable ? (
+        <button
+          onClick={() => onSelect(id)}
+          className="text-slate-100 hover:text-blue-300 hover:underline"
+          title={`Navigate to ${id}`}
+        >
+          {shortId(id)}
+        </button>
+      ) : (
+        <span className="text-slate-100" title={id}>{shortId(id)}</span>
+      )}
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          navigator.clipboard?.writeText(id)
+        }}
+        className="rounded p-0.5 text-slate-500 hover:bg-slate-800 hover:text-slate-200"
+        title="Copy full ID"
+        aria-label="Copy full execution ID"
+      >
+        <Copy size={10} />
+      </button>
+    </span>
+  )
+}
+
 function JsonBlock({ value }: { value: unknown }) {
   if (value === null || value === undefined) return <span className="text-slate-500 italic">null</span>
   const text = typeof value === 'string' ? value : JSON.stringify(value, null, 2)
@@ -134,7 +193,15 @@ function JsonBlock({ value }: { value: unknown }) {
   )
 }
 
-function DetailPanel({ executionId, onClose }: { executionId: string; onClose: () => void }) {
+function DetailPanel({
+  executionId,
+  onClose,
+  onSelectExecution,
+}: {
+  executionId: string
+  onClose: () => void
+  onSelectExecution: (id: string) => void
+}) {
   const { data, isLoading, error } = useQuery<AgentRunDetailResponse>({
     queryKey: ['agent-execution-detail', executionId],
     queryFn: async () => {
@@ -202,6 +269,77 @@ function DetailPanel({ executionId, onClose }: { executionId: string; onClose: (
                 <div className="mt-0.5 font-mono text-slate-100">{formatCost(ex.cost)}</div>
               </div>
             </section>
+
+            {ex.fanout_available && (
+              <section>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2 flex items-center gap-1.5">
+                  <GitBranch size={12} />
+                  Lineage &amp; Fanout
+                </h3>
+
+                {(ex.parent_execution_id || ex.root_execution_id) && (
+                  <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                    <div className="rounded border border-slate-800 bg-slate-950/40 p-2">
+                      <div className="text-slate-500 uppercase tracking-wide mb-1">Parent</div>
+                      {ex.parent_execution_id ? (
+                        <IdChip id={ex.parent_execution_id} onSelect={onSelectExecution} />
+                      ) : (
+                        <span className="text-slate-500 italic text-xs">root execution</span>
+                      )}
+                    </div>
+                    <div className="rounded border border-slate-800 bg-slate-950/40 p-2">
+                      <div className="text-slate-500 uppercase tracking-wide mb-1">Root</div>
+                      {ex.root_execution_id && ex.root_execution_id !== ex.id ? (
+                        <IdChip id={ex.root_execution_id} onSelect={onSelectExecution} />
+                      ) : (
+                        <span className="text-slate-500 italic text-xs">this run</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                  <div className="rounded border border-slate-800 bg-slate-950/40 p-2">
+                    <div className="text-slate-500 uppercase tracking-wide">Direct children</div>
+                    <div className="mt-0.5 font-mono text-slate-100">{ex.child_count}</div>
+                  </div>
+                  <div className="rounded border border-slate-800 bg-slate-950/40 p-2">
+                    <div className="text-slate-500 uppercase tracking-wide">Subtree size</div>
+                    <div className="mt-0.5 font-mono text-slate-100">{ex.subtree_count}</div>
+                  </div>
+                </div>
+
+                {ex.child_count === 0 ? (
+                  <div className="rounded border border-slate-800 bg-slate-950/40 p-3 text-xs text-slate-500 italic">
+                    No sub-executions.
+                  </div>
+                ) : (
+                  <div className="rounded border border-slate-800 bg-slate-950/40 divide-y divide-slate-800/60">
+                    {ex.children.map((child) => (
+                      <button
+                        key={child.execution_id}
+                        onClick={() => onSelectExecution(child.execution_id)}
+                        className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left hover:bg-slate-800/40"
+                      >
+                        <span className="font-mono text-xs text-slate-200 truncate max-w-[10rem]">
+                          {child.agent_name || 'unknown'}
+                        </span>
+                        <StatusBadge status={child.status} />
+                        <span className="ml-auto flex items-center gap-2 text-xs text-slate-400">
+                          <span className="font-mono">{formatDuration(child.duration_ms)}</span>
+                          {child.created_at && <span>{formatRelative(child.created_at)}</span>}
+                        </span>
+                      </button>
+                    ))}
+                    {ex.children_truncated && (
+                      <div className="px-2.5 py-1.5 text-xs text-slate-500 italic">
+                        + {ex.child_count - ex.children.length} more (showing first {ex.children.length})
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
+            )}
 
             <section>
               <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400 mb-2">Input</h3>
@@ -448,7 +586,11 @@ export function AgentRunsTab() {
       </div>
 
       {selectedId && (
-        <DetailPanel executionId={selectedId} onClose={() => setSelectedId(null)} />
+        <DetailPanel
+          executionId={selectedId}
+          onClose={() => setSelectedId(null)}
+          onSelectExecution={setSelectedId}
+        />
       )}
     </div>
   )
