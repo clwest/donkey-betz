@@ -61,6 +61,12 @@ S3039 opened with S7 (Chris's ratified pick from S3038 close) and ran a 4-PR clo
 - **S7 fix is live** — brainstorm panel dispatches on long_running should no longer fail with `SynchronousOnlyOperation`. Regression test `test_thinking_agent_async_boundary.py::test_concurrent_executes_with_widened_race_window_do_not_raise` will catch regressions.
 - **PA workspace fix is live** — 4 fallback paths in `unified_pa_entrypoint.py` now inject user. Fresh LLMCallLog rows from those paths should populate `workspace`. Full 30d loss_pct drop will take a few days of real traffic.
 
+### New from S3040 (pre-arc)
+
+- **Workspace/Deliverable/Initiative archaeology deliverable** — `7c5bc04d-6976-4f70-9c25-de373613023b` in Donkey Betz workspace (`b4503364…`). Traces original intent for all three concepts (S695 Workspaces / S847 Initiatives / S862 Deliverables), documents the drift, and names the 3 coupled questions the eventual re-coherence arc must answer. Read this BEFORE opening the deferred workspace-cleanup arc (see `project_donkey_betz_workspace_cleanup_and_ui_redo_deferred`). Do not re-do the archaeology.
+
+- **Odds API marked degraded — 2 periodic tasks disabled** — `collect-sports-odds-intelligence` (every 30 min) + `generate-daily-betting-brief` (7am daily) both `enabled=False` in DB. Chris directive S3040: Odds API key auth failed, cash flow priority beats sports-betting focus. Reason preserved in `PeriodicTask.description` field with `[DEGRADED 2026-07-30 S3040 …]` marker. `cleanup-old-predictions` (weekly cleanup) stays enabled — harmless. **To re-enable when cash flows or key is renewed:** `PeriodicTask.objects.filter(name__in=['collect-sports-odds-intelligence','generate-daily-betting-brief']).update(enabled=True)`. Ad-hoc callers of `TheOddsSpider` (financial signals, market agents) still work — their circuit breaker handles auth failures gracefully. **Silent-degradation bug in `_impl_generate_daily_betting_brief` NOT fixed** — returns `status='success'` even when Odds API dies + DB persist fails on NOT NULL `predictions`. Left in place because task is now disabled; re-open if re-enabling.
+
 ### Carried from prior arcs — status preserved
 
 - **T1 Fold future_trigger (`typing.Literal[actor]`)** — 1st trigger (S3036)
