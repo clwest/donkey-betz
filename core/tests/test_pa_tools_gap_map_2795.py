@@ -207,6 +207,89 @@ class GapMapLogicTests(SimpleTestCase):
         )
         self.assertEqual(category, 'agent_via_run_agent')
 
+    # ── S3045 Batch 1 substrate — agent_via_run_agent_validated ─────
+    #
+    # Rigby T1 SIGN AGREE with 6 A2 sweep dimensions (i)-(vi). These
+    # three tests cover the positive branch, the negative control
+    # (non-agent handler-only tools cannot promote), and the precedence
+    # invariant (meta_no_handler / orphan_schema still short-circuit).
+
+    def test_classify_agent_via_run_agent_validated_when_doc_exists(self):
+        """S3045: agent-via-run_agent tool with per-tool validation doc
+        classifies as ``agent_via_run_agent_validated`` (positive)."""
+        idx = {
+            'per_tool_stems': {'thinking_agent': ['thinking_agent_validation.md']},
+            'covered_actions_by_stem': {'thinking_agent': None},
+            'substrate_stems': set(),
+            'total_docs': 1,
+        }
+        category = classify_tool(
+            tool_name='thinking_agent',
+            has_schema=False,
+            has_handler=True,
+            schema_actions=[],
+            docs_index=idx,
+            is_agent_via_run_agent=True,
+        )
+        self.assertEqual(category, 'agent_via_run_agent_validated')
+
+    def test_classify_handler_only_dead_not_promoted_by_doc_presence(self):
+        """S3045 negative control: handler-only tool NOT reachable via
+        run_agent stays ``handler_only_dead`` even if a doc stem matches.
+        Prevents accidental promotion of unrelated handler-only tools."""
+        idx = {
+            'per_tool_stems': {'dead_tool': ['dead_tool_validation.md']},
+            'covered_actions_by_stem': {'dead_tool': None},
+            'substrate_stems': set(),
+            'total_docs': 1,
+        }
+        category = classify_tool(
+            tool_name='dead_tool',
+            has_schema=False,
+            has_handler=True,
+            schema_actions=[],
+            docs_index=idx,
+            is_agent_via_run_agent=False,
+        )
+        self.assertEqual(category, 'handler_only_dead')
+
+    def test_classify_agent_via_run_agent_precedence_stable(self):
+        """S3045 precedence: meta_no_handler and orphan_schema still
+        short-circuit before the new agent_via_run_agent_validated
+        branch. Both cases have has_handler=False, so the new branch
+        cannot fire regardless of doc presence."""
+        idx = {
+            'per_tool_stems': {'run_agent': ['run_agent_validation.md']},
+            'covered_actions_by_stem': {'run_agent': None},
+            'substrate_stems': set(),
+            'total_docs': 1,
+        }
+        # meta_no_handler wins even with a matching doc.
+        self.assertEqual(
+            classify_tool(
+                tool_name='run_agent',
+                has_schema=True,
+                has_handler=False,
+                schema_actions=[],
+                docs_index=idx,
+                is_agent_via_run_agent=False,
+            ),
+            'meta_no_handler',
+        )
+        # orphan_schema (has_schema + not has_handler) wins even if
+        # is_agent_via_run_agent were incorrectly True.
+        self.assertEqual(
+            classify_tool(
+                tool_name='some_orphan',
+                has_schema=True,
+                has_handler=False,
+                schema_actions=[],
+                docs_index=idx,
+                is_agent_via_run_agent=True,
+            ),
+            'orphan_schema',
+        )
+
 
 class SchemaLintTests(SimpleTestCase):
     """Contracts 10-12 — schema quality lint (F5 mitigation)."""
