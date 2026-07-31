@@ -7,6 +7,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.db.models import Sum, Avg, Q
 from core.models import Agent, AgentSolution, AgentLearning, Advisor
+from core.permissions_role import require_operator_role  # S3052 PR 4: role gate
 from core.security import scope_queryset_agent_execution
 import random
 from datetime import datetime
@@ -264,6 +265,7 @@ def learning_feed_data(request):
 
 
 @require_http_methods(["GET"])
+@require_operator_role  # S3052 PR 4: block customer-role callers (Gap 6, MVP subset). Also gates unauthenticated callers (previously public — bonus tightening).
 def all_agents_list(request):
     """Get complete list of active agents with details"""
     # Session 564: Filter to active agents only for consistency with Research tab

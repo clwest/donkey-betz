@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 import { authApi } from '@/lib/api'
+import { isCustomerRole } from '@/lib/roles'  // S3052 PR 4: post-auth redirect
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
@@ -21,7 +22,8 @@ export default function LoginPage() {
       const response = await authApi.login(username, password)
       const { token, user } = response.data
       login(token, user)
-      navigate('/workspace')  // Session 857: Workspace is now the main hub
+      // S3052 PR 4 — customer accounts land on /my; operators continue to /workspace hub.
+      navigate(isCustomerRole(user) ? '/my' : '/workspace', { replace: true })
     } catch (err: unknown) {
       const error = err as { response?: { data?: { detail?: string } } }
       setError(error.response?.data?.detail || 'Login failed. Please try again.')
