@@ -144,7 +144,11 @@ class UnifiedTokenAuthenticationMiddleware(MiddlewareMixin):
         '/api/intelligence/cross-references/',  # Cross-reference mappings
         '/api/autonomous/situations/',  # Situations list for Command Center
         '/api/autonomous/trigger-events/',  # Trigger events for Command Center
-        '/api/agents/',  # Session 564: Agent list for Command Center
+        # S3052 PR 4: '/api/agents/' removed from PUBLIC_PATHS — now operator-only
+        # via @require_operator_role on all_agents_list (Gap 6). Removing here
+        # allows UnifiedTokenAuthenticationMiddleware to resolve token headers so
+        # operator token callers reach the view; without this, PUBLIC_PATHS
+        # short-circuits token resolution and the decorator sees AnonymousUser.
         '/api/agent-conversations/',  # Session 564: Conversations sub-tab
         '/api/conversation-contract/',  # Session 717: Conversation Contract Analytics
         '/api/agent-dreams/',  # Session 564: Dreams sub-tab
