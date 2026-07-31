@@ -20,6 +20,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from core.auth_middleware import token_auth_required
+from core.permissions_role import require_operator_role  # S3052 PR 4 A2 fold: operator gate
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
@@ -3250,6 +3251,7 @@ def get_validation_metrics(request):
 # =============================================================================
 
 @require_http_methods(["GET"])
+@require_operator_role  # S3052 PR 4 A2 fold: agent profile is operator-only (Gap 6)
 def get_agent_profile(request, agent_id):
     """
     Get comprehensive profile for a single agent including all their activity.

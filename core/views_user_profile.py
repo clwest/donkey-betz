@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from core.models import UserProfile, UserPreferences
+from core.permissions_role import IsOperatorRole  # S3052 PR 4 A2 fold: operator gate
 
 User = get_user_model()
 
@@ -169,7 +170,7 @@ def ai_configuration(request):
 
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsOperatorRole])  # S3052 PR 4 A2 fold: agents API is operator-only
 def agents_assigned(request):
     """Get or update assigned agents for user"""
     user = request.user
