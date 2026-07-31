@@ -4,6 +4,7 @@ import { usePAStore } from '@/stores/paStore'
 import Layout from '@/components/layout/Layout'
 import CustomerLayout from '@/components/layout/CustomerLayout'  // S3051 PR 3: minimal customer-facing shell
 import MyPage from '@/pages/MyPage'  // S3051 PR 3: customer chat entry route
+import { isCustomerRole } from '@/lib/roles'  // S3052 PR 4: role predicate
 import LoginPage from '@/pages/LoginPage'
 import LandingPage from '@/pages/LandingPage'  // S2797: public unauth landing page at /welcome
 import InboxPage from '@/pages/InboxPage'
@@ -62,6 +63,23 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+// S3052 PR 4 — Operator-only route guard. Discharges Gap 6.
+// Redirects customer-role users (currently `platform_role === 'reviewer'`)
+// back to /my. Full route audit + expanded operator scope is Phase 3+ work.
+function OperatorOnlyRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, user } = useAuthStore()
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />
+  }
+
+  if (isCustomerRole(user)) {
+    return <Navigate to="/my" replace />
+  }
+
+  return <>{children}</>
+}
+
 function App() {
   return (
     <>
@@ -90,7 +108,7 @@ function App() {
         {/* Session 1083: /dashboard redirects to Command Center per Rigby hidden-routes audit */}
         <Route path="dashboard" element={<Navigate to="/" replace />} />
         <Route path="demo" element={<DemoHomePage />} />
-        <Route path="agents" element={<AgentsPage />} />
+        <Route path="agents" element={<OperatorOnlyRoute><AgentsPage /></OperatorOnlyRoute>} />
         <Route path="intelligence" element={<IntelligencePage />} />
         <Route path="content" element={<ContentPage />} />
         <Route path="settings" element={<SettingsPage />} />
@@ -100,7 +118,7 @@ function App() {
         <Route path="portfolio" element={<PortfolioPage />} />
         <Route path="stocks" element={<StockIntelligencePage />} />
         <Route path="government" element={<GovernmentPage />} />
-        <Route path="admin" element={<AdminPage />} />
+        <Route path="admin" element={<OperatorOnlyRoute><AdminPage /></OperatorOnlyRoute>} />
         <Route path="workspace" element={<WorkspacePage />} />
         <Route path="platform" element={<Navigate to="/workspace" replace />} />
 
