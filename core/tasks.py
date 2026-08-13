@@ -397,11 +397,11 @@ def _circuit_breaker_record_timeout(agent_name: str, task: str):
 # ==================== SESSION 835: STALE EXECUTION CLEANUP ====================
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.cleanup_stale_agent_executions")
 def cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
     from core.tasks_agents import _impl_cleanup_stale_agent_executions
     return _impl_cleanup_stale_agent_executions(self, minutes_threshold)
-@shared_task(bind=True, ignore_result=True)
+@shared_task(bind=True, ignore_result=True, name="core.tasks.cleanup_stale_content")
 def cleanup_stale_content(
     self,
     cutoff_days: int = 7,
@@ -411,18 +411,18 @@ def cleanup_stale_content(
 ):
     from core.tasks_misc import _impl_cleanup_stale_content
     return _impl_cleanup_stale_content(self, cutoff_days, statuses, protected_types, cap)
-@shared_task
+@shared_task(name="core.tasks.reap_zombie_work")
 def reap_zombie_work(
     deliberation_stale_minutes: int = 60,
     pilot_stale_days: int = 7,
 ):
     from core.tasks_misc import _impl_reap_zombie_work
     return _impl_reap_zombie_work(deliberation_stale_minutes, pilot_stale_days)
-@shared_task
+@shared_task(name="core.tasks.cleanup_junk_initiatives")
 def cleanup_junk_initiatives(stale_days: int = 7):
     from core.tasks_initiatives import _impl_cleanup_junk_initiatives
     return _impl_cleanup_junk_initiatives(stale_days)
-@shared_task
+@shared_task(name="core.tasks.run_learning_loop_cycle")
 def run_learning_loop_cycle(lookback_days: int = 7):
     """
     Session 945: Run the learning loop cycle to extract patterns from execution data.
@@ -457,7 +457,7 @@ def run_learning_loop_cycle(lookback_days: int = 7):
         raise
 
 
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, name="core.tasks.summarize_learning_readback")
 def summarize_learning_readback():
     """Summarize learning readback telemetry — logs how often the feedback loop is closing."""
     from django.utils import timezone
@@ -480,7 +480,7 @@ def summarize_learning_readback():
     return {'total': total, 'consulted': consulted, 'used': used, 'tool_ok': tool_ok_count}
 
 
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, name="core.tasks.cleanup_learning_readback_events")
 def cleanup_learning_readback_events(retention_days: int = 30):
     """Delete LearningReadbackEvent rows older than retention_days."""
     from django.utils import timezone
@@ -493,7 +493,7 @@ def cleanup_learning_readback_events(retention_days: int = 30):
     return {'deleted': deleted}
 
 
-@shared_task
+@shared_task(name="core.tasks.decay_learning_patterns")
 def decay_learning_patterns():
     """Session 1085: Weekly decay of stale/ineffective learning patterns."""
     from core.services.learning_pattern_engine import LearningPatternEngine
@@ -502,29 +502,29 @@ def decay_learning_patterns():
     return result
 
 
-@shared_task
+@shared_task(name="core.tasks.cleanup_boardroom_junk")
 def cleanup_boardroom_junk(spider_action_hours: int = 6):
     from core.tasks_ops import _impl_cleanup_boardroom_junk
     return _impl_cleanup_boardroom_junk(spider_action_hours)
-@shared_task
+@shared_task(name="core.tasks.auto_approve_boardroom_items")
 def auto_approve_boardroom_items():
     from core.tasks_ops import _impl_auto_approve_boardroom_items
     return _impl_auto_approve_boardroom_items()
-@shared_task(bind=True, soft_time_limit=1800, time_limit=1900)
+@shared_task(bind=True, soft_time_limit=1800, time_limit=1900, name="core.tasks.execute_workspace_pipeline")
 def execute_workspace_pipeline(self, run_id: str):
     """Execute a workspace pipeline run (dispatched from trigger_pipeline API)."""
     from core.services.workspace_pipeline_runner import execute_pipeline_run
     return execute_pipeline_run(run_id)
-@shared_task(bind=True, soft_time_limit=300, time_limit=330)
+@shared_task(bind=True, soft_time_limit=300, time_limit=330, name="core.tasks.execute_demo_pipeline_task")
 def execute_demo_pipeline_task(self, run_id: str, topic: str, user_id: int):
     """Execute a demo pipeline for onboarding (fast, 3 stages)."""
     from core.views_demo_pipeline import _execute_demo_pipeline
     return _execute_demo_pipeline(run_id, topic, user_id)
-@shared_task
+@shared_task(name="core.tasks.cleanup_expired_boardroom_items")
 def cleanup_expired_boardroom_items(days_old: int = 7):
     from core.tasks_misc import _impl_cleanup_expired_boardroom_items
     return _impl_cleanup_expired_boardroom_items(days_old)
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, name="core.tasks.auto_process_extracted_artifacts")
 def auto_process_extracted_artifacts(
     stale_days: int = 7,
     archive_days: int = 14,
@@ -533,7 +533,7 @@ def auto_process_extracted_artifacts(
 ):
     from core.tasks_agents import _impl_auto_process_extracted_artifacts
     return _impl_auto_process_extracted_artifacts(stale_days, archive_days, batch_size, aggressive)
-@shared_task
+@shared_task(name="core.tasks.cleanup_automated_conversation_artifacts")
 def cleanup_automated_conversation_artifacts(batch_size: int = 5000, prefix: str = None):
     from core.tasks_misc import _impl_cleanup_automated_conversation_artifacts
     return _impl_cleanup_automated_conversation_artifacts(batch_size, prefix)
@@ -542,13 +542,13 @@ def cleanup_discussion_artifacts(batch_size: int = 5000):
     return cleanup_automated_conversation_artifacts(batch_size=batch_size, prefix='Discussion:')
 
 
-@shared_task
+@shared_task(name="core.tasks.cleanup_halted_experiments")
 def cleanup_halted_experiments(days_old: int = 7):
     from core.tasks_ops import _impl_cleanup_halted_experiments
     return _impl_cleanup_halted_experiments(days_old)
 
 
-@shared_task
+@shared_task(name="core.tasks.cleanup_stale_running_experiments")
 def cleanup_stale_running_experiments(
     hours_old: int = 72,
     dry_run: bool = False,
@@ -659,7 +659,7 @@ def cleanup_stale_running_experiments(
     }
 
 
-@shared_task
+@shared_task(name="core.tasks.reconcile_experiment_status_outcome")
 def reconcile_experiment_status_outcome(dry_run: bool = False):
     """
     Session 1103c: reconcile Experiment.status with Experiment.outcome_classification.
@@ -747,11 +747,11 @@ def reconcile_experiment_status_outcome(dry_run: bool = False):
         'by_outcome': by_outcome,
         'dry_run': False,
     }
-@shared_task
+@shared_task(name="core.tasks.run_autonomy_cycle")
 def run_autonomy_cycle(user_id: int = None):
     from core.tasks_misc import _impl_run_autonomy_cycle
     return _impl_run_autonomy_cycle(user_id)
-@shared_task(bind=True, max_retries=0, soft_time_limit=300, time_limit=600)
+@shared_task(bind=True, max_retries=0, soft_time_limit=300, time_limit=600, name="core.tasks.run_cto_daily_diagnostic")
 def run_cto_daily_diagnostic(self):
     """Session 1093 — Daily CTOAgent platform reliability diagnostic.
 
@@ -763,7 +763,7 @@ def run_cto_daily_diagnostic(self):
     """
     from core.tasks_ops import _impl_run_cto_daily_diagnostic
     return _impl_run_cto_daily_diagnostic()
-@shared_task(bind=True, max_retries=2, default_retry_delay=120, soft_time_limit=180, time_limit=300)
+@shared_task(bind=True, max_retries=2, default_retry_delay=120, soft_time_limit=180, time_limit=300, name="core.tasks.post_cto_daily_diagnostic")
 def post_cto_daily_diagnostic(
     self,
     cto_async_task_id: str = None,
@@ -797,7 +797,7 @@ def post_cto_daily_diagnostic(
     )
 
 
-@shared_task(bind=True, max_retries=0, soft_time_limit=300, time_limit=600)
+@shared_task(bind=True, max_retries=0, soft_time_limit=300, time_limit=600, name="core.tasks.run_coo_daily_diagnostic")
 def run_coo_daily_diagnostic(self):
     """Session 1094 — Daily COOAgent operations diagnostic.
 
@@ -816,7 +816,7 @@ def run_coo_daily_diagnostic(self):
     return run_diagnostic(build_config())
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=120, soft_time_limit=180, time_limit=300)
+@shared_task(bind=True, max_retries=2, default_retry_delay=120, soft_time_limit=180, time_limit=300, name="core.tasks.post_coo_daily_diagnostic")
 def post_coo_daily_diagnostic(
     self,
     agent_async_task_id: str = None,
@@ -844,7 +844,7 @@ def post_coo_daily_diagnostic(
     )
 
 
-@shared_task(bind=True, max_retries=0, soft_time_limit=300, time_limit=600)
+@shared_task(bind=True, max_retries=0, soft_time_limit=300, time_limit=600, name="core.tasks.run_trend_daily_diagnostic")
 def run_trend_daily_diagnostic(self):
     """Session 1094 — Daily TrendAnalysisAgent spider-intelligence anomaly diagnostic.
 
@@ -858,7 +858,7 @@ def run_trend_daily_diagnostic(self):
     return run_diagnostic(build_config())
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=120, soft_time_limit=180, time_limit=300)
+@shared_task(bind=True, max_retries=2, default_retry_delay=120, soft_time_limit=180, time_limit=300, name="core.tasks.post_trend_daily_diagnostic")
 def post_trend_daily_diagnostic(
     self,
     agent_async_task_id: str = None,
@@ -884,7 +884,7 @@ def post_trend_daily_diagnostic(
         metrics=metrics or {},
         structured_payload=structured_payload or {},
     )
-@shared_task(bind=True, max_retries=0, default_retry_delay=60, soft_time_limit=3600, time_limit=3900)
+@shared_task(bind=True, max_retries=0, default_retry_delay=60, soft_time_limit=3600, time_limit=3900, name="core.tasks.execute_agent_task")
 def execute_agent_task(
     self,
     agent_name: str,
@@ -893,7 +893,7 @@ def execute_agent_task(
 ) -> Dict[str, Any]:
     from core.tasks_agents import _impl_execute_agent_task
     return _impl_execute_agent_task(self, agent_name, task, context)
-@shared_task(bind=True, max_retries=1, default_retry_delay=60, soft_time_limit=3600, time_limit=3900)
+@shared_task(bind=True, max_retries=1, default_retry_delay=60, soft_time_limit=3600, time_limit=3900, name="core.tasks.create_talking_video_task")
 def create_talking_video_task(
     self,
     image_prompt: str,
@@ -902,7 +902,7 @@ def create_talking_video_task(
 ) -> Dict[str, Any]:
     from core.tasks_media import _impl_create_talking_video_task
     return _impl_create_talking_video_task(self, image_prompt, script, context)
-@shared_task(bind=True, max_retries=0, default_retry_delay=60, soft_time_limit=3600, time_limit=3900)
+@shared_task(bind=True, max_retries=0, default_retry_delay=60, soft_time_limit=3600, time_limit=3900, name="core.tasks.execute_initiative_stage_task")
 def execute_initiative_stage_task(
     self,
     initiative_id: str,
@@ -913,7 +913,7 @@ def execute_initiative_stage_task(
 ) -> Dict[str, Any]:
     from core.tasks_initiatives import _impl_execute_initiative_stage_task
     return _impl_execute_initiative_stage_task(self, initiative_id, stage_num, agent_name, task, context)
-@shared_task(bind=True, max_retries=1, default_retry_delay=120)
+@shared_task(bind=True, max_retries=1, default_retry_delay=120, name="core.tasks.produce_content_package")
 def produce_content_package(
     self,
     production_id: str,
@@ -994,19 +994,19 @@ def _run_spider_adapter(spider, spider_name: str) -> dict:
         return {'items': [], 'message': f'Spider {spider_name} has no fetch/scrape/fetch_data method'}
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.run_spider_by_category")
 def run_spider_by_category(self, category: str, execution_mode: str = 'interactive'):
     from core.tasks_spiders import _impl_run_spider_by_category
     return _impl_run_spider_by_category(self, category, execution_mode)
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.execute_single_spider")
 def execute_single_spider(self, spider_name: str, execution_log_id: str = None):
     from core.tasks_spiders import _impl_execute_single_spider
     return _impl_execute_single_spider(self, spider_name, execution_log_id)
-@shared_task(bind=True, max_retries=3)
+@shared_task(bind=True, max_retries=3, name="core.tasks.isolate_documents_batch")
 def isolate_documents_batch(self, batch_size: int = 50, max_batches: int = None):
     from core.tasks_ops import _impl_isolate_documents_batch
     return _impl_isolate_documents_batch(self, batch_size, max_batches)
-@shared_task
+@shared_task(name="core.tasks.monitor_isolation_progress")
 def monitor_isolation_progress():
     """
     Monitoring task to check overall isolation progress
@@ -1052,7 +1052,7 @@ def monitor_isolation_progress():
             'timestamp': datetime.now().isoformat()
         }
 
-@shared_task
+@shared_task(name="core.tasks.cleanup_isolation_metadata")
 def cleanup_isolation_metadata():
     """
     Cleanup task to remove duplicate or corrupted isolation metadata
@@ -1099,13 +1099,13 @@ def cleanup_isolation_metadata():
 # Session 399: DEPRECATED - This task created mock/placeholder spider data.
 # Real spider collection is handled by run_spider_network() task which runs every 15 minutes.
 # Keeping function for backwards compatibility but it now just returns without creating mock data.
-@shared_task
+@shared_task(name="core.tasks.collect_spider_data")
 def collect_spider_data():
     """DEPRECATED: Mock spider data collection - replaced by run_spider_network()"""
     logger.info("collect_spider_data() is deprecated - use run_spider_network() for real data")
     return "Deprecated - no mock data created"
 
-@shared_task
+@shared_task(name="core.tasks.process_spider_data_automatic")
 def process_spider_data_automatic():
     """
     Automatically process unprocessed spider data every 5 minutes
@@ -1156,15 +1156,15 @@ def process_spider_data_automatic():
     return results
 
 
-@shared_task
+@shared_task(name="core.tasks.process_core_spider_data")
 def process_core_spider_data():
     from core.tasks_spiders import _impl_process_core_spider_data
     return _impl_process_core_spider_data()
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.run_spider_network")
 def run_spider_network(self):
     from core.tasks_spiders import _impl_run_spider_network
     return _impl_run_spider_network(self)
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, name="core.tasks.backfill_spider_embeddings")
 def backfill_spider_embeddings(batch_size: int = 50):
     """
     Session 293: Generate embeddings for SpiderData entries that don't have them.
@@ -1234,7 +1234,7 @@ def backfill_signal_scores():
     return f"Scored {updated} clusters"
 
 
-@shared_task
+@shared_task(name="core.tasks.execute_single_spider_lightweight")
 def execute_single_spider_lightweight(spider_name: str):
     from core.tasks_spiders import _impl_execute_single_spider_lightweight
     return _impl_execute_single_spider_lightweight(spider_name)
@@ -1830,19 +1830,19 @@ def _collect_news_default() -> list:
     return items
 
 
-@shared_task
+@shared_task(name="core.tasks.poll_pending_3d_models")
 def poll_pending_3d_models():
     from core.tasks_misc import _impl_poll_pending_3d_models
     return _impl_poll_pending_3d_models()
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, name="core.tasks.record_all_user_style_evolution")
 def record_all_user_style_evolution():
     from core.tasks_agents import _impl_record_all_user_style_evolution
     return _impl_record_all_user_style_evolution()
-@shared_task(bind=True, max_retries=3)
+@shared_task(bind=True, max_retries=3, name="core.tasks.execute_scheduled_workflow")
 def execute_scheduled_workflow(self, schedule_id: str):
     from core.tasks_ops import _impl_execute_scheduled_workflow
     return _impl_execute_scheduled_workflow(self, schedule_id)
-@shared_task
+@shared_task(name="core.tasks.sync_workflow_schedules")
 def sync_workflow_schedules():
     from core.tasks_ops import _impl_sync_workflow_schedules
     return _impl_sync_workflow_schedules()
@@ -1852,11 +1852,12 @@ def sync_workflow_schedules():
     retry_backoff_max=60,
     retry_jitter=True,
     max_retries=2,
+    name="core.tasks.check_workflow_schedules",
 )
 def check_workflow_schedules():
     from core.tasks_misc import _impl_check_workflow_schedules
     return _impl_check_workflow_schedules()
-@shared_task
+@shared_task(name="core.tasks.score_opportunities_from_spider_data")
 def score_opportunities_from_spider_data(hours: int = 24, limit: int = 100):
     """
     Score spider data and create opportunities.
@@ -1902,31 +1903,31 @@ def score_opportunities_from_spider_data(hours: int = 24, limit: int = 100):
         }
 
 
-@shared_task
+@shared_task(name="core.tasks.execute_pending_opportunity_tasks")
 def execute_pending_opportunity_tasks(limit: int = 20):
     from core.tasks_ops import _impl_execute_pending_opportunity_tasks
     return _impl_execute_pending_opportunity_tasks(limit)
-@shared_task
+@shared_task(name="core.tasks.expire_old_opportunities")
 def expire_old_opportunities():
     from core.tasks_misc import _impl_expire_old_opportunities
     return _impl_expire_old_opportunities()
-@shared_task
+@shared_task(name="core.tasks.generate_opportunity_report")
 def generate_opportunity_report():
     from core.tasks_ops import _impl_generate_opportunity_report
     return _impl_generate_opportunity_report()
-@shared_task
+@shared_task(name="core.tasks.train_ml_scoring_model")
 def train_ml_scoring_model(force_retrain: bool = False, min_samples: int = 100, use_optuna: bool = True):
     from core.tasks_financial import _impl_train_ml_scoring_model
     return _impl_train_ml_scoring_model(force_retrain, min_samples, use_optuna)
-@shared_task
+@shared_task(name="core.tasks.evaluate_ml_model_performance")
 def evaluate_ml_model_performance():
     from core.tasks_financial import _impl_evaluate_ml_model_performance
     return _impl_evaluate_ml_model_performance()
-@shared_task
+@shared_task(name="core.tasks.process_realtime_scoring_queue")
 def process_realtime_scoring_queue(max_items: int = 50, max_time_sec: int = 25):
     from core.tasks_misc import _impl_process_realtime_scoring_queue
     return _impl_process_realtime_scoring_queue(max_items, max_time_sec)
-@shared_task
+@shared_task(name="core.tasks.process_batch_scoring_queue")
 def process_batch_scoring_queue(batch_size: int = 100):
     """
     Process items from the database batch scoring queue.
@@ -1976,15 +1977,15 @@ def process_batch_scoring_queue(batch_size: int = 100):
         }
 
 
-@shared_task
+@shared_task(name="core.tasks.cleanup_stale_scoring_requests")
 def cleanup_stale_scoring_requests():
     from core.tasks_misc import _impl_cleanup_stale_scoring_requests
     return _impl_cleanup_stale_scoring_requests()
-@shared_task
+@shared_task(name="core.tasks.score_spider_data_async")
 def score_spider_data_async(spider_data_id: str, priority: str = 'normal', source: str = 'api', user_id: int = None):
     from core.tasks_spiders import _impl_score_spider_data_async
     return _impl_score_spider_data_async(spider_data_id, priority, source, user_id)
-@shared_task(bind=True, max_retries=3)
+@shared_task(bind=True, max_retries=3, name="core.tasks.process_distribution")
 def process_distribution(self, distribution_id: str):
     from core.tasks_content import _impl_process_distribution
     return _impl_process_distribution(self, distribution_id)
@@ -2168,23 +2169,23 @@ def process_shutterstock_distribution(distribution):
     }
 
 
-@shared_task
+@shared_task(name="core.tasks.update_distribution_analytics")
 def update_distribution_analytics():
     from core.tasks_misc import _impl_update_distribution_analytics
     return _impl_update_distribution_analytics()
-@shared_task
+@shared_task(name="core.tasks.discover_success_patterns")
 def discover_success_patterns(user_id=None, days=90):
     from core.tasks_misc import _impl_discover_success_patterns
     return _impl_discover_success_patterns(user_id, days)
-@shared_task
+@shared_task(name="core.tasks.generate_user_insights")
 def generate_user_insights(user_id=None, max_insights=10):
     from core.tasks_misc import _impl_generate_user_insights
     return _impl_generate_user_insights(user_id, max_insights)
-@shared_task
+@shared_task(name="core.tasks.update_learning_profiles")
 def update_learning_profiles():
     from core.tasks_misc import _impl_update_learning_profiles
     return _impl_update_learning_profiles()
-@shared_task
+@shared_task(name="core.tasks.run_daily_learning_pipeline")
 def run_daily_learning_pipeline():
     """
     Run the complete daily learning pipeline.
@@ -2223,7 +2224,7 @@ def run_daily_learning_pipeline():
 # Session 234: Proactive System Celery Tasks (Phase 6)
 # ============================================================
 
-@shared_task
+@shared_task(name="core.tasks.run_proactive_system_check")
 def run_proactive_system_check(user_id=None):
     """
     Run a complete proactive system check.
@@ -2268,7 +2269,7 @@ def run_proactive_system_check(user_id=None):
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.check_all_alerts")
 def check_all_alerts():
     """
     Check all active alerts for all users.
@@ -2298,7 +2299,7 @@ def check_all_alerts():
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.generate_smart_suggestions")
 def generate_smart_suggestions(user_id=None, max_suggestions=5):
     """
     Generate smart suggestions for users based on their data.
@@ -2341,7 +2342,7 @@ def generate_smart_suggestions(user_id=None, max_suggestions=5):
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.execute_scheduled_automations")
 def execute_scheduled_automations():
     """
     Execute all scheduled automated actions that are due.
@@ -2360,7 +2361,7 @@ def execute_scheduled_automations():
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.send_pending_notifications")
 def send_pending_notifications():
     """
     Send any pending scheduled notifications.
@@ -2402,7 +2403,7 @@ def send_pending_notifications():
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.cleanup_old_notifications")
 def cleanup_old_notifications(days=30):
     """
     Clean up old read/dismissed notifications.
@@ -2439,7 +2440,7 @@ def cleanup_old_notifications(days=30):
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.expire_old_suggestions")
 def expire_old_suggestions(days=14):
     """
     Mark old pending suggestions as expired.
@@ -2472,31 +2473,31 @@ def expire_old_suggestions(days=14):
 # This is the heart of the collective intelligence system
 # =============================================================================
 
-@shared_task
+@shared_task(name="core.tasks.run_agent_learning_cycle")
 def run_agent_learning_cycle():
     from core.tasks_agents import _impl_run_agent_learning_cycle
     return _impl_run_agent_learning_cycle()
-@shared_task
+@shared_task(name="core.tasks.agent_think_and_synthesize")
 def agent_think_and_synthesize():
     from core.tasks_agents import _impl_agent_think_and_synthesize
     return _impl_agent_think_and_synthesize()
-@shared_task
+@shared_task(name="core.tasks.update_agent_effectiveness_from_learning")
 def update_agent_effectiveness_from_learning():
     from core.tasks_misc import _impl_update_agent_effectiveness_from_learning
     return _impl_update_agent_effectiveness_from_learning()
-@shared_task
+@shared_task(name="core.tasks.broadcast_learning_status")
 def broadcast_learning_status():
     from core.tasks_agents import _impl_broadcast_learning_status
     return _impl_broadcast_learning_status()
-@shared_task
+@shared_task(name="core.tasks.validate_knowledge_sources")
 def validate_knowledge_sources():
     from core.tasks_agents import _impl_validate_knowledge_sources
     return _impl_validate_knowledge_sources()
-@shared_task
+@shared_task(name="core.tasks.embed_daily_agent_learning")
 def embed_daily_agent_learning():
     from core.tasks_agents import _impl_embed_daily_agent_learning
     return _impl_embed_daily_agent_learning()
-@shared_task
+@shared_task(name="core.tasks.embed_agent_activity")
 def embed_agent_activity(hours: int = 2):
     from core.tasks_agents import _impl_embed_agent_activity
     return _impl_embed_agent_activity(hours)
@@ -2884,15 +2885,15 @@ def _extract_hivemind_knowledge(session, completed_contributions):
 # Session 244: Agent Conversations (Inter-Agent Chat)
 # =============================================================================
 
-@shared_task(bind=True, soft_time_limit=1800, time_limit=1860, ignore_result=True)
+@shared_task(bind=True, soft_time_limit=1800, time_limit=1860, ignore_result=True, name="core.tasks.run_agent_conversation")
 def run_agent_conversation(self, max_conversations: int = 3, max_messages: int = 6):
     from core.tasks_conversations import _impl_run_agent_conversation
     return _impl_run_agent_conversation(self, max_conversations, max_messages)
-@shared_task(bind=True, max_retries=2, soft_time_limit=1800, time_limit=1860, ignore_result=True)
+@shared_task(bind=True, max_retries=2, soft_time_limit=1800, time_limit=1860, ignore_result=True, name="core.tasks.run_multi_agent_conversation")
 def run_multi_agent_conversation(self, max_conversations: int = 2, participants_per_conversation: int = 4, max_rounds: int = 3):
     from core.tasks_conversations import _impl_run_multi_agent_conversation
     return _impl_run_multi_agent_conversation(self, max_conversations, participants_per_conversation, max_rounds)
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.auto_promote_decisions")
 def auto_promote_decisions(self, quality_threshold: float = 0.6, max_promotions: int = 3):
     """
     Session 362: Automatically promote high-quality decisions to canonical policies.
@@ -2924,15 +2925,15 @@ def auto_promote_decisions(self, quality_threshold: float = 0.6, max_promotions:
 # Session 362: Spider-Triggered Conversations
 # =============================================================================
 
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.trigger_spider_conversations")
 def trigger_spider_conversations(self, min_relevance: int = 70, max_conversations: int = 2):
     from core.tasks_conversations import _impl_trigger_spider_conversations
     return _impl_trigger_spider_conversations(self, min_relevance, max_conversations)
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.trigger_project_research")
 def trigger_project_research(self, max_projects: int = 3, max_spiders_per_project: int = 2):
     from core.tasks_ops import _impl_trigger_project_research
     return _impl_trigger_project_research(self, max_projects, max_spiders_per_project)
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.propagate_new_policies")
 def propagate_new_policies(self, hours_back: int = 2, max_actions: int = 3):
     """
     Session 363: Propagate newly promoted policies to relevant agents.
@@ -2961,35 +2962,35 @@ def propagate_new_policies(self, hours_back: int = 2, max_actions: int = 3):
     }
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.broadcast_conversation_status")
 def broadcast_conversation_status(self):
     from core.tasks_misc import _impl_broadcast_conversation_status
     return _impl_broadcast_conversation_status(self)
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.run_project_conversation")
 def run_project_conversation(self, project_id: str, topic: str, max_messages: int = 6):
     from core.tasks_conversations import _impl_run_project_conversation
     return _impl_run_project_conversation(self, project_id, topic, max_messages)
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.generate_agent_dreams")
 def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2):
     from core.tasks_initiatives import _impl_generate_agent_dreams
     return _impl_generate_agent_dreams(self, max_dreamers, dreams_per_agent)
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.broadcast_dream_journal")
 def broadcast_dream_journal(self):
     from core.tasks_initiatives import _impl_broadcast_dream_journal
     return _impl_broadcast_dream_journal(self)
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.score_and_promote_dreams")
 def score_and_promote_dreams(self, max_dreams: int = 50, promote_threshold: float = 0.85):
     from core.tasks_initiatives import _impl_score_and_promote_dreams
     return _impl_score_and_promote_dreams(self, max_dreams, promote_threshold)
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.process_approved_dreams")
 def process_approved_dreams(self, max_dreams: int = 10):
     from core.tasks_initiatives import _impl_process_approved_dreams
     return _impl_process_approved_dreams(self, max_dreams)
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.cleanup_stale_dreams")
 def cleanup_stale_dreams(self, max_age_hours: int = 72):
     from core.tasks_initiatives import _impl_cleanup_stale_dreams
     return _impl_cleanup_stale_dreams(self, max_age_hours)
-@shared_task(bind=True, soft_time_limit=1800, time_limit=1860)
+@shared_task(bind=True, soft_time_limit=1800, time_limit=1860, name="core.tasks.execute_dream_implementations")
 def execute_dream_implementations(self, max_implementations: int = 5):
     from core.tasks_initiatives import _impl_execute_dream_implementations
     return _impl_execute_dream_implementations(self, max_implementations)
@@ -3373,11 +3374,11 @@ def _detect_visual_style(dream):
     return 'digital_art'
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.explore_dream_topic")
 def explore_dream_topic(self, exploration_id: str):
     from core.tasks_conversations import _impl_explore_dream_topic
     return _impl_explore_dream_topic(self, exploration_id)
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.run_hive_mind_session")
 def run_hive_mind_session(self, session_id: str):
     from core.tasks_conversations import _impl_run_hive_mind_session
     return _impl_run_hive_mind_session(self, session_id)
@@ -3424,7 +3425,7 @@ def broadcast_hive_mind_status(session, status):
 # Session 251: Memory Palace Tasks
 # =============================================================================
 
-@shared_task
+@shared_task(name="core.tasks.generate_memory_embedding")
 def generate_memory_embedding(memory_id: str):
     from core.tasks_media import _impl_generate_memory_embedding
     return _impl_generate_memory_embedding(memory_id)
@@ -3593,7 +3594,7 @@ def check_level_milestones():
 def broadcast_evolution_status():
     from core.tasks_misc import _impl_broadcast_evolution_status
     return _impl_broadcast_evolution_status()
-@shared_task
+@shared_task(name="core.tasks.sync_project_knowledge")
 def sync_project_knowledge():
     """
     Sync BusinessResearchResult to AgentKnowledgeSource.
@@ -3626,7 +3627,7 @@ def sync_project_knowledge():
         return {'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.recalculate_spider_priorities")
 def recalculate_spider_priorities():
     """
     Recalculate spider priorities based on active projects.
@@ -3662,7 +3663,7 @@ def recalculate_spider_priorities():
         return {'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.process_research_feedback")
 def process_research_feedback(feedback_id: str):
     """
     Process a single research feedback submission.
@@ -3698,7 +3699,7 @@ def process_research_feedback(feedback_id: str):
         return {'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.update_project_spider_priorities")
 def update_project_spider_priorities(project_id: str):
     """
     Update spider priorities for a specific project.
@@ -3736,7 +3737,7 @@ def update_project_spider_priorities(project_id: str):
 # Enable projects to autonomously learn and track their domain over time
 # =============================================================================
 
-@shared_task
+@shared_task(name="core.tasks.run_project_learning_cycle")
 def run_project_learning_cycle():
     """
     Celery Beat task: Check all projects with learning enabled
@@ -3785,7 +3786,7 @@ def run_project_learning_cycle():
         return {'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.run_single_project_learning")
 def run_single_project_learning(project_id: str):
     from core.tasks_ops import _impl_run_single_project_learning
     return _impl_run_single_project_learning(project_id)
@@ -3915,49 +3916,51 @@ def _create_learning_notification(project, deltas):
 # ==================== SESSION 373: AUTO-RESOLVE KNOWLEDGE GAPS ====================
 
 
-@shared_task(bind=True, max_retries=2)
+@shared_task(bind=True, max_retries=2, name="core.tasks.auto_resolve_knowledge_gaps")
 def auto_resolve_knowledge_gaps(self):
     from core.tasks_misc import _impl_auto_resolve_knowledge_gaps
     return _impl_auto_resolve_knowledge_gaps(self)
-@shared_task(bind=True, max_retries=3)
+@shared_task(bind=True, max_retries=3, name="core.tasks.process_document_async")
 def process_document_async(self, document_id: int, generate_embeddings: bool = True, embedding_model: str = 'openai_text_embedding_3_small'):
     from core.tasks_misc import _impl_process_document_async
     return _impl_process_document_async(self, document_id, generate_embeddings, embedding_model)
-@shared_task(bind=True, max_retries=3)
+@shared_task(bind=True, max_retries=3, name="core.tasks.process_url_async")
 def process_url_async(self, url: str, title: str = None, user_id: int = None, generate_embeddings: bool = True):
     from core.tasks_media import _impl_process_url_async
     return _impl_process_url_async(self, url, title, user_id, generate_embeddings)
-@shared_task(bind=True, max_retries=3)
+@shared_task(bind=True, max_retries=3, name="core.tasks.generate_document_embeddings")
 def generate_document_embeddings(self, document_id: str, embedding_model: str = 'openai_small'):
     from core.tasks_misc import _impl_generate_document_embeddings
     return _impl_generate_document_embeddings(self, document_id, embedding_model)
 @shared_task(bind=True, max_retries=1, soft_time_limit=600, time_limit=660,
-             queue='long_running', ignore_result=True)
+             queue='long_running', ignore_result=True,
+             name="core.tasks.transcribe_video_task",)
 def transcribe_video_task(self, transcript_id):
     from core.tasks_media import _impl_transcribe_video_task
     return _impl_transcribe_video_task(self, transcript_id)
 @shared_task(bind=True, max_retries=1, soft_time_limit=120, time_limit=150,
-             queue='long_running', ignore_result=False)
+             queue='long_running', ignore_result=False,
+             name="core.tasks.generate_video_content_pack_task",)
 def generate_video_content_pack_task(self, video_id, user_id, language='en'):
     from core.tasks_content import _impl_generate_video_content_pack_task
     return _impl_generate_video_content_pack_task(self, video_id, user_id, language)
-@shared_task(bind=True, max_retries=1, soft_time_limit=1800, time_limit=1860, ignore_result=False)
+@shared_task(bind=True, max_retries=1, soft_time_limit=1800, time_limit=1860, ignore_result=False, name="core.tasks.ingest_video_task")
 def ingest_video_task(self, document_id, tmp_video_path, original_filename, user_id, language='en'):
     from core.tasks_media import _impl_ingest_video_task
     return _impl_ingest_video_task(self, document_id, tmp_video_path, original_filename, user_id, language)
-@shared_task(bind=True, max_retries=1, soft_time_limit=1800, time_limit=1860, ignore_result=False)
+@shared_task(bind=True, max_retries=1, soft_time_limit=1800, time_limit=1860, ignore_result=False, name="core.tasks.youtube_whisper_task")
 def youtube_whisper_task(self, document_id, youtube_url, user_id, language='en'):
     from core.tasks_media import _impl_youtube_whisper_task
     return _impl_youtube_whisper_task(self, document_id, youtube_url, user_id, language)
-@shared_task
+@shared_task(name="core.tasks.collect_training_data")
 def collect_training_data():
     from core.tasks_ops import _impl_collect_training_data
     return _impl_collect_training_data()
-@shared_task
+@shared_task(name="core.tasks.collect_training_data_full")
 def collect_training_data_full():
     from core.tasks_ops import _impl_collect_training_data_full
     return _impl_collect_training_data_full()
-@shared_task
+@shared_task(name="core.tasks.cleanup_spider_item_hashes")
 def cleanup_spider_item_hashes(days_to_keep: int = 90):
     """
     Session 616: Clean up old spider item hashes to prevent table bloat.
@@ -4105,7 +4108,7 @@ def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
 
 
 # Session 1064: Telemetry cleanup — prevent unbounded table growth
-@shared_task
+@shared_task(name="core.tasks.cleanup_celery_task_events")
 def cleanup_celery_task_events(days_to_keep: int = None):
     """Delete CeleryTaskEvent records older than retention period."""
     from django.conf import settings as django_settings
@@ -4118,7 +4121,7 @@ def cleanup_celery_task_events(days_to_keep: int = None):
     return {'deleted': count, 'retention_days': days_to_keep}
 
 
-@shared_task
+@shared_task(name="core.tasks.cleanup_llm_call_logs")
 def cleanup_llm_call_logs(days_to_keep: int = None):
     """Delete LLMCallLog records older than retention period."""
     from django.conf import settings as django_settings
@@ -4131,31 +4134,31 @@ def cleanup_llm_call_logs(days_to_keep: int = None):
     return {'deleted': count, 'retention_days': days_to_keep}
 
 
-@shared_task
+@shared_task(name="core.tasks.generate_weekly_opportunity_digest")
 def generate_weekly_opportunity_digest():
     from core.tasks_ops import _impl_generate_weekly_opportunity_digest
     return _impl_generate_weekly_opportunity_digest()
-@shared_task
+@shared_task(name="core.tasks.send_proactive_opportunity_alerts")
 def send_proactive_opportunity_alerts():
     from core.tasks_ops import _impl_send_proactive_opportunity_alerts
     return _impl_send_proactive_opportunity_alerts()
-@shared_task
+@shared_task(name="core.tasks.send_personalized_opportunity_alerts")
 def send_personalized_opportunity_alerts():
     from core.tasks_ops import _impl_send_personalized_opportunity_alerts
     return _impl_send_personalized_opportunity_alerts()
-@shared_task(bind=True, max_retries=3)
+@shared_task(bind=True, max_retries=3, name="core.tasks.generate_content_package")
 def generate_content_package(self, package_id: str):
     from core.tasks_content import _impl_generate_content_package
     return _impl_generate_content_package(self, package_id)
-@shared_task(bind=True, max_retries=3)
+@shared_task(bind=True, max_retries=3, name="core.tasks.generate_ai_series")
 def generate_ai_series(self, series_id: str):
     from core.tasks_content import _impl_generate_ai_series
     return _impl_generate_ai_series(self, series_id)
-@shared_task
+@shared_task(name="core.tasks.assemble_chunked_upload")
 def assemble_chunked_upload(upload_id: str):
     from core.tasks_media import _impl_assemble_chunked_upload
     return _impl_assemble_chunked_upload(upload_id)
-@shared_task
+@shared_task(name="core.tasks.cleanup_expired_uploads")
 def cleanup_expired_uploads():
     """
     Clean up incomplete upload sessions older than expiry time.
@@ -4197,11 +4200,11 @@ def cleanup_expired_uploads():
 # Session 452: Pipeline Learning <-> Collective Intelligence Bridge
 # =============================================================================
 
-@shared_task
+@shared_task(name="core.tasks.sync_pipeline_insights_to_collective")
 def sync_pipeline_insights_to_collective():
     from core.tasks_misc import _impl_sync_pipeline_insights_to_collective
     return _impl_sync_pipeline_insights_to_collective()
-@shared_task
+@shared_task(name="core.tasks.run_autonomous_intelligence_loop")
 def run_autonomous_intelligence_loop():
     """
     Session 460: The conductor that makes everything work together.
@@ -4234,7 +4237,7 @@ def run_autonomous_intelligence_loop():
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.run_daily_intelligence_digest")
 def run_daily_intelligence_digest():
     """
     Session 460: Generate and send the daily intelligence digest.
@@ -4267,7 +4270,7 @@ def run_daily_intelligence_digest():
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.check_sec_filings_alert")
 def check_sec_filings_alert():
     """
     Session 460: Quick SEC filing check task.
@@ -4297,7 +4300,7 @@ def check_sec_filings_alert():
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.run_stock_audit_cycle")
 def run_stock_audit_cycle():
     """
     Session 461: Stock Audit Agent Group task.
@@ -4350,7 +4353,7 @@ def track_prediction_outcomes():
 def calculate_agent_accuracy():
     from core.tasks_agents import _impl_calculate_agent_accuracy
     return _impl_calculate_agent_accuracy()
-@shared_task
+@shared_task(name="core.tasks.run_autonomous_content_studio")
 def run_autonomous_content_studio():
     from core.tasks_content import _impl_run_autonomous_content_studio
     return _impl_run_autonomous_content_studio()
@@ -4358,11 +4361,11 @@ def run_autonomous_content_studio():
 def generate_content_for_channel(channel_id):
     from core.tasks_content import _impl_generate_content_for_channel
     return _impl_generate_content_for_channel(channel_id)
-@shared_task
+@shared_task(name="core.tasks.track_content_performance")
 def track_content_performance():
     from core.tasks_content import _impl_track_content_performance
     return _impl_track_content_performance()
-@shared_task
+@shared_task(name="core.tasks.process_hitl_escalations")
 def process_hitl_escalations():
     """
     Process validation requests that need escalation.
@@ -4397,7 +4400,7 @@ def process_hitl_escalations():
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.expire_overdue_validations")
 def expire_overdue_validations():
     """
     Expire validation requests that are past deadline.
@@ -4436,7 +4439,7 @@ def expire_overdue_validations():
 # =============================================================================
 
 
-@shared_task
+@shared_task(name="core.tasks.process_event_bus_scoring_queue")
 def process_event_bus_scoring_queue():
     """
     Process events from the scoring worker queue.
@@ -4470,7 +4473,7 @@ def process_event_bus_scoring_queue():
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.process_event_bus_validation_queue")
 def process_event_bus_validation_queue():
     """
     Process events from the validation worker queue.
@@ -4504,7 +4507,7 @@ def process_event_bus_validation_queue():
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.process_event_bus_analytics_queue")
 def process_event_bus_analytics_queue():
     """
     Process events from the analytics worker queue.
@@ -4539,7 +4542,7 @@ def process_event_bus_analytics_queue():
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.claim_stale_events")
 def claim_stale_events():
     """
     Claim and reprocess stale events from all consumer groups.
@@ -4584,7 +4587,7 @@ def claim_stale_events():
         return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.get_event_bus_stats")
 def get_event_bus_stats():
     """
     Get event bus statistics.
@@ -4700,7 +4703,8 @@ def unified_pipeline_health_check():
 @shared_task(
     bind=True,
     max_retries=3,
-    default_retry_delay=300
+    default_retry_delay=300,
+    name="core.tasks.aggregate_roi_metrics_daily",
 )
 def aggregate_roi_metrics_daily(self):
     from core.tasks_financial import _impl_aggregate_roi_metrics_daily
@@ -4708,7 +4712,8 @@ def aggregate_roi_metrics_daily(self):
 @shared_task(
     bind=True,
     max_retries=3,
-    default_retry_delay=300
+    default_retry_delay=300,
+    name="core.tasks.generate_weekly_intelligence_brief",
 )
 def generate_weekly_intelligence_brief(self):
     from core.tasks_misc import _impl_generate_weekly_intelligence_brief
@@ -4845,7 +4850,7 @@ def record_revenue_event(
 def run_blockchain_security_monitor():
     from core.tasks_financial import _impl_run_blockchain_security_monitor
     return _impl_run_blockchain_security_monitor()
-@shared_task
+@shared_task(name="core.tasks.run_stock_market_intelligence")
 def run_stock_market_intelligence():
     from core.tasks_financial import _impl_run_stock_market_intelligence
     return _impl_run_stock_market_intelligence()
@@ -5024,20 +5029,20 @@ def create_default_triggers():
 # =============================================================================
 
 
-@shared_task(bind=True, max_retries=3)
+@shared_task(bind=True, max_retries=3, name="core.tasks.start_resolve_render")
 def start_resolve_render(self, job_id: str, video_ids: list, template: str, color_grade: str,
                          spider_trends: dict = None, user_id: int = None):
     from core.tasks_media import _impl_start_resolve_render
     return _impl_start_resolve_render(self, job_id, video_ids, template, color_grade, spider_trends, user_id)
-@shared_task(bind=True, max_retries=60)  # Max 60 retries = 30 minutes
+@shared_task(bind=True, max_retries=60, name="core.tasks.poll_resolve_job_status")  # Max 60 retries = 30 minutes
 def poll_resolve_job_status(self, job_id: str):
     from core.tasks_media import _impl_poll_resolve_job_status
     return _impl_poll_resolve_job_status(self, job_id)
-@shared_task
+@shared_task(name="core.tasks.record_resolve_outcome")
 def record_resolve_outcome(job_id: str):
     from core.tasks_misc import _impl_record_resolve_outcome
     return _impl_record_resolve_outcome(job_id)
-@shared_task
+@shared_task(name="core.tasks.cleanup_old_resolve_jobs")
 def cleanup_old_resolve_jobs(days: int = 30):
     """
     Clean up old resolve render jobs from the database.
@@ -5083,15 +5088,15 @@ def cleanup_old_resolve_jobs(days: int = 30):
 # SESSION 479: 14 NEW AUTONOMOUS SITUATIONS
 # =============================================================================
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_design_trends_monitor")
 def run_design_trends_monitor(self):
     from core.tasks_ops import _impl_run_design_trends_monitor
     return _impl_run_design_trends_monitor(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_viral_content_predictor")
 def run_viral_content_predictor(self):
     from core.tasks_misc import _impl_run_viral_content_predictor
     return _impl_run_viral_content_predictor(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_job_match_intelligence")
 def run_job_match_intelligence(self):
     """Situation #9: Job Match Intelligence - Monitors jobs and scores matches."""
     logger.info("💼 [JOB MATCH] Starting job matching...")
@@ -5142,7 +5147,7 @@ def run_job_match_intelligence(self):
         return {'status': 'error', 'error': str(e)}
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_side_hustle_detector")
 def run_side_hustle_detector(self):
     """Situation #11: Side Hustle Detector - Finds trending micro-opportunities."""
     logger.info("💰 [SIDE HUSTLE] Starting detection...")
@@ -5185,23 +5190,23 @@ def run_side_hustle_detector(self):
         return {'status': 'error', 'error': str(e)}
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_crypto_sentiment_monitor")
 def run_crypto_sentiment_monitor(self):
     from core.tasks_misc import _impl_run_crypto_sentiment_monitor
     return _impl_run_crypto_sentiment_monitor(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_tech_stack_tracker")
 def run_tech_stack_tracker(self):
     from core.tasks_misc import _impl_run_tech_stack_tracker
     return _impl_run_tech_stack_tracker(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_ai_model_monitor")
 def run_ai_model_monitor(self):
     from core.tasks_misc import _impl_run_ai_model_monitor
     return _impl_run_ai_model_monitor(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_case_law_monitor")
 def run_case_law_monitor(self):
     from core.tasks_misc import _impl_run_case_law_monitor
     return _impl_run_case_law_monitor(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_regulatory_change_detector")
 def run_regulatory_change_detector(self):
     """Situation #19: Regulatory Change Detector - Monitors regulatory news."""
     logger.info("📜 [REGULATORY] Starting detection...")
@@ -5247,27 +5252,27 @@ def run_regulatory_change_detector(self):
 # Session 480: Automating the 5 "Manual" Situations
 # =============================================================================
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_thumbnail_optimizer")
 def run_thumbnail_optimizer(self):
     from core.tasks_media import _impl_run_thumbnail_optimizer
     return _impl_run_thumbnail_optimizer(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_freelance_opportunity_scout")
 def run_freelance_opportunity_scout(self):
     from core.tasks_ops import _impl_run_freelance_opportunity_scout
     return _impl_run_freelance_opportunity_scout(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_sec_filing_analyzer")
 def run_sec_filing_analyzer(self):
     from core.tasks_financial import _impl_run_sec_filing_analyzer
     return _impl_run_sec_filing_analyzer(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_earnings_predictor")
 def run_earnings_predictor(self):
     from core.tasks_financial import _impl_run_earnings_predictor
     return _impl_run_earnings_predictor(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60)
+@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_skill_gap_analyzer")
 def run_skill_gap_analyzer(self):
     from core.tasks_ops import _impl_run_skill_gap_analyzer
     return _impl_run_skill_gap_analyzer(self)
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.generate_podcast_episode")
 def generate_podcast_episode(self, episode_id: str, topic: str, format_type: str, participants: int, generate_audio: bool):
     from core.tasks_content import _impl_generate_podcast_episode
     return _impl_generate_podcast_episode(self, episode_id, topic, format_type, participants, generate_audio)
@@ -5405,11 +5410,11 @@ def _build_operational_context():
 # SESSION 543: SELF-BLOG GENERATION TASK
 # =============================================================================
 
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.generate_self_blog_task")
 def generate_self_blog_task(self, tone='enthusiastic', word_count=1500, topic_category=None):
     from core.tasks_content import _impl_generate_self_blog_task
     return _impl_generate_self_blog_task(self, tone, word_count, topic_category)
-@shared_task(bind=True, soft_time_limit=240, time_limit=300)
+@shared_task(bind=True, soft_time_limit=240, time_limit=300, name="core.tasks.draft_legal_document_task")
 def draft_legal_document_task(self, task_description, context=None, user_id=None):
     """
     Session 1062: Async legal document drafting via LegalDocDrafterAgent.
@@ -5442,7 +5447,7 @@ def draft_legal_document_task(self, task_description, context=None, user_id=None
     }
 
 
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.generate_blog_with_topic_task")
 def generate_blog_with_topic_task(self, topic, tone='enthusiastic'):
     """
     Session 1057: Generate a blog for a specific topic via the deliberation pipeline.
@@ -5469,28 +5474,28 @@ def generate_blog_with_topic_task(self, topic, tone='enthusiastic'):
     }
 
 
-@shared_task(bind=True, soft_time_limit=480, time_limit=540)
+@shared_task(bind=True, soft_time_limit=480, time_limit=540, name="core.tasks.generate_self_blog_deliberation_task")
 def generate_self_blog_deliberation_task(self, tone='enthusiastic', word_count=1500, topic_category=None):
     from core.tasks_content import _impl_generate_self_blog_deliberation_task
     return _impl_generate_self_blog_deliberation_task(self, tone, word_count, topic_category)
 
 
-@shared_task(bind=True, soft_time_limit=300, time_limit=360)
+@shared_task(bind=True, soft_time_limit=300, time_limit=360, name="core.tasks.generate_operator_edge_newsletter")
 def generate_operator_edge_newsletter(self, hours=72, cluster_limit=5, dry_run=False):
     """Generate an Operator Edge newsletter from recent signal clusters."""
     from core.tasks_content import _impl_generate_operator_edge_newsletter
     return _impl_generate_operator_edge_newsletter(self, hours, cluster_limit, dry_run)
 
 
-@shared_task(bind=True, soft_time_limit=1800, time_limit=1860, ignore_result=True)
+@shared_task(bind=True, soft_time_limit=1800, time_limit=1860, ignore_result=True, name="core.tasks.run_autonomous_thinking_cycle")
 def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=24):
     from core.tasks_content import _impl_run_autonomous_thinking_cycle
     return _impl_run_autonomous_thinking_cycle(self, cycle_type, lookback_hours)
-@shared_task
+@shared_task(name="core.tasks.scan_concerns_for_human_action")
 def scan_concerns_for_human_action():
     from core.tasks_ops import _impl_scan_concerns_for_human_action
     return _impl_scan_concerns_for_human_action()
-@shared_task
+@shared_task(name="core.tasks.batch_extract_artifacts")
 def batch_extract_artifacts(hours_back: int = 24, limit: int = 50):
     """
     Process conversations from last N hours that haven't been extracted.
@@ -5533,7 +5538,7 @@ def batch_extract_artifacts(hours_back: int = 24, limit: int = 50):
 # ============================================================================
 
 
-@shared_task(soft_time_limit=30, time_limit=60, ignore_result=True)
+@shared_task(soft_time_limit=30, time_limit=60, ignore_result=True, name="core.tasks.execute_approved_artifacts")
 def execute_approved_artifacts(limit: int = 10):
     """
     Fan-out dispatcher: find approved artifacts and dispatch each as its own subtask.
@@ -5553,7 +5558,7 @@ def execute_approved_artifacts(limit: int = 10):
         return {'success': False, 'error': str(e)}
 
 
-@shared_task(soft_time_limit=300, time_limit=330, ignore_result=True)
+@shared_task(soft_time_limit=300, time_limit=330, ignore_result=True, name="core.tasks.execute_single_artifact")
 def execute_single_artifact(artifact_id: str):
     """
     Session 1068: Execute a single approved artifact via agent routing.
@@ -5601,27 +5606,27 @@ def execute_single_artifact(artifact_id: str):
         return {'success': False, 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.generate_weekly_synthesis")
 def generate_weekly_synthesis(days_back: int = 7):
     from core.tasks_misc import _impl_generate_weekly_synthesis
     return _impl_generate_weekly_synthesis(days_back)
-@shared_task(soft_time_limit=600, time_limit=660)
+@shared_task(soft_time_limit=600, time_limit=660, name="core.tasks.generate_pending_reviews")
 def generate_pending_reviews():
     from core.tasks_content import _impl_generate_pending_reviews
     return _impl_generate_pending_reviews()
-@shared_task
+@shared_task(name="core.tasks.collect_kalshi_prediction_markets")
 def collect_kalshi_prediction_markets():
     from core.tasks_financial import _impl_collect_kalshi_prediction_markets
     return _impl_collect_kalshi_prediction_markets()
-@shared_task
+@shared_task(name="core.tasks.collect_kalshi_market_intelligence")
 def collect_kalshi_market_intelligence():
     from core.tasks_financial import _impl_collect_kalshi_market_intelligence
     return _impl_collect_kalshi_market_intelligence()
-@shared_task
+@shared_task(name="core.tasks.collect_sports_odds")
 def collect_sports_odds():
     from core.tasks_financial import _impl_collect_sports_odds
     return _impl_collect_sports_odds()
-@shared_task
+@shared_task(name="core.tasks.collect_sports_odds_intelligence")
 def collect_sports_odds_intelligence():
     from core.tasks_financial import _impl_collect_sports_odds_intelligence
     return _impl_collect_sports_odds_intelligence()
@@ -5637,15 +5642,15 @@ def market_intelligence_scan():
 def market_movement_alerts():
     from core.tasks_misc import _impl_market_movement_alerts
     return _impl_market_movement_alerts()
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, name="core.tasks.snapshot_odds_for_line_movement")
 def snapshot_odds_for_line_movement():
     from core.tasks_financial import _impl_snapshot_odds_for_line_movement
     return _impl_snapshot_odds_for_line_movement()
-@shared_task
+@shared_task(name="core.tasks.scan_arbs_and_notify")
 def scan_arbs_and_notify():
     from core.tasks_misc import _impl_scan_arbs_and_notify
     return _impl_scan_arbs_and_notify()
-@shared_task(bind=True, max_retries=2, default_retry_delay=300, queue='default')
+@shared_task(bind=True, max_retries=2, default_retry_delay=300, queue='default', name="core.tasks.verify_betting_outcomes")
 def verify_betting_outcomes(self):
     """
     Session 995: Verify betting outcomes, settle wagers, feed learning loop.
@@ -5695,11 +5700,11 @@ def verify_betting_outcomes(self):
         raise self.retry(exc=e)
 
 
-@shared_task(bind=True, max_retries=1, default_retry_delay=300, queue='default')
+@shared_task(bind=True, max_retries=1, default_retry_delay=300, queue='default', name="core.tasks.generate_daily_betting_brief")
 def generate_daily_betting_brief(self):
     from core.tasks_content import _impl_generate_daily_betting_brief
     return _impl_generate_daily_betting_brief(self)
-@shared_task(bind=True, max_retries=1, default_retry_delay=600, queue='default')
+@shared_task(bind=True, max_retries=1, default_retry_delay=600, queue='default', name="core.tasks.evaluate_ml_predictions")
 def evaluate_ml_predictions(self):
     from core.tasks_financial import _impl_evaluate_ml_predictions
     return _impl_evaluate_ml_predictions(self)
@@ -5707,7 +5712,7 @@ def evaluate_ml_predictions(self):
 def maintain_dream_backlog():
     from core.tasks_initiatives import _impl_maintain_dream_backlog
     return _impl_maintain_dream_backlog()
-@shared_task
+@shared_task(name="core.tasks.refresh_system_state_cache")
 def refresh_system_state_cache():
     """
     Session 573: Refresh the system state aggregator cache.
@@ -5749,7 +5754,7 @@ def refresh_system_state_cache():
 
 # ==================== SESSION 579: DREAM AUTO-TRIAGE ====================
 
-@shared_task
+@shared_task(name="core.tasks.auto_triage_dreams")
 def auto_triage_dreams(
     promote_threshold: float = 0.85,
     archive_age_days: int = 7,
@@ -5759,7 +5764,7 @@ def auto_triage_dreams(
 ):
     from core.tasks_initiatives import _impl_auto_triage_dreams
     return _impl_auto_triage_dreams(promote_threshold, archive_age_days, archive_score_threshold, max_promote, max_archive)
-@shared_task
+@shared_task(name="core.tasks.auto_approve_low_risk_gates")
 def auto_approve_low_risk_gates(
     max_gates: int = 20,
     auto_deploy: bool = False,
@@ -5767,23 +5772,23 @@ def auto_approve_low_risk_gates(
 ):
     from core.tasks_ops import _impl_auto_approve_low_risk_gates
     return _impl_auto_approve_low_risk_gates(max_gates, auto_deploy, dry_run)
-@shared_task
+@shared_task(name="core.tasks.auto_promote_low_risk_decisions")
 def auto_promote_low_risk_decisions(dry_run: bool = False):
     from core.tasks_misc import _impl_auto_promote_low_risk_decisions
     return _impl_auto_promote_low_risk_decisions(dry_run)
-@shared_task
+@shared_task(name="core.tasks.report_pending_review_metrics")
 def report_pending_review_metrics():
     from core.tasks_misc import _impl_report_pending_review_metrics
     return _impl_report_pending_review_metrics()
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, name="core.tasks.ai_promote_decisions")
 def ai_promote_decisions(batch_size: int = 50):
     from core.tasks_misc import _impl_ai_promote_decisions
     return _impl_ai_promote_decisions(batch_size)
-@shared_task
+@shared_task(name="core.tasks.auto_complete_pilots")
 def auto_complete_pilots():
     from core.tasks_ops import _impl_auto_complete_pilots
     return _impl_auto_complete_pilots()
-@shared_task
+@shared_task(name="core.tasks.evaluate_pilots_with_thinking_agent")
 def evaluate_pilots_with_thinking_agent():
     from core.tasks_ops import _impl_evaluate_pilots_with_thinking_agent
     return _impl_evaluate_pilots_with_thinking_agent()
@@ -5864,7 +5869,7 @@ def collect_pilot_metrics(decision, pilot) -> Dict[str, Any]:
     return metrics
 
 
-@shared_task
+@shared_task(name="core.tasks.generate_checklist_content_async")
 def generate_checklist_content_async(gate_id: str):
     from core.tasks_misc import _impl_generate_checklist_content_async
     return _impl_generate_checklist_content_async(gate_id)
@@ -5931,7 +5936,7 @@ def _send_halt_discord_notification(experiment, reason):
 def monitor_celery_health():
     from core.tasks_ops import _impl_monitor_celery_health
     return _impl_monitor_celery_health()
-@shared_task
+@shared_task(name="core.tasks.update_experiment_kpis")
 def update_experiment_kpis():
     """
     Session 609: Automatically update KPIs for all running experiments.
@@ -6003,7 +6008,7 @@ def _send_kpi_update_discord_notification(results):
 # Session 611: KPI Alerts Task
 # =============================================================================
 
-@shared_task
+@shared_task(name="core.tasks.check_kpi_alerts")
 def check_kpi_alerts():
     """
     Session 611: Check all running experiments for KPI alert conditions.
@@ -6051,7 +6056,7 @@ def check_kpi_alerts():
         return {'success': False, 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.send_weekly_kpi_summary")
 def send_weekly_kpi_summary():
     from core.tasks_misc import _impl_send_weekly_kpi_summary
     return _impl_send_weekly_kpi_summary()
@@ -6723,7 +6728,7 @@ def _send_gate_processing_discord(results: dict):
 # Session 687: Human Interface - Attention Item Generation
 # =============================================================================
 
-@shared_task
+@shared_task(name="core.tasks.generate_human_attention_items")
 def generate_human_attention_items():
     from core.tasks_agents import _impl_generate_human_attention_items
     return _impl_generate_human_attention_items()
@@ -6962,7 +6967,7 @@ def check_nervous():
 def coordinate_body():
     from core.tasks_body_systems import _impl_coordinate_body
     return _impl_coordinate_body()
-@shared_task
+@shared_task(name="core.tasks.run_market_monitoring_agents")
 def run_market_monitoring_agents():
     """
     Session 737: Run market monitoring agents on schedule.
@@ -7011,7 +7016,7 @@ def run_market_monitoring_agents():
     return results
 
 
-@shared_task
+@shared_task(name="core.tasks.run_blockchain_monitoring_agents")
 def run_blockchain_monitoring_agents():
     """
     Session 737: Run blockchain monitoring agents on schedule.
@@ -7058,23 +7063,23 @@ def run_blockchain_monitoring_agents():
     return results
 
 
-@shared_task
+@shared_task(name="core.tasks.run_business_strategy_agents")
 def run_business_strategy_agents():
     from core.tasks_misc import _impl_run_business_strategy_agents
     return _impl_run_business_strategy_agents()
-@shared_task
+@shared_task(name="core.tasks.exercise_all_dormant_agents")
 def exercise_all_dormant_agents():
     from core.tasks_misc import _impl_exercise_all_dormant_agents
     return _impl_exercise_all_dormant_agents()
-@shared_task
+@shared_task(name="core.tasks.check_content_diversity")
 def check_content_diversity():
     from core.tasks_misc import _impl_check_content_diversity
     return _impl_check_content_diversity()
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, name="core.tasks.check_celery_health")
 def check_celery_health():
     from core.tasks_misc import _impl_check_celery_health
     return _impl_check_celery_health()
-@shared_task
+@shared_task(name="core.tasks.execute_orchestration_async")
 def execute_orchestration_async(execution_id: str):
     """
     Session 764: Execute an orchestration workflow asynchronously.
@@ -7124,11 +7129,11 @@ def execute_orchestration_async(execution_id: str):
         return {'success': False, 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.check_orchestration_timeouts")
 def check_orchestration_timeouts():
     from core.tasks_misc import _impl_check_orchestration_timeouts
     return _impl_check_orchestration_timeouts()
-@shared_task
+@shared_task(name="core.tasks.check_orchestration_auto_approvals")
 def check_orchestration_auto_approvals():
     """
     Session 764: Check for auto-approvals on expired approval gates.
@@ -7156,7 +7161,7 @@ def check_orchestration_auto_approvals():
 # ==================== SESSION 766: DREAM EXECUTION PIPELINE TASKS ====================
 
 
-@shared_task(soft_time_limit=1800, time_limit=1860)
+@shared_task(soft_time_limit=1800, time_limit=1860, name="core.tasks.execute_approved_dreams_via_orchestration")
 def execute_approved_dreams_via_orchestration(limit: int = 10):
     """
     Session 766: Execute approved dreams through the Orchestration Layer.
@@ -7205,7 +7210,7 @@ def execute_approved_dreams_via_orchestration(limit: int = 10):
         return {'success': False, 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.execute_single_dream")
 def execute_single_dream(dream_id: str):
     """
     Session 766: Execute a single approved dream.
@@ -9351,7 +9356,7 @@ def _track_group_contribution(agent_name: str, group_name: str, project_id: str,
         logger.warning(f"Could not track contribution for {agent_name}: {e}")
 
 
-@shared_task
+@shared_task(name="core.tasks.run_content_creation_agents")
 def run_content_creation_agents():
     """
     Session 787: Run content creation agents every 3 hours.
@@ -9391,7 +9396,7 @@ def run_content_creation_agents():
     return _run_agent_group('CONTENT CREATION', agents, task_gen, '🎨')
 
 
-@shared_task
+@shared_task(name="core.tasks.run_strategy_marketing_agents")
 def run_strategy_marketing_agents():
     """
     Session 787: Run strategy and marketing agents every 4 hours.
@@ -9417,7 +9422,7 @@ def run_strategy_marketing_agents():
     return _run_agent_group('STRATEGY & MARKETING', agents, task_gen, '📈')
 
 
-@shared_task
+@shared_task(name="core.tasks.run_research_analysis_agents")
 def run_research_analysis_agents():
     """
     Session 787: Run research and analysis agents every 2 hours.
@@ -9436,7 +9441,7 @@ def run_research_analysis_agents():
     return _run_agent_group('RESEARCH & ANALYSIS', agents, task_gen, '🔬')
 
 
-@shared_task
+@shared_task(name="core.tasks.run_stock_financial_agents")
 def run_stock_financial_agents():
     """
     Session 787: Run stock and financial analysis agents every 3 hours.
@@ -9464,7 +9469,7 @@ def run_stock_financial_agents():
     return _run_agent_group('STOCK & FINANCIAL', agents, task_gen, '📊')
 
 
-@shared_task
+@shared_task(name="core.tasks.run_prediction_market_agents")
 def run_prediction_market_agents():
     """
     Session 787: Run prediction market agents every 2 hours.
@@ -9484,7 +9489,7 @@ def run_prediction_market_agents():
     return _run_agent_group('PREDICTION MARKETS', agents, task_gen, '🎯')
 
 
-@shared_task
+@shared_task(name="core.tasks.run_narrative_culture_agents")
 def run_narrative_culture_agents():
     """
     Session 787: Run narrative and culture agents every 6 hours.
@@ -9509,7 +9514,7 @@ def run_narrative_culture_agents():
     return _run_agent_group('NARRATIVE & CULTURE', agents, task_gen, '📖')
 
 
-@shared_task
+@shared_task(name="core.tasks.run_development_tech_agents")
 def run_development_tech_agents():
     """
     Session 787: Run development and tech agents every 4 hours.
@@ -9538,7 +9543,7 @@ def run_development_tech_agents():
     return _run_agent_group('DEVELOPMENT & TECH', agents, task_gen, '💻')
 
 
-@shared_task
+@shared_task(name="core.tasks.run_executive_leadership_agents")
 def run_executive_leadership_agents():
     """
     Session 787: Run executive and leadership agents every 6 hours.
@@ -9569,7 +9574,7 @@ def run_executive_leadership_agents():
     return _run_agent_group('EXECUTIVE & LEADERSHIP', agents, task_gen, '👔')
 
 
-@shared_task
+@shared_task(name="core.tasks.run_podcast_debate_agents")
 def run_podcast_debate_agents():
     """
     Session 787: Run podcast and debate agents every 8 hours.
@@ -9590,11 +9595,11 @@ def run_podcast_debate_agents():
     return _run_agent_group('PODCAST & DEBATE', agents, task_gen, '🎙️')
 
 
-@shared_task
+@shared_task(name="core.tasks.auto_generate_podcast_episode")
 def auto_generate_podcast_episode():
     from core.tasks_content import _impl_auto_generate_podcast_episode
     return _impl_auto_generate_podcast_episode()
-@shared_task
+@shared_task(name="core.tasks.run_content_studio_agents")
 def run_content_studio_agents():
     """
     Session 787: Run content studio agents every 4 hours.
@@ -9615,7 +9620,7 @@ def run_content_studio_agents():
     return _run_agent_group('CONTENT STUDIO', agents, task_gen, '🎬')
 
 
-@shared_task
+@shared_task(name="core.tasks.run_campaign_series_agents")
 def run_campaign_series_agents():
     """
     Session 787: Run campaign and series agents every 6 hours.
@@ -9634,7 +9639,7 @@ def run_campaign_series_agents():
     return _run_agent_group('CAMPAIGN & SERIES', agents, task_gen, '🚀')
 
 
-@shared_task
+@shared_task(name="core.tasks.run_system_orchestration_agents")
 def run_system_orchestration_agents():
     """
     Session 787: Run system and orchestration agents every 2 hours.
@@ -9669,7 +9674,7 @@ def run_system_orchestration_agents():
     return _run_agent_group('SYSTEM & ORCHESTRATION', agents, task_gen, '⚙️')
 
 
-@shared_task
+@shared_task(name="core.tasks.run_quality_audit_agents")
 def run_quality_audit_agents():
     """
     Session 787: Run quality and audit agents every 4 hours.
@@ -9688,7 +9693,7 @@ def run_quality_audit_agents():
     return _run_agent_group('QUALITY & AUDIT', agents, task_gen, '✅')
 
 
-@shared_task
+@shared_task(name="core.tasks.run_specialty_agents")
 def run_specialty_agents():
     """
     Session 787: Run specialty agents every 8 hours.
@@ -9713,7 +9718,7 @@ def run_specialty_agents():
 # Session 819: Mythology System Tasks
 # =============================================================================
 
-@shared_task
+@shared_task(name="core.tasks.update_mythology_pattern_statistics")
 def update_mythology_pattern_statistics():
     """
     Session 819: Update MythPattern frequency counts and prevention rates.
@@ -10036,19 +10041,19 @@ def _format_metrics_for_audit(metrics: dict) -> str:
 # Session 823: Metrics Action Trigger - Self-Execution Engine
 # =============================================================================
 
-@shared_task
+@shared_task(name="core.tasks.run_metrics_action_check")
 def run_metrics_action_check():
     from core.tasks_misc import _impl_run_metrics_action_check
     return _impl_run_metrics_action_check()
-@shared_task
+@shared_task(name="core.tasks.run_agent_health_rotation")
 def run_agent_health_rotation():
     from core.tasks_misc import _impl_run_agent_health_rotation
     return _impl_run_agent_health_rotation()
-@shared_task
+@shared_task(name="core.tasks.run_system_self_audit")
 def run_system_self_audit():
     from core.tasks_agents import _impl_run_system_self_audit
     return _impl_run_system_self_audit()
-@shared_task
+@shared_task(name="core.tasks.discover_and_import_audits")
 def discover_and_import_audits():
     """
     Session 820: Automatically discover and import new audit files.
@@ -10064,7 +10069,7 @@ def discover_and_import_audits():
     return {'blocked': True, 'reason': 'Audit parsing unreliable'}
 
 
-@shared_task
+@shared_task(name="core.tasks.assign_open_findings_to_agents")
 def assign_open_findings_to_agents():
     """
     Session 820: Auto-assign open findings to appropriate agents.
@@ -10079,7 +10084,7 @@ def assign_open_findings_to_agents():
     return {'blocked': True, 'reason': 'All execution paths disabled'}
 
 
-@shared_task
+@shared_task(name="core.tasks.execute_remediation_tasks")
 def execute_remediation_tasks():
     """
     Session 820: Execute assigned remediation tasks via agents.
@@ -10118,7 +10123,7 @@ def execute_remediation_tasks():
         return {'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.verify_completed_fixes")
 def verify_completed_fixes():
     """
     Session 820: Verify that completed fixes actually worked.
@@ -10145,7 +10150,7 @@ def verify_completed_fixes():
         return {'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.run_autonomous_remediation_cycle")
 def run_autonomous_remediation_cycle():
     """
     Session 820: Run a complete autonomous remediation cycle.
@@ -10194,7 +10199,7 @@ def run_autonomous_remediation_cycle():
         return {'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.assign_and_execute_remediation")
 def assign_and_execute_remediation(limit: int = 20, write_files: bool = True):
     """
     Session 833: Combined task that assigns findings then executes remediation.
@@ -10328,7 +10333,7 @@ def _route_spec_to_human_attention_standalone(task, agent_name):
         logger.error(f"  ⚠️ Failed to create HumanAttentionItem: {e}")
 
 
-@shared_task
+@shared_task(name="core.tasks.run_agent_remediation_batch")
 def run_agent_remediation_batch(agent_name: str = 'CodeGeneratorAgent', limit: int = 20, write_files: bool = True):
     """
     Session 829: Run a batch of remediation tasks for a specific agent.
@@ -10565,7 +10570,7 @@ Recommendation:
 # =============================================================================
 
 
-@shared_task(bind=True, max_retries=1, default_retry_delay=60, soft_time_limit=1800, time_limit=1860, ignore_result=True)
+@shared_task(bind=True, max_retries=1, default_retry_delay=60, soft_time_limit=1800, time_limit=1860, ignore_result=True, name="core.tasks.run_triggered_conversation")
 def run_triggered_conversation(
     self,
     topic: str,
@@ -10578,7 +10583,7 @@ def run_triggered_conversation(
 ):
     from core.tasks_conversations import _impl_run_triggered_conversation
     return _impl_run_triggered_conversation(self, topic, conversation_type, objective, success_criteria, auto_select_agents, participant_ids, hive_session_id)
-@shared_task(bind=True)
+@shared_task(bind=True, name="core.tasks.run_diagnostic_pipeline_task")
 def run_diagnostic_pipeline_task(self, signature_id: str = None, force: bool = False):
     """
     Session 856: Run the diagnostic pipeline for failure analysis.
@@ -10620,7 +10625,7 @@ def run_diagnostic_pipeline_task(self, signature_id: str = None, force: bool = F
         raise
 
 
-@shared_task
+@shared_task(name="core.tasks.cleanup_resolved_signatures")
 def cleanup_resolved_signatures(days_old: int = 30):
     """
     Session 856: Archive old resolved failure signatures.
@@ -10654,7 +10659,7 @@ def cleanup_resolved_signatures(days_old: int = 30):
     return {'archived': count}
 
 
-@shared_task
+@shared_task(name="core.tasks.detect_failure_task")
 def detect_failure_task(
     error_message: str,
     source_type: str,
@@ -10666,7 +10671,7 @@ def detect_failure_task(
 ):
     from core.tasks_misc import _impl_detect_failure_task
     return _impl_detect_failure_task(error_message, source_type, error_code, provider, source_id, source_name, context)
-@shared_task(bind=True, max_retries=2, default_retry_delay=120)
+@shared_task(bind=True, max_retries=2, default_retry_delay=120, name="core.tasks.run_conceptforge_pipeline")
 def run_conceptforge_pipeline(
     self,
     source_type: str,
@@ -10679,11 +10684,11 @@ def run_conceptforge_pipeline(
 ):
     from core.tasks_content import _impl_run_conceptforge_pipeline
     return _impl_run_conceptforge_pipeline(self, source_type, source_id, source_title, domain, quality_score, triggered_by, user_id)
-@shared_task
+@shared_task(name="core.tasks.poll_processing_videos")
 def poll_processing_videos():
     from core.tasks_misc import _impl_poll_processing_videos
     return _impl_poll_processing_videos()
-@shared_task
+@shared_task(name="core.tasks.advance_initiative_pipeline")
 def advance_initiative_pipeline(limit: int = 10, auto_approve: bool = True):
     from core.tasks_initiatives import _impl_advance_initiative_pipeline
     return _impl_advance_initiative_pipeline(limit, auto_approve)
@@ -10847,7 +10852,7 @@ def _get_previous_stage_context(initiative, current_stage: int) -> str:
 # Session 885: Auto-Kickstart Stuck Initiatives
 # =============================================================================
 
-@shared_task
+@shared_task(name="core.tasks.auto_kickstart_stuck_initiatives")
 def auto_kickstart_stuck_initiatives(limit: int = 10):
     from core.tasks_initiatives import _impl_auto_kickstart_stuck_initiatives
     return _impl_auto_kickstart_stuck_initiatives(limit)
@@ -10887,7 +10892,7 @@ def process_pending_auto_topics(self, max_topics: int = 3):
 def cleanup_expired_signals(self):
     from core.tasks_misc import _impl_cleanup_expired_signals
     return _impl_cleanup_expired_signals(self)
-@shared_task(bind=True, queue='default')
+@shared_task(bind=True, queue='default', name="core.tasks.extract_action_items_from_session")
 def extract_action_items_from_session(self, session_id: str):
     """
     Session 903: Auto-extract action items when a HiveMind session completes.
@@ -10931,15 +10936,15 @@ def extract_action_items_from_session(self, session_id: str):
 # Session 1058 Level 3: Auto-Dispatch Pending Action Items
 # =============================================================================
 
-@shared_task(bind=True, soft_time_limit=300, time_limit=360)
+@shared_task(bind=True, soft_time_limit=300, time_limit=360, name="core.tasks.dispatch_pending_action_items")
 def dispatch_pending_action_items(self):
     from core.tasks_ops import _impl_dispatch_pending_action_items
     return _impl_dispatch_pending_action_items(self)
-@shared_task(bind=True, max_retries=3, default_retry_delay=300)
+@shared_task(bind=True, max_retries=3, default_retry_delay=300, name="core.tasks.retry_blocked_research")
 def retry_blocked_research(self, research_result_id: str):
     from core.tasks_ops import _impl_retry_blocked_research
     return _impl_retry_blocked_research(self, research_result_id)
-@shared_task(bind=True, queue='default')
+@shared_task(bind=True, queue='default', name="core.tasks.check_blocked_research_for_unblock")
 def check_blocked_research_for_unblock(self):
     """
     Session 905: Periodic task to check all blocked research and trigger retries.
@@ -10977,11 +10982,11 @@ def check_blocked_research_for_unblock(self):
 # ==================== SESSION 905: INITIATIVE AUTO-PROGRESSION ====================
 
 
-@shared_task(bind=True, queue='default')
+@shared_task(bind=True, queue='default', name="core.tasks.process_initiative_auto_progression")
 def process_initiative_auto_progression(self):
     from core.tasks_initiatives import _impl_process_initiative_auto_progression
     return _impl_process_initiative_auto_progression(self)
-@shared_task(bind=True, queue='default')
+@shared_task(bind=True, queue='default', name="core.tasks.detect_duplicate_initiatives")
 def detect_duplicate_initiatives(self):
     from core.tasks_initiatives import _impl_detect_duplicate_initiatives
     return _impl_detect_duplicate_initiatives(self)
@@ -11056,15 +11061,16 @@ def _extract_agent_content(result) -> str:
 
 
 @shared_task(bind=True, queue='default', max_retries=1, ignore_result=True,
-             soft_time_limit=600, time_limit=660)
+             soft_time_limit=600, time_limit=660,
+             name="core.tasks.generate_initiative_stage_document",)
 def generate_initiative_stage_document(self, initiative_id: str, stage_num: int):
     from core.tasks_initiatives import _impl_generate_initiative_stage_document
     return _impl_generate_initiative_stage_document(self, initiative_id, stage_num)
-@shared_task(bind=True, queue='default')
+@shared_task(bind=True, queue='default', name="core.tasks.backfill_stage_documents")
 def backfill_stage_documents(self, stage_num: int = 1, limit: int = 50):
     from core.tasks_misc import _impl_backfill_stage_documents
     return _impl_backfill_stage_documents(self, stage_num, limit)
-@shared_task
+@shared_task(name="core.tasks.run_daily_priority_scan")
 def run_daily_priority_scan():
     """
     Session 914.7: Run the daily priority scan to identify top 5 focus initiatives.
@@ -11095,7 +11101,7 @@ def run_daily_priority_scan():
         return {'success': False, 'error': str(e)}
 
 
-@shared_task
+@shared_task(name="core.tasks.check_operating_rhythm_status")
 def check_operating_rhythm_status():
     """
     Session 914.7: Check operating rhythm status and generate recommendations.
@@ -11140,48 +11146,48 @@ def check_operating_rhythm_status():
 # Session 926: Audio Cache Cleanup for Universal Agent Voice System
 # =============================================================================
 
-@shared_task
+@shared_task(name="core.tasks.cleanup_audio_cache")
 def cleanup_audio_cache():
     from core.tasks_misc import _impl_cleanup_audio_cache
     return _impl_cleanup_audio_cache()
 
 
 # Session 1077: Daily auto-archive stale deliverables (noise prevention)
-@shared_task(soft_time_limit=120, time_limit=150)
+@shared_task(soft_time_limit=120, time_limit=150, name="core.tasks.auto_archive_stale_deliverables")
 def auto_archive_stale_deliverables(days=3):
     from core.tasks_misc import _impl_auto_archive_stale_deliverables
     return _impl_auto_archive_stale_deliverables(days=days)
 
 
 # Regression detector: alert if deliverables are created without workspace
-@shared_task(soft_time_limit=60, time_limit=90)
+@shared_task(soft_time_limit=60, time_limit=90, name="core.tasks.check_orphan_deliverables")
 def check_orphan_deliverables():
     from core.tasks_misc import _impl_check_orphan_deliverables
     return _impl_check_orphan_deliverables()
 
 
-@shared_task(soft_time_limit=600, time_limit=660, ignore_result=True)
+@shared_task(soft_time_limit=600, time_limit=660, ignore_result=True, name="core.tasks.enforce_db_retention")
 def enforce_db_retention():
     """Daily database retention — prevents disk exhaustion by cleaning old rows."""
     from core.tasks_misc import _impl_enforce_db_retention
     return _impl_enforce_db_retention()
 
 
-@shared_task(bind=True, soft_time_limit=5400, time_limit=5460, ignore_result=False)
+@shared_task(bind=True, soft_time_limit=5400, time_limit=5460, ignore_result=False, name="core.tasks.claude_code_engineer_task")
 def claude_code_engineer_task(self, task_description, conversation_id=None, requested_by='rigby'):
     """Autonomous Claude Code engineering session — reads files, writes code, creates PRs."""
     from core.services.claude_code_engineer import execute_engineering_task
     return execute_engineering_task(task_description, conversation_id, requested_by)
 
 
-@shared_task(soft_time_limit=60, time_limit=90, ignore_result=True)
+@shared_task(soft_time_limit=60, time_limit=90, ignore_result=True, name="core.tasks.claude_code_agent_respond")
 def claude_code_agent_respond(conversation_id, message_text, source):
     """Autonomous Claude Code agent — responds when addressed in a conversation."""
     from core.services.claude_code_agent import handle_message
     return handle_message(conversation_id, message_text, source)
 
 
-@shared_task(bind=True, time_limit=300, soft_time_limit=280)
+@shared_task(bind=True, time_limit=300, soft_time_limit=280, name="core.tasks.process_pa_chat_task")
 def process_pa_chat_task(self, user_id, message, context=None, generate_audio=False, conversation_id=None, source='web', platform='web'):
     from core.tasks_misc import _impl_process_pa_chat_task
     return _impl_process_pa_chat_task(self, user_id, message, context, generate_audio, conversation_id, source, platform)
@@ -11189,7 +11195,7 @@ def process_pa_chat_task(self, user_id, message, context=None, generate_audio=Fa
 
 # Session 1078: Background PA context rebuild — eliminates ghost timeout on first hit.
 # Enqueued by get_assistant_context when fresh cache misses. Stampede-locked per user.
-@shared_task(bind=True, time_limit=60, soft_time_limit=45, ignore_result=True, queue='pa')
+@shared_task(bind=True, time_limit=60, soft_time_limit=45, ignore_result=True, queue='pa', name="core.tasks.rebuild_pa_context_task")
 def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
     """Rebuild PA context in background and populate caches."""
     import hashlib
@@ -11303,7 +11309,7 @@ def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
 
 # Session 1077: Background TTS task — offloaded from process_pa_chat_task
 # to prevent SoftTimeLimitExceeded from ElevenLabs blocking the main PA path.
-@shared_task(bind=True, time_limit=120, soft_time_limit=90, ignore_result=True)
+@shared_task(bind=True, time_limit=120, soft_time_limit=90, ignore_result=True, name="core.tasks.process_pa_tts_task")
 def process_pa_tts_task(self, user_id, text, conversation_id=None, trace_id=None):
     """Generate TTS audio in background and update the conversation record."""
     import asyncio
@@ -11339,7 +11345,7 @@ def process_pa_tts_task(self, user_id, text, conversation_id=None, trace_id=None
         logger.warning(f"[PA_TTS] Background TTS failed: {e}")
 
 
-@shared_task(bind=True, time_limit=120, soft_time_limit=100)
+@shared_task(bind=True, time_limit=120, soft_time_limit=100, name="core.tasks.generate_step_content")
 def generate_step_content(self, step_id):
     from core.tasks_content import _impl_generate_step_content
     return _impl_generate_step_content(self, step_id)
@@ -11570,7 +11576,7 @@ def _run_desks_inner(_time, traceback, cache, gc, CACHE_TTL):
 # Session 1031: Surface Top Dreams to Boardroom
 # =============================================================================
 
-@shared_task
+@shared_task(name="core.tasks.surface_top_dreams")
 def surface_top_dreams(max_items=5, min_composite=0.85):
     from core.tasks_initiatives import _impl_surface_top_dreams
     return _impl_surface_top_dreams(max_items, min_composite)
@@ -11631,7 +11637,7 @@ def rescan_active_workspaces(stale_days: int = 7):
 # Mines ToolCallRecord for patterns and creates PAToolInsight candidates.       #
 # --------------------------------------------------------------------------- #
 
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, name="core.tasks.analyze_pa_tool_patterns")
 def analyze_pa_tool_patterns():
     from core.tasks_agents import _impl_analyze_pa_tool_patterns
     return _impl_analyze_pa_tool_patterns()
@@ -11710,7 +11716,7 @@ def _summarize_diff(bad: dict, good: dict) -> str:
     return "; ".join(changes[:3]) if changes else "different parameters"
 
 
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, name="core.tasks.cleanup_expired_pa_insights")
 def cleanup_expired_pa_insights():
     """Demote expired approved insights back to candidate (daily 3 AM)."""
     from core.models_tool_calls import PAToolInsight
@@ -11740,7 +11746,7 @@ _RETENTION_DAYS = {
 }
 
 
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, name="core.tasks.enforce_data_retention")
 def enforce_data_retention():
     """Nightly job: archive/delete artifacts by data_sensitivity + age.
 
@@ -12279,17 +12285,17 @@ def _auto_research_competitor(competitor_name, user_id=None, time_budget=120):
     return stats
 
 
-@shared_task(bind=True, soft_time_limit=300, time_limit=360)
+@shared_task(bind=True, soft_time_limit=300, time_limit=360, name="core.tasks.generate_competitor_comparison_task")
 def generate_competitor_comparison_task(self, comparison_id, source_document_id=None,
                                         competitor_name='', focus_areas=None,
                                         auto_research=True):
     from core.tasks_misc import _impl_generate_competitor_comparison_task
     return _impl_generate_competitor_comparison_task(self, comparison_id, source_document_id, competitor_name, focus_areas, auto_research)
-@shared_task(bind=True, soft_time_limit=900, time_limit=1080, ignore_result=True)
+@shared_task(bind=True, soft_time_limit=900, time_limit=1080, ignore_result=True, name="core.tasks.run_source_pack_workflow")
 def run_source_pack_workflow(self, run_id):
     from core.tasks_content import _impl_run_source_pack_workflow
     return _impl_run_source_pack_workflow(self, run_id)
-@shared_task(bind=True, ignore_result=True)
+@shared_task(bind=True, ignore_result=True, name="core.tasks.summarize_conversation_task")
 def summarize_conversation_task(self, conversation_id, user_id=None):
     from core.tasks_conversations import _impl_summarize_conversation_task
     return _impl_summarize_conversation_task(self, conversation_id, user_id)
@@ -12303,11 +12309,11 @@ def summarize_conversation_task(self, conversation_id, user_id=None):
 def ops_control_loop():
     from core.tasks_ops import _impl_ops_control_loop
     return _impl_ops_control_loop()
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, name="core.tasks.check_llm_cost_spike")
 def check_llm_cost_spike():
     from core.tasks_misc import _impl_check_llm_cost_spike
     return _impl_check_llm_cost_spike()
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, name="core.tasks.run_ops_autopilot")
 def run_ops_autopilot():
     """Every 10 min: evaluate ops policies and take allowed automatic actions."""
     try:
@@ -12327,7 +12333,7 @@ def run_ops_autopilot():
         ) from e
 
 
-@shared_task(ignore_result=True)
+@shared_task(ignore_result=True, name="core.tasks.post_ops_digest")
 def post_ops_digest():
     from core.tasks_misc import _impl_post_ops_digest
     return _impl_post_ops_digest()
