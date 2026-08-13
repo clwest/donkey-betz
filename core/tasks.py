@@ -1752,79 +1752,8 @@ def generate_user_insights(user_id=None, max_insights=10):
 # Session 234: Proactive System Celery Tasks (Phase 6)
 # ============================================================
 
-@shared_task(name="core.tasks.run_proactive_system_check")
-def run_proactive_system_check(user_id=None):
-    """
-    Run a complete proactive system check.
-    Checks alerts, generates suggestions, and executes scheduled automations.
-    """
-    try:
-        from django.contrib.auth import get_user_model
-        from core.proactive_engine import ProactiveSystem
-
-        User = get_user_model()
-
-        results = {
-            'users_processed': 0,
-            'alerts_triggered': 0,
-            'suggestions_generated': 0,
-            'actions_executed': 0,
-        }
-
-        if user_id:
-            users = User.objects.filter(id=user_id)
-        else:
-            users = User.objects.filter(is_active=True)
-
-        for user in users:
-            try:
-                proactive = ProactiveSystem(user)
-                check_result = proactive.run_proactive_check(user)
-
-                results['users_processed'] += 1
-                results['alerts_triggered'] += len(check_result.get('alerts_triggered', []))
-                results['suggestions_generated'] += len(check_result.get('suggestions_generated', []))
-                results['actions_executed'] += len(check_result.get('actions_executed', []))
-
-            except Exception as e:
-                logger.error(f"🔔 [PROACTIVE] Error for user {user.id}: {e}")
-
-        logger.info(f"🔔 [PROACTIVE] System check complete: {results}")
-        return results
-
-    except Exception as e:
-        logger.exception(f"🔔 [PROACTIVE] System check failed: {e}")
-        return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task(name="core.tasks.check_all_alerts")
-def check_all_alerts():
-    """
-    Check all active alerts for all users.
-    Triggers notifications for any alerts that meet their conditions.
-    """
-    try:
-        from django.contrib.auth import get_user_model
-        from core.proactive_engine import AlertEngine
-
-        User = get_user_model()
-        engine = AlertEngine()
-
-        total_triggered = 0
-
-        for user in User.objects.filter(is_active=True):
-            try:
-                triggered = engine.check_all_alerts(user)
-                total_triggered += len(triggered)
-            except Exception as e:
-                logger.error(f"🔔 [ALERTS] Error checking alerts for user {user.id}: {e}")
-
-        logger.info(f"🔔 [ALERTS] Checked all alerts, triggered: {total_triggered}")
-        return {'status': 'success', 'alerts_triggered': total_triggered}
-
-    except Exception as e:
-        logger.exception(f"🔔 [ALERTS] Alert check failed: {e}")
-        return {'status': 'failed', 'error': str(e)}
 
 
 @shared_task(name="core.tasks.generate_smart_suggestions")
@@ -3337,10 +3266,6 @@ def assemble_chunked_upload(upload_id: str):
 # Session 452: Pipeline Learning <-> Collective Intelligence Bridge
 # =============================================================================
 
-@shared_task(name="core.tasks.sync_pipeline_insights_to_collective")
-def sync_pipeline_insights_to_collective():
-    from core.tasks_misc import _impl_sync_pipeline_insights_to_collective
-    return _impl_sync_pipeline_insights_to_collective()
 @shared_task(name="core.tasks.run_autonomous_intelligence_loop")
 def run_autonomous_intelligence_loop():
     """
@@ -3453,179 +3378,14 @@ def process_hitl_escalations():
 # =============================================================================
 
 
-@shared_task(name="core.tasks.process_event_bus_scoring_queue")
-def process_event_bus_scoring_queue():
-    """
-    Process events from the scoring worker queue.
-
-    Session 470: Market Intelligence Architecture - Phase 4
-
-    Consumes events from:
-    - mi:spider_data - New spider data collected
-    - mi:opportunity_created - New opportunities
-
-    Schedule: Every 30 seconds
-    """
-    logger.info("📡 [EventBus] Processing scoring event queue...")
-
-    try:
-        from core.services.event_handlers import create_scoring_worker
-
-        worker = create_scoring_worker(consumer_name="celery_scoring_worker")
-        result = worker.process_batch()
-
-        if result['events_processed'] > 0:
-            logger.info(
-                f"📡 [EventBus] Scoring queue: processed {result['events_processed']}, "
-                f"succeeded {result['events_succeeded']}, failed {result['events_failed']}"
-            )
-
-        return result
-
-    except Exception as e:
-        logger.error(f"📡 [EventBus] Scoring queue processing failed: {e}")
-        return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task(name="core.tasks.process_event_bus_validation_queue")
-def process_event_bus_validation_queue():
-    """
-    Process events from the validation worker queue.
-
-    Session 470: Market Intelligence Architecture - Phase 4
-
-    Consumes events from:
-    - mi:opportunity_scored - Scored opportunities
-    - mi:validation_required - Items needing human review
-
-    Schedule: Every 30 seconds
-    """
-    logger.info("📡 [EventBus] Processing validation event queue...")
-
-    try:
-        from core.services.event_handlers import create_validation_worker
-
-        worker = create_validation_worker(consumer_name="celery_validation_worker")
-        result = worker.process_batch()
-
-        if result['events_processed'] > 0:
-            logger.info(
-                f"📡 [EventBus] Validation queue: processed {result['events_processed']}, "
-                f"succeeded {result['events_succeeded']}, failed {result['events_failed']}"
-            )
-
-        return result
-
-    except Exception as e:
-        logger.error(f"📡 [EventBus] Validation queue processing failed: {e}")
-        return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task(name="core.tasks.process_event_bus_analytics_queue")
-def process_event_bus_analytics_queue():
-    """
-    Process events from the analytics worker queue.
-
-    Session 470: Market Intelligence Architecture - Phase 4
-
-    Consumes events from:
-    - mi:validation_decided - Human decisions
-    - mi:outcome_recorded - Actual outcomes
-    - mi:model_trained - Model updates
-
-    Schedule: Every minute
-    """
-    logger.info("📡 [EventBus] Processing analytics event queue...")
-
-    try:
-        from core.services.event_handlers import create_analytics_worker
-
-        worker = create_analytics_worker(consumer_name="celery_analytics_worker")
-        result = worker.process_batch()
-
-        if result['events_processed'] > 0:
-            logger.info(
-                f"📡 [EventBus] Analytics queue: processed {result['events_processed']}, "
-                f"succeeded {result['events_succeeded']}, failed {result['events_failed']}"
-            )
-
-        return result
-
-    except Exception as e:
-        logger.error(f"📡 [EventBus] Analytics queue processing failed: {e}")
-        return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task(name="core.tasks.claim_stale_events")
-def claim_stale_events():
-    """
-    Claim and reprocess stale events from all consumer groups.
-
-    Session 470: Market Intelligence Architecture - Phase 4
-
-    Finds events that have been pending for too long (stuck in processing)
-    and reclaims them for reprocessing.
-
-    Schedule: Every 5 minutes
-    """
-    logger.info("📡 [EventBus] Claiming stale events...")
-
-    try:
-        from core.services.event_handlers import (
-            create_scoring_worker,
-            create_validation_worker,
-            create_analytics_worker
-        )
-
-        total_claimed = 0
-
-        # Claim from scoring worker
-        scoring_worker = create_scoring_worker("celery_stale_claimer")
-        total_claimed += scoring_worker.claim_stale_events(min_idle_ms=60000)
-
-        # Claim from validation worker
-        validation_worker = create_validation_worker("celery_stale_claimer")
-        total_claimed += validation_worker.claim_stale_events(min_idle_ms=60000)
-
-        # Claim from analytics worker
-        analytics_worker = create_analytics_worker("celery_stale_claimer")
-        total_claimed += analytics_worker.claim_stale_events(min_idle_ms=60000)
-
-        if total_claimed > 0:
-            logger.info(f"📡 [EventBus] Claimed and reprocessed {total_claimed} stale events")
-
-        return {'claimed': total_claimed}
-
-    except Exception as e:
-        logger.error(f"📡 [EventBus] Stale event claiming failed: {e}")
-        return {'status': 'failed', 'error': str(e)}
 
 
-@shared_task(name="core.tasks.get_event_bus_stats")
-def get_event_bus_stats():
-    """
-    Get event bus statistics.
-
-    Session 470: Market Intelligence Architecture - Phase 4
-
-    Schedule: Every 15 minutes (for monitoring)
-    """
-    try:
-        from core.services.event_bus import get_event_bus
-
-        bus = get_event_bus()
-        stats = bus.get_stats()
-
-        logger.info(
-            f"📡 [EventBus] Stats: {stats['total_events']} total events, "
-            f"dead_letter={stats['dead_letter_count']}"
-        )
-
-        return stats
-
-    except Exception as e:
-        logger.error(f"📡 [EventBus] Stats collection failed: {e}")
-        return {'status': 'failed', 'error': str(e)}
 
 
 # =============================================================================
@@ -3698,10 +3458,6 @@ def _send_narrative_digest_to_discord(stats: dict):
 
 # ==================== SESSION 473: NARRATIVE DRIFT + CONTENT STUDIO INTEGRATION ====================
 
-@shared_task(name='unified_pipeline.health_check')
-def unified_pipeline_health_check():
-    from core.tasks_misc import _impl_unified_pipeline_health_check
-    return _impl_unified_pipeline_health_check()
 @shared_task(
     bind=True,
     max_retries=3,
@@ -4665,10 +4421,6 @@ def _send_halt_discord_notification(experiment, reason):
 # Session 865: Celery Health Monitoring Task
 # =============================================================================
 
-@shared_task(name='core.tasks.monitor_celery_health')
-def monitor_celery_health():
-    from core.tasks_ops import _impl_monitor_celery_health
-    return _impl_monitor_celery_health()
 
 
 
@@ -5574,87 +5326,8 @@ def coordinate_body():
 
 
 
-@shared_task(ignore_result=True, name="core.tasks.check_celery_health")
-def check_celery_health():
-    from core.tasks_misc import _impl_check_celery_health
-    return _impl_check_celery_health()
-@shared_task(name="core.tasks.execute_orchestration_async")
-def execute_orchestration_async(execution_id: str):
-    """
-    Session 764: Execute an orchestration workflow asynchronously.
-
-    This task is triggered when a workflow is started with async_mode=True.
-    It runs the full orchestration execution in the background.
-
-    Args:
-        execution_id: UUID of the OrchestrationExecution to run
-    """
-    from core.services.orchestration_engine import orchestration_engine
-    from core.models_orchestration import OrchestrationExecution
-
-    logger.info(f"🎭 [ORCHESTRATION] Starting async execution: {execution_id}")
-
-    try:
-        execution = OrchestrationExecution.objects.get(id=execution_id)
-
-        if execution.status not in ('pending', 'running'):
-            logger.warning(
-                f"🎭 [ORCHESTRATION] Execution {execution_id} not in runnable state: {execution.status}"
-            )
-            return {'success': False, 'error': f'Invalid status: {execution.status}'}
-
-        result = orchestration_engine._execute(execution)
-
-        logger.info(
-            f"🎭 [ORCHESTRATION] Execution {execution_id} completed: {result.status}"
-        )
-
-        return {
-            'success': result.status == 'completed',
-            'execution_id': str(execution_id),
-            'status': result.status,
-            'current_step': result.current_step,
-            'total_steps': result.total_steps,
-            'total_cost': float(result.total_cost),
-            'error': result.error_message if result.status == 'failed' else None,
-        }
-
-    except OrchestrationExecution.DoesNotExist:
-        logger.error(f"🎭 [ORCHESTRATION] Execution not found: {execution_id}")
-        return {'success': False, 'error': 'Execution not found'}
-
-    except Exception as e:
-        logger.error(f"🎭 [ORCHESTRATION] Async execution failed: {e}", exc_info=True)
-        return {'success': False, 'error': str(e)}
 
 
-@shared_task(name="core.tasks.check_orchestration_timeouts")
-def check_orchestration_timeouts():
-    from core.tasks_misc import _impl_check_orchestration_timeouts
-    return _impl_check_orchestration_timeouts()
-@shared_task(name="core.tasks.check_orchestration_auto_approvals")
-def check_orchestration_auto_approvals():
-    """
-    Session 764: Check for auto-approvals on expired approval gates.
-
-    Runs periodically to:
-    1. Find pending approval gates past their expiration
-    2. Auto-approve gates configured for auto-approval
-    3. Mark other gates as expired
-
-    This enables unattended workflow operation when configured.
-    """
-    from core.services.orchestration_approval import approval_service
-
-    logger.info("🔔 [ORCHESTRATION] Checking for auto-approvals...")
-
-    try:
-        approval_service.check_auto_approvals()
-        return {'success': True}
-
-    except Exception as e:
-        logger.error(f"🔔 [ORCHESTRATION] Auto-approval check failed: {e}", exc_info=True)
-        return {'success': False, 'error': str(e)}
 
 
 # ==================== SESSION 766: DREAM EXECUTION PIPELINE TASKS ====================
@@ -8321,18 +7994,6 @@ def run_triggered_conversation(
 
 
 
-@shared_task(name="core.tasks.detect_failure_task")
-def detect_failure_task(
-    error_message: str,
-    source_type: str,
-    error_code: str = None,
-    provider: str = None,
-    source_id: str = None,
-    source_name: str = None,
-    context: dict = None
-):
-    from core.tasks_misc import _impl_detect_failure_task
-    return _impl_detect_failure_task(error_message, source_type, error_code, provider, source_id, source_name, context)
 @shared_task(bind=True, max_retries=2, default_retry_delay=120, name="core.tasks.run_conceptforge_pipeline")
 def run_conceptforge_pipeline(
     self,
@@ -9799,6 +9460,43 @@ def execute_code_job(self, run_id: str):
 def rag_retrieval_canary():
     from core.tasks_misc import _impl_rag_retrieval_canary
     return _impl_rag_retrieval_canary()
+
+
+
+# Phase 3 re-exports — ops health & monitoring tasks now live in core/tasks_ops.py.
+# IMPORTANT: this block MUST live at the bottom of the file. tasks_ops.py
+# imports private helpers from core.tasks at module top, so triggering
+# `from core.tasks_ops import …` before those helpers are defined produces
+# a partially-initialized-module ImportError. Same constraint as the ops
+# cleanup, agents, content, and financial re-exports below.
+#
+# Re-exported here so 12 PeriodicTask DB rows (11 enabled + 1 disabled —
+# proactive-system-check pre-existing operator state, unchanged), 2 beat
+# schedule entries (core/celery.py), 13 settings.py task-routing entries
+# (incl. the non-standard `unified_pipeline.health_check`), 4
+# `add_critical_celery_tasks` management-cmd dispatchers, and 2 lazy
+# Python-import consumer sites (provider_health_tracker.py:98,
+# orchestration_engine.py:128) keep resolving.
+from core.tasks_ops import (  # noqa: F401
+    # Health & monitoring
+    run_proactive_system_check,
+    check_all_alerts,
+    monitor_celery_health,
+    check_celery_health,
+    detect_failure_task,
+    # Orchestration
+    execute_orchestration_async,
+    check_orchestration_timeouts,
+    check_orchestration_auto_approvals,
+    # Pipeline & event bus
+    sync_pipeline_insights_to_collective,
+    process_event_bus_scoring_queue,
+    process_event_bus_validation_queue,
+    process_event_bus_analytics_queue,
+    claim_stale_events,
+    get_event_bus_stats,
+    unified_pipeline_health_check,
+)
 
 
 
