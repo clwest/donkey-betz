@@ -1,3 +1,4 @@
+# Session 1077: Codegen timeout + fuzzy search/replace fixes applied
 """CodeJob implementation helpers extracted from core/tasks.py.
 
 Contains _inject_github_token, _gather_repo_context,
