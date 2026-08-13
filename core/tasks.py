@@ -525,15 +525,6 @@ def cleanup_junk_initiatives(stale_days: int = 7):
 
 
 
-@shared_task(ignore_result=True, name="core.tasks.auto_process_extracted_artifacts")
-def auto_process_extracted_artifacts(
-    stale_days: int = 7,
-    archive_days: int = 14,
-    batch_size: int = 2000,
-    aggressive: bool = True
-):
-    from core.tasks_agents import _impl_auto_process_extracted_artifacts
-    return _impl_auto_process_extracted_artifacts(stale_days, archive_days, batch_size, aggressive)
 @shared_task(name="core.tasks.cleanup_automated_conversation_artifacts")
 def cleanup_automated_conversation_artifacts(batch_size: int = 5000, prefix: str = None):
     from core.tasks_misc import _impl_cleanup_automated_conversation_artifacts
@@ -1484,66 +1475,6 @@ def execute_pending_opportunity_tasks(limit: int = 20):
 def generate_opportunity_report():
     from core.tasks_ops import _impl_generate_opportunity_report
     return _impl_generate_opportunity_report()
-@shared_task(name="core.tasks.train_ml_scoring_model")
-def train_ml_scoring_model(force_retrain: bool = False, min_samples: int = 100, use_optuna: bool = True):
-    from core.tasks_financial import _impl_train_ml_scoring_model
-    return _impl_train_ml_scoring_model(force_retrain, min_samples, use_optuna)
-@shared_task(name="core.tasks.evaluate_ml_model_performance")
-def evaluate_ml_model_performance():
-    from core.tasks_financial import _impl_evaluate_ml_model_performance
-    return _impl_evaluate_ml_model_performance()
-@shared_task(name="core.tasks.process_realtime_scoring_queue")
-def process_realtime_scoring_queue(max_items: int = 50, max_time_sec: int = 25):
-    from core.tasks_misc import _impl_process_realtime_scoring_queue
-    return _impl_process_realtime_scoring_queue(max_items, max_time_sec)
-@shared_task(name="core.tasks.process_batch_scoring_queue")
-def process_batch_scoring_queue(batch_size: int = 100):
-    """
-    Process items from the database batch scoring queue.
-
-    Session 470: Market Intelligence Architecture - Phase 2
-
-    This task runs hourly to process lower-priority scoring requests
-    that were queued for batch processing.
-
-    Args:
-        batch_size: Maximum items to process per run
-
-    Returns:
-        Dict with processing statistics
-    """
-    logger.info("📦 [BATCH QUEUE] Starting batch processing...")
-
-    try:
-        from core.services.scoring_dispatcher import get_scoring_dispatcher
-
-        dispatcher = get_scoring_dispatcher()
-
-        # Process batch
-        stats = dispatcher.process_batch_queue(batch_size=batch_size)
-
-        # Cleanup expired items
-        expired = dispatcher.cleanup_expired()
-
-        result = {
-            'status': 'completed',
-            **stats,
-            'expired_cleaned': expired
-        }
-
-        logger.info(
-            f"📦 [BATCH QUEUE] Complete: {stats['success']}/{stats['processed']} success, "
-            f"{expired} expired cleaned"
-        )
-
-        return result
-
-    except Exception as e:
-        logger.error(f"❌ [BATCH QUEUE] Task failed: {e}")
-        return {
-            'status': 'failed',
-            'error': str(e)
-        }
 
 
 @shared_task(name="core.tasks.score_spider_data_async")
@@ -2757,10 +2688,6 @@ def broadcast_hive_mind_status(session, status):
 # Session 251: Memory Palace Tasks
 # =============================================================================
 
-@shared_task(name="core.tasks.generate_memory_embedding")
-def generate_memory_embedding(memory_id: str):
-    from core.tasks_media import _impl_generate_memory_embedding
-    return _impl_generate_memory_embedding(memory_id)
 
 
 # =============================================================================
@@ -2979,18 +2906,6 @@ def _create_learning_notification(project, deltas):
 # ==================== SESSION 373: AUTO-RESOLVE KNOWLEDGE GAPS ====================
 
 
-@shared_task(bind=True, max_retries=3, name="core.tasks.process_document_async")
-def process_document_async(self, document_id: int, generate_embeddings: bool = True, embedding_model: str = 'openai_text_embedding_3_small'):
-    from core.tasks_misc import _impl_process_document_async
-    return _impl_process_document_async(self, document_id, generate_embeddings, embedding_model)
-@shared_task(bind=True, max_retries=3, name="core.tasks.process_url_async")
-def process_url_async(self, url: str, title: str = None, user_id: int = None, generate_embeddings: bool = True):
-    from core.tasks_media import _impl_process_url_async
-    return _impl_process_url_async(self, url, title, user_id, generate_embeddings)
-@shared_task(bind=True, max_retries=3, name="core.tasks.generate_document_embeddings")
-def generate_document_embeddings(self, document_id: str, embedding_model: str = 'openai_small'):
-    from core.tasks_misc import _impl_generate_document_embeddings
-    return _impl_generate_document_embeddings(self, document_id, embedding_model)
 @shared_task(bind=True, max_retries=1, soft_time_limit=600, time_limit=660,
              queue='long_running', ignore_result=True,
              name="core.tasks.transcribe_video_task",)
@@ -3011,14 +2926,6 @@ def ingest_video_task(self, document_id, tmp_video_path, original_filename, user
 def youtube_whisper_task(self, document_id, youtube_url, user_id, language='en'):
     from core.tasks_media import _impl_youtube_whisper_task
     return _impl_youtube_whisper_task(self, document_id, youtube_url, user_id, language)
-@shared_task(name="core.tasks.collect_training_data")
-def collect_training_data():
-    from core.tasks_ops import _impl_collect_training_data
-    return _impl_collect_training_data()
-@shared_task(name="core.tasks.collect_training_data_full")
-def collect_training_data_full():
-    from core.tasks_ops import _impl_collect_training_data_full
-    return _impl_collect_training_data_full()
 @shared_task(name="core.tasks.cleanup_spider_item_hashes")
 def cleanup_spider_item_hashes(days_to_keep: int = 90):
     """
@@ -3183,10 +3090,6 @@ def send_proactive_opportunity_alerts():
 def send_personalized_opportunity_alerts():
     from core.tasks_ops import _impl_send_personalized_opportunity_alerts
     return _impl_send_personalized_opportunity_alerts()
-@shared_task(name="core.tasks.assemble_chunked_upload")
-def assemble_chunked_upload(upload_id: str):
-    from core.tasks_media import _impl_assemble_chunked_upload
-    return _impl_assemble_chunked_upload(upload_id)
 
 
 # =============================================================================
@@ -3858,42 +3761,6 @@ def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=2
 def scan_concerns_for_human_action():
     from core.tasks_ops import _impl_scan_concerns_for_human_action
     return _impl_scan_concerns_for_human_action()
-@shared_task(name="core.tasks.batch_extract_artifacts")
-def batch_extract_artifacts(hours_back: int = 24, limit: int = 50):
-    """
-    Process conversations from last N hours that haven't been extracted.
-
-    Run via Celery Beat every hour.
-
-    Args:
-        hours_back: Look back this many hours for conversations
-        limit: Max conversations to process per batch
-
-    Returns:
-        dict with batch results
-    """
-    try:
-        from core.services.artifact_extraction import extraction_service
-
-        results = extraction_service.batch_extract(hours_back=hours_back)
-
-        if results['artifacts_total'] > 0:
-            logger.info(f"📋 [ARTIFACTS BATCH] Processed {results['processed']} conversations, "
-                       f"extracted {results['artifacts_total']} artifacts")
-        else:
-            logger.info(f"📋 [ARTIFACTS BATCH] Processed {results['processed']} conversations, no artifacts found")
-
-        return {
-            'success': True,
-            **results
-        }
-
-    except Exception as e:
-        logger.error(f"📋 [ARTIFACTS BATCH] Failed: {e}", exc_info=True)
-        return {
-            'success': False,
-            'error': str(e)
-        }
 
 
 # ============================================================================
@@ -3901,72 +3768,8 @@ def batch_extract_artifacts(hours_back: int = 24, limit: int = 50):
 # ============================================================================
 
 
-@shared_task(soft_time_limit=30, time_limit=60, ignore_result=True, name="core.tasks.execute_approved_artifacts")
-def execute_approved_artifacts(limit: int = 10):
-    """
-    Fan-out dispatcher: find approved artifacts and dispatch each as its own subtask.
-
-    Session 1068: Changed from sequential execution (caused TimeLimitExceeded every
-    run — 10 synchronous agent calls in a 660s window) to fan-out pattern.
-    Each artifact now executes in its own ``execute_single_artifact`` subtask.
-
-    Run via Celery Beat every 15 minutes.
-    """
-    try:
-        from core.services.artifact_execution import execution_service
-        results = execution_service.execute_approved_artifacts(limit=limit)
-        return {'success': True, **results}
-    except Exception as e:
-        logger.error(f"[EXECUTION BATCH] Failed to dispatch: {e}", exc_info=True)
-        return {'success': False, 'error': str(e)}
 
 
-@shared_task(soft_time_limit=300, time_limit=330, ignore_result=True, name="core.tasks.execute_single_artifact")
-def execute_single_artifact(artifact_id: str):
-    """
-    Session 1068: Execute a single approved artifact via agent routing.
-
-    Has its own 5-minute soft / 5.5-minute hard time limit so one slow agent
-    cannot block the entire batch.
-    """
-    try:
-        from core.services.artifact_execution import execution_service
-        from core.models_conversation_artifacts import ExtractedArtifact
-
-        artifact = ExtractedArtifact.objects.get(id=artifact_id)
-        execution = execution_service.execute_artifact(artifact)
-        logger.info(f"[ARTIFACT] {artifact_id} executed via {execution.agent_name}: {execution.status}")
-        return {'success': True, 'status': execution.status}
-
-    except SoftTimeLimitExceeded:
-        logger.error(f"[ARTIFACT] {artifact_id} timed out (soft_time_limit=300s)")
-        # Mark execution as failed if one exists. Session 1103c: was
-        # 'except Exception: pass' which, if the state-transition save
-        # itself failed, left the ArtifactExecution stuck in 'running'
-        # forever — another zombie-execution contributor. Log loudly
-        # now so the zombie can be cleaned up manually instead of
-        # silently piling up.
-        try:
-            from core.models_conversation_artifacts import ArtifactExecution
-            running = ArtifactExecution.objects.filter(
-                artifact_id=artifact_id, status='running'
-            ).first()
-            if running:
-                running.status = 'failed'
-                running.error_message = 'Celery soft_time_limit exceeded (300s)'
-                running.completed_at = timezone.now()
-                running.save()
-        except Exception as e:
-            logger.error(
-                "[ARTIFACT] %s timed out AND the failed-state transition "
-                "save also failed (%s: %s) — execution is stuck in "
-                "'running' state and will need manual cleanup",
-                artifact_id, type(e).__name__, e,
-            )
-        return {'success': False, 'error': 'timeout'}
-    except Exception as e:
-        logger.error(f"[ARTIFACT] {artifact_id} failed: {e}", exc_info=True)
-        return {'success': False, 'error': str(e)}
 
 
 
@@ -8716,6 +8519,43 @@ def execute_code_job(self, run_id: str):
 def rag_retrieval_canary():
     from core.tasks_misc import _impl_rag_retrieval_canary
     return _impl_rag_retrieval_canary()
+
+
+
+# Phase 3 re-exports — ops ML / docs / artifacts tasks now live in core/tasks_ops.py.
+# IMPORTANT: this block MUST live at the bottom of the file. tasks_ops.py
+# imports private helpers from core.tasks at module top, so triggering
+# `from core.tasks_ops import …` before those helpers are defined produces
+# a partially-initialized-module ImportError. Same constraint as the ops
+# audit, ops desks, ops health, ops cleanup, agents, content, and financial
+# re-exports below.
+#
+# Re-exported here so 8 PeriodicTask DB rows (all enabled), 0 beat schedule
+# entries (DB-driven), 12 settings.py task-routing entries, and 9 lazy
+# Python-import consumer sites across 6 modules (views_upload,
+# views_rag_embeddings ×3, models_unified_system ×2, embed_documents
+# mgmt cmd, services.artifact_execution, services.td_handlers_core)
+# keep resolving.
+from core.tasks_ops import (  # noqa: F401
+    # ML scoring & training
+    train_ml_scoring_model,
+    evaluate_ml_model_performance,
+    process_realtime_scoring_queue,
+    process_batch_scoring_queue,
+    collect_training_data,
+    collect_training_data_full,
+    # Document & embedding processing
+    generate_memory_embedding,
+    process_document_async,
+    process_url_async,
+    generate_document_embeddings,
+    # Upload & artifact pipeline
+    auto_process_extracted_artifacts,
+    assemble_chunked_upload,
+    batch_extract_artifacts,
+    execute_approved_artifacts,
+    execute_single_artifact,
+)
 
 
 
