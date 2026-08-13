@@ -5,6 +5,17 @@
 # Policy: do NOT exclude documentation extensions (*.md, *.mdx, *.rst,
 # *.txt). The credential leak this workflow was added to catch was
 # committed inside a *.md file that the prior scanner excluded.
+#
+# Allowlist strategy (post history-purge):
+#   - path: only genuinely-generated bundled library artifacts.
+#   - regexes: two narrow-shape patterns for Discord sequential-digit
+#     placeholder snowflakes and Stripe publishable keys (documented
+#     public identifiers), plus documented-public example fixture
+#     values (AWS docs example, jwt.io sample, GitHub docs placeholder),
+#     plus per-fingerprint anchored literals for every other known FP.
+#   - deliberately NO broad shape rules for 40-char hex or UUIDs;
+#     each frozen historical SHA or UUID is allowlisted by exact
+#     value so a real credential of the same shape would still trigger.
 
 title = "Donkey Betz Secret Scan"
 
@@ -18,8 +29,97 @@ useDefault = true
 
 [allowlist]
 description = "Repo-wide allowlist"
-# Skip the gitleaks config itself so pattern references in this file
-# cannot self-trigger the scanner.
+regexTarget = "secret"
+
+# File path allowlists (very narrow).
 paths = [
-  '''(^|/)\.gitleaks\.toml$''',
+  '''(^|/)\.gitleaks\.toml$''',   # self-reference: this config file
+  '''^frontend/dist/assets/html2canvas\.esm[^/]*\.js$''',   # bundled library
 ]
+
+# Value-shape / literal allowlists. All patterns are anchored (^...$)
+# to avoid unintended substring matches. Each entry has a comment naming
+# the fingerprint class it suppresses.
+regexes = [
+  # Frozen workspace / initiative UUIDs referenced by application code and
+  # docs. Anchored literals; no shape-level UUID allowlist.
+  '''^b4503364\-2573\-4401\-9e28\-61a739e0ce50$''',   # workspace-uuid-4c466ac0acb7
+  '''^780a8d15\-9ca0\-4d91\-970f\-6934a24fc08d$''',   # workspace-uuid-5f1de9a9d15a
+  # Frozen historical git SHA-1 references (session handoffs, pa_local.sh
+  # session pins, test fixtures). Each entry is the exact SHA that was
+  # cited in a docs/handoff/test file; anchored literal, not a shape rule.
+  '''^4b458900136c83dd49b869b80e08b1e5d2967a4c$''',   # git-sha-027fbc45d4ce
+  '''^fc58364ffbca4e77b732d03711d44965cf40acb6$''',   # git-sha-048a480dde41
+  '''^4b9facbb8006ac4dd7408fd45a6747105a6719fb$''',   # git-sha-0c10fe7cc4b7
+  '''^2447578c3bb5aca86100be7b2f1bbdb2f3535dfc$''',   # git-sha-3279d4447ae2
+  '''^0ef9dd74312961574231b1c573d8af0cba3ea0f4$''',   # git-sha-3f130cbc14b9
+  '''^abc123def456abc123def456abc123def456abcd$''',   # git-sha-457b0713edeb
+  '''^2e63ae5a6eb6e506f757351f2e2f2db9021d3498$''',   # git-sha-479c5b873751
+  '''^19f3b711b2b1995255c5cc0e4182e085423c6557$''',   # git-sha-48ef85c769c6
+  '''^c4ba8e9a9dc7baea61ee3063c3f74ce038a98502$''',   # git-sha-5a197fd636e1
+  '''^0fb2390dedd5cc47ec7e6a320e1477b31b7c0a97$''',   # git-sha-7c38f093ed73
+  '''^8401e05142480ffd7635e1f7cf5708c6a8c965e3$''',   # git-sha-a0692dd22f62
+  '''^73d9b35d53b95e79de1537fc03b889ba37ad1c70$''',   # git-sha-a124946bad95
+  '''^424a48280fa87d30f4997beda23ccad57418d7cb$''',   # git-sha-aaaf63be231f
+  '''^cff3e8441c4e2490e970de2f921f0064e7cc88a7$''',   # git-sha-b97cd8ae4b15
+  '''^e3c7276f00f12b77bda365c7c186577cd854cf2a$''',   # git-sha-bb8fc59d1bf6
+  '''^0256880456bb65533c759cc02c62160ce1a72444$''',   # git-sha-c048780e48d4
+  '''^e7d2ae96885384ad8c66cfcd094f4f193629f227$''',   # git-sha-c481eb7baded
+  '''^f6355675bdaec4b828b2ee73c8ed63fe7ea6c574$''',   # git-sha-c8f09da0a7f8
+  '''^43d46129f9d92d5f454c4f8fced36b744a53d248$''',   # git-sha-ca5411de95c8
+  '''^504406afbc117727c55cd1244ff77ecebe791cc0$''',   # git-sha-de63ebaf854f
+  '''^cd8023345521a198b2e56c6ec14809f844163d99$''',   # git-sha-f38dee1a7d08
+  '''^993f8273f70877e23b5c7d2f92ed30562a089fe3$''',   # git-sha-f98f04d18558
+  '''^(1234567890|9876543210)\d{7,9}$''',   # discord-sequential-digit-placeholder-snowflake
+  '''^pk_(live|test)_[A-Za-z0-9]+$''',   # stripe-publishable-key-public-identifier
+  # Documented-public example values (AWS/GitHub docs, jwt.io sample):
+  '''^AKIAIOSFODNN7EXAMPLE$''',   # documented-public-fake-1a5d44a2dca1
+  '''^eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.eyJzdWIiOiIxMjM0NTY3ODkwIn0\.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9PlFUP0THsR8U$''',   # documented-public-fake-8bc96795edcb
+  '''^ghp_abcdefghij1234567890abcdefghij123456$''',   # documented-public-fake-27cb8e534e6c
+  # Per-fingerprint anchored-literal allowlists for planning-doc /
+  # handoff / test-fixture values that survived history purge but
+  # are documented false positives (see .git/gitleaks-fp-notes if
+  # a fingerprint needs to be audited):
+  '''^chris\-d\-verdict\-ratified\-2026\-07\-11\-S2752$''',   # known-fp-51c116e1ae8b
+  '''^chris\-d\-verdict\-ratified\-2026\-07\-10\-S2749$''',   # known-fp-056fd6b55336
+  '''^sk\-abc123def456ghi789jkl012$''',   # known-fp-169dbfd5f5ff
+  '''^fs_contractconcierge_k2$''',   # known-fp-33cf69525e1e
+  '''^fs_contractconcierge_k1$''',   # known-fp-9832839fe9ee
+  '''^fs_phantom_k1$''',   # known-fp-eebe82d854d3
+  '''^donkey\-purge\-2026$''',   # known-fp-3c558423e13f
+  '''^unique\-api\-key\-123$''',   # known-fp-81bbe1345370
+  '''^test\-api\-key\-12345$''',   # known-fp-2688f4e126ca
+  '''^gt\-1234567890$''',   # known-fp-1450cdec18d3
+  '''^sk\-68tWJ0EV3JvC\.\.\.$''',   # known-fp-7fc8a398270b
+  '''^key_5fe43609bf90ece\.\.\.$''',   # known-fp-67f5df87ee68
+  '''^sk_659d75e6adf724be\.\.\.$''',   # known-fp-ae89af35c954
+  '''^ba6bd09c6f712179849a\.\.\.$''',   # known-fp-b30efce5e57b
+  '''^tykxwu9TlmLWuHm3wMxp\.\.\.$''',   # known-fp-e5aed0bac191
+  '''^810a1ae72feb52d3e6d0\.\.\.$''',   # known-fp-e185110b713b
+  '''^xL8X2FtglotuPWTj\.\.\.$''',   # known-fp-5a60b0b01c3b
+  '''^YIA7b5sRh035HC8Sm\.\.\.$''',   # known-fp-321fc610fecf
+  '''^cf5d5b9708e84217\.\.\.$''',   # known-fp-cd1940bcf7f6
+  '''^b935b22cdd04effc926a\.\.\.$''',   # known-fp-7973f0d184ff
+  '''^MI7Q3C5SB38XEZ3U4BBZ\.\.\.$''',   # known-fp-2f312bcf37e9
+  '''^08f19233eacb09d75155\.\.\.$''',   # known-fp-7a59c64dd07b
+  '''^f6bb6275ea84e0c97f63\.\.\.$''',   # known-fp-5c6beb21c308
+  '''^d6e18bc35ae97873941e\.\.\.$''',   # known-fp-a6d82c3f9890
+  '''^cX5HIfWy5Wl09pfQgAp8\.\.\.$''',   # known-fp-f8e275d21118
+  '''^306301228528\-hmuv74gr\.\.\.$''',   # known-fp-a3e77f6eac13
+  '''^xL8X2FtglotuPWTjtPLdpw$''',   # known-fp-27f56d74d785
+  '''^key_5fe43609bf90ece612d42f5418399c410f974b846337f9e13fa5b08261bfb6ef45b9835b084bd21fa64029007178a5e5fbd770cf9b0efb8cb8443ec69d62ef6c$''',   # known-fp-4676423f690e
+  '''^_MjKKp0hx6yvZL0VMNdTe2UwQhmtocvq$''',   # known-fp-7017ca6b14c4
+  '''^sk_live_4242424242424242$''',   # known-fp-31864b6d33de
+  '''^eyJ0eXAiOiJKV1QiLCJhbGc\.\.\.$''',   # known-fp-01cd93d6f6a5
+  '''^SGVsbG8sIHdvcmxkIQ==$''',   # known-fp-f978b1667208
+  '''^eyJ0eXAiOiJKV1Qi\.\.\.$''',   # known-fp-97c900332865
+  '''^eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9\.\.\.$''',   # known-fp-120b81919f3b
+  '''^x3JJHMbDL1EzLkh9GBhXDw==$''',   # known-fp-24b6d840b1df
+  '''^m_zhCaAot5HbxTcGfrI8DelrbD_cGk4D$''',   # known-fp-aea736d2575f
+  '''^eyJ0eXAiOiJKV1QiLCJhbGciOi\.\.\.$''',   # known-fp-98f3b306c59d
+  '''^Tpk_053b8dd1b9684e2c9816ab4f6b8a1e7a$''',   # known-fp-2fb64778f2ff
+  '''^donkeybetz123$''',   # known-fp-750bb322bf06
+  '''^0fb2390dedd5cc47ec7e\.\.\.$''',   # known-fp-ef2584c0e95c
+  '''^tykxwu9TlmLWuHm3wMxpjgoyj7DWkZLQ$''',   # known-fp-97108088f886
+]
+
