@@ -46,6 +46,7 @@ from core.tasks import (  # noqa: F401 — private helpers from tasks.py
     _is_media_task_blocked,
     _preflight_check_agent_data,
     _record_timeout_signature,
+    _run_agent_group,
     _run_agent_warmup,
     _summarize_diff,
     _summarize_params,
@@ -5590,4 +5591,773 @@ def _impl_analyze_pa_tool_patterns():
     return {'status': 'ok', 'records': total, 'created': created, 'updated': updated}
 
 
+
+
+
+# =============================================================================
+# Phase 3 — Wave B migration from core/tasks.py
+# =============================================================================
+# Tasks below were moved verbatim out of core/tasks.py. Registered Celery
+# names are unchanged (locked by Phase 1 name= kwargs), so PeriodicTask
+# DB rows, settings.py task-routing, and string-dispatched callers all
+# continue to resolve. core/tasks.py keeps a re-export shim so existing
+# `from core.tasks import X` callers (views_personal_assistant,
+# views_initiative_kickstart, views_diagnostics, project_intelligence_consumer,
+# tests/test_pa_context.py) keep working.
+#
+# `_run_agent_group` is imported from core.tasks above (added to the
+# existing helper-import block) — see TODO at its definition for the
+# planned move to a shared runtime module after later domain migrations.
+
+
+# -----------------------------------------------------------------------------
+# Personal Assistant
+# -----------------------------------------------------------------------------
+@shared_task(bind=True, soft_time_limit=5400, time_limit=5460, ignore_result=False, name="core.tasks.claude_code_engineer_task")
+def claude_code_engineer_task(self, task_description, conversation_id=None, requested_by='rigby'):
+    """Autonomous Claude Code engineering session — reads files, writes code, creates PRs."""
+    from core.services.claude_code_engineer import execute_engineering_task
+    return execute_engineering_task(task_description, conversation_id, requested_by)
+
+@shared_task(soft_time_limit=60, time_limit=90, ignore_result=True, name="core.tasks.claude_code_agent_respond")
+def claude_code_agent_respond(conversation_id, message_text, source):
+    """Autonomous Claude Code agent — responds when addressed in a conversation."""
+    from core.services.claude_code_agent import handle_message
+    return handle_message(conversation_id, message_text, source)
+
+@shared_task(bind=True, time_limit=300, soft_time_limit=280, name="core.tasks.process_pa_chat_task")
+def process_pa_chat_task(self, user_id, message, context=None, generate_audio=False, conversation_id=None, source='web', platform='web'):
+    from core.tasks_misc import _impl_process_pa_chat_task
+    return _impl_process_pa_chat_task(self, user_id, message, context, generate_audio, conversation_id, source, platform)
+
+@shared_task(bind=True, time_limit=60, soft_time_limit=45, ignore_result=True, queue='pa', name="core.tasks.rebuild_pa_context_task")
+def rebuild_pa_context_task(self, user_id, reason='fresh_miss'):
+    """Rebuild PA context in background and populate caches."""
+    import hashlib
+    from time import monotonic
+    from django.contrib.auth import get_user_model
+    from django.core.cache import cache
+    from django.db import close_old_connections
+
+    User = get_user_model()
+    user_hash = hashlib.md5(str(user_id).encode()).hexdigest()
+    lock_key = f"pa_ctx:rebuild_lock:{user_hash}"
+
+    def _get_rss_mb():
+        """Current RSS in MB (cross-platform)."""
+        try:
+            import os
+            import resource
+            rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+            return round(rss / (1024 * 1024), 1) if os.uname().sysname == 'Darwin' else round(rss / 1024, 1)
+        except Exception as _e:
+            logger.warning(
+                "tasks._get_rss_mb: swallowed (%s: %s) — returning default",
+                type(_e).__name__, _e,
+            )
+            return None
+
+    # Stampede lock — skip if another rebuild is already running
+    lock_acquired = cache.add(lock_key, '1', timeout=90)
+    if not lock_acquired:
+        logger.info(
+            "PA_CONTEXT_REBUILD status=lock_suppressed lock_acquired=false "
+            "user_id=%s reason=%s",
+            user_id, reason,
+        )
+        return {'skipped': True, 'reason': 'lock_held'}
+
+    logger.info(
+        "PA_CONTEXT_REBUILD status=lock_acquired lock_acquired=true "
+        "user_id=%s reason=%s",
+        user_id, reason,
+    )
+
+    try:
+        import json
+        close_old_connections()
+        user = User.objects.get(id=user_id)
+
+        rss_start_mb = _get_rss_mb()
+
+        t0 = monotonic()
+        from core.agent_context_middleware import AgentContextMiddleware
+        middleware = AgentContextMiddleware()
+        context = middleware.get_user_context(user)
+        build_ms = int((monotonic() - t0) * 1000)
+
+        rss_end_mb = _get_rss_mb()
+        rss_delta_mb = round(rss_end_mb - rss_start_mb, 1) if rss_start_mb is not None and rss_end_mb is not None else None
+
+        fresh_key = f"pa_ctx:fresh:{user_hash}"
+        stale_key = f"pa_ctx:stale:{user_hash}"
+        cache.set(fresh_key, context, 300)   # 5 min fresh
+        cache.set(stale_key, context, 1800)  # 30 min stale
+
+        # Verify cache writes landed
+        cache_write_ok = cache.get(fresh_key) is not None
+        payload_bytes = len(json.dumps(context, default=str))
+
+        logger.info(
+            "PA_CONTEXT_REBUILD status=ok user_id=%s build_ms=%s reason=%s "
+            "lock_acquired=true cache_write_ok=%s "
+            "rss_start_mb=%s rss_end_mb=%s rss_delta_mb=%s payload_bytes=%s",
+            user_id, build_ms, reason, cache_write_ok,
+            rss_start_mb, rss_end_mb, rss_delta_mb, payload_bytes,
+        )
+
+        # Alert: memory spike
+        if rss_delta_mb is not None and rss_delta_mb > 300:
+            logger.warning(
+                "[MEMORY] PA_CONTEXT_REBUILD rss_delta_mb=%s exceeds 300MB threshold "
+                "user_id=%s build_ms=%s",
+                rss_delta_mb, user_id, build_ms,
+            )
+
+        # Alert: slow build
+        if build_ms > 5000:
+            logger.warning(
+                "[SLOW] PA_CONTEXT_REBUILD build_ms=%s exceeds 5s threshold "
+                "user_id=%s reason=%s",
+                build_ms, user_id, reason,
+            )
+
+        # Alert: cache write failure
+        if not cache_write_ok:
+            logger.error(
+                "[CACHE] PA_CONTEXT_REBUILD cache_write_ok=false — Redis may be down "
+                "user_id=%s",
+                user_id,
+            )
+
+        return {'success': True, 'build_ms': build_ms, 'rss_delta_mb': rss_delta_mb, 'cache_write_ok': cache_write_ok}
+
+    except Exception as e:
+        logger.error(
+            "PA_CONTEXT_REBUILD status=error user_id=%s reason=%s error=%s",
+            user_id, reason, str(e),
+        )
+        return {'success': False, 'error': str(e)}
+    finally:
+        cache.delete(lock_key)
+
+@shared_task(ignore_result=True, name="core.tasks.analyze_pa_tool_patterns")
+def analyze_pa_tool_patterns():
+    from core.tasks_agents import _impl_analyze_pa_tool_patterns
+    return _impl_analyze_pa_tool_patterns()
+
+
+
+# -----------------------------------------------------------------------------
+# Agent orchestration
+# -----------------------------------------------------------------------------
+@shared_task(name="core.tasks.run_autonomy_cycle")
+def run_autonomy_cycle(user_id: int = None):
+    from core.tasks_misc import _impl_run_autonomy_cycle
+    return _impl_run_autonomy_cycle(user_id)
+
+@shared_task(bind=True, max_retries=0, default_retry_delay=60, soft_time_limit=3600, time_limit=3900, name="core.tasks.execute_agent_task")
+def execute_agent_task(
+    self,
+    agent_name: str,
+    task: str,
+    context: Dict[str, Any] = None
+) -> Dict[str, Any]:
+    from core.tasks_agents import _impl_execute_agent_task
+    return _impl_execute_agent_task(self, agent_name, task, context)
+
+@shared_task(bind=True, max_retries=0, default_retry_delay=60, soft_time_limit=3600, time_limit=3900, name="core.tasks.execute_initiative_stage_task")
+def execute_initiative_stage_task(
+    self,
+    initiative_id: str,
+    stage_num: int,
+    agent_name: str,
+    task: str,
+    context: Dict[str, Any] = None
+) -> Dict[str, Any]:
+    from core.tasks_initiatives import _impl_execute_initiative_stage_task
+    return _impl_execute_initiative_stage_task(self, initiative_id, stage_num, agent_name, task, context)
+
+@shared_task(name="core.tasks.agent_think_and_synthesize")
+def agent_think_and_synthesize():
+    from core.tasks_agents import _impl_agent_think_and_synthesize
+    return _impl_agent_think_and_synthesize()
+
+@shared_task(bind=True, name="core.tasks.generate_agent_dreams")
+def generate_agent_dreams(self, max_dreamers: int = 5, dreams_per_agent: int = 2):
+    from core.tasks_initiatives import _impl_generate_agent_dreams
+    return _impl_generate_agent_dreams(self, max_dreamers, dreams_per_agent)
+
+@shared_task(name="core.tasks.run_market_monitoring_agents")
+def run_market_monitoring_agents():
+    """
+    Session 737: Run market monitoring agents on schedule.
+    Session 944: Updated to use universal_agent_workspace_output for SKIN layer integration.
+
+    Exercises these dormant agents:
+    - MarketMovementMonitorAgent
+    - MarketAnomalyDetectorAgent
+    - SignalScannerAgent
+    - ArbitrageDetector
+    - SportsOddsAnalyst
+    """
+    logger.info("📊 [MARKET MONITOR] Starting market monitoring agents...")
+
+    results = []
+
+    agents_to_run = [
+        ('MarketMovementMonitorAgent', 'Scan for significant market movements in the last 24 hours'),
+        ('MarketAnomalyDetectorAgent', 'Detect any market anomalies or unusual patterns'),
+        ('SignalScannerAgent', 'Scan for trading signals and market indicators'),
+        ('ArbitrageDetector', 'Check for arbitrage opportunities across markets'),
+        ('SportsOddsAnalyst', 'Analyze current sports betting odds for value'),
+    ]
+
+    for agent_name, task in agents_to_run:
+        try:
+            # Session 944: Use universal_agent_workspace_output to create WorkspaceOperations
+            result = universal_agent_workspace_output(
+                agent_name=agent_name,
+                topic=task,
+                trigger_source='schedule',
+                force_production=True
+            )
+            success = result.get('success', False) if isinstance(result, dict) else False
+            results.append({
+                'agent': agent_name,
+                'success': success,
+                'file': result.get('file') if isinstance(result, dict) else None,
+            })
+            logger.info(f"📊 [MARKET MONITOR] {agent_name}: {'✅' if success else '❌'}")
+        except Exception as e:
+            logger.warning(f"📊 [MARKET MONITOR] {agent_name} failed: {e}")
+            results.append({'agent': agent_name, 'success': False, 'error': str(e)})
+
+    logger.info(f"📊 [MARKET MONITOR] Complete: {len([r for r in results if r.get('success')])} / {len(results)} succeeded")
+    return results
+
+@shared_task(name="core.tasks.run_business_strategy_agents")
+def run_business_strategy_agents():
+    from core.tasks_misc import _impl_run_business_strategy_agents
+    return _impl_run_business_strategy_agents()
+
+@shared_task(name="core.tasks.exercise_all_dormant_agents")
+def exercise_all_dormant_agents():
+    from core.tasks_misc import _impl_exercise_all_dormant_agents
+    return _impl_exercise_all_dormant_agents()
+
+@shared_task(name='core.tasks.agent_workspace_status_report')
+def agent_workspace_status_report():
+    from core.tasks_agents import _impl_agent_workspace_status_report
+    return _impl_agent_workspace_status_report()
+
+@shared_task(name='core.tasks.agent_research_to_workspace')
+def agent_research_to_workspace(topic: str = None):
+    from core.tasks_agents import _impl_agent_research_to_workspace
+    return _impl_agent_research_to_workspace(topic)
+
+@shared_task(name='core.tasks.agent_content_to_workspace')
+def agent_content_to_workspace(content_type: str = 'blog', topic: str = None):
+    from core.tasks_agents import _impl_agent_content_to_workspace
+    return _impl_agent_content_to_workspace(content_type, topic)
+
+@shared_task(name='core.tasks.universal_agent_workspace_output', soft_time_limit=2700, time_limit=3000)
+def universal_agent_workspace_output(
+    agent_name: str,
+    topic: str = None,
+    initiative_id: str = None,
+    trigger_source: str = None,
+    force_production: bool = False
+):
+    from core.tasks_agents import _impl_universal_agent_workspace_output
+    return _impl_universal_agent_workspace_output(agent_name, topic, initiative_id, trigger_source, force_production)
+
+@shared_task(name='core.tasks.agent_category_rotation')
+def agent_category_rotation(category: str):
+    try:
+        from core.tasks_misc import _impl_agent_category_rotation
+        return _impl_agent_category_rotation(category)
+    except Exception as e:
+        logger.exception(f"[agent_category_rotation] Failed for category={category}: {e}")
+        raise
+
+@shared_task(name='core.tasks.full_agent_rotation')
+def full_agent_rotation():
+    """
+    Session 777: Execute ALL agents in the registry and write outputs to workspace.
+
+    This is the master task that ensures every agent produces workspace output.
+    Should be run periodically (e.g., weekly) to ensure all agents are active.
+
+    Returns:
+        Summary of all agent executions by category
+    """
+    logger.info("🌟 [SKIN LAYER] Starting FULL agent rotation - all 74 agents")
+
+    category_results = {}
+
+    for category in AGENT_CATEGORIES:
+        try:
+            result = agent_category_rotation(category)
+            category_results[category] = {
+                'success': result.get('success', False),
+                'total': result.get('total_agents', 0),
+                'successful': result.get('successful', 0),
+                'failed': result.get('failed', 0)
+            }
+        except Exception as e:
+            category_results[category] = {
+                'success': False,
+                'error': str(e)
+            }
+
+    total_agents = sum(r.get('total', 0) for r in category_results.values())
+    total_successful = sum(r.get('successful', 0) for r in category_results.values())
+
+    logger.info(
+        f"🌟 [SKIN LAYER] Full rotation complete: "
+        f"{total_successful}/{total_agents} agents succeeded"
+    )
+
+    return {
+        'success': total_successful > 0,
+        'total_agents': total_agents,
+        'successful': total_successful,
+        'failed': total_agents - total_successful,
+        'categories': category_results
+    }
+
+@shared_task(name="core.tasks.run_strategy_marketing_agents")
+def run_strategy_marketing_agents():
+    """
+    Session 787: Run strategy and marketing agents every 4 hours.
+
+    Agents: ContentStrategyAgent, BrandIdentityAgent, SEOOptimizerAgent,
+            SocialMediaAgent, BrandStrategyAgent
+    """
+    agents = [
+        'ContentStrategyAgent', 'BrandIdentityAgent', 'SEOOptimizerAgent',
+        'SocialMediaAgent', 'BrandStrategyAgent'
+    ]
+
+    def task_gen(agent):
+        tasks = {
+            'ContentStrategyAgent': 'Analyze spider data and recommend content strategies for the next 24 hours',
+            'BrandIdentityAgent': 'Review brand consistency across recent content and suggest improvements',
+            'SEOOptimizerAgent': 'Analyze trending keywords and provide SEO recommendations',
+            'SocialMediaAgent': 'Identify social media opportunities from recent spider data',
+            'BrandStrategyAgent': 'Evaluate brand positioning based on competitor data',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('STRATEGY & MARKETING', agents, task_gen, '📈')
+
+@shared_task(name="core.tasks.run_research_analysis_agents")
+def run_research_analysis_agents():
+    """
+    Session 787: Run research and analysis agents every 2 hours.
+
+    Agents: ResearchAgent, CustomerResearchAgent
+    """
+    agents = ['ResearchAgent', 'CustomerResearchAgent']
+
+    def task_gen(agent):
+        tasks = {
+            'ResearchAgent': 'Research the most significant trends from the last 6 hours of spider data',
+            'CustomerResearchAgent': 'Analyze customer behavior patterns from recent data',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('RESEARCH & ANALYSIS', agents, task_gen, '🔬')
+
+@shared_task(name="core.tasks.run_development_tech_agents")
+def run_development_tech_agents():
+    """
+    Session 787: Run development and tech agents every 4 hours.
+    Session 1027: Removed CodeGeneratorAgent — runs in Railway sandbox with no
+    codebase access, can't write actual code. Was burning ~$8.76/day producing
+    analysis specs that go nowhere. Same issue as remediation fix (Session 1026).
+
+    Agents: CodeReviewAgent, FullStackDeveloperAgent,
+            DevOpsAgent, TechnicalDocumentAgent
+    """
+    agents = [
+        # Session 1027: CodeGeneratorAgent removed — sandbox can't write code
+        'CodeReviewAgent', 'FullStackDeveloperAgent',
+        'DevOpsAgent', 'TechnicalDocumentAgent'
+    ]
+
+    def task_gen(agent):
+        tasks = {
+            'CodeReviewAgent': 'Analyze recent code patterns and identify potential improvements',
+            'FullStackDeveloperAgent': 'Identify development opportunities from spider tech data',
+            'DevOpsAgent': 'Check system health and suggest infrastructure improvements',
+            'TechnicalDocumentAgent': 'Review documentation gaps and suggest updates',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('DEVELOPMENT & TECH', agents, task_gen, '💻')
+
+@shared_task(name="core.tasks.run_executive_leadership_agents")
+def run_executive_leadership_agents():
+    """
+    Session 787: Run executive and leadership agents every 6 hours.
+
+    Agents: CTOAgent, COOAgent, CreativeDirectorAgent
+    (Session 1099: Removed MeetingCoordinatorAgent — its execute() spawns sub-agent
+    perspective threads via router.route() with a 180s ThreadPoolExecutor timeout.
+    When sub-agents exceed 180s, the coordinator abandons them but Python threads
+    can't be killed, so the sub-agent LLM work keeps running for 60+ min,
+    accumulating hung `in_progress` AgentExecution rows that only die when the
+    60-min cleanup task catches them. Produces 2-3 stuck CTO/COO/CreativeDirector
+    executions per rotation × 4 rotations/day = the source of the current
+    CTO 40% / COO 50% circuit-breaker trips. Drop from rotation; CTO/COO still
+    reachable via PA/conversation_action_dispatch where they complete in 26-121s.
+    Deeper fix — threading.Event cancellation in MeetingCoordinator._get_agent_perspective
+    — is filed for future work.)
+    """
+    agents = ['CTOAgent', 'COOAgent', 'CreativeDirectorAgent']
+
+    def task_gen(agent):
+        tasks = {
+            'CTOAgent': 'Review technology strategy and provide executive recommendations',
+            'COOAgent': 'Analyze operational efficiency and suggest improvements',
+            'CreativeDirectorAgent': 'Review creative output quality and provide direction',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('EXECUTIVE & LEADERSHIP', agents, task_gen, '👔')
+
+@shared_task(name="core.tasks.run_podcast_debate_agents")
+def run_podcast_debate_agents():
+    """
+    Session 787: Run podcast and debate agents every 8 hours.
+
+    Agents: PodcastCoordinatorAgent, DebateAdvocateAgent, DebateSkepticAgent, ModeratorAgent
+    """
+    agents = ['PodcastCoordinatorAgent', 'DebateAdvocateAgent', 'DebateSkepticAgent', 'ModeratorAgent']
+
+    def task_gen(agent):
+        tasks = {
+            'PodcastCoordinatorAgent': 'Identify compelling podcast topics from recent trends',
+            'DebateAdvocateAgent': 'Prepare arguments for a trending controversial topic',
+            'DebateSkepticAgent': 'Prepare counter-arguments for a trending topic',
+            'ModeratorAgent': 'Analyze recent debates and summarize key discussion points',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('PODCAST & DEBATE', agents, task_gen, '🎙️')
+
+@shared_task(name="core.tasks.run_campaign_series_agents")
+def run_campaign_series_agents():
+    """
+    Session 787: Run campaign and series agents every 6 hours.
+
+    Agents: CampaignOrchestratorAgent, AISeriesWorkflowAgent
+    """
+    agents = ['CampaignOrchestratorAgent', 'AISeriesWorkflowAgent']
+
+    def task_gen(agent):
+        tasks = {
+            'CampaignOrchestratorAgent': 'Review active campaigns and suggest optimizations',
+            'AISeriesWorkflowAgent': 'Check AI series workflows and advance pending items',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('CAMPAIGN & SERIES', agents, task_gen, '🚀')
+
+@shared_task(name="core.tasks.run_system_orchestration_agents")
+def run_system_orchestration_agents():
+    """
+    Session 787: Run system and orchestration agents every 2 hours.
+    Session 1027: Rewrote WorkflowAgent and OpportunityPipelineAgent tasks.
+    Old WorkflowAgent task "Check pending workflows and advance ready items"
+    spawned unbounded sub-tasks to ResearchAgent (~30 "audit pending workflows"
+    runs/day). Old OpportunityPipelineAgent task triggered "no revenue" assessment
+    51x/day. New tasks are bounded — report only, do NOT delegate to sub-agents.
+
+    Agents: SystemIntelligenceAgent, ThinkingAgent, WorkflowAgent,
+            WorkflowOrchestrationAgent, OpportunityPipelineAgent
+    """
+    agents = [
+        'SystemIntelligenceAgent', 'ThinkingAgent', 'WorkflowAgent',
+        'WorkflowOrchestrationAgent', 'OpportunityPipelineAgent'
+    ]
+
+    def task_gen(agent):
+        tasks = {
+            'SystemIntelligenceAgent': 'Generate a system health and intelligence report',
+            'ThinkingAgent': 'Reflect on recent system activities and generate insights',
+            # Session 1027: Bounded task — report status only, do NOT spawn sub-tasks
+            # or delegate to ResearchAgent/OpportunityScoringAgent
+            'WorkflowAgent': 'Report a brief summary of active workflow statuses from database records. Do NOT delegate to other agents or spawn sub-tasks. Just summarize what you can see directly.',
+            'WorkflowOrchestrationAgent': 'Orchestrate cross-agent workflow coordination',
+            # Session 1027: Changed from "Review opportunity pipeline and prioritize actions"
+            # which triggered 51x "no revenue" loop. New task is bounded.
+            'OpportunityPipelineAgent': 'Summarize the top 3 recent signal clusters by strength score. Do NOT analyze revenue status or delegate to other agents.',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('SYSTEM & ORCHESTRATION', agents, task_gen, '⚙️')
+
+@shared_task(name="core.tasks.run_quality_audit_agents")
+def run_quality_audit_agents():
+    """
+    Session 787: Run quality and audit agents every 4 hours.
+
+    Agents: ContentAuditAgent, ContentDiversityOrchestrator
+    """
+    agents = ['ContentAuditAgent', 'ContentDiversityOrchestrator']
+
+    def task_gen(agent):
+        tasks = {
+            'ContentAuditAgent': 'Audit recent content for quality and compliance',
+            'ContentDiversityOrchestrator': 'Check content diversity and identify gaps',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('QUALITY & AUDIT', agents, task_gen, '✅')
+
+@shared_task(name="core.tasks.run_specialty_agents")
+def run_specialty_agents():
+    """
+    Session 787: Run specialty agents every 8 hours.
+
+    Agents: LegalDocDrafterAgent, CharacterTrainingAgent, TrainedCreationAgent, MemoryIsolationAgent
+    """
+    agents = ['LegalDocDrafterAgent', 'CharacterTrainingAgent', 'TrainedCreationAgent', 'MemoryIsolationAgent']
+
+    def task_gen(agent):
+        tasks = {
+            'LegalDocDrafterAgent': 'Review legal updates and prepare relevant document templates',
+            'CharacterTrainingAgent': 'Analyze character training data and suggest improvements',
+            'TrainedCreationAgent': 'Generate content using trained character models',
+            'MemoryIsolationAgent': 'Perform memory isolation check and cleanup stale data',
+        }
+        return tasks.get(agent, f'Perform your primary function and report insights')
+
+    return _run_agent_group('SPECIALTY', agents, task_gen, '🔧')
+
+@shared_task(name="core.tasks.run_agent_health_rotation")
+def run_agent_health_rotation():
+    from core.tasks_misc import _impl_run_agent_health_rotation
+    return _impl_run_agent_health_rotation()
+
+@shared_task(name="core.tasks.run_agent_remediation_batch")
+def run_agent_remediation_batch(agent_name: str = 'CodeGeneratorAgent', limit: int = 20, write_files: bool = True):
+    """
+    Session 829: Run a batch of remediation tasks for a specific agent.
+
+    Session 1031: DISABLED — execution burns $9/day running agents on garbage
+    audit findings. All 4 remediation execution paths now hard-blocked:
+    1. execute_remediation_tasks (blocked)
+    2. run_autonomous_remediation_cycle (blocked)
+    3. assign_and_execute_remediation (blocked)
+    4. run_agent_remediation_batch (this function — blocked)
+
+    Use 'python manage.py auto_remediate --execute' for manual runs.
+    """
+    logger.warning(
+        f"🚫 [REMEDIATION-BATCH] BLOCKED — execution disabled since Session 1026. "
+        f"Agent: {agent_name}, limit: {limit}"
+    )
+    return {'blocked': True, 'reason': 'Execution disabled since Session 1026', 'agent': agent_name}
+
+
+
+# -----------------------------------------------------------------------------
+# Lifecycle / system
+# -----------------------------------------------------------------------------
+@shared_task(bind=True, name="core.tasks.cleanup_stale_agent_executions")
+def cleanup_stale_agent_executions(self, minutes_threshold: int = 60):
+    from core.tasks_agents import _impl_cleanup_stale_agent_executions
+    return _impl_cleanup_stale_agent_executions(self, minutes_threshold)
+
+@shared_task(name="core.tasks.embed_agent_activity")
+def embed_agent_activity(hours: int = 2):
+    from core.tasks_agents import _impl_embed_agent_activity
+    return _impl_embed_agent_activity(hours)
+
+@shared_task(name='core.tasks.update_agent_mood')
+def update_agent_mood(agent_id: str, mood: str, intensity: float = 0.7,
+                      trigger_type: str = 'task_success', trigger_source: str = '',
+                      duration_minutes: int = 60):
+    from core.tasks_misc import _impl_update_agent_mood
+    return _impl_update_agent_mood(agent_id, mood, intensity, trigger_type, trigger_source, duration_minutes)
+
+@shared_task(name='core.tasks.check_mood_expirations')
+def check_mood_expirations():
+    from core.tasks_body_systems import _impl_check_mood_expirations
+    return _impl_check_mood_expirations()
+
+@shared_task(name='core.tasks.apply_mood_trigger_rules')
+def apply_mood_trigger_rules(agent_id: str = None):
+    from core.tasks_misc import _impl_apply_mood_trigger_rules
+    return _impl_apply_mood_trigger_rules(agent_id)
+
+@shared_task(name='core.tasks.evolve_agent_relationships')
+def evolve_agent_relationships():
+    """
+    Session 253: Periodically evolve agent relationships based on activity.
+
+    Called by Celery Beat every 30 minutes to:
+    - Strengthen relationships that have recent positive interactions
+    - Weaken relationships with no recent activity
+    - Potentially evolve relationship types based on cumulative interactions
+    """
+    try:
+        from core.models_unified_system import AgentRelationship
+
+        relationships = AgentRelationship.objects.all().iterator()
+        evolved_count = 0
+
+        for rel in relationships:
+            # Check for stale relationships (no interaction in 7 days)
+            if rel.last_interaction_at:
+                days_since_interaction = (timezone.now() - rel.last_interaction_at).days
+
+                if days_since_interaction > 7:
+                    # Slightly decay strength for inactive relationships
+                    old_strength = rel.strength
+                    rel.strength = max(0.1, rel.strength - 0.02)
+
+                    if old_strength != rel.strength:
+                        rel.save()
+                        evolved_count += 1
+
+            # Natural trust recovery for rivalries with positive interactions
+            if rel.relationship_type == 'rivalry' and rel.respect_level > 0.7:
+                rel.trust_level = min(1.0, rel.trust_level + 0.01)
+                rel.save()
+                evolved_count += 1
+
+        logger.info(f"⚔️ [RELATIONSHIPS] Evolved {evolved_count} relationships")
+
+        return {
+            'status': 'success',
+            'evolved_count': evolved_count
+        }
+
+    except Exception as e:
+        logger.exception(f"⚔️ [RELATIONSHIPS] Failed to evolve: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+@shared_task(name='core.tasks.update_alliance_strengths')
+def update_alliance_strengths():
+    """
+    Session 253: Update combined strength for all active alliances.
+    Session 871: Alliance model removed (0 records, never used).
+    Task kept as stub to avoid Celery Beat errors.
+    """
+    # Session 871: Alliance model removed
+    return {
+        'status': 'skipped',
+        'reason': 'Alliance model removed in Session 871'
+    }
+
+@shared_task(name='core.tasks.broadcast_relationship_status')
+def broadcast_relationship_status():
+    from core.tasks_misc import _impl_broadcast_relationship_status
+    return _impl_broadcast_relationship_status()
+
+@shared_task(name='core.tasks.process_agent_activity_xp')
+def process_agent_activity_xp():
+    from core.tasks_agents import _impl_process_agent_activity_xp
+    return _impl_process_agent_activity_xp()
+
+@shared_task(name='core.tasks.check_level_milestones')
+def check_level_milestones():
+    """
+    Session 254: Check for and record any missed level milestones.
+
+    Called by Celery Beat hourly to ensure milestones are recorded.
+    """
+    try:
+        from core.models_unified_system import AgentEvolution, LevelMilestone
+
+        evolutions = AgentEvolution.objects.all().iterator()
+        milestones_created = 0
+
+        for evo in evolutions:
+            # Check if milestone exists for current level
+            if not LevelMilestone.objects.filter(evolution=evo, level=evo.current_level).exists():
+                LevelMilestone.objects.create(
+                    evolution=evo,
+                    level=evo.current_level,
+                    title=evo.get_title(),  # Session 799: Use method not attribute
+                    xp_at_milestone=evo.total_xp,
+                    bonus_awarded='milestone_check'
+                )
+                milestones_created += 1
+
+        logger.info(f"📈 [EVOLUTION] Created {milestones_created} missing milestones")
+
+        return {
+            'status': 'success',
+            'milestones_created': milestones_created
+        }
+
+    except Exception as e:
+        logger.exception(f"📈 [EVOLUTION] Failed to check milestones: {e}")
+        return {'status': 'failed', 'error': str(e)}
+
+@shared_task(name='core.tasks.broadcast_evolution_status', ignore_result=True)
+def broadcast_evolution_status():
+    from core.tasks_misc import _impl_broadcast_evolution_status
+    return _impl_broadcast_evolution_status()
+
+@shared_task(name='learning_loop.calculate_agent_accuracy')
+def calculate_agent_accuracy():
+    from core.tasks_agents import _impl_calculate_agent_accuracy
+    return _impl_calculate_agent_accuracy()
+
+@shared_task(name='core.tasks.aggregate_tool_call_stats')
+def aggregate_tool_call_stats(days_back: int = 1):
+    from core.tasks_ops import _impl_aggregate_tool_call_stats
+    return _impl_aggregate_tool_call_stats(days_back)
+
+@shared_task(name='core.tasks.agent_daily_summary')
+def agent_daily_summary():
+    from core.tasks_agents import _impl_agent_daily_summary
+    return _impl_agent_daily_summary()
+
+
+
+# -----------------------------------------------------------------------------
+# Media / TTS
+# -----------------------------------------------------------------------------
+@shared_task(bind=True, time_limit=120, soft_time_limit=90, ignore_result=True, name="core.tasks.process_pa_tts_task")
+def process_pa_tts_task(self, user_id, text, conversation_id=None, trace_id=None):
+    """Generate TTS audio in background and update the conversation record."""
+    import asyncio
+    from django.contrib.auth import get_user_model
+
+    logger.info(f"[PA_TTS] Starting background TTS for user {user_id}, trace {trace_id}")
+    try:
+        User = get_user_model()
+        user = User.objects.get(id=user_id)
+
+        from core.services.unified_pa_entrypoint import UnifiedPAEntrypoint
+        pa = UnifiedPAEntrypoint(user, conversation_id=conversation_id)
+
+        loop = asyncio.new_event_loop()
+        try:
+            audio_url = loop.run_until_complete(
+                asyncio.wait_for(pa._generate_audio(text), timeout=60)
+            )
+        finally:
+            loop.close()
+
+        if audio_url and conversation_id:
+            from core.models import ChatConversation
+            ChatConversation.objects.filter(
+                conversation_id=conversation_id,
+                user=user,
+            ).order_by('-created_at').update(
+                assistant_audio_url=audio_url,
+            )
+            logger.info(f"[PA_TTS] Audio saved: {audio_url[:80]}...")
+
+    except Exception as e:
+        logger.warning(f"[PA_TTS] Background TTS failed: {e}")
 
