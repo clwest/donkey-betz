@@ -6241,3 +6241,246 @@ def process_human_attention_lifecycle():
             'error': str(e)
         }
 
+
+
+
+# =============================================================================
+# Phase 3 — Wave B migration from core/tasks.py (Sub-PR 6 of 9: ops dreams)
+# =============================================================================
+# Tasks below were moved verbatim out of core/tasks.py. Registered Celery
+# names are unchanged (locked by Phase 1 name= kwargs), so 10 PeriodicTask
+# DB rows (1 enabled — `maintain-dream-backlog` — + 9 DISABLED — Dreams
+# subsystem in operator standby), 12 settings.py task-routing entries (all
+# unique), 1 in-code beat schedule ref in core/celery.py:284-285
+# (`dream-daily-surfacing` → core.tasks.surface_top_dreams), 4 lazy
+# Python-import consumer sites across 4 modules (signals.dream_signals,
+# views_autonomous_reasoning, views_agent_learning, views_hive_mind),
+# and 6 management-command string refs in add_critical_celery_tasks.py
+# all continue to resolve.
+#
+# 4 cross-module .delay() dispatch sites are preserved by the shim:
+#   - signals/dream_signals.py:86       execute_single_dream.delay(...)
+#   - views_autonomous_reasoning.py:296 run_autonomous_thinking_cycle.delay(...)
+#   - views_agent_learning.py:1504      explore_dream_topic.delay(...)
+#   - views_hive_mind.py:72             run_hive_mind_session.delay(...)
+# All use lazy `from core.tasks import …` + `.delay(...)`. Phase 1 locked
+# the registered Celery names; the shim preserves the import path.
+#
+# 10 of the 13 tasks are thin (3-line) delegators to existing _impl_*
+# helpers in non-tasks_ops siblings: 7 in tasks_initiatives, 2 in
+# tasks_conversations, 1 in tasks_content. Function-local imports —
+# zero module-load-time coupling. The 3 fat tasks (process_hivemind_sessions
+# 43L, execute_approved_dreams_via_orchestration 46L, execute_single_dream
+# 43L) are completely self-contained — no module-local helpers, no dispatch.
+
+
+
+# -----------------------------------------------------------------------------
+# Dreams lifecycle
+# -----------------------------------------------------------------------------
+@shared_task(bind=True, name="core.tasks.broadcast_dream_journal")
+def broadcast_dream_journal(self):
+    from core.tasks_initiatives import _impl_broadcast_dream_journal
+    return _impl_broadcast_dream_journal(self)
+
+@shared_task(bind=True, name="core.tasks.score_and_promote_dreams")
+def score_and_promote_dreams(self, max_dreams: int = 50, promote_threshold: float = 0.85):
+    from core.tasks_initiatives import _impl_score_and_promote_dreams
+    return _impl_score_and_promote_dreams(self, max_dreams, promote_threshold)
+
+@shared_task(bind=True, name="core.tasks.process_approved_dreams")
+def process_approved_dreams(self, max_dreams: int = 10):
+    from core.tasks_initiatives import _impl_process_approved_dreams
+    return _impl_process_approved_dreams(self, max_dreams)
+
+@shared_task(bind=True, soft_time_limit=1800, time_limit=1860, name="core.tasks.execute_dream_implementations")
+def execute_dream_implementations(self, max_implementations: int = 5):
+    from core.tasks_initiatives import _impl_execute_dream_implementations
+    return _impl_execute_dream_implementations(self, max_implementations)
+
+@shared_task(name='core.tasks.maintain_dream_backlog')
+def maintain_dream_backlog():
+    from core.tasks_initiatives import _impl_maintain_dream_backlog
+    return _impl_maintain_dream_backlog()
+
+@shared_task(name="core.tasks.auto_triage_dreams")
+def auto_triage_dreams(
+    promote_threshold: float = 0.85,
+    archive_age_days: int = 7,
+    archive_score_threshold: float = 0.4,
+    max_promote: int = 20,
+    max_archive: int = 50
+):
+    from core.tasks_initiatives import _impl_auto_triage_dreams
+    return _impl_auto_triage_dreams(promote_threshold, archive_age_days, archive_score_threshold, max_promote, max_archive)
+
+@shared_task(soft_time_limit=1800, time_limit=1860, name="core.tasks.execute_approved_dreams_via_orchestration")
+def execute_approved_dreams_via_orchestration(limit: int = 10):
+    """
+    Session 766: Execute approved dreams through the Orchestration Layer.
+
+    This task finds approved dreams that haven't been executed yet and
+    triggers the DreamExecutionPipeline to:
+    1. Create a PartnershipProject from each dream
+    2. Generate a CustomWorkflow for execution
+    3. Trigger orchestration execution
+
+    This is the NEW pipeline that actually executes dreams through the
+    Orchestration Layer (Session 764). The old process_approved_dreams
+    task creates DreamImplementation records but doesn't execute.
+
+    Args:
+        limit: Maximum number of dreams to process per run
+    """
+    from core.services.dream_execution_pipeline import dream_execution_pipeline
+
+    logger.info(f"💭 [DREAM ORCHESTRATION] Processing up to {limit} approved dreams...")
+
+    try:
+        results = dream_execution_pipeline.process_approved_dreams(limit=limit)
+
+        success_count = sum(1 for r in results if r.get('success'))
+        failed_count = len(results) - success_count
+
+        logger.info(
+            f"💭 [DREAM ORCHESTRATION] Processed {len(results)} dreams: "
+            f"{success_count} success, {failed_count} failed"
+        )
+
+        return {
+            'success': True,
+            'total_processed': len(results),
+            'success_count': success_count,
+            'failed_count': failed_count,
+            'results': results,
+        }
+
+    except SoftTimeLimitExceeded:
+        logger.error("[DREAM ORCHESTRATION] execute_approved_dreams_via_orchestration timed out (soft_time_limit=1800s)")
+        return {'success': False, 'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
+    except Exception as e:
+        logger.error(f"💭 [DREAM ORCHESTRATION] Failed to process dreams: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+@shared_task(name="core.tasks.execute_single_dream")
+def execute_single_dream(dream_id: str):
+    """
+    Session 766: Execute a single approved dream.
+
+    This task is triggered when a dream is approved to immediately
+    start the execution pipeline.
+
+    Args:
+        dream_id: UUID of the AgentDream to execute
+    """
+    from core.services.dream_execution_pipeline import dream_execution_pipeline
+    from core.models_unified_system import AgentDream
+
+    logger.info(f"💭 [DREAM PIPELINE] Executing dream: {dream_id}")
+
+    try:
+        dream = AgentDream.objects.get(id=dream_id)
+
+        if dream.decision_outcome != 'approved':
+            logger.warning(
+                f"💭 [DREAM PIPELINE] Dream {dream_id} is not approved: {dream.decision_outcome}"
+            )
+            return {
+                'success': False,
+                'error': f"Dream not approved: {dream.decision_outcome}",
+            }
+
+        result = dream_execution_pipeline.execute_dream(dream, async_mode=True)
+
+        if result['success']:
+            logger.info(f"💭 [DREAM PIPELINE] Dream executed: {dream.title}")
+        else:
+            logger.warning(f"💭 [DREAM PIPELINE] Dream failed: {result.get('error')}")
+
+        return result
+
+    except AgentDream.DoesNotExist:
+        logger.error(f"💭 [DREAM PIPELINE] Dream not found: {dream_id}")
+        return {'success': False, 'error': 'Dream not found'}
+
+    except Exception as e:
+        logger.error(f"💭 [DREAM PIPELINE] Failed to execute dream: {e}", exc_info=True)
+        return {'success': False, 'error': str(e)}
+
+@shared_task(name="core.tasks.surface_top_dreams")
+def surface_top_dreams(max_items=5, min_composite=0.85):
+    from core.tasks_initiatives import _impl_surface_top_dreams
+    return _impl_surface_top_dreams(max_items, min_composite)
+
+
+
+
+# -----------------------------------------------------------------------------
+# Hivemind
+# -----------------------------------------------------------------------------
+@shared_task(bind=True, name="core.tasks.explore_dream_topic")
+def explore_dream_topic(self, exploration_id: str):
+    from core.tasks_conversations import _impl_explore_dream_topic
+    return _impl_explore_dream_topic(self, exploration_id)
+
+@shared_task(bind=True, name="core.tasks.run_hive_mind_session")
+def run_hive_mind_session(self, session_id: str):
+    from core.tasks_conversations import _impl_run_hive_mind_session
+    return _impl_run_hive_mind_session(self, session_id)
+
+@shared_task(name='core.tasks.process_hivemind_sessions', soft_time_limit=1800, time_limit=1860)
+def process_hivemind_sessions(limit: int = 3):
+    """
+    Session 766: Process completed HiveMind sessions via Orchestration.
+
+    This task runs periodically to:
+    1. Find completed HiveMind sessions with synthesis
+    2. Create projects and workflows from sessions
+    3. Execute via Orchestration Engine
+
+    Solves Dead End #4: 321 sessions with 182 syntheses, 0 acted upon.
+
+    Schedule: Every 30 minutes (via Celery Beat)
+    """
+    from core.services.hivemind_execution_pipeline import hivemind_execution_pipeline
+
+    logger.info("🧠 [HIVEMIND] Starting HiveMind execution pipeline")
+
+    try:
+        results = hivemind_execution_pipeline.process_completed_sessions(limit=limit)
+
+        success_count = sum(1 for r in results if r.get('success'))
+        fail_count = len(results) - success_count
+
+        logger.info(
+            f"🧠 [HIVEMIND] Complete: {success_count} executed, {fail_count} failed"
+        )
+
+        return {
+            'status': 'completed',
+            'processed': len(results),
+            'success': success_count,
+            'failed': fail_count,
+        }
+
+    except SoftTimeLimitExceeded:
+        logger.error("[HIVEMIND] process_hivemind_sessions timed out (soft_time_limit=1800s)")
+        return {'status': 'failed', 'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
+    except Exception as e:
+        logger.error(f"❌ [HIVEMIND] Processing failed: {e}")
+        return {
+            'status': 'failed',
+            'error': str(e)
+        }
+
+
+
+
+# -----------------------------------------------------------------------------
+# Autonomous thinking
+# -----------------------------------------------------------------------------
+@shared_task(bind=True, soft_time_limit=1800, time_limit=1860, ignore_result=True, name="core.tasks.run_autonomous_thinking_cycle")
+def run_autonomous_thinking_cycle(self, cycle_type='scheduled', lookback_hours=24):
+    from core.tasks_content import _impl_run_autonomous_thinking_cycle
+    return _impl_run_autonomous_thinking_cycle(self, cycle_type, lookback_hours)
+
