@@ -1467,24 +1467,12 @@ def score_opportunities_from_spider_data(hours: int = 24, limit: int = 100):
         }
 
 
-@shared_task(name="core.tasks.execute_pending_opportunity_tasks")
-def execute_pending_opportunity_tasks(limit: int = 20):
-    from core.tasks_ops import _impl_execute_pending_opportunity_tasks
-    return _impl_execute_pending_opportunity_tasks(limit)
-@shared_task(name="core.tasks.generate_opportunity_report")
-def generate_opportunity_report():
-    from core.tasks_ops import _impl_generate_opportunity_report
-    return _impl_generate_opportunity_report()
 
 
 @shared_task(name="core.tasks.score_spider_data_async")
 def score_spider_data_async(spider_data_id: str, priority: str = 'normal', source: str = 'api', user_id: int = None):
     from core.tasks_spiders import _impl_score_spider_data_async
     return _impl_score_spider_data_async(spider_data_id, priority, source, user_id)
-@shared_task(bind=True, max_retries=3, name="core.tasks.process_distribution")
-def process_distribution(self, distribution_id: str):
-    from core.tasks_content import _impl_process_distribution
-    return _impl_process_distribution(self, distribution_id)
 def process_etsy_distribution(distribution):
     """Process distribution to Etsy."""
     account = distribution.platform_account
@@ -1665,18 +1653,6 @@ def process_shutterstock_distribution(distribution):
     }
 
 
-@shared_task(name="core.tasks.update_distribution_analytics")
-def update_distribution_analytics():
-    from core.tasks_misc import _impl_update_distribution_analytics
-    return _impl_update_distribution_analytics()
-@shared_task(name="core.tasks.discover_success_patterns")
-def discover_success_patterns(user_id=None, days=90):
-    from core.tasks_misc import _impl_discover_success_patterns
-    return _impl_discover_success_patterns(user_id, days)
-@shared_task(name="core.tasks.generate_user_insights")
-def generate_user_insights(user_id=None, max_insights=10):
-    from core.tasks_misc import _impl_generate_user_insights
-    return _impl_generate_user_insights(user_id, max_insights)
 
 
 # ============================================================
@@ -3078,18 +3054,6 @@ def spider_data_retention(self, trim_days=7, delete_days=30, batch_size=200):
 
 
 
-@shared_task(name="core.tasks.generate_weekly_opportunity_digest")
-def generate_weekly_opportunity_digest():
-    from core.tasks_ops import _impl_generate_weekly_opportunity_digest
-    return _impl_generate_weekly_opportunity_digest()
-@shared_task(name="core.tasks.send_proactive_opportunity_alerts")
-def send_proactive_opportunity_alerts():
-    from core.tasks_ops import _impl_send_proactive_opportunity_alerts
-    return _impl_send_proactive_opportunity_alerts()
-@shared_task(name="core.tasks.send_personalized_opportunity_alerts")
-def send_personalized_opportunity_alerts():
-    from core.tasks_ops import _impl_send_personalized_opportunity_alerts
-    return _impl_send_personalized_opportunity_alerts()
 
 
 # =============================================================================
@@ -3098,37 +3062,6 @@ def send_personalized_opportunity_alerts():
 
 
 
-@shared_task(name="core.tasks.run_daily_intelligence_digest")
-def run_daily_intelligence_digest():
-    """
-    Session 460: Generate and send the daily intelligence digest.
-
-    Runs once per day (8am) to send a summary of:
-    - Overnight SEC filings
-    - Top tech news headlines
-    - Job opportunities matching user skills
-    - Content creation ideas
-    - Agent activity summary
-
-    This is the "Good morning, here's what happened" notification.
-    """
-    logger.info("☀️ [SESSION 460] Generating daily intelligence digest...")
-
-    try:
-        from core.services.autonomous_loop import run_daily_digest
-
-        success = run_daily_digest()
-
-        if success:
-            logger.info("☀️ [SESSION 460] Daily digest sent successfully!")
-            return {'status': 'completed', 'sent': True}
-        else:
-            logger.warning("☀️ [SESSION 460] Daily digest send failed")
-            return {'status': 'completed', 'sent': False}
-
-    except Exception as e:
-        logger.error(f"☀️ [SESSION 460] Daily digest failed: {e}")
-        return {'status': 'failed', 'error': str(e)}
 
 
 
@@ -3257,144 +3190,12 @@ def _send_narrative_digest_to_discord(stats: dict):
 
 # ==================== SESSION 473: NARRATIVE DRIFT + CONTENT STUDIO INTEGRATION ====================
 
-@shared_task(
-    bind=True,
-    max_retries=3,
-    default_retry_delay=300,
-    name="core.tasks.aggregate_roi_metrics_daily",
-)
-def aggregate_roi_metrics_daily(self):
-    from core.tasks_financial import _impl_aggregate_roi_metrics_daily
-    return _impl_aggregate_roi_metrics_daily(self)
-@shared_task(
-    bind=True,
-    max_retries=3,
-    default_retry_delay=300,
-    name="core.tasks.generate_weekly_intelligence_brief",
-)
-def generate_weekly_intelligence_brief(self):
-    from core.tasks_misc import _impl_generate_weekly_intelligence_brief
-    return _impl_generate_weekly_intelligence_brief(self)
-@shared_task(name='roi_metrics.record_opportunity_view')
-def record_opportunity_view(opportunity_id: str, user_id: int = None, source: str = None):
-    """
-    [SESSION 475] Record when a user views an opportunity.
-
-    This is the entry point to the conversion funnel.
-    Called from opportunity views/APIs.
-    """
-    try:
-        from core.services.roi_tracker import record_view
-
-        result = record_view(
-            opportunity_id=opportunity_id,
-            user_id=user_id,
-            source=source
-        )
-
-        if result.success:
-            logger.debug(f"👁️ Recorded view: {opportunity_id} (source: {source})")
-
-        return {'success': result.success, 'event_id': result.event_id}
-
-    except Exception as e:
-        logger.error(f"Failed to record opportunity view: {e}")
-        return {'success': False, 'error': str(e)}
 
 
-@shared_task(name='roi_metrics.record_opportunity_click')
-def record_opportunity_click(
-    opportunity_id: str,
-    user_id: int = None,
-    source: str = None,
-    previous_event_id: str = None
-):
-    """
-    [SESSION 475] Record when a user clicks on an opportunity.
-    """
-    try:
-        from core.services.roi_tracker import record_click
-
-        result = record_click(
-            opportunity_id=opportunity_id,
-            user_id=user_id,
-            source=source,
-            previous_event_id=previous_event_id
-        )
-
-        if result.success:
-            logger.debug(f"👆 Recorded click: {opportunity_id}")
-
-        return {'success': result.success, 'event_id': result.event_id}
-
-    except Exception as e:
-        logger.error(f"Failed to record opportunity click: {e}")
-        return {'success': False, 'error': str(e)}
 
 
-@shared_task(name='roi_metrics.record_opportunity_application')
-def record_opportunity_application(
-    opportunity_id: str,
-    user_id: int = None,
-    source: str = None,
-    previous_event_id: str = None
-):
-    """
-    [SESSION 475] Record when a user applies to an opportunity.
-    """
-    try:
-        from core.services.roi_tracker import record_application
-
-        result = record_application(
-            opportunity_id=opportunity_id,
-            user_id=user_id,
-            source=source,
-            previous_event_id=previous_event_id
-        )
-
-        if result.success:
-            logger.info(f"📝 Recorded application: {opportunity_id}")
-
-        return {'success': result.success, 'event_id': result.event_id}
-
-    except Exception as e:
-        logger.error(f"Failed to record opportunity application: {e}")
-        return {'success': False, 'error': str(e)}
 
 
-@shared_task(name='roi_metrics.record_revenue')
-def record_revenue_event(
-    opportunity_id: str,
-    value: float,
-    user_id: int = None,
-    source: str = None,
-    previous_event_id: str = None
-):
-    """
-    [SESSION 475] Record revenue from an opportunity.
-
-    This is the final step in the conversion funnel.
-    """
-    try:
-        from core.services.roi_tracker import record_revenue
-        from decimal import Decimal
-
-        result = record_revenue(
-            opportunity_id=opportunity_id,
-            value=Decimal(str(value)),
-            user_id=user_id,
-            source=source,
-            previous_event_id=previous_event_id
-        )
-
-        if result.success:
-            logger.info(f"💰 Recorded revenue: ${value} from {opportunity_id}")
-
-        return {'success': result.success, 'event_id': result.event_id}
-
-    except Exception as e:
-        logger.error(f"Failed to record revenue: {e}")
-        return {'success': False, 'error': str(e)}
 
 
 # =============================================================================
@@ -4725,50 +4526,6 @@ def process_hivemind_sessions(limit: int = 3):
 # Session 766: Opportunity Execution Pipeline
 # =============================================================================
 
-@shared_task(name='core.tasks.process_high_scoring_opportunities')
-def process_high_scoring_opportunities(limit: int = 3, min_score: int = 70):
-    """
-    Session 766: Process high-scoring opportunities via Orchestration.
-
-    This task runs periodically to:
-    1. Find high-scoring opportunities (>= min_score) without projects
-    2. Create projects and workflows from opportunities
-    3. Execute via Orchestration Engine
-
-    Solves Dead End #7: 6,709 opportunities discovered, 0% actioned.
-
-    Schedule: Every 20 minutes (via Celery Beat)
-    """
-    from core.services.opportunity_execution_pipeline import opportunity_execution_pipeline
-
-    logger.info("💰 [OPPORTUNITY] Starting opportunity execution pipeline")
-
-    try:
-        results = opportunity_execution_pipeline.process_high_scoring_opportunities(
-            limit=limit,
-            min_score=min_score
-        )
-
-        success_count = sum(1 for r in results if r.get('success'))
-        fail_count = len(results) - success_count
-
-        logger.info(
-            f"💰 [OPPORTUNITY] Complete: {success_count} executed, {fail_count} failed"
-        )
-
-        return {
-            'status': 'completed',
-            'processed': len(results),
-            'success': success_count,
-            'failed': fail_count,
-        }
-
-    except Exception as e:
-        logger.error(f"❌ [OPPORTUNITY] Processing failed: {e}")
-        return {
-            'status': 'failed',
-            'error': str(e)
-        }
 
 
 # =============================================================================
@@ -8519,6 +8276,52 @@ def execute_code_job(self, run_id: str):
 def rag_retrieval_canary():
     from core.tasks_misc import _impl_rag_retrieval_canary
     return _impl_rag_retrieval_canary()
+
+
+
+# Phase 3 re-exports — ops ROI / analytics / opportunity tasks now live in core/tasks_ops.py.
+# IMPORTANT: this block MUST live at the bottom of the file. tasks_ops.py
+# imports private helpers from core.tasks at module top, so triggering
+# `from core.tasks_ops import …` before those helpers are defined produces
+# a partially-initialized-module ImportError. Same constraint as the ops
+# ML, ops audit, ops desks, ops health, ops cleanup, agents, content, and
+# financial re-exports below.
+#
+# Re-exported here so 11 PeriodicTask DB rows (10 enabled + 1 disabled —
+# proactive-opportunity-alerts pre-existing operator state, unchanged),
+# 17 settings.py task-routing entries (including the 4 non-standard
+# `roi_metrics.*` registered names + 3 pre-existing duplicate entries),
+# and 6 lazy Python-import consumer sites across 2 view modules
+# (views_auto_distribution ×2, views_opportunity ×4) keep resolving.
+#
+# `discover_success_patterns` and `generate_user_insights` are dispatched
+# from `tasks_learning.run_daily_learning_pipeline` via
+# `current_app.send_task('core.tasks.X')` (string-based by registered
+# name). Phase 1 locked those names, so the dispatch survives this
+# module relocation with zero changes to tasks_learning.
+from core.tasks_ops import (  # noqa: F401
+    # Opportunity lifecycle
+    execute_pending_opportunity_tasks,
+    generate_opportunity_report,
+    generate_weekly_opportunity_digest,
+    send_proactive_opportunity_alerts,
+    send_personalized_opportunity_alerts,
+    process_high_scoring_opportunities,
+    # Distribution
+    process_distribution,
+    update_distribution_analytics,
+    # Analytics & insights
+    discover_success_patterns,
+    generate_user_insights,
+    run_daily_intelligence_digest,
+    aggregate_roi_metrics_daily,
+    generate_weekly_intelligence_brief,
+    # ROI metrics (non-standard registered names: roi_metrics.*)
+    record_opportunity_view,
+    record_opportunity_click,
+    record_opportunity_application,
+    record_revenue_event,
+)
 
 
 
