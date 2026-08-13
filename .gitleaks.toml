@@ -1,0 +1,25 @@
+# Donkey Betz secret-scanning configuration.
+#
+# Powered by gitleaks; driven by .github/workflows/secret-scan.yml.
+#
+# Policy: do NOT exclude documentation extensions (*.md, *.mdx, *.rst,
+# *.txt). The credential leak this workflow was added to catch was
+# committed inside a *.md file that the prior scanner excluded.
+
+title = "Donkey Betz Secret Scan"
+
+[extend]
+# Inherit gitleaks' maintained default ruleset: Stripe live secret keys,
+# AWS access/secret keys, GitHub PATs (classic + fine-grained), Slack
+# tokens, Google API keys, private keys, generic high-entropy strings,
+# and many others. See:
+#   https://github.com/gitleaks/gitleaks/blob/master/config/gitleaks.toml
+useDefault = true
+
+[allowlist]
+description = "Repo-wide allowlist"
+# Skip the gitleaks config itself so pattern references in this file
+# cannot self-trigger the scanner.
+paths = [
+  '''(^|/)\.gitleaks\.toml$''',
+]

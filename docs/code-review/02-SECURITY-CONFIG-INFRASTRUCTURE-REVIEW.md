@@ -175,8 +175,8 @@ def is_rate_limited(self, client_ip, endpoint, limit, window):
 - **Severity:** HIGH
 - **Description:** Fernet encryption keys stored in `.env`:
 ```
-ENCRYPTION_KEY="[REDACTED - HISTORICAL SECRET]"
-ENCRYPTION_KEY_BACKUP="[REDACTED - HISTORICAL SECRET]"
+ENCRYPTION_KEY="[REDACTED - ROTATED]"
+ENCRYPTION_KEY_BACKUP="[REDACTED - ROTATED]"
 ```
 - **Impact:** If `.env` is compromised, all encrypted data can be decrypted
 - **Recommendation:** Use a hardware security module (HSM) or cloud KMS for encryption key storage

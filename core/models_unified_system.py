@@ -7463,7 +7463,10 @@ class UserPlatformAccount(models.Model):
     account_url = models.URLField(blank=True)
     account_status = models.CharField(max_length=20, choices=ACCOUNT_STATUS, default='pending')
 
-    # Credentials (encrypted in production)
+    # Credentials — plaintext at rest. Prior comment said "encrypted in production"
+    # but no EncryptionService write-path was ever implemented for these fields.
+    # Table currently has 0 rows (DEPRECATED per class docstring); do not populate
+    # in plaintext without first adding real encryption.
     api_key = models.CharField(max_length=500, blank=True)
     api_secret = models.CharField(max_length=500, blank=True)
     access_token = models.TextField(blank=True)
