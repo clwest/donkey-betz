@@ -28,7 +28,7 @@
 ## Category: Image Generation (Stability AI) - 100%
 
 ### API Configuration Status
-- **API Key:** Valid ([REDACTED - HISTORICAL SECRET])
+- **API Key:** Valid ([REDACTED - ROTATION REQUIRED])
 - **Credits Remaining:** 6,990 (~3,495 images)
 - **Provider Status:** Fully operational
 
@@ -180,7 +180,7 @@
 ## Category: Character Training (Replicate) - 100%
 
 ### API Configuration Status
-- **API Key:** Valid ([REDACTED - HISTORICAL SECRET])
+- **API Key:** Valid ([REDACTED - ROTATION REQUIRED])
 - **Provider:** Operational
 - **Model:** ostris/flux-dev-lora-trainer
 

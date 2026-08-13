@@ -105,13 +105,13 @@ I am writing to express my strong interest in the Python Developer position...
 
 ### 2. Polygon.io API ✅
 - **Status:** ACTIVE
-- **Key:** [REDACTED - HISTORICAL SECRET]
+- **Key:** [REDACTED - ROTATION REQUIRED]
 - **Usage:** Real-time stock market data
 - **Capabilities:** Price quotes, historical data, market trends
 
 ### 3. NewsAPI ✅
 - **Status:** ACTIVE
-- **Key:** [REDACTED - HISTORICAL SECRET]
+- **Key:** [REDACTED - ROTATION REQUIRED]
 - **Usage:** Real-time news aggregation
 - **Sources:** 80,000+ news sources worldwide
 

@@ -335,7 +335,7 @@ for field in update_fields:
   3. Notify affected parties if compromise suspected
 - **Code:**
 ```env
-STRIPE_SECRET_KEY="[REDACTED - HISTORICAL SECRET]"
+STRIPE_SECRET_KEY="[REDACTED - ROTATION REQUIRED]"
 STRIPE_PUBLISHABLE_KEY="pk_live_51S3KGRICc9cY4M3SxX8wSaIjlvFiuWorJFURkLbic0yrK6QRy8pzsXXtymZjAY7ZC5YkzJEXA5HTvlAcMC7SbIXz00KOvmAiQr"
 ```
 
@@ -348,7 +348,7 @@ STRIPE_PUBLISHABLE_KEY="pk_live_51S3KGRICc9cY4M3SxX8wSaIjlvFiuWorJFURkLbic0yrK6Q
 - **Code:**
 ```env
 REDDIT_USERNAME="Photo-dad2017"
-REDDIT_PASSWORD="[REDACTED - HISTORICAL SECRET]"
+REDDIT_PASSWORD="[REDACTED - ROTATION REQUIRED]"
 ```
 
 ### Finding 3: Coinbase EC Private Key Exposed

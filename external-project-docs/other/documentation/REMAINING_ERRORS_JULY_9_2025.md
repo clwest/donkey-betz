@@ -29,7 +29,7 @@ All major errors have been resolved:
 **Resolution Applied**:
 - Removed quotes from API key in .env file
 - Added `override=True` to `load_dotenv()` in settings.py
-- API key `[REDACTED - HISTORICAL SECRET]` is now valid
+- API key `[REDACTED - ROTATION REQUIRED]` is now valid
 - Direct API test returned 200 OK with real data
 
 ## All Issues Resolved ✅

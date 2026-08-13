@@ -4465,8 +4465,8 @@ python manage.py test_weather_location --verbose
 
 ## API Configuration Status
 
-- ✅ **WeatherAPI**: Configured ([REDACTED - HISTORICAL SECRET])
-- ✅ **NOAA API**: Configured ([REDACTED - HISTORICAL SECRET])  
+- ✅ **WeatherAPI**: Configured ([REDACTED - ROTATION REQUIRED])
+- ✅ **NOAA API**: Configured ([REDACTED - ROTATION REQUIRED])  
 - ✅ **OpenWeatherMap**: Available as fallback
 
 ## Next Steps for Enhancement
@@ -5511,12 +5511,12 @@ return {
 ### 2. APIs with Real Implementation
 
 #### News API
-- Properly configured with key: `[REDACTED - HISTORICAL SECRET]`
+- Properly configured with key: `[REDACTED - ROTATION REQUIRED]`
 - Has fallback providers: GNews, CurrentsAPI, The Guardian
 - Actually fetches real news when working
 
 #### Polygon API
-- Properly configured with key: `[REDACTED - HISTORICAL SECRET]`
+- Properly configured with key: `[REDACTED - ROTATION REQUIRED]`
 - Has comprehensive services for stocks, crypto, forex, options
 - Real-time market data available
 

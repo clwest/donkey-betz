@@ -6,7 +6,7 @@ The Polygon API was using an incorrect/expired API key that was set in the shell
 ## Root Cause
 1. **Environment Variable Override**: `POLYGON_API_KEY` was set in the shell environment
 2. **Incorrect Key**: Shell had `m_zhCaAot5HbxTcGfrI8DelrbD_cGk4D` (invalid/expired)
-3. **Correct Key**: .env has `[REDACTED - HISTORICAL SECRET]` (valid)
+3. **Correct Key**: .env has `[REDACTED - ROTATION REQUIRED]` (valid)
 
 ## Solution
 ```bash

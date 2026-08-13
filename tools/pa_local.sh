@@ -345,7 +345,7 @@
 # responses despite tools being wired. See
 # feedback_pa_worker_function_calling_env.md memory.
 export PA_API_URL=http://localhost:8000
-export PA_API_TOKEN=[REDACTED - HISTORICAL SECRET]
+export PA_API_TOKEN=[REDACTED - ROTATION REQUIRED]
 # **ACTIVE at S2400 open 2026-07-05:** pa-6279ead1714c4630 (Group 2400
 # Auth arc pin — minted at S2400 open via session_tool.create_fresh
 # per playbook §16 arc-open fresh-thread discipline). ELEVENTH formal

@@ -82,7 +82,7 @@ Session 136 Part 2 successfully implemented cloud storage infrastructure:
 ```bash
 CLOUDINARY_CLOUD_NAME="donkeybetz"
 CLOUDINARY_API_KEY="812832815734936"
-CLOUDINARY_API_SECRET="[REDACTED - HISTORICAL SECRET]"
+CLOUDINARY_API_SECRET="[REDACTED - ROTATION REQUIRED]"
 ```
 
 **To Complete Migration:**

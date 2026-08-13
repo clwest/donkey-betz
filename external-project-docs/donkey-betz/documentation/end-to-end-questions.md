@@ -125,8 +125,8 @@ python manage.py test_weather_location --verbose
 
 ## API Configuration Status
 
-- ✅ **WeatherAPI**: Configured ([REDACTED - HISTORICAL SECRET])
-- ✅ **NOAA API**: Configured ([REDACTED - HISTORICAL SECRET])  
+- ✅ **WeatherAPI**: Configured ([REDACTED - ROTATION REQUIRED])
+- ✅ **NOAA API**: Configured ([REDACTED - ROTATION REQUIRED])  
 - ✅ **OpenWeatherMap**: Available as fallback
 
 ## Next Steps for Enhancement

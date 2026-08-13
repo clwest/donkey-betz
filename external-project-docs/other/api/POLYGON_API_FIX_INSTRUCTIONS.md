@@ -11,7 +11,7 @@ There were TWO issues preventing Polygon API from working:
 
 2. **Quotes in .env File**:
    - Had: `POLYGON_API_KEY="REDACTED"`
-   - Fixed to: `POLYGON_API_KEY=[REDACTED - HISTORICAL SECRET]` (no quotes)
+   - Fixed to: `POLYGON_API_KEY=[REDACTED - ROTATION REQUIRED]` (no quotes)
 
 ## Solution Steps
 
@@ -68,7 +68,7 @@ After fixing, the test script should show:
 
 1. **Fixed .env File**: Removed quotes from API key
 2. **Modified settings.py**: Added `override=True` to `load_dotenv()` to force .env values over system variables
-3. **Verified Working**: API key `[REDACTED - HISTORICAL SECRET]` is now valid and working!
+3. **Verified Working**: API key `[REDACTED - ROTATION REQUIRED]` is now valid and working!
 
 ## Additional Fixes Applied
 
