@@ -24,10 +24,10 @@ from core.tasks import (  # noqa: F401 — private helpers from tasks.py
     _evaluate_pilot_outcome,
     _extract_experiment_learning,
     _feed_learnings_to_collective_intelligence,
-    _run_agent_group,
     _send_pilot_evaluation_discord,
     _simulate_kpi_progress,
 )
+from core.tasks_runtime import _run_agent_group  # noqa: F401
 
 
 

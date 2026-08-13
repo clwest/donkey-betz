@@ -10120,18 +10120,6 @@ def rag_retrieval_canary():
     return _impl_rag_retrieval_canary()
 
 
-# Phase 3 — `_run_agent_group` (and its private companion
-# `_track_group_contribution`) extracted to core/tasks_runtime.py.
-# Re-exported here so the existing `from core.tasks import _run_agent_group`
-# imports in tasks_agents.py, tasks_content.py, and tasks_financial.py
-# keep resolving. A follow-up PR can swap those 3 sibling imports to
-# point at core.tasks_runtime directly and drop this shim.
-from core.tasks_runtime import (  # noqa: F401
-    _run_agent_group,
-    _track_group_contribution,
-)
-
-
 
 
 # ── Backfill: deliverable workspaces ───────────────────────────────────────
