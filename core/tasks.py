@@ -3266,37 +3266,6 @@ def assemble_chunked_upload(upload_id: str):
 # Session 452: Pipeline Learning <-> Collective Intelligence Bridge
 # =============================================================================
 
-@shared_task(name="core.tasks.run_autonomous_intelligence_loop")
-def run_autonomous_intelligence_loop():
-    """
-    Session 460: The conductor that makes everything work together.
-
-    This task runs every 15 minutes to:
-    1. Check for new high-value spider data (SEC filings, etc.)
-    2. Analyze with appropriate agents
-    3. Generate alerts and opportunities
-    4. Send notifications to Discord
-
-    This transforms the platform from isolated components into a
-    self-operating intelligence machine.
-    """
-    logger.info("🔄 [SESSION 460] Starting Autonomous Intelligence Loop...")
-
-    try:
-        from core.services.autonomous_loop import run_intelligence_cycle
-
-        results = run_intelligence_cycle()
-
-        logger.info(f"🔄 [SESSION 460] Intelligence loop complete: "
-                   f"{results.get('sec_alerts', 0)} SEC alerts, "
-                   f"{results.get('content_opportunities', 0)} content opps, "
-                   f"{results.get('job_opportunities', 0)} job opps")
-
-        return results
-
-    except Exception as e:
-        logger.error(f"🔄 [SESSION 460] Intelligence loop failed: {e}")
-        return {'status': 'failed', 'error': str(e)}
 
 
 @shared_task(name="core.tasks.run_daily_intelligence_digest")
@@ -3798,160 +3767,10 @@ def record_resolve_outcome(job_id: str):
 # SESSION 479: 14 NEW AUTONOMOUS SITUATIONS
 # =============================================================================
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_design_trends_monitor")
-def run_design_trends_monitor(self):
-    from core.tasks_ops import _impl_run_design_trends_monitor
-    return _impl_run_design_trends_monitor(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_viral_content_predictor")
-def run_viral_content_predictor(self):
-    from core.tasks_misc import _impl_run_viral_content_predictor
-    return _impl_run_viral_content_predictor(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_job_match_intelligence")
-def run_job_match_intelligence(self):
-    """Situation #9: Job Match Intelligence - Monitors jobs and scores matches."""
-    logger.info("💼 [JOB MATCH] Starting job matching...")
-
-    try:
-        from core.models_unified_system import SpiderData
-        from core.models_autonomous_situations import JobMatch, JobMatchProfile, AutonomousSituationSession
-        from django.utils import timezone
-        from datetime import timedelta
-
-        session = AutonomousSituationSession.objects.create(situation_type='job_matching', status='running')
-        cutoff = timezone.now() - timedelta(hours=6)
-        spider_data = SpiderData.objects.filter(
-            spider_name__in=['remoteok', 'weworkremotely', 'adzuna'],
-            created_at__gte=cutoff
-        ).defer('embedding')[:100]
-
-        profile, _ = JobMatchProfile.objects.get_or_create(
-            user=None,
-            defaults={'skills': ['python', 'django', 'javascript', 'react'], 'remote_only': True}
-        )
-
-        jobs_created = 0
-        for data in spider_data:
-            raw = data.raw_data or {}
-            title = raw.get('title', '') or raw.get('position', '') or ''
-            url = raw.get('url', '') or data.source_url
-            if not title or not url:
-                continue
-            matched = [s for s in profile.skills if s.lower() in title.lower()]
-            score = len(matched) / len(profile.skills) * 100 if profile.skills else 0
-            if score > 20:
-                JobMatch.objects.create(
-                    title=title[:500], company=raw.get('company', 'Unknown')[:200],
-                    job_url=url, source_spider=data.spider_name, overall_match_score=score,
-                    matched_skills=matched, profile=profile
-                )
-                jobs_created += 1
-
-        session.status = 'completed'
-        session.completed_at = timezone.now()
-        session.items_created = jobs_created
-        session.save()
-        logger.info(f"💼 [JOB MATCH] Completed: {jobs_created} jobs")
-        return {'status': 'completed', 'jobs': jobs_created}
-    except Exception as e:
-        logger.error(f"💼 [JOB MATCH] Error: {e}")
-        return {'status': 'error', 'error': str(e)}
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_side_hustle_detector")
-def run_side_hustle_detector(self):
-    """Situation #11: Side Hustle Detector - Finds trending micro-opportunities."""
-    logger.info("💰 [SIDE HUSTLE] Starting detection...")
-
-    try:
-        from core.models_unified_system import SpiderData
-        from core.models_autonomous_situations import SideHustle, AutonomousSituationSession
-        from django.utils import timezone
-        from datetime import timedelta
-
-        session = AutonomousSituationSession.objects.create(situation_type='side_hustle', status='running')
-        cutoff = timezone.now() - timedelta(hours=24)
-        spider_data = SpiderData.objects.filter(
-            spider_name__in=['reddit', 'producthunt', 'kickstarter'],
-            created_at__gte=cutoff
-        ).defer('embedding')[:100]
-
-        hustles = {'dropshipping': 'dropship', 'digital_products': 'digital product', 'saas': 'saas'}
-        created = 0
-        for data in spider_data:
-            raw = data.raw_data or {}
-            text = str(raw).lower()
-            for cat, kw in hustles.items():
-                if kw in text:
-                    SideHustle.objects.get_or_create(
-                        name=f"{cat.replace('_', ' ').title()} Trend", category=cat,
-                        defaults={'description': 'Detected from spider data', 'trend_score': 50}
-                    )
-                    created += 1
-                    break
-
-        session.status = 'completed'
-        session.completed_at = timezone.now()
-        session.items_created = created
-        session.save()
-        logger.info(f"💰 [SIDE HUSTLE] Completed: {created} hustles")
-        return {'status': 'completed', 'hustles': created}
-    except Exception as e:
-        logger.error(f"💰 [SIDE HUSTLE] Error: {e}")
-        return {'status': 'error', 'error': str(e)}
 
 
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_tech_stack_tracker")
-def run_tech_stack_tracker(self):
-    from core.tasks_misc import _impl_run_tech_stack_tracker
-    return _impl_run_tech_stack_tracker(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_ai_model_monitor")
-def run_ai_model_monitor(self):
-    from core.tasks_misc import _impl_run_ai_model_monitor
-    return _impl_run_ai_model_monitor(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_case_law_monitor")
-def run_case_law_monitor(self):
-    from core.tasks_misc import _impl_run_case_law_monitor
-    return _impl_run_case_law_monitor(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_regulatory_change_detector")
-def run_regulatory_change_detector(self):
-    """Situation #19: Regulatory Change Detector - Monitors regulatory news."""
-    logger.info("📜 [REGULATORY] Starting detection...")
-
-    try:
-        from core.models_unified_system import SpiderData
-        from core.models_autonomous_situations import RegulatoryChange, AutonomousSituationSession
-        from django.utils import timezone
-        from datetime import timedelta
-
-        session = AutonomousSituationSession.objects.create(situation_type='regulatory', status='running')
-        cutoff = timezone.now() - timedelta(hours=48)
-        spider_data = SpiderData.objects.filter(
-            spider_name__in=['government', 'legal_news', 'business_news'],
-            created_at__gte=cutoff
-        ).defer('embedding')[:100]
-
-        created = 0
-        reg_keywords = ['regulation', 'rule', 'policy', 'sec', 'ftc', 'fda']
-        for data in spider_data:
-            raw = data.raw_data or {}
-            title = raw.get('title', '') or ''
-            if any(kw in title.lower() for kw in reg_keywords):
-                RegulatoryChange.objects.create(
-                    title=title[:500], agency='Unknown', regulation_type='notice',
-                    summary=title, published_date=timezone.now().date(), status='pending',
-                    source_spider=data.spider_name
-                )
-                created += 1
-
-        session.status = 'completed'
-        session.completed_at = timezone.now()
-        session.items_created = created
-        session.save()
-        logger.info(f"📜 [REGULATORY] Completed: {created} changes")
-        return {'status': 'completed', 'changes': created}
-    except Exception as e:
-        logger.error(f"📜 [REGULATORY] Error: {e}")
-        return {'status': 'error', 'error': str(e)}
 
 
 # =============================================================================
@@ -3962,14 +3781,6 @@ def run_regulatory_change_detector(self):
 def run_thumbnail_optimizer(self):
     from core.tasks_media import _impl_run_thumbnail_optimizer
     return _impl_run_thumbnail_optimizer(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_freelance_opportunity_scout")
-def run_freelance_opportunity_scout(self):
-    from core.tasks_ops import _impl_run_freelance_opportunity_scout
-    return _impl_run_freelance_opportunity_scout(self)
-@shared_task(bind=True, max_retries=2, default_retry_delay=60, name="core.tasks.run_skill_gap_analyzer")
-def run_skill_gap_analyzer(self):
-    from core.tasks_ops import _impl_run_skill_gap_analyzer
-    return _impl_run_skill_gap_analyzer(self)
 def _build_operational_context():
     """
     Query real telemetry models and return a markdown string the content writer
@@ -8485,227 +8296,8 @@ def check_operating_rhythm_status():
 # to prevent SoftTimeLimitExceeded from ElevenLabs blocking the main PA path.
 
 
-@shared_task(name='core.tasks.run_all_desks_intelligence', soft_time_limit=1800, time_limit=1860)
-def run_all_desks_intelligence():
-    """
-    Session 1000: Run all 4 intelligence desk coordinators sequentially.
-
-    Desks:
-      1. Stocks  — MarketIntelligenceCoordinator (saves to MarketIntelligenceBrief + cache)
-      2. Sports  — SportsBettingCoordinator.generate_brief()
-      3. Blockchain — BlockchainAuditCoordinator.execute()
-      4. Narrative — NarrativeDriftCoordinator.execute()
-
-    Each desk result is cached with a 6-hour TTL for the API to serve.
-    Returns summary dict with timing and success counts.
-    """
-    import gc
-    import time as _time
-    import traceback
-    from django.core.cache import cache
-
-    CACHE_TTL = 6 * 3600  # 6 hours
-
-    try:
-        return _run_desks_inner(_time, traceback, cache, gc, CACHE_TTL)
-    except SoftTimeLimitExceeded:
-        logger.error("[SESSION 1000] run_all_desks_intelligence timed out (soft_time_limit=1800s)")
-        return {'desks_completed': 0, 'desks_failed': 0, 'timing': {},
-                'error': 'Celery soft_time_limit exceeded', 'timed_out': True}
 
 
-def _run_desks_inner(_time, traceback, cache, gc, CACHE_TTL):
-    desks_completed = 0
-    desks_failed = 0
-    timing = {}
-
-    # --- Desk 1: Stocks ---
-    try:
-        t0 = _time.time()
-        logger.info("[SESSION 1000] Running Stocks desk ...")
-        from core.agents.stocks.market_intelligence_coordinator import MarketIntelligenceCoordinator
-        coordinator = MarketIntelligenceCoordinator(user=None)
-        result = coordinator.execute(
-            task="Daily stock intelligence brief",
-            context={},
-            scifi_context={},
-            spider_context={},
-        )
-        elapsed = round(_time.time() - t0, 1)
-        timing['stocks'] = elapsed
-
-        summary = ''
-        if hasattr(result, 'data') and isinstance(result.data, dict):
-            # The brief is nested under result.data['brief']
-            brief_data = result.data.get('brief', {}) or {}
-            summary = (
-                brief_data.get('executive_summary', '')
-                or result.data.get('executive_summary', '')
-                or result.data.get('summary', '')
-            )
-        if not summary and hasattr(result, 'message') and result.message:
-            summary = str(result.message)[:500]
-
-        cache.set('desk:stocks:latest', {
-            'generated_at': timezone.now().isoformat(),
-            'executive_summary': summary[:500],
-            'agents_run': [
-                'MarketIntelligenceCoordinator', 'BullCaseAgent', 'BearCaseAgent',
-                'StockAuditCoordinator', 'StockAnalystAgent', 'MarketMovementMonitorAgent',
-                'InstitutionalWatcherAgent', 'MarketAnomalyDetectorAgent', 'SignalScannerAgent',
-            ],
-            'elapsed_seconds': elapsed,
-        }, CACHE_TTL)
-        desks_completed += 1
-        logger.info(f"[SESSION 1000] Stocks desk done in {elapsed}s")
-    except Exception as e:
-        desks_failed += 1
-        timing['stocks'] = -1
-        logger.error(f"[SESSION 1000] Stocks desk failed: {e}\n{traceback.format_exc()}")
-
-    gc.collect()
-
-    # --- Desk 2: Sports ---
-    try:
-        t0 = _time.time()
-        logger.info("[SESSION 1000] Running Sports desk ...")
-        from core.services.sports_betting_coordinator import SportsBettingCoordinator
-        brief = SportsBettingCoordinator().generate_brief()
-        elapsed = round(_time.time() - t0, 1)
-        timing['sports'] = elapsed
-
-        cache.set('desk:sports:latest', {
-            'generated_at': timezone.now().isoformat(),
-            'executive_summary': (brief.get('executive_summary', '') or '')[:500],
-            'top_plays': brief.get('top_plays') or [],
-            'agents_run': brief.get('agents_run') or [],
-            'elapsed_seconds': elapsed,
-        }, CACHE_TTL)
-
-        # Session 1003: Persist to DB so briefs survive cache TTL
-        # Session 1005: Fixed key mismatches (arbitrage, sharp_action) and None guards
-        try:
-            from core.models_unified_system import SportsBettingBrief
-            SportsBettingBrief.objects.create(
-                brief_date=timezone.now().date(),
-                executive_summary=(brief.get('executive_summary', '') or '')[:500],
-                predictions=brief.get('predictions') or {},
-                arbitrage_opportunities=brief.get('arbitrage') or {},
-                sharp_action_alerts=brief.get('sharp_action') or {},
-                line_movements=brief.get('line_movements') or {},
-                top_plays=brief.get('top_plays') or [],
-                agents_run=brief.get('agents_run') or [],
-                errors=brief.get('errors') or [],
-                generation_time_seconds=elapsed,
-            )
-        except Exception as db_err:
-            logger.warning(f"[SESSION 1005] Could not persist sports brief: {db_err}")
-
-        desks_completed += 1
-        logger.info(f"[SESSION 1000] Sports desk done in {elapsed}s")
-    except Exception as e:
-        desks_failed += 1
-        timing['sports'] = -1
-        logger.error(f"[SESSION 1000] Sports desk failed: {e}\n{traceback.format_exc()}")
-
-    gc.collect()
-
-    # --- Desk 3: Blockchain ---
-    try:
-        t0 = _time.time()
-        logger.info("[SESSION 1000] Running Blockchain desk ...")
-        from core.agents.blockchain.blockchain_audit_coordinator import BlockchainAuditCoordinator
-        coordinator = BlockchainAuditCoordinator(user=None)
-        result = coordinator.execute(
-            task="Daily blockchain intelligence scan",
-            context={},
-            scifi_context={},
-            spider_context={},
-        )
-        elapsed = round(_time.time() - t0, 1)
-        timing['blockchain'] = elapsed
-
-        data = result.data if hasattr(result, 'data') and isinstance(result.data, dict) else {}
-        cache.set('desk:blockchain:latest', {
-            'generated_at': timezone.now().isoformat(),
-            'summary': (data.get('summary', '') or data.get('executive_summary', '') or result.message[:500])[:500],
-            'agents_run': [
-                'BlockchainAuditCoordinator', 'SmartContractAuditorAgent',
-                'TransactionMonitorAgent', 'WhaleWatcherAgent', 'ExploitDetectorAgent',
-            ],
-            'elapsed_seconds': elapsed,
-        }, CACHE_TTL)
-
-        # Session 1003: Persist to DB so briefs survive cache TTL
-        try:
-            from core.models_unified_system import BlockchainAuditBrief
-            BlockchainAuditBrief.objects.create(
-                brief_date=timezone.now().date(),
-                executive_summary=(data.get('summary', '') or data.get('executive_summary', '') or result.message[:500])[:500],
-                security_alerts=data.get('security_alerts', {}),
-                whale_movements=data.get('whale_movements', {}),
-                contract_audits=data.get('contract_audits', {}),
-                exploit_detection=data.get('exploit_detection', {}),
-                agents_run=[
-                    'BlockchainAuditCoordinator', 'SmartContractAuditorAgent',
-                    'TransactionMonitorAgent', 'WhaleWatcherAgent', 'ExploitDetectorAgent',
-                ],
-                errors=data.get('errors', []),
-                generation_time_seconds=elapsed,
-            )
-        except Exception as db_err:
-            logger.warning(f"[SESSION 1003] Could not persist blockchain brief: {db_err}")
-
-        desks_completed += 1
-        logger.info(f"[SESSION 1000] Blockchain desk done in {elapsed}s")
-    except Exception as e:
-        desks_failed += 1
-        timing['blockchain'] = -1
-        logger.error(f"[SESSION 1000] Blockchain desk failed: {e}\n{traceback.format_exc()}")
-
-    gc.collect()
-
-    # --- Desk 4: Narrative ---
-    try:
-        t0 = _time.time()
-        logger.info("[SESSION 1000] Running Narrative desk ...")
-        from core.agents.narrative.narrative_drift_coordinator import NarrativeDriftCoordinator
-        coordinator = NarrativeDriftCoordinator(user=None)
-        result = coordinator.execute(
-            task="Daily narrative drift scan — detect emerging trends and cultural shifts",
-            context={},
-            scifi_context={},
-            spider_context={},
-        )
-        elapsed = round(_time.time() - t0, 1)
-        timing['narrative'] = elapsed
-
-        data = result.data if hasattr(result, 'data') and isinstance(result.data, dict) else {}
-        cache.set('desk:narrative:latest', {
-            'generated_at': timezone.now().isoformat(),
-            'summary': (data.get('summary', '') or data.get('executive_summary', '') or result.message[:500])[:500],
-            'agents_run': [
-                'NarrativeDriftCoordinator', 'NarrativeHistorianAgent',
-                'TrendBreakDetectorAgent', 'CulturalImpactAgent',
-            ],
-            'elapsed_seconds': elapsed,
-        }, CACHE_TTL)
-        desks_completed += 1
-        logger.info(f"[SESSION 1000] Narrative desk done in {elapsed}s")
-    except Exception as e:
-        desks_failed += 1
-        timing['narrative'] = -1
-        logger.error(f"[SESSION 1000] Narrative desk failed: {e}\n{traceback.format_exc()}")
-
-    logger.info(
-        f"[SESSION 1000] Intelligence desks complete: "
-        f"{desks_completed} succeeded, {desks_failed} failed, timing={timing}"
-    )
-    return {
-        'desks_completed': desks_completed,
-        'desks_failed': desks_failed,
-        'timing': timing,
-    }
 
 
 # =============================================================================
@@ -9460,6 +9052,42 @@ def execute_code_job(self, run_id: str):
 def rag_retrieval_canary():
     from core.tasks_misc import _impl_rag_retrieval_canary
     return _impl_rag_retrieval_canary()
+
+
+
+# Phase 3 re-exports — ops intelligence desks tasks now live in core/tasks_ops.py.
+# IMPORTANT: this block MUST live at the bottom of the file. tasks_ops.py
+# imports private helpers from core.tasks at module top, so triggering
+# `from core.tasks_ops import …` before those helpers are defined produces
+# a partially-initialized-module ImportError. Same constraint as the ops
+# health, ops cleanup, agents, content, and financial re-exports below.
+#
+# Re-exported here so 19 PeriodicTask DB rows (16 enabled + 3 disabled —
+# autonomous-intelligence-loop, viral-content-predictor,
+# autonomous-viral-content-predictor pre-existing operator state,
+# unchanged), 11 settings.py task-routing entries, 1
+# `add_critical_celery_tasks` management-cmd dispatcher, and 1 lazy
+# Python-import consumer site (views_home.py:234) keep resolving.
+#
+# `_run_desks_inner` (private helper, sole runtime caller is
+# `run_all_desks_intelligence`) moved alongside its caller — verified
+# zero external imports.
+from core.tasks_ops import (  # noqa: F401
+    # Intelligence desks
+    run_design_trends_monitor,
+    run_viral_content_predictor,
+    run_job_match_intelligence,
+    run_side_hustle_detector,
+    run_tech_stack_tracker,
+    run_ai_model_monitor,
+    run_case_law_monitor,
+    run_regulatory_change_detector,
+    run_freelance_opportunity_scout,
+    run_skill_gap_analyzer,
+    # Aggregator + autonomous loop
+    run_autonomous_intelligence_loop,
+    run_all_desks_intelligence,
+)
 
 
 
