@@ -39,6 +39,32 @@ from core.tasks_diagnostics import (  # noqa: F401
     run_diagnostic_pipeline_task,
 )
 
+# Phase 3 re-exports — boardroom tasks now live in core/tasks_boardroom.py.
+# Imports preserved here so existing callers (`from core.tasks import X`,
+# `core.tasks.X.apply_async()`, settings.py task-routing dicts keyed by
+# 'core.tasks.X', PeriodicTask DB rows, and the budget-tracking cost dict
+# in `core/services/ops_autopilot/budget.py`) keep working without any
+# modification. Tasks register under the same Celery names regardless of
+# which module defines them.
+from core.tasks_boardroom import (  # noqa: F401
+    cleanup_boardroom_junk,
+    auto_approve_boardroom_items,
+    cleanup_expired_boardroom_items,
+    auto_promote_decisions,
+    auto_approve_low_risk_gates,
+    auto_promote_low_risk_decisions,
+    report_pending_review_metrics,
+    ai_promote_decisions,
+    auto_complete_pilots,
+    evaluate_pilots_with_thinking_agent,
+    evaluate_and_complete_pilots,
+    execute_pilot_implementations,
+    process_gates_and_deploy_pilots,
+    enrich_boardroom_ml_predictions,
+    process_gate_progression,
+)
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -520,14 +546,6 @@ def decay_learning_patterns():
     return result
 
 
-@shared_task(name="core.tasks.cleanup_boardroom_junk")
-def cleanup_boardroom_junk(spider_action_hours: int = 6):
-    from core.tasks_ops import _impl_cleanup_boardroom_junk
-    return _impl_cleanup_boardroom_junk(spider_action_hours)
-@shared_task(name="core.tasks.auto_approve_boardroom_items")
-def auto_approve_boardroom_items():
-    from core.tasks_ops import _impl_auto_approve_boardroom_items
-    return _impl_auto_approve_boardroom_items()
 @shared_task(bind=True, soft_time_limit=1800, time_limit=1900, name="core.tasks.execute_workspace_pipeline")
 def execute_workspace_pipeline(self, run_id: str):
     """Execute a workspace pipeline run (dispatched from trigger_pipeline API)."""
@@ -538,10 +556,6 @@ def execute_demo_pipeline_task(self, run_id: str, topic: str, user_id: int):
     """Execute a demo pipeline for onboarding (fast, 3 stages)."""
     from core.views_demo_pipeline import _execute_demo_pipeline
     return _execute_demo_pipeline(run_id, topic, user_id)
-@shared_task(name="core.tasks.cleanup_expired_boardroom_items")
-def cleanup_expired_boardroom_items(days_old: int = 7):
-    from core.tasks_misc import _impl_cleanup_expired_boardroom_items
-    return _impl_cleanup_expired_boardroom_items(days_old)
 @shared_task(ignore_result=True, name="core.tasks.auto_process_extracted_artifacts")
 def auto_process_extracted_artifacts(
     stale_days: int = 7,
@@ -2786,32 +2800,6 @@ def run_agent_conversation(self, max_conversations: int = 3, max_messages: int =
 def run_multi_agent_conversation(self, max_conversations: int = 2, participants_per_conversation: int = 4, max_rounds: int = 3):
     from core.tasks_conversations import _impl_run_multi_agent_conversation
     return _impl_run_multi_agent_conversation(self, max_conversations, participants_per_conversation, max_rounds)
-@shared_task(bind=True, name="core.tasks.auto_promote_decisions")
-def auto_promote_decisions(self, quality_threshold: float = 0.6, max_promotions: int = 3):
-    """
-    Session 362: Automatically promote high-quality decisions to canonical policies.
-
-    DEPRECATED: Session 658 introduced ai_promote_decisions which uses GPT-5-mini
-    for intelligent evaluation. This legacy task is kept for backwards compatibility
-    but now defers to the AI-powered version.
-
-    Args:
-        quality_threshold: Minimum quality_score to be eligible (0.0-1.0)
-        max_promotions: Maximum decisions to promote per run
-
-    Returns:
-        Stats about promotions made
-    """
-    # Session 659: This task is deprecated - use ai_promote_decisions instead
-    # The AI Decision Promoter (Session 658) uses GPT-5-mini for intelligent evaluation
-    # which is more accurate than the rule-based quality_score approach.
-    logger.info("🏛️ [AUTO-PROMOTE] DEPRECATED - Use ai_promote_decisions (Session 658) instead")
-
-    return {
-        'status': 'deprecated',
-        'message': 'This task is deprecated. Use ai_promote_decisions (Session 658) which uses GPT-5-mini for intelligent evaluation.',
-        'redirect': 'core.tasks.ai_promote_decisions'
-    }
 
 
 # =============================================================================
@@ -5657,34 +5645,6 @@ def auto_triage_dreams(
 ):
     from core.tasks_initiatives import _impl_auto_triage_dreams
     return _impl_auto_triage_dreams(promote_threshold, archive_age_days, archive_score_threshold, max_promote, max_archive)
-@shared_task(name="core.tasks.auto_approve_low_risk_gates")
-def auto_approve_low_risk_gates(
-    max_gates: int = 20,
-    auto_deploy: bool = False,
-    dry_run: bool = False
-):
-    from core.tasks_ops import _impl_auto_approve_low_risk_gates
-    return _impl_auto_approve_low_risk_gates(max_gates, auto_deploy, dry_run)
-@shared_task(name="core.tasks.auto_promote_low_risk_decisions")
-def auto_promote_low_risk_decisions(dry_run: bool = False):
-    from core.tasks_misc import _impl_auto_promote_low_risk_decisions
-    return _impl_auto_promote_low_risk_decisions(dry_run)
-@shared_task(name="core.tasks.report_pending_review_metrics")
-def report_pending_review_metrics():
-    from core.tasks_misc import _impl_report_pending_review_metrics
-    return _impl_report_pending_review_metrics()
-@shared_task(ignore_result=True, name="core.tasks.ai_promote_decisions")
-def ai_promote_decisions(batch_size: int = 50):
-    from core.tasks_misc import _impl_ai_promote_decisions
-    return _impl_ai_promote_decisions(batch_size)
-@shared_task(name="core.tasks.auto_complete_pilots")
-def auto_complete_pilots():
-    from core.tasks_ops import _impl_auto_complete_pilots
-    return _impl_auto_complete_pilots()
-@shared_task(name="core.tasks.evaluate_pilots_with_thinking_agent")
-def evaluate_pilots_with_thinking_agent():
-    from core.tasks_ops import _impl_evaluate_pilots_with_thinking_agent
-    return _impl_evaluate_pilots_with_thinking_agent()
 def collect_pilot_metrics(decision, pilot) -> Dict[str, Any]:
     """
     Session 594: Collect relevant metrics based on decision type.
@@ -5953,10 +5913,6 @@ def check_kpi_alerts():
 def send_weekly_kpi_summary():
     from core.tasks_misc import _impl_send_weekly_kpi_summary
     return _impl_send_weekly_kpi_summary()
-@shared_task(name='core.tasks.evaluate_and_complete_pilots')
-def evaluate_and_complete_pilots():
-    from core.tasks_financial import _impl_evaluate_and_complete_pilots
-    return _impl_evaluate_and_complete_pilots()
 def _evaluate_pilot_outcome(pilot, decision) -> tuple:
     """
     Session 618: Evaluate pilot outcome based on decision characteristics.
@@ -6208,10 +6164,6 @@ def _send_pilot_evaluation_discord(results: dict, top_pilots: list):
 # SESSION 690: IMPLEMENTATION PIPELINE - EXECUTE PILOT RECOMMENDATIONS
 # =============================================================================
 
-@shared_task(name='core.tasks.execute_pilot_implementations')
-def execute_pilot_implementations(batch_size: int = 10):
-    from core.tasks_ops import _impl_execute_pilot_implementations
-    return _impl_execute_pilot_implementations(batch_size)
 def _send_implementation_discord(results: dict):
     """Session 690: Send Discord notification about implementations."""
     try:
@@ -6241,10 +6193,6 @@ def _send_implementation_discord(results: dict):
 # SESSION 619: AUTOMATIC GATE PROCESSING AND PILOT DEPLOYMENT
 # =============================================================================
 
-@shared_task(name='core.tasks.process_gates_and_deploy_pilots', ignore_result=True)
-def process_gates_and_deploy_pilots(batch_size: int = 10, risk_levels: list = None):
-    from core.tasks_misc import _impl_process_gates_and_deploy_pilots
-    return _impl_process_gates_and_deploy_pilots(batch_size, risk_levels)
 def _process_single_gate(gate) -> dict:
     """Process a single gate: generate docs, approve, create pilot."""
     from django.utils import timezone
@@ -6668,10 +6616,6 @@ def process_human_attention_lifecycle():
 # Session 954: Boardroom ML Predictions
 # =============================================================================
 
-@shared_task(name='core.tasks.enrich_boardroom_ml_predictions', ignore_result=True)
-def enrich_boardroom_ml_predictions():
-    from core.tasks_financial import _impl_enrich_boardroom_ml_predictions
-    return _impl_enrich_boardroom_ml_predictions()
 @shared_task(name='core.tasks.process_hivemind_sessions', soft_time_limit=1800, time_limit=1860)
 def process_hivemind_sessions(limit: int = 3):
     """
@@ -7153,16 +7097,6 @@ def execute_single_dream(dream_id: str):
 # Session 766: Gate Progression Pipeline Tasks
 # =============================================================================
 
-@shared_task(name='core.tasks.process_gate_progression')
-def process_gate_progression(
-    dry_run: bool = False,
-    limit: int = 50,
-    auto_waive_low_risk: bool = True,
-    auto_approve_ready: bool = True,
-    start_pilots: bool = True,
-):
-    from core.tasks_misc import _impl_process_gate_progression
-    return _impl_process_gate_progression(dry_run, limit, auto_waive_low_risk, auto_approve_ready, start_pilots)
 @shared_task(bind=True, name='core.tasks.process_content_ideas', max_retries=2, default_retry_delay=60)
 def process_content_ideas(
     self,
