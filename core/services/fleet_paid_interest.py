@@ -52,17 +52,25 @@ STATE_MANUALLY_OVERRIDDEN = "manually_overridden"
 
 @dataclass
 class TriggerState:
-    """Snapshot of an app's paid-interest demand-gate state."""
+    """Snapshot of an app's paid-interest demand-gate state.
+
+    All count / has-high-value fields exclude rows flagged
+    ``is_test_data=True`` (Session 1142 — RFC 2606 reserved domains
+    auto-flagged at submission, see ``core/views_fleet_paid_interest``).
+    Test signals are reported separately under ``test_signals`` so the
+    contamination is visible without polluting the gate decision.
+    """
 
     app_slug: str
-    total_signals: int
-    last_90d_signals: int
-    has_high_value_signal: bool
+    total_signals: int  # production rows only
+    last_90d_signals: int  # production rows only
+    has_high_value_signal: bool  # production rows only
     high_value_threshold: int
     trigger_state: str
     rolling_window_days: int
     count_threshold: int
-    last_signal_at: Optional[str]  # ISO-8601 or None
+    last_signal_at: Optional[str]  # ISO-8601 or None (production rows only)
+    test_signals: int = 0  # Session 1142 — reported for transparency, not gating
 
     def to_dict(self) -> dict:
         return {
@@ -75,6 +83,7 @@ class TriggerState:
             "rolling_window_days": self.rolling_window_days,
             "count_threshold": self.count_threshold,
             "last_signal_at": self.last_signal_at,
+            "test_signals": self.test_signals,
         }
 
 
@@ -116,8 +125,14 @@ def evaluate_trigger_state(
     rolling_window_days = cfg["rolling_window_days"]
     pro_price = cfg["pro_price"]
 
-    qs = FleetPaidInterest.objects.filter(app_slug=app_slug)
+    # Session 1142 — exclude is_test_data=True rows from production counts.
+    # Test signals are surfaced under test_signals for transparency.
+    qs_all = FleetPaidInterest.objects.filter(app_slug=app_slug)
+    qs = qs_all.filter(is_test_data=False)
+    qs_test = qs_all.filter(is_test_data=True)
+
     total_signals = qs.count()
+    test_signals = qs_test.count()
 
     cutoff = timezone.now() - timedelta(days=rolling_window_days)
     last_90d_signals = qs.filter(created_at__gte=cutoff).count()
@@ -144,6 +159,7 @@ def evaluate_trigger_state(
         rolling_window_days=rolling_window_days,
         count_threshold=count_threshold,
         last_signal_at=last_signal_at,
+        test_signals=test_signals,
     )
 
 

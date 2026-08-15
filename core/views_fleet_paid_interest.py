@@ -60,6 +60,49 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 # Accept the spec's workspace-size strings exactly.
 _VALID_WORKSPACE_SIZES = {"solo", "2-5", "6-20", "20+"}
 
+# RFC 2606 reserved domains + IANA test TLDs. Submissions targeting
+# these are guaranteed-not-production by spec and get auto-flagged
+# is_test_data=True so they don't contaminate the Decision 13 gate.
+#
+# RFC 2606 reserves the example.{com,org,net} domains and ALL their
+# subdomains for documentation/testing — so user@mail.example.com also
+# counts. The bare `@example` form covers the bare reserved TLD.
+_TEST_EMAIL_DIRECT_SUFFIXES = (
+    "@example.com",
+    "@example.org",
+    "@example.net",
+    "@example",
+    ".test",
+    ".invalid",
+    ".localhost",
+)
+_TEST_EMAIL_SUBDOMAIN_SUFFIXES = (
+    ".example.com",
+    ".example.org",
+    ".example.net",
+)
+# Public constant kept stable for callers that need to introspect the
+# direct-match list (e.g. test assertions). Subdomain rules are part of
+# the function contract, not the constant.
+_TEST_EMAIL_SUFFIXES = _TEST_EMAIL_DIRECT_SUFFIXES
+
+
+def _looks_like_test_email(email_lc: str) -> bool:
+    """Return True when ``email_lc`` is in an RFC 2606 reserved test domain.
+
+    Matches:
+        - Direct: ``@example.com``, ``@example.org``, ``@example.net``,
+          ``@example``, and any address ending in ``.test`` / ``.invalid`` /
+          ``.localhost`` TLDs.
+        - Subdomain: any address ending in ``.example.com``, ``.example.org``,
+          ``.example.net`` (RFC 2606 reserves all subdomains too).
+
+    Caller must lowercase first (storage email is already lowercased).
+    """
+    if any(email_lc.endswith(suffix) for suffix in _TEST_EMAIL_DIRECT_SUFFIXES):
+        return True
+    return any(email_lc.endswith(suffix) for suffix in _TEST_EMAIL_SUBDOMAIN_SUFFIXES)
+
 
 # ──────────────────────────────────────────────────────────────────────
 # Helpers
@@ -242,6 +285,7 @@ def fleet_paid_interest_submit(request):
             )
 
     # ── Persist ───────────────────────────────────────────────────────
+    is_test_data = _looks_like_test_email(email_lc)
     row = FleetPaidInterest.objects.create(
         app_slug=app_slug,
         email=email_lc,
@@ -252,11 +296,12 @@ def fleet_paid_interest_submit(request):
         submitted_by_identity=identity,
         submitted_by_key_id=identity_payload.get("key_id", "") or "",
         request_id=request.META.get("HTTP_X_REQUEST_ID", "") or "",
+        is_test_data=is_test_data,
     )
 
     logger.info(
-        "[paid-interest] captured app=%s email=%s pay=%s row=%s",
-        app_slug, email_lc, willing_pay_clean, row.id,
+        "[paid-interest] captured app=%s email=%s pay=%s row=%s test=%s",
+        app_slug, email_lc, willing_pay_clean, row.id, is_test_data,
     )
 
     # Audit row — fleet_auth already wrote one on the auth path; we don't
