@@ -962,10 +962,12 @@ LOGGING = {
             'level': 'DEBUG' if DEBUG else 'INFO',
         },
         'file': {
-            'class': 'logging.FileHandler',
+            'class': 'logging.handlers.RotatingFileHandler',
             'filename': os.path.join(BASE_DIR, 'django_debug.log'),
             'formatter': 'verbose',
-            'level': 'DEBUG',
+            'level': 'INFO',
+            'maxBytes': 50 * 1024 * 1024,
+            'backupCount': 3,
         },
     },
     'root': {
@@ -980,14 +982,19 @@ LOGGING = {
         },
         'core': {
             'handlers': ['console', 'file'],
-            'level': 'DEBUG',
+            'level': 'INFO',
             'propagate': False,
         },
         'content': {
             'handlers': ['console', 'file'],
-            'level': 'DEBUG',
+            'level': 'INFO',
             'propagate': False,
         },
+        'httpx': {'handlers': ['console', 'file'], 'level': 'WARNING', 'propagate': False},
+        'httpcore': {'handlers': ['console', 'file'], 'level': 'WARNING', 'propagate': False},
+        'urllib3': {'handlers': ['console', 'file'], 'level': 'WARNING', 'propagate': False},
+        'openai': {'handlers': ['console', 'file'], 'level': 'WARNING', 'propagate': False},
+        'anthropic': {'handlers': ['console', 'file'], 'level': 'WARNING', 'propagate': False},
     },
 }
 
