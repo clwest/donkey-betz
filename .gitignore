@@ -129,6 +129,16 @@ frontend/dist/
 # ratification card drafts, etc.) — working notes, not part of the codebase.
 .claude/scratch/
 
+# Claude Code machine-local settings (permission grants, tool allowlists).
+# Already covered by ~/.config/git/ignore for this operator; kept here so
+# the ignore is explicit in-repo for anyone who lacks the global rule.
+.claude/settings.local.json
+
+# Machine-local MCP server config. Has held credentials in this estate
+# before (see PROGRAM_UDB_HARVEST.md, 2026-08-29 brave-api-key incident);
+# do not track.
+.mcp.json
+
 # context-kit scratch output
 # Note: ignore *contents* (`.context-kit/*`) rather than the directory
 # (`.context-kit/`). Git cannot re-include a file with `!path` if its
