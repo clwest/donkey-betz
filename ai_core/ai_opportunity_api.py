@@ -215,7 +215,7 @@ def get_generated_projects(request):
     Get list of all generated projects
     """
     try:
-        projects_dir = Path("/Users/donkeyking/development/unified-donkey-betz/generated_projects")
+        projects_dir = Path("/Users/donkeyking/Donkey_Betz/unified-donkey-betz/generated_projects")
 
         if not projects_dir.exists():
             return Response({

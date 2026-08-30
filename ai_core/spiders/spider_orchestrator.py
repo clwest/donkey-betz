@@ -30,7 +30,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('/Users/donkeyking/development/unified-donkey-betz/logs/spider_army.log'),
+        logging.FileHandler('/Users/donkeyking/Donkey_Betz/unified-donkey-betz/logs/spider_army.log'),
         logging.StreamHandler()
     ]
 )

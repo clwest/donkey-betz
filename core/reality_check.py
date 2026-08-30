@@ -512,7 +512,7 @@ class SystemRealityChecker:
 
             # Check frontend integration
             checks_performed.append("frontend_check")
-            frontend_path = "/Users/donkeyking/development/unified-donkey-betz/frontend/src/components/RevenueDashboard.tsx"
+            frontend_path = "/Users/donkeyking/Donkey_Betz/unified-donkey-betz/frontend/src/components/RevenueDashboard.tsx"
 
             if os.path.exists(frontend_path):
                 with open(frontend_path, 'r') as f:
@@ -639,7 +639,7 @@ class SystemRealityChecker:
 
             # Check frontend
             checks_performed.append("frontend_check")
-            frontend_path = "/Users/donkeyking/development/unified-donkey-betz/frontend/src/components/NeuralOrchestra.tsx"
+            frontend_path = "/Users/donkeyking/Donkey_Betz/unified-donkey-betz/frontend/src/components/NeuralOrchestra.tsx"
 
             if os.path.exists(frontend_path):
                 with open(frontend_path, 'r') as f:
@@ -746,7 +746,7 @@ class SystemRealityChecker:
 
             # Check frontend
             checks_performed.append("frontend_check")
-            frontend_path = "/Users/donkeyking/development/unified-donkey-betz/frontend/src/components/DecisionCommand.tsx"
+            frontend_path = "/Users/donkeyking/Donkey_Betz/unified-donkey-betz/frontend/src/components/DecisionCommand.tsx"
 
             if os.path.exists(frontend_path):
                 with open(frontend_path, 'r') as f:
@@ -834,7 +834,7 @@ class SystemRealityChecker:
 
             # Check WebSocket routing
             checks_performed.append("routing_check")
-            routing_path = "/Users/donkeyking/development/unified-donkey-betz/core/routing.py"
+            routing_path = "/Users/donkeyking/Donkey_Betz/unified-donkey-betz/core/routing.py"
 
             if os.path.exists(routing_path):
                 with open(routing_path, 'r') as f:
@@ -858,7 +858,7 @@ class SystemRealityChecker:
 
             # Check for mock bridge (should be replaced)
             checks_performed.append("mock_bridge_check")
-            mock_bridge_path = "/Users/donkeyking/development/unified-donkey-betz/core/websocket_bridge.py"
+            mock_bridge_path = "/Users/donkeyking/Donkey_Betz/unified-donkey-betz/core/websocket_bridge.py"
 
             if os.path.exists(mock_bridge_path):
                 with open(mock_bridge_path, 'r') as f:
@@ -1072,8 +1072,8 @@ class SystemRealityChecker:
             # Check for spider modules
             checks_performed.append("spider_modules_check")
             spider_paths = [
-                "/Users/donkeyking/development/unified-donkey-betz/spiders",
-                "/Users/donkeyking/development/unified-donkey-betz/ai_core/spiders"
+                "/Users/donkeyking/Donkey_Betz/unified-donkey-betz/spiders",
+                "/Users/donkeyking/Donkey_Betz/unified-donkey-betz/ai_core/spiders"
             ]
 
             has_spiders = False
@@ -1275,8 +1275,8 @@ class SystemRealityChecker:
             # Check for model persistence
             checks_performed.append("model_persistence_check")
             model_paths = [
-                "/Users/donkeyking/development/unified-donkey-betz/models",
-                "/Users/donkeyking/development/unified-donkey-betz/ml_models"
+                "/Users/donkeyking/Donkey_Betz/unified-donkey-betz/models",
+                "/Users/donkeyking/Donkey_Betz/unified-donkey-betz/ml_models"
             ]
 
             has_persisted_models = False

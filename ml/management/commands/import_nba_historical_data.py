@@ -55,7 +55,7 @@ class Command(BaseCommand):
         self.stdout.write(f"🏃 Mode: {'DRY RUN' if dry_run else 'LIVE IMPORT'}\n")
 
         # File paths
-        base_dir = '/Users/donkeyking/development/unified-donkey-betz/nba-game-data'
+        base_dir = '/Users/donkeyking/Donkey_Betz/unified-donkey-betz/nba-game-data'
         teams_file = os.path.join(base_dir, 'teams.csv')
         games_file = os.path.join(base_dir, 'games.csv')
 

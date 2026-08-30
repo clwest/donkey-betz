@@ -701,7 +701,7 @@ AI-Powered Freelancer
         """Persist trained ML models"""
         try:
             # Create models directory if it doesn't exist
-            models_dir = "/Users/donkeyking/development/unified-donkey-betz/ml_models"
+            models_dir = "/Users/donkeyking/Donkey_Betz/unified-donkey-betz/ml_models"
             os.makedirs(models_dir, exist_ok=True)
 
             # Create placeholder model files
@@ -869,8 +869,8 @@ AI-Powered Freelancer
         try:
             # Count existing spider files
             spider_paths = [
-                "/Users/donkeyking/development/unified-donkey-betz/spiders",
-                "/Users/donkeyking/development/unified-donkey-betz/ai_core/spiders"
+                "/Users/donkeyking/Donkey_Betz/unified-donkey-betz/spiders",
+                "/Users/donkeyking/Donkey_Betz/unified-donkey-betz/ai_core/spiders"
             ]
 
             spider_count = 0

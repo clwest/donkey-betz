@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Project configuration
-PROJECTS_BASE_DIR = Path("/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects")
+PROJECTS_BASE_DIR = Path("/Users/donkeyking/Donkey_Betz/unified-donkey-betz/ai_generated_projects")
 
 def find_project_directory(base_dir, project_name):
     """
@@ -171,7 +171,7 @@ def build_project_module(request):
             ['python', 'dynamic_project_builder.py', 'switch', project],
             capture_output=True,
             text=True,
-            cwd='/Users/donkeyking/development/unified-donkey-betz',
+            cwd='/Users/donkeyking/Donkey_Betz/unified-donkey-betz',
             timeout=10
         )
 

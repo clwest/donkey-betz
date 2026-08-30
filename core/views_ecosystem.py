@@ -96,7 +96,7 @@ def get_project_status(request):
     """Get real project build status"""
     from pathlib import Path
 
-    project_dir = Path("/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects")
+    project_dir = Path("/Users/donkeyking/Donkey_Betz/unified-donkey-betz/ai_generated_projects")
 
     projects = {}
     for project_path in project_dir.glob("*"):
@@ -181,10 +181,10 @@ def code_preview(request):
 
     # Map project to file path
     project_paths = {
-        'ecommerce': '/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/ecommerce/',
-        'content_factory': '/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/content_factory/',
-        'trading_bot': '/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/trading_bot/',
-        'predictive_analytics': '/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects/predictive_analytics/'
+        'ecommerce': '/Users/donkeyking/Donkey_Betz/unified-donkey-betz/ai_generated_projects/ecommerce/',
+        'content_factory': '/Users/donkeyking/Donkey_Betz/unified-donkey-betz/ai_generated_projects/content_factory/',
+        'trading_bot': '/Users/donkeyking/Donkey_Betz/unified-donkey-betz/ai_generated_projects/trading_bot/',
+        'predictive_analytics': '/Users/donkeyking/Donkey_Betz/unified-donkey-betz/ai_generated_projects/predictive_analytics/'
     }
 
     if project in project_paths:

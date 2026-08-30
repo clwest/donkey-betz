@@ -65,7 +65,7 @@ class SystemRealityChecker:
     """
 
     def __init__(self):
-        self.base_path = "/Users/donkeyking/development/unified-donkey-betz"
+        self.base_path = "/Users/donkeyking/Donkey_Betz/unified-donkey-betz"
         self.reality_assessments = {}
         self.git_claims = []
         self.actual_implementations = []
@@ -951,7 +951,7 @@ if __name__ == "__main__":
     report = run_reality_check()
 
     # Save report to file
-    output_path = "/Users/donkeyking/development/unified-donkey-betz/BRUTAL_REALITY_REPORT.json"
+    output_path = "/Users/donkeyking/Donkey_Betz/unified-donkey-betz/BRUTAL_REALITY_REPORT.json"
     with open(output_path, 'w') as f:
         json.dump(report, f, indent=2, default=str)
 

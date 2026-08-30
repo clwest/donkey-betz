@@ -11,7 +11,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-PROJECT_BASE = Path("/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects")
+PROJECT_BASE = Path("/Users/donkeyking/Donkey_Betz/unified-donkey-betz/ai_generated_projects")
 
 @csrf_exempt
 @require_http_methods(["GET"])

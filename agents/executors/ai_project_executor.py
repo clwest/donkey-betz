@@ -34,7 +34,7 @@ class AIProjectExecutor(BaseAgentExecutor):
             "business_execution"
         ]
         self.llm_enforcer = get_llm_enforcer()
-        self.project_workspace = Path("/Users/donkeyking/development/unified-donkey-betz/generated_projects")
+        self.project_workspace = Path("/Users/donkeyking/Donkey_Betz/unified-donkey-betz/generated_projects")
         self.project_workspace.mkdir(exist_ok=True)
 
     def execute(self, task: str, context: Dict[str, Any] = None) -> Dict[str, Any]:

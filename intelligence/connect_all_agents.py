@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 # Setup Django
-sys.path.append('/Users/donkeyking/development/unified-donkey-betz')
+sys.path.append('/Users/donkeyking/Donkey_Betz/unified-donkey-betz')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'unified_donkey_betz.settings')
 django.setup()
 

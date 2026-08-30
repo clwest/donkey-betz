@@ -171,7 +171,7 @@ class FRL2InlinePatternRemovedTests(SimpleTestCase):
         td_handlers_core.py:~4013 (list_recent action)."""
         # `list_recent` lives inside a bigger method — read raw file
         # rather than a specific method's source.
-        src_path = '/Users/donkeyking/development/unified-donkey-betz/core/services/td_handlers_core.py'
+        src_path = '/Users/donkeyking/Donkey_Betz/unified-donkey-betz/core/services/td_handlers_core.py'
         with open(src_path) as f:
             src = f.read()
         # `list_recent` block references compute_limit now.

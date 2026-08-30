@@ -15,7 +15,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Stubs removed — auto-fix uses LLM directly
 
 # Project configuration
-PROJECTS_BASE_DIR = Path("/Users/donkeyking/development/unified-donkey-betz/ai_generated_projects")
+PROJECTS_BASE_DIR = Path("/Users/donkeyking/Donkey_Betz/unified-donkey-betz/ai_generated_projects")
 
 
 @csrf_exempt

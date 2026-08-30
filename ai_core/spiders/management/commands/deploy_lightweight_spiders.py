@@ -13,7 +13,7 @@ import sys
 import os
 
 # Add project to path
-sys.path.append('/Users/donkeyking/development/unified-donkey-betz')
+sys.path.append('/Users/donkeyking/Donkey_Betz/unified-donkey-betz')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'core.settings')
 
 from ai_core.spiders.lightweight_spider_system import (

@@ -49,7 +49,7 @@ class SelfRefactoringEngine:
     """
 
     def __init__(self):
-        self.project_root = Path('/Users/donkeyking/development/unified-donkey-betz')
+        self.project_root = Path('/Users/donkeyking/Donkey_Betz/unified-donkey-betz')
         self.redis_client = redis.Redis.from_url(_REDIS_URL, decode_responses=True)
         self.repo = git.Repo(self.project_root)
         self.backup_dir = self.project_root / '.consciousness_backups'

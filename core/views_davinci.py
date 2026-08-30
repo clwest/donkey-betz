@@ -375,7 +375,7 @@ def chain_videos_simple(request):
 
                     if not local_file_path.exists():
                         # Try absolute path
-                        local_file_path = Path('/Users/donkeyking/development/unified-donkey-betz') / clip_url.lstrip('/')
+                        local_file_path = Path('/Users/donkeyking/Donkey_Betz/unified-donkey-betz') / clip_url.lstrip('/')
 
                     if local_file_path.exists():
                         shutil.copy2(local_file_path, temp_path)

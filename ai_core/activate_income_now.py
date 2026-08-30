@@ -11,7 +11,7 @@ import json
 from datetime import datetime
 
 # Setup Django
-sys.path.insert(0, '/Users/donkeyking/development/unified-donkey-betz/backend')
+sys.path.insert(0, '/Users/donkeyking/Donkey_Betz/unified-donkey-betz/backend')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'settings')
 django.setup()
 

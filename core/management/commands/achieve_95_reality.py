@@ -139,7 +139,7 @@ class Command(BaseCommand):
                 )
 
             # Save integration report
-            report_file = f'/Users/donkeyking/development/unified-donkey-betz/integration_report_{timezone.now().strftime("%Y%m%d_%H%M%S")}.json'
+            report_file = f'/Users/donkeyking/Donkey_Betz/unified-donkey-betz/integration_report_{timezone.now().strftime("%Y%m%d_%H%M%S")}.json'
 
             with open(report_file, 'w') as f:
                 json.dump({

@@ -75,7 +75,7 @@ class ConsciousnessBridge:
         else:
             redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
             self.redis_client = redis.Redis.from_url(redis_url, decode_responses=True)
-        self.project_root = Path('/Users/donkeyking/development/unified-donkey-betz')
+        self.project_root = Path('/Users/donkeyking/Donkey_Betz/unified-donkey-betz')
         self.capabilities: Dict[str, Capability] = {}
         self.insights: List[SystemInsight] = []
         self.proposals: List[ImprovementProposal] = []

@@ -656,7 +656,7 @@ class DataFlowTracer:
 
             elif stage == FlowStage.ANALYSIS and component == "message_router":
                 # Message routing should work if WebSocket routing is configured
-                routing_path = "/Users/donkeyking/development/unified-donkey-betz/core/routing.py"
+                routing_path = "/Users/donkeyking/Donkey_Betz/unified-donkey-betz/core/routing.py"
                 if os.path.exists(routing_path):
                     updated_data['routed_at'] = timezone.now().isoformat()
                     updated_data['target'] = target_component

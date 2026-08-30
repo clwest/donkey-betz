@@ -232,7 +232,7 @@ def get_current_git_commit() -> str:
     try:
         result = subprocess.run(['git', 'rev-parse', 'HEAD'],
                               capture_output=True, text=True,
-                              cwd='/Users/donkeyking/development/unified-donkey-betz')
+                              cwd='/Users/donkeyking/Donkey_Betz/unified-donkey-betz')
         return result.stdout.strip() if result.returncode == 0 else ''
     except Exception as _e:
         logger.warning(
@@ -247,7 +247,7 @@ def capture_file_tree() -> list:
     try:
         result = subprocess.run(['find', '.', '-type', 'f', '-name', '*.py', '-o', '-name', '*.html', '-o', '-name', '*.js'],
                               capture_output=True, text=True,
-                              cwd='/Users/donkeyking/development/unified-donkey-betz')
+                              cwd='/Users/donkeyking/Donkey_Betz/unified-donkey-betz')
         return result.stdout.strip().split('\n') if result.returncode == 0 else []
     except Exception as _e:
         logger.warning(
@@ -339,7 +339,7 @@ def get_git_diff(commit_before: str, commit_after: str) -> str:
     try:
         result = subprocess.run(['git', 'diff', commit_before, commit_after],
                               capture_output=True, text=True,
-                              cwd='/Users/donkeyking/development/unified-donkey-betz')
+                              cwd='/Users/donkeyking/Donkey_Betz/unified-donkey-betz')
         return result.stdout if result.returncode == 0 else ''
     except Exception as _e:
         logger.warning(

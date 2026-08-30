@@ -440,7 +440,7 @@ class Command(BaseCommand):
 
         # Save report to file
         report_filename = f'platform_unification_deployment_report_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
-        report_path = f'/Users/donkeyking/development/unified-donkey-betz/{report_filename}'
+        report_path = f'/Users/donkeyking/Donkey_Betz/unified-donkey-betz/{report_filename}'
 
         try:
             with open(report_path, 'w') as f:

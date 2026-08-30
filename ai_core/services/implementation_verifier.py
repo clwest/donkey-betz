@@ -23,7 +23,7 @@ from ai_core.models.implementation_tracking import (
 class ImplementationVerifier:
     """Verifies that agents actually implement changes, not just provide advice"""
 
-    def __init__(self, project_root: str = "/Users/donkeyking/development/unified-donkey-betz"):
+    def __init__(self, project_root: str = "/Users/donkeyking/Donkey_Betz/unified-donkey-betz"):
         self.project_root = project_root
         self.current_session: Optional[ImplementationSession] = None
 

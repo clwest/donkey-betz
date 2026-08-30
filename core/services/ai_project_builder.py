@@ -213,7 +213,7 @@ class AIProjectBuilder(ProjectBuilderLearningMixin):
 
     def __init__(self):
         self.llm_enforcer = get_llm_enforcer()
-        self.project_workspace = Path("/Users/donkeyking/development/unified-donkey-betz/generated_projects")
+        self.project_workspace = Path("/Users/donkeyking/Donkey_Betz/unified-donkey-betz/generated_projects")
         self.project_workspace.mkdir(exist_ok=True)
         # Initialize learning mixin attributes
         self._learning_loop = None

@@ -89,7 +89,7 @@ class Command(BaseCommand):
         self.stdout.write(f"🏃 Mode: {'DRY RUN' if dry_run else 'LIVE IMPORT'}\n")
 
         # File path
-        games_file = '/Users/donkeyking/development/unified-donkey-betz/mlb-pitch-data/games.csv'
+        games_file = '/Users/donkeyking/Donkey_Betz/unified-donkey-betz/mlb-pitch-data/games.csv'
 
         if not os.path.exists(games_file):
             self.stdout.write(self.style.ERROR(f"❌ Games file not found: {games_file}"))
